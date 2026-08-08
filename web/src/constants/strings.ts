@@ -326,5 +326,11 @@ export const strings = {
     confirmMessage: 'Are you sure you want to exit? Your current test progress will be lost.',
     confirmButton: 'Exit Test',
     cancelButton: 'Continue Test'
+  },
+  anticheat: {
+    contextMenuBlocked: 'Right-click context menu is disabled during active standardized test mode.',
+    shortcutBlocked: 'Keyboard shortcuts are restricted during active standardized test mode.',
+    windowUnfocused: 'Warning: Tab switch / window unfocus detected ({count}/{max}). Repeated violations will trigger test submission.',
+    autoSubmitted: 'Test automatically submitted due to multiple window unfocus violations.'
   }
 } as const;

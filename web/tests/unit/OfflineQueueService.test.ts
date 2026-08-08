@@ -10,7 +10,22 @@ vi.mock('../../src/config/firebase', () => ({
 describe('OfflineQueueService Unit Tests', () => {
   const queueService = new OfflineQueueService();
 
-  it('should enqueue and retrieve offline submission', async () => {
+  it('should compute valid SHA-256 checksum for offline payload', async () => {
+    const data = {
+      testType: 'OIR',
+      userId: 'user_123',
+      payload: { answers: [1, 2, 3] },
+      timestamp: 1700000000000
+    };
+
+    const checksum1 = await OfflineQueueService.computeChecksum(data);
+    const checksum2 = await OfflineQueueService.computeChecksum(data);
+
+    expect(checksum1).toBeDefined();
+    expect(checksum1).toBe(checksum2);
+  });
+
+  it('should enqueue submission with checksum and verify non-tampered status', async () => {
     const id = await queueService.enqueueSubmission({
       testType: 'OIR',
       userId: 'test_user_123',
@@ -19,22 +34,34 @@ describe('OfflineQueueService Unit Tests', () => {
 
     expect(id).toBeDefined();
     const queued = await queueService.getQueuedSubmissions();
-    expect(queued.some((item) => item.id === id)).toBe(true);
+    const item = queued.find((i) => i.id === id);
+
+    expect(item).toBeDefined();
+    expect(item?.checksum).toBeDefined();
+    expect(item?.isTampered).toBe(false);
   });
 
-  it('should sync pending submissions using handler when user is authenticated', async () => {
-    await queueService.enqueueSubmission({
+  it('should detect tampered payload when checksum mismatch occurs', async () => {
+    const id = await queueService.enqueueSubmission({
       testType: 'TAT',
       userId: 'test_user_123',
-      payload: { stories: ['story1'] }
+      payload: { stories: ['original story'] }
     });
+
+    const queued = await queueService.getQueuedSubmissions();
+    const item = queued.find((i) => i.id === id);
+
+    if (item) {
+      // Simulate local tamper in payload
+      item.payload.stories = ['HACKED TAMPERED STORY'];
+      item.checksum = 'invalid_tampered_checksum';
+    }
 
     const handler = vi.fn().mockResolvedValue(true);
     const result = await queueService.syncPendingSubmissions(handler);
 
     expect(result.authRequired).toBe(false);
-    expect(result.syncedCount).toBeGreaterThan(0);
-    expect(handler).toHaveBeenCalled();
+    expect(result.tamperedCount).toBeGreaterThan(0);
   });
 
   it('should remove submission after successful sync', async () => {
