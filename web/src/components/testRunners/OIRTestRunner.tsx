@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { OIRTestViewModel, OIRTestState } from '../../viewmodels/OIRTestViewModel';
 import { useTestTimer } from '../../hooks/useTestTimer';
 import { strings } from '../../constants/strings';
+import { useAntiCheat } from '../../hooks/useAntiCheat';
+import { AntiCheatWarningBanner } from '../common/AntiCheatWarningBanner';
 import { Clock, CheckCircle2, ChevronLeft, ChevronRight, Send, AlertTriangle, LogOut } from 'lucide-react';
 
 export interface OIRTestRunnerProps {
@@ -39,6 +41,12 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
   useEffect(() => {
     start();
   }, [start]);
+
+  const isTestActive = !state.isLoading && !state.error && !state.isCompleted;
+  const { warningMessage } = useAntiCheat({
+    isActive: isTestActive,
+    onViolationExceeded: () => viewModel.submitTest(userId, isOnline)
+  });
 
   if (state.isLoading) {
     return (
@@ -95,6 +103,7 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <AntiCheatWarningBanner message={warningMessage} />
       {/* Timer, Status & Exit Header */}
       <div className="flex items-center justify-between p-4 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl">
         <div>

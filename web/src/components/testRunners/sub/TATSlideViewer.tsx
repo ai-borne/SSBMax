@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { PsychologyTestViewModel, PsychologyTestState } from '../../../viewmodels/PsychologyTestViewModel';
 import { useTestTimer } from '../../../hooks/useTestTimer';
 import { strings } from '../../../constants/strings';
+import { useAntiCheat } from '../../../hooks/useAntiCheat';
+import { AntiCheatWarningBanner } from '../../common/AntiCheatWarningBanner';
 import { Clock, CheckCircle2, ChevronRight, Send, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 
 interface TATSlideViewerProps {
@@ -46,6 +48,12 @@ export const TATSlideViewer: React.FC<TATSlideViewerProps> = ({
     }
   }, [state.currentSlideIndex, currentSlide, reset]);
 
+  const isTestActive = !state.isLoading && !state.error && !state.isCompleted;
+  const { warningMessage } = useAntiCheat({
+    isActive: isTestActive,
+    onViolationExceeded: () => viewModel.submitTest(userId, isOnline)
+  });
+
   if (state.isLoading) {
     return (
       <div className="flex items-center justify-center p-12 text-slate-400">
@@ -85,6 +93,7 @@ export const TATSlideViewer: React.FC<TATSlideViewerProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <AntiCheatWarningBanner message={warningMessage} />
       <div className="flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded-xl">
         <div>
           <h2 className="text-lg font-semibold text-slate-100">{strings.psychology.tatTitle}</h2>

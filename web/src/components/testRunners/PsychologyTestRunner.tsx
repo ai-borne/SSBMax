@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { PsychologyTestViewModel, PsychologyTestState } from '../../viewmodels/PsychologyTestViewModel';
 import { useTestTimer } from '../../hooks/useTestTimer';
 import { strings } from '../../constants/strings';
+import { useAntiCheat } from '../../hooks/useAntiCheat';
+import { AntiCheatWarningBanner } from '../common/AntiCheatWarningBanner';
 import { Clock, CheckCircle2, ChevronRight, Send, AlertTriangle, FileText, LogOut } from 'lucide-react';
 
 export interface PsychologyTestRunnerProps {
@@ -48,6 +50,12 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
       reset(currentSlide.durationSeconds);
     }
   }, [state.currentSlideIndex, currentSlide, reset]);
+
+  const isTestActive = !state.isLoading && !state.error && !state.isCompleted;
+  const { warningMessage } = useAntiCheat({
+    isActive: isTestActive,
+    onViolationExceeded: () => viewModel.submitTest(userId, isOnline)
+  });
 
   if (state.isLoading) {
     return (
@@ -97,6 +105,7 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <AntiCheatWarningBanner message={warningMessage} />
       {/* Test Title, Slide Counter & Exit Header */}
       <div className="flex items-center justify-between p-4 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl">
         <div>

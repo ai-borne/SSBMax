@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { OIRTestViewModel, OIRTestState } from '../../../viewmodels/OIRTestViewModel';
 import { useTestTimer } from '../../../hooks/useTestTimer';
 import { strings } from '../../../constants/strings';
+import { useAntiCheat } from '../../../hooks/useAntiCheat';
+import { AntiCheatWarningBanner } from '../../common/AntiCheatWarningBanner';
 import { Clock, CheckCircle2, ChevronLeft, ChevronRight, Send, AlertTriangle } from 'lucide-react';
 
 interface OIRMCQRunnerProps {
@@ -36,6 +38,12 @@ export const OIRMCQRunner: React.FC<OIRMCQRunnerProps> = ({
   useEffect(() => {
     start();
   }, [start]);
+
+  const isTestActive = !state.isLoading && !state.error && !state.isCompleted;
+  const { warningMessage } = useAntiCheat({
+    isActive: isTestActive,
+    onViolationExceeded: () => viewModel.submitTest(userId, isOnline)
+  });
 
   if (state.isLoading) {
     return (
@@ -92,6 +100,7 @@ export const OIRMCQRunner: React.FC<OIRMCQRunnerProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <AntiCheatWarningBanner message={warningMessage} />
       <div className="flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded-xl">
         <div>
           <h2 className="text-lg font-semibold text-slate-100">{strings.oir.title}</h2>
