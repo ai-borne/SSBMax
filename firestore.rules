@@ -49,9 +49,9 @@ service cloud.firestore {
       // Users can create their own profile
       allow create: if isAuthenticated() && request.auth.uid == userId;
       
-      // Users can update their own profile (except role)
+      // Users can update their own profile (except privileged membership and role fields)
       allow update: if isOwner(userId) && 
-                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isPaidMember', 'membershipPlan', 'paymentId', 'orderId']);
       
       // No one can delete user profiles
       allow delete: if false;
@@ -453,12 +453,7 @@ service cloud.firestore {
     match /topic_content/{topicId} {
       // All authenticated users can read topic content
       allow read: if isAuthenticated();
-      
-      // ⚠️ PRODUCTION SECURITY NOTE:
-      // Migration write access should be removed after initial migration is complete.
-      // For now, allowing writes for migration tool. Once migration is done, change to:
-      // allow write: if false; (and manage content via Firebase Console only)
-      allow write: if isAuthenticated();
+      allow write: if false;
     }
     
     // ============================================
@@ -467,17 +462,8 @@ service cloud.firestore {
     
     match /study_materials/{materialId} {
       // All authenticated users can read study materials
-      // (Premium filtering can be added later if needed)
       allow read: if isAuthenticated();
-      
-      // ⚠️ PRODUCTION SECURITY NOTE:
-      // Migration write access should be removed after initial migration is complete.
-      // For now, allowing creates for migration tool. Once migration is done, change to:
-      // allow create: if false; (and manage content via Firebase Console only)
-      allow create: if isAuthenticated();
-      
-      // No update/delete from clients
-      allow update, delete: if false;
+      allow write: if false;
     }
     
     // ============================================
@@ -619,22 +605,30 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // Interview responses - users can write their own responses
+    // Interview responses - users can write their own responses (cannot modify olqScores/analyzedBy)
     match /interview_responses/{responseId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow write: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid &&
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['olqScores', 'analyzedBy']);
     }
 
-    // Interview results - users can read/write their own results
+    // Webhook logs - server-side backend only (no client access)
+    match /webhook_logs/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Interview results - users can read their own results
     match /interview_results/{resultId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow write: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow write: if false;
     }
 
-    // Question cache - authenticated users can read/write cached questions
+    // Question cache - read-only for authenticated clients
     match /question_cache/{docId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if false;
     }
 
     // Generic questions pool - read-only for users
