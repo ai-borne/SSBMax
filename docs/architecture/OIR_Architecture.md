@@ -254,10 +254,16 @@ markQuestionsUsed()      → SQLDelight (7-day suppression)
 ```
 A session is created before questions are exposed. Leaving the test marks it `ABANDONED`; a
 successful submit marks it `SUBMITTED`; an expired session is terminal `EXPIRED`. Abandoned and
-expired sessions are not resumed in the current release. Result and answer-review routes pass only
+expired sessions are not resumed in the current release — retaking the test is a fresh session, not
+a continuation (see Session State Machine below). Result and answer-review routes pass only
 the durable submission ID, and the review screen fetches the persisted result through its ViewModel.
 
-
+**Steps 2–4 share one `runCatching`, not independent recovery.** If step 2 (submission persist)
+succeeds but step 3 or 4 then throws, `SubmitOIRTestUseCase` still returns `Result.failure` — the
+submission is already durable, but the session never reaches `SUBMITTED` and usage is never
+recorded. Same mechanism and consequences as PPDT's identical use-case shape; see `PPDT_Pipeline.md`
+§8 for the failure-mode detail and §25 for how to tell "actually failed" apart from "reported
+failure, already succeeded" when debugging.
 
 ### Session State Machine
 
@@ -265,10 +271,12 @@ A durable Firestore session is created before questions are exposed. Identity fi
 
 ```text
 ACTIVE
-  ├─ user exits → ABANDONED (terminal; no resume in this release)
-  ├─ absolute expiry → EXPIRED (terminal)
-  └─ successful durable submit → SUBMITTED (terminal)
+  ├─ user exits → ABANDONED (terminal for that attempt; no resume in this release)
+  ├─ absolute expiry → EXPIRED (terminal for that attempt)
+  └─ successful durable submit → SUBMITTED (terminal for that attempt)
 ```
+
+"No resume" means the ViewModel never continues an abandoned/expired attempt's in-progress answers — a retake always starts a fresh 50-question session. It does not mean retaking is blocked: the session doc id is `{userId}_{testId}` (reused, not re-minted) and starting a new attempt is a Firestore `create`-shaped write over any prior terminal *or still-`ACTIVE`* doc, gated by `test_sessions`' rule (`PPDT_Pipeline.md` §24). This exact path was broken twice in production ("Could not create a secure test session") — see that section and its §17 #15/#16 for what shipped, why, and the fix.
 
 The timer derives remaining time from the session's absolute expiry rather than counting local ticks. Backgrounding, delayed frames, and device clock drift cannot extend the server-defined session lifetime. Submission is one-shot in the UI and idempotent in the repository/use-case path.
 
@@ -278,11 +286,11 @@ The timer derives remaining time from the session's absolute expiry rather than 
 |---|---|---|
 | OIR metadata | `test_content/oir/meta/config` | Read-only to app clients; content writes are tooling/server-only |
 | OIR batches | `test_content/oir/batches/{batchId}` | Authenticated content reads only |
-| Test session | `users/{userId}/test_sessions/{sessionId}` | Owner-only; identity and terminal transitions are protected |
-| Submission/result | `users/{userId}/test_submissions/{submissionId}` | Owner-only; finalized result fields are immutable |
-| Monthly usage | `users/{userId}/test_usage/{yyyy-MM}` | Owner-only; month/identity fields are immutable and updates are monotonic |
+| Test session | `test_sessions/{userId}_{testId}` (top-level, not nested under `users/`) | Owner-only; identity and terminal transitions are protected |
+| Submission/result | `submissions/{submissionId}` (top-level; for OIR, `submissionId == sessionId`) | Owner-only; finalized result fields are immutable |
+| Monthly usage | `users/{userId}/subscription/usage_{yyyy-MM}` | Owner-only; month/identity fields are immutable and updates are monotonic |
 
-Firestore rules enforce ownership, authentication, OIR session linkage, immutable identity fields, finalized-submission immutability, and exactly-once usage semantics. The Compose UI and ViewModels never call Firebase directly.
+`test_sessions` and the monthly-usage collection are shared verbatim with every other test type via `TestSessionRepository`/`TestUsageRecorder` — the rule text, the reasoning behind each clause, and the two incidents both collections have already caused in production are documented once, in `PPDT_Pipeline.md` §24 (rules) and §25 (debugging playbook), not repeated here. The Compose UI and ViewModels never call Firebase directly.
 
 ### User-Visible State Contract
 
