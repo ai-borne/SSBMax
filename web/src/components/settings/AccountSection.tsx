@@ -28,7 +28,7 @@ export const AccountSection: FC<AccountSectionProps> = ({
   onSignOut,
 }) => {
   return (
-    <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-5" data-testid="account-section">
+    <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-5" data-testid="account-section">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div className="space-y-1">
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -59,21 +59,21 @@ export const AccountSection: FC<AccountSectionProps> = ({
 
       {/* Candidate Profile Details Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-1">
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
           <span className="text-slate-500 dark:text-slate-400 block font-medium">{strings.account.displayName}</span>
           <span className="font-bold text-slate-900 dark:text-white block text-sm" data-testid="account-display-name">
             {userName || 'Officer Cadet Candidate'}
           </span>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-1">
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
           <span className="text-slate-500 dark:text-slate-400 block font-medium">{strings.account.email}</span>
           <span className="font-bold text-slate-900 dark:text-white block text-sm truncate" data-testid="account-email">
             {userEmail || 'cadet@ssbmax.in'}
           </span>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-1">
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
           <span className="text-slate-500 dark:text-slate-400 block font-medium flex items-center gap-1">
             <Target className="w-3.5 h-3.5 text-sky-500" />
             <span>{strings.account.targetBoard}</span>
@@ -83,7 +83,7 @@ export const AccountSection: FC<AccountSectionProps> = ({
           </span>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-1">
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
           <span className="text-slate-500 dark:text-slate-400 block font-medium">{strings.account.prepStatus}</span>
           <span className="font-semibold text-slate-800 dark:text-slate-200 block" data-testid="account-prep-status">
             {prepStatus}

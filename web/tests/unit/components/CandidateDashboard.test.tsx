@@ -49,4 +49,16 @@ describe('CandidateDashboard Component', () => {
 
     expect(handleViewReports).toHaveBeenCalledTimes(1);
   });
+
+  it('applies Level 2 elevation styling to Stage 1 and Stage 2 cards', () => {
+    render(<CandidateDashboard />);
+
+    const stage1Card = screen.getByTestId('stage1-card');
+    expect(stage1Card.className).toContain('dark:bg-slate-800/90');
+    expect(stage1Card.className).toContain('dark:border-slate-700/80');
+
+    const stage2Card = screen.getByTestId('stage2-card');
+    expect(stage2Card.className).toContain('dark:bg-slate-800/90');
+    expect(stage2Card.className).toContain('dark:border-slate-700/80');
+  });
 });

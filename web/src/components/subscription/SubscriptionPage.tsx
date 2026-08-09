@@ -76,7 +76,7 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
       {/* Tier Comparison Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
         {/* Tier 1: Free Candidate Plan */}
-        <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl flex flex-col justify-between" data-testid="free-tier-card">
+        <div className="p-8 rounded-3xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 flex flex-col justify-between" data-testid="free-tier-card">
           <div>
             <div className="space-y-2 mb-6">
               <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">
@@ -101,7 +101,7 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
 
           <button
             disabled
-            className="w-full py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold border border-slate-200 dark:border-slate-700 cursor-not-allowed text-center"
+            className="w-full min-h-[44px] py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold border border-slate-200 dark:border-slate-700 cursor-not-allowed text-center"
             data-testid="current-plan-btn"
           >
             {strings.subscription.currentPlan}
@@ -109,7 +109,7 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
         </div>
 
         {/* Tier 2: Officer Pass (PRO Plan) */}
-        <div className="relative p-8 rounded-3xl bg-white dark:bg-slate-900 border-2 border-sky-500 shadow-xl shadow-sky-600/10 dark:shadow-sky-950/50 flex flex-col justify-between" data-testid="pro-tier-card">
+        <div className="relative p-8 rounded-3xl bg-white dark:bg-slate-800/90 border-2 border-sky-500 shadow-xl shadow-sky-600/10 dark:shadow-xl dark:shadow-slate-950/60 flex flex-col justify-between" data-testid="pro-tier-card">
           <div className="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-black uppercase tracking-widest shadow-md">
             Most Popular
           </div>

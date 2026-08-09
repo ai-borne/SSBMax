@@ -54,4 +54,15 @@ describe('SubscriptionPage Component', () => {
       expect(screen.getByText('Order creation error')).toBeInTheDocument();
     });
   });
+
+  it('applies Level 2 elevation styling to free-tier-card and pro-tier-card', () => {
+    render(<SubscriptionPage />);
+
+    const freeCard = screen.getByTestId('free-tier-card');
+    expect(freeCard.className).toContain('dark:bg-slate-800/90');
+    expect(freeCard.className).toContain('dark:border-slate-700/80');
+
+    const proCard = screen.getByTestId('pro-tier-card');
+    expect(proCard.className).toContain('dark:bg-slate-800/90');
+  });
 });

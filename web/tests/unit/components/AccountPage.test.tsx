@@ -52,4 +52,13 @@ describe('AccountPage Component', () => {
     fireEvent.click(screen.getByTestId('upgrade-pass-button'));
     expect(onUpgradeClick).toHaveBeenCalledTimes(1);
   });
+
+  it('applies Level 2 elevation styling to user profile card', () => {
+    render(<AccountPage user={mockUser} />);
+
+    const accountPage = screen.getByTestId('account-page');
+    const profileCard = accountPage.querySelector('.rounded-3xl');
+    expect(profileCard?.className).toContain('dark:bg-slate-800/90');
+    expect(profileCard?.className).toContain('dark:border-slate-700/80');
+  });
 });

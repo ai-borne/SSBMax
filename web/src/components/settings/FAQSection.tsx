@@ -18,7 +18,7 @@ export const FAQSection: FC = () => {
   };
 
   return (
-    <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-4" data-testid="faq-section">
+    <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-4" data-testid="faq-section">
       <div className="space-y-1 pb-3 border-b border-slate-200 dark:border-slate-800">
         <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <HelpCircle className="w-5 h-5 text-sky-600 dark:text-sky-400" />
@@ -33,7 +33,7 @@ export const FAQSection: FC = () => {
           return (
             <div
               key={index}
-              className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/60 overflow-hidden transition-all"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 overflow-hidden transition-all"
               data-testid={`faq-item-${index}`}
             >
               <button

@@ -63,9 +63,9 @@ export const BaseModal: FC<BaseModalProps> = ({
         aria-labelledby={ariaLabelledBy}
         aria-describedby={ariaDescribedBy}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden focus:outline-none animate-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl dark:shadow-slate-950/80 overflow-hidden focus:outline-none animate-in zoom-in-95 duration-200"
       >
-        <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 bg-slate-50 dark:bg-slate-950/60">
+        <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/60">
           <h2 id={ariaLabelledBy} className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
             {title}
           </h2>

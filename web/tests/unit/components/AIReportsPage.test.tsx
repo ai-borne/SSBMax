@@ -60,4 +60,16 @@ describe('AIReportsPage Component', () => {
     fireEvent.click(toggleBtn);
     expect(screen.getByText(strings.reportsPage.toggleUser)).toBeInTheDocument();
   });
+
+  it('applies Level 2 elevation styling to radar-view and olq-view section containers', () => {
+    render(<AIReportsPage />);
+
+    const radarView = screen.getByTestId('radar-view');
+    expect(radarView.className).toContain('dark:bg-slate-800/90');
+    expect(radarView.className).toContain('dark:border-slate-700/80');
+
+    const olqView = screen.getByTestId('olq-view');
+    expect(olqView.className).toContain('dark:bg-slate-800/90');
+    expect(olqView.className).toContain('dark:border-slate-700/80');
+  });
 });
