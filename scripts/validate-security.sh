@@ -119,8 +119,10 @@ echo -e "${BLUE}[4/10] Validating HTTP Security Headers & security.txt...${NC}"
 
 if [ -f "web/public/_headers" ]; then
     if grep -q "Strict-Transport-Security: max-age=63072000" web/public/_headers && \
+       grep -q "Cross-Origin-Resource-Policy: cross-origin" web/public/_headers && \
+       grep -q "upgrade-insecure-requests" web/public/_headers && \
        grep -q "frame-ancestors 'none'" web/public/_headers; then
-        echo -e "${GREEN}✅ web/public/_headers includes 2-year HSTS & strict CSP frame-ancestors 'none'${NC}"
+        echo -e "${GREEN}✅ web/public/_headers includes HSTS, CORP cross-origin, upgrade-insecure-requests & strict CSP${NC}"
     else
         echo -e "${RED}❌ web/public/_headers missing required security header directives!${NC}"
         ERRORS=$((ERRORS + 1))
@@ -192,13 +194,15 @@ fi
 echo ""
 
 # ============================================
-# 8. Check Firebase Security Rules Lockdown
+# 8. Check Firebase Security Rules Lockdown & Anti-Cheat Handlers
 # ============================================
-echo -e "${BLUE}[8/10] Checking Security Rules lockdown...${NC}"
+echo -e "${BLUE}[8/10] Checking Security Rules lockdown & Anti-Cheat handlers...${NC}"
 
 if [ -f "firestore.rules" ] && [ -f "storage.rules" ]; then
-    if grep -q "isPaidMember" firestore.rules && grep -F -q "10 * 1024 * 1024" storage.rules; then
-        echo -e "${GREEN}✅ firestore.rules and storage.rules contain locked down access controls${NC}"
+    if grep -q "isPaidMember" firestore.rules && \
+       grep -F -q "10 * 1024 * 1024" storage.rules && \
+       grep -q "contentType.matches" storage.rules; then
+        echo -e "${GREEN}✅ firestore.rules and storage.rules contain locked down access & MIME type controls${NC}"
     else
         echo -e "${RED}❌ firestore.rules or storage.rules missing critical lockdown directives!${NC}"
         ERRORS=$((ERRORS + 1))
@@ -206,6 +210,17 @@ if [ -f "firestore.rules" ] && [ -f "storage.rules" ]; then
 else
     echo -e "${RED}❌ firestore.rules or storage.rules missing!${NC}"
     ERRORS=$((ERRORS + 1))
+fi
+
+if [ -f "web/src/services/AntiCheatService.ts" ]; then
+    if grep -q "paste" web/src/services/AntiCheatService.ts && \
+       grep -q "drop" web/src/services/AntiCheatService.ts && \
+       grep -q "fullscreenchange" web/src/services/AntiCheatService.ts; then
+        echo -e "${GREEN}✅ AntiCheatService contains paste, drop, and fullscreen tracking handlers${NC}"
+    else
+        echo -e "${RED}❌ AntiCheatService missing paste/drop or fullscreen tracking handlers!${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
 fi
 
 echo ""
