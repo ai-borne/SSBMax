@@ -209,11 +209,14 @@ jobs:
   # as CocoaPods-shaped cinterops -- SPM's Firebase integration never
   # produces the .framework bundles they link against) requires a Kotlin
   # Native compiler whose bundled Clang can parse the target SDK's headers.
-  # Verified locally: Xcode 26.6 (iOS 26.5 SDK) is newer than Kotlin 2.1.0's
-  # Native compiler supports (fails with "module '_c_standard_library_
-  # obsolete' requires feature 'found_incompatible_headers__check_search_
-  # paths'" during cinterop). 16.0 is the newest version the Kotlin Gradle
-  # Plugin itself reports testing against.
+  #
+  # Kotlin 2.2.20 added Xcode 26 support (see the 2.2.20 release notes), so
+  # this job uses Xcode 26.2. That is the floor for the Swift package graph
+  # too: the resolved firebase-ios-sdk pulls swift-protobuf 1.38.x, whose
+  # Package.swift requires Swift tools 6.2.0 -- Xcode 16.x ships Swift 6.0
+  # and fails xcodebuild with "using Swift tools version 6.2.0 but the
+  # installed version is 6.0.0". Do NOT drop back to Xcode 16.x without
+  # also pinning swift-protobuf to a Swift-6.0-compatible version.
   ios-tests:
     name: iOS (shared tests + Xcode build)
     runs-on: macos-15
@@ -224,10 +227,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Select Xcode 16
+      - name: Select Xcode 26.2
         uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1
         with:
-          xcode-version: '16.0'
+          xcode-version: '26.2'
 
       - name: Set up JDK 21
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
@@ -420,15 +423,11 @@ jobs:
   # Make THIS the required status check in branch-protection rules; it stays
   # stable even as the jobs above are added or renamed.
   #
-  # ios-tests deliberately isn't in `needs` yet: it's a brand-new pipeline
-  # (Phase 0b, KMP-convergence plan) that has never run in actual CI, and it
-  # could only be verified structurally here, not end-to-end -- this
-  # session's Kotlin Native compiler couldn't parse this machine's Xcode
-  # 26.6 SDK headers, a local-environment mismatch unrelated to whether the
-  # job itself is correct (CI pins Xcode 16.0 precisely to avoid that). Watch
-  # it run for real on the next few PRs, then add `ios-tests` to `needs`
-  # below once it's confirmed green -- don't block merges on an unverified
-  # gate.
+  # ios-tests deliberately isn't in `needs` yet: it's the newest pipeline
+  # (Phase 0b, KMP-convergence plan) and has only recently started running
+  # green in real CI after the Xcode 26.2 pin (see the ios-tests job above).
+  # Once it's confirmed green across a few PRs, add `ios-tests` to `needs`
+  # below -- don't block merges on a gate that's still being validated.
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
