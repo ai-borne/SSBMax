@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { AppLayout } from '../../../src/components/layout/AppLayout';
 import { strings } from '../../../src/constants/strings';
 
@@ -117,5 +117,34 @@ describe('AppLayout Component', () => {
 
     fireEvent.click(toggleButton);
     expect(document.documentElement.classList.contains('dark')).toBe(false);
+  });
+
+  it('renders PWA install button when beforeinstallprompt fires and prompts user on click', async () => {
+    const promptMock = vi.fn().mockResolvedValue(undefined);
+    const userChoiceMock = Promise.resolve({ outcome: 'accepted', platform: 'web' });
+
+    render(
+      <AppLayout user={null}>
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    expect(screen.queryByTestId('pwa-install-button')).not.toBeInTheDocument();
+
+    const event = new Event('beforeinstallprompt');
+    Object.assign(event, {
+      prompt: promptMock,
+      userChoice: userChoiceMock
+    });
+
+    await act(async () => {
+      fireEvent(window, event);
+    });
+
+    const installButton = screen.getByTestId('pwa-install-button');
+    expect(installButton).toBeInTheDocument();
+
+    fireEvent.click(installButton);
+    expect(promptMock).toHaveBeenCalledTimes(1);
   });
 });

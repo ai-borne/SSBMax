@@ -137,8 +137,14 @@ export const AppLayout: FC<AppLayoutProps> = ({
                   </div>
 
                   {deferredPrompt && (
-                    <button onClick={handleInstallClick} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-xs font-bold bg-sky-600 text-white rounded-xl shadow-sm hover:bg-sky-500 transition-colors" title={strings.header.installPwa} data-testid="pwa-install-button">
-                      <Download className="w-4 h-4" />
+                    <button
+                      onClick={handleInstallClick}
+                      className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                      aria-label={strings.header.installPwa}
+                      title={strings.header.installPwa}
+                      data-testid="pwa-install-button"
+                    >
+                      <Download className="w-4 h-4 text-sky-500 dark:text-sky-400" />
                     </button>
                   )}
 
