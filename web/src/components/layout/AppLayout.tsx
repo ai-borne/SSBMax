@@ -90,8 +90,8 @@ export const AppLayout: FC<AppLayoutProps> = ({
               <div className="max-w-7xl w-full mx-auto flex items-center justify-between relative">
                 {/* Brand Logo & Title */}
                 <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavClick('home')} data-testid="brand-logo">
-                  <div className="p-2 rounded-xl bg-gradient-to-tr from-sky-600 to-blue-600 text-white shadow-md shadow-sky-600/20 group-hover:scale-105 transition-transform">
-                    <ShieldCheck className="w-5 h-5" />
+                  <div className="p-1.5 rounded-xl bg-slate-900 border border-slate-700/50 text-white shadow-md shadow-sky-600/10 group-hover:scale-105 transition-transform overflow-hidden flex items-center justify-center">
+                    <img src="/favicon.png" alt="SSBMax Logo" className="w-5 h-5 object-contain" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -122,7 +122,11 @@ export const AppLayout: FC<AppLayoutProps> = ({
                         }`}
                         data-testid={`nav-item-${item.id}`}
                       >
-                        <Icon className="w-4 h-4" />
+                        {item.id === 'home' ? (
+                          <img src="/favicon.png" alt="Home" className="w-4 h-4 object-contain rounded-sm" />
+                        ) : (
+                          <Icon className="w-4 h-4" />
+                        )}
                         <span>{item.label}</span>
                       </button>
                     );
@@ -177,7 +181,11 @@ export const AppLayout: FC<AppLayoutProps> = ({
                         onClick={() => handleNavClick(item.id)}
                         className={`min-h-[44px] flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${isActive ? 'bg-sky-600 text-white font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                       >
-                        <Icon className="w-4 h-4" />
+                        {item.id === 'home' ? (
+                          <img src="/favicon.png" alt="Home" className="w-4 h-4 object-contain rounded-sm" />
+                        ) : (
+                          <Icon className="w-4 h-4" />
+                        )}
                         <span>{item.label}</span>
                       </button>
                     );
