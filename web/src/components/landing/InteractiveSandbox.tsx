@@ -1,5 +1,5 @@
 import { FC, useState } from 'react';
-import { Sparkles, Zap, CheckCircle2, AlertCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { Zap, CheckCircle2, AlertCircle, ArrowRight, RefreshCw } from 'lucide-react';
 import { strings } from '../../constants/strings';
 
 interface HeuristicResult {
@@ -85,7 +85,7 @@ export const InteractiveSandbox: FC = () => {
 
         {/* Prompt Selector Pills */}
         <div className="w-full flex flex-wrap justify-center gap-2 mb-6" data-testid="prompt-selector-group">
-          {prompts.map((p, idx) => (
+          {prompts.map((_, idx) => (
             <button
               key={idx}
               onClick={() => {

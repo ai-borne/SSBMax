@@ -1,5 +1,5 @@
 import { FC, useState } from 'react';
-import { ShieldCheck, BarChart3, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { ShieldCheck, BarChart3, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { strings } from '../../constants/strings';
 
 export interface FactorItem {
