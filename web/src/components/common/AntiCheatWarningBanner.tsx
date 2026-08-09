@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldAlert } from 'lucide-react';
+// Centralized string resources: strings.anticheat
 
 interface AntiCheatWarningBannerProps {
   message: string | null;
