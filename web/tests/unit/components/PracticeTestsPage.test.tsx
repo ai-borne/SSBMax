@@ -4,13 +4,15 @@ import { PracticeTestsPage } from '../../../src/components/practice/PracticeTest
 import { strings } from '../../../src/constants/strings';
 
 describe('PracticeTestsPage Component', () => {
-  it('renders title, search bar, and test catalog cards', () => {
+  it('renders title, search bar, OLQ radar SVG, and test catalog cards', () => {
     render(<PracticeTestsPage />);
 
     expect(screen.getByTestId('practice-tests-page')).toBeInTheDocument();
     expect(screen.getByText(strings.practice.title)).toBeInTheDocument();
     expect(screen.getByTestId('search-input')).toBeInTheDocument();
+    expect(screen.getByTestId('olq-radar-svg')).toBeInTheDocument();
     expect(screen.getByTestId('test-card-oir')).toBeInTheDocument();
+    expect(screen.getByTestId('test-card-piq')).toBeInTheDocument();
     expect(screen.getByTestId('test-card-tat')).toBeInTheDocument();
   });
 
@@ -24,7 +26,7 @@ describe('PracticeTestsPage Component', () => {
     expect(screen.queryByTestId('test-card-tat')).not.toBeInTheDocument();
   });
 
-  it('triggers onStartTest for free test when clicked by guest user', () => {
+  it('triggers onStartTest for free OIR test when clicked', () => {
     const handleStartTest = vi.fn();
     render(<PracticeTestsPage isPaidMember={false} onStartTest={handleStartTest} />);
 
@@ -34,39 +36,28 @@ describe('PracticeTestsPage Component', () => {
     expect(handleStartTest).toHaveBeenCalledWith('oir');
   });
 
-  it('triggers onUpgrade for pro test when clicked by non-paid user', () => {
-    const handleStartTest = vi.fn();
-    const handleUpgrade = vi.fn();
-    render(
-      <PracticeTestsPage
-        isPaidMember={false}
-        onStartTest={handleStartTest}
-        onUpgrade={handleUpgrade}
-      />
-    );
+  it('opens digital PIQ form wizard when PIQ card is clicked', () => {
+    render(<PracticeTestsPage isPaidMember={false} />);
 
-    const launchTatBtn = screen.getByTestId('launch-test-tat');
-    fireEvent.click(launchTatBtn);
+    const launchPiqBtn = screen.getByTestId('launch-test-piq');
+    fireEvent.click(launchPiqBtn);
 
-    expect(handleUpgrade).toHaveBeenCalledTimes(1);
-    expect(handleStartTest).not.toHaveBeenCalled();
+    expect(screen.getByTestId('piq-wizard-container')).toBeInTheDocument();
+    expect(screen.getByTestId('piq-pii-warning')).toBeInTheDocument();
   });
 
-  it('triggers onStartTest for pro test when user is paid member', () => {
-    const handleStartTest = vi.fn();
+  it('opens ProUpgradeGateModal for locked test when clicked by guest user', () => {
     const handleUpgrade = vi.fn();
-    render(
-      <PracticeTestsPage
-        isPaidMember={true}
-        onStartTest={handleStartTest}
-        onUpgrade={handleUpgrade}
-      />
-    );
+    render(<PracticeTestsPage isPaidMember={false} onUpgrade={handleUpgrade} />);
 
     const launchTatBtn = screen.getByTestId('launch-test-tat');
     fireEvent.click(launchTatBtn);
 
-    expect(handleStartTest).toHaveBeenCalledWith('tat');
-    expect(handleUpgrade).not.toHaveBeenCalled();
+    expect(screen.getByTestId('pro-upgrade-gate-modal')).toBeInTheDocument();
+
+    const upgradeBtn = screen.getByTestId('upgrade-pro-cta-button');
+    fireEvent.click(upgradeBtn);
+
+    expect(handleUpgrade).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,0 +1,217 @@
+import { FC, useState } from 'react';
+import { Shield, Layers, BarChart2 } from 'lucide-react';
+
+export interface OLQScores {
+  // Factor I
+  effectiveIntelligence?: number;
+  reasoningAbility?: number;
+  organizingAbility?: number;
+  powerOfExpression?: number;
+  // Factor II
+  socialAdaptability?: number;
+  cooperation?: number;
+  senseOfResponsibility?: number;
+  // Factor III
+  initiative?: number;
+  selfConfidence?: number;
+  speedOfDecision?: number;
+  abilityToInfluence?: number;
+  liveliness?: number;
+  // Factor IV
+  determination?: number;
+  courage?: number;
+  stamina?: number;
+}
+
+export interface OLQFactorRadarSVGProps {
+  scores?: OLQScores;
+  className?: string;
+}
+
+interface FactorGroup {
+  name: string;
+  code: string;
+  olqs: Array<{ key: keyof OLQScores; label: string; defaultVal: number }>;
+}
+
+const factorGroups: FactorGroup[] = [
+  {
+    name: 'Factor I: Planning & Reasoning',
+    code: 'F1',
+    olqs: [
+      { key: 'effectiveIntelligence', label: 'Effective Intelligence', defaultVal: 85 },
+      { key: 'reasoningAbility', label: 'Reasoning Ability', defaultVal: 80 },
+      { key: 'organizingAbility', label: 'Organizing Ability', defaultVal: 78 },
+      { key: 'powerOfExpression', label: 'Power of Expression', defaultVal: 82 }
+    ]
+  },
+  {
+    name: 'Factor II: Social Adjustment',
+    code: 'F2',
+    olqs: [
+      { key: 'socialAdaptability', label: 'Social Adaptability', defaultVal: 88 },
+      { key: 'cooperation', label: 'Cooperation', defaultVal: 90 },
+      { key: 'senseOfResponsibility', label: 'Sense of Responsibility', defaultVal: 85 }
+    ]
+  },
+  {
+    name: 'Factor III: Social Effectiveness',
+    code: 'F3',
+    olqs: [
+      { key: 'initiative', label: 'Initiative', defaultVal: 84 },
+      { key: 'selfConfidence', label: 'Self Confidence', defaultVal: 86 },
+      { key: 'speedOfDecision', label: 'Speed of Decision', defaultVal: 79 },
+      { key: 'abilityToInfluence', label: 'Ability to Influence', defaultVal: 81 },
+      { key: 'liveliness', label: 'Liveliness', defaultVal: 83 }
+    ]
+  },
+  {
+    name: 'Factor IV: Dynamic & Courage',
+    code: 'F4',
+    olqs: [
+      { key: 'determination', label: 'Determination', defaultVal: 88 },
+      { key: 'courage', label: 'Courage', defaultVal: 87 },
+      { key: 'stamina', label: 'Stamina', defaultVal: 85 }
+    ]
+  }
+];
+
+export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, className = '' }) => {
+  const [viewMode, setViewMode] = useState<'4factor' | '15olq'>('4factor');
+
+  // Compute Factor Averages
+  const factorAverages = factorGroups.map((group) => {
+    const total = group.olqs.reduce((acc, item) => {
+      const val = scores[item.key] ?? item.defaultVal;
+      return acc + val;
+    }, 0);
+    return Math.round(total / group.olqs.length);
+  });
+
+  const getPoints = (values: number[], cx: number, cy: number, r: number) => {
+    const numPoints = values.length;
+    return values
+      .map((val, i) => {
+        const angle = (Math.PI * 2 * i) / numPoints - Math.PI / 2;
+        const radius = (val / 100) * r;
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(' ');
+  };
+
+  const valuesToRender =
+    viewMode === '4factor'
+      ? factorAverages
+      : factorGroups.flatMap((g) => g.olqs.map((o) => scores[o.key] ?? o.defaultVal));
+
+  const labelsToRender =
+    viewMode === '4factor'
+      ? factorGroups.map((g) => g.code)
+      : factorGroups.flatMap((g) => g.olqs.map((o) => o.label.substring(0, 10)));
+
+  const size = 300;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = 100;
+  const polygonPoints = getPoints(valuesToRender, cx, cy, r);
+
+  return (
+    <div className={`space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm ${className}`} data-testid="olq-radar-svg">
+      <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="flex items-center gap-2">
+          <Shield className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+          <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+            15 Officer-Like Qualities (OLQ) Radar
+          </h3>
+        </div>
+        <button
+          onClick={() => setViewMode(viewMode === '4factor' ? '15olq' : '4factor')}
+          className="min-h-[44px] min-w-[44px] px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          data-testid="radar-view-toggle"
+        >
+          {viewMode === '4factor' ? <Layers className="w-4 h-4 text-sky-500" /> : <BarChart2 className="w-4 h-4 text-sky-500" />}
+          <span>{viewMode === '4factor' ? 'Expand 15 OLQs' : '4 Core Factors'}</span>
+        </button>
+      </div>
+
+      {/* Inline SVG Chart Primitive */}
+      <div className="flex justify-center py-2">
+        <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[280px] h-auto overflow-visible" data-testid="svg-chart-element">
+          {/* Concentric grid circles */}
+          {[0.25, 0.5, 0.75, 1.0].map((level) => (
+            <circle
+              key={level}
+              cx={cx}
+              cy={cy}
+              r={r * level}
+              fill="none"
+              className="stroke-slate-200 dark:stroke-slate-800"
+              strokeWidth="1"
+              strokeDasharray={level < 1.0 ? '3 3' : undefined}
+            />
+          ))}
+
+          {/* Radial axis lines */}
+          {valuesToRender.map((_, i) => {
+            const angle = (Math.PI * 2 * i) / valuesToRender.length - Math.PI / 2;
+            const x2 = cx + r * Math.cos(angle);
+            const y2 = cy + r * Math.sin(angle);
+            return (
+              <line
+                key={i}
+                x1={cx}
+                y1={cy}
+                x2={x2}
+                y2={y2}
+                className="stroke-slate-200 dark:stroke-slate-800"
+                strokeWidth="1"
+              />
+            );
+          })}
+
+          {/* Polygon Score Overlay */}
+          <polygon
+            points={polygonPoints}
+            className="fill-sky-500/25 stroke-sky-500"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+          />
+
+          {/* Axis Labels */}
+          {labelsToRender.map((lbl, i) => {
+            const angle = (Math.PI * 2 * i) / labelsToRender.length - Math.PI / 2;
+            const labelR = r + 18;
+            const lx = cx + labelR * Math.cos(angle);
+            const ly = cy + labelR * Math.sin(angle);
+            return (
+              <text
+                key={i}
+                x={lx}
+                y={ly}
+                textAnchor="middle"
+                dominantBaseline="central"
+                className="text-[10px] font-bold fill-slate-700 dark:fill-slate-300 uppercase tracking-tighter"
+              >
+                {lbl}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* 4 Factor Summary Legend */}
+      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+        {factorGroups.map((g, idx) => (
+          <div key={g.code} className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">{g.name.split(':')[1] || g.name}</span>
+            <span className="font-mono font-bold text-sky-600 dark:text-sky-400">{factorAverages[idx]}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default OLQFactorRadarSVG;
