@@ -31,19 +31,20 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders default home section and PublicHeader on initial load', () => {
+  it('renders default home section and unified command header on initial load', () => {
     render(<App />);
 
     expect(screen.getByTestId('hero-section')).toBeInTheDocument();
-    expect(screen.getByTestId('public-header')).toBeInTheDocument();
-    expect(screen.getByTestId('public-brand-logo')).toBeInTheDocument();
+    expect(screen.getByTestId('command-header')).toBeInTheDocument();
+    expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
+    expect(screen.getByTestId('unified-pill-nav')).toBeInTheDocument();
   });
 
   it('navigates across the 4 core tabs (home, study, tests, settings)', () => {
     render(<App />);
 
-    // Click SSB Tests link on PublicHeader
-    fireEvent.click(screen.getByTestId('public-nav-tests'));
+    // Click SSB Tests link on unified nav
+    fireEvent.click(screen.getByTestId('nav-item-tests'));
     expect(screen.getByTestId('practice-tests-page')).toBeInTheDocument();
 
     // Click Study nav
@@ -62,8 +63,8 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
   it('launches full-screen test runner and hides header/footer, then exits back to app layout', async () => {
     render(<App />);
 
-    // Go to tests page from PublicHeader
-    fireEvent.click(screen.getByTestId('public-nav-tests'));
+    // Go to tests page from unified nav
+    fireEvent.click(screen.getByTestId('nav-item-tests'));
 
     // Launch free OIR test
     const launchOIRBtn = screen.getByTestId('launch-test-oir');

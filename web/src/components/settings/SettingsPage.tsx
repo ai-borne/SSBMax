@@ -77,16 +77,16 @@ export const SettingsPage: FC<SettingsPageProps> = ({
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8" data-testid="settings-page">
-      {/* Header Banner */}
-      <div className="text-center space-y-3">
+      {/* Hero Header Banner Card */}
+      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-3" data-testid="settings-header-banner">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider">
           <Settings className="w-4 h-4" />
           <span>{strings.settings.title}</span>
         </div>
-        <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+        <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">
           {strings.settings.title}
         </h1>
-        <p className="text-slate-600 dark:text-slate-400 text-sm max-w-2xl mx-auto">
+        <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm max-w-2xl">
           {strings.settings.subtitle}
         </p>
       </div>

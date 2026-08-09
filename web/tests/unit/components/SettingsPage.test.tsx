@@ -8,6 +8,7 @@ describe('SettingsPage Component', () => {
     render(<SettingsPage theme="dark" userName="Cadet Vikram" userEmail="vikram@ssbmax.in" />);
 
     expect(screen.getByTestId('settings-page')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-header-banner')).toBeInTheDocument();
     expect(screen.getByTestId('account-section')).toBeInTheDocument();
     expect(screen.getByTestId('pii-privacy-warning')).toBeInTheDocument();
     expect(screen.getByTestId('pii-privacy-warning')).toHaveTextContent(strings.account.piqPrivacyWarning);

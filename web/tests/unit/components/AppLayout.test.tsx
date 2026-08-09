@@ -33,49 +33,67 @@ describe('AppLayout Component', () => {
     expect(screen.getByText('Child Content')).toBeInTheDocument();
   });
 
-  it('renders title, brand logo, and command navigation items for authenticated user', () => {
-    render(
-      <AppLayout activeTab="home" user={mockUser}>
-        <div>Content</div>
-      </AppLayout>
-    );
-
-    expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
-    expect(screen.getAllByText(strings.header.title)[0]).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-home')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-study')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-tests')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-settings')).toBeInTheDocument();
-  });
-
-  it('renders PublicHeader for unauthenticated user on landing page', () => {
+  it('renders unified pill segmented navigation bar for both guest and authenticated users', () => {
     render(
       <AppLayout activeTab="home" user={null}>
         <div>Public Landing Content</div>
       </AppLayout>
     );
 
-    expect(screen.getByTestId('public-header')).toBeInTheDocument();
-    expect(screen.getByTestId('public-cta-start-free')).toBeInTheDocument();
+    expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
+    expect(screen.getByTestId('command-header')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-home')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-study')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-tests')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-settings')).toBeInTheDocument();
+    expect(screen.getByTestId('sign-in-cta-button')).toBeInTheDocument();
+    expect(screen.getByTestId('sign-in-cta-button')).toHaveTextContent(strings.header.signIn);
   });
 
-  it('triggers onTabChange callback when navigation item is clicked', () => {
-    const handleTabChange = vi.fn();
+  it('renders PRO badge for authenticated paid officer member', () => {
     render(
-      <AppLayout activeTab="home" user={mockUser} onTabChange={handleTabChange}>
+      <AppLayout activeTab="home" user={mockUser}>
         <div>Content</div>
       </AppLayout>
     );
 
+    expect(screen.getByTestId('pro-membership-badge')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-home')).toBeInTheDocument();
+  });
+
+  it('triggers onTabChange callback when navigation pill is clicked', () => {
+    const handleTabChange = vi.fn();
+    render(
+      <AppLayout activeTab="home" user={null} onTabChange={handleTabChange}>
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    const studyNav = screen.getByTestId('nav-item-study');
+    fireEvent.click(studyNav);
+    expect(handleTabChange).toHaveBeenCalledWith('study');
+
     const testsNav = screen.getByTestId('nav-item-tests');
     fireEvent.click(testsNav);
-
     expect(handleTabChange).toHaveBeenCalledWith('tests');
+  });
+
+  it('triggers onSignInClick when sign-in button is clicked for guest user', () => {
+    const onSignInClick = vi.fn();
+    render(
+      <AppLayout activeTab="home" user={null} onSignInClick={onSignInClick}>
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    const signInBtn = screen.getByTestId('sign-in-cta-button');
+    fireEvent.click(signInBtn);
+    expect(onSignInClick).toHaveBeenCalledTimes(1);
   });
 
   it('toggles mobile menu drawer when mobile menu button is clicked', () => {
     render(
-      <AppLayout user={mockUser}>
+      <AppLayout user={null}>
         <div>Content</div>
       </AppLayout>
     );
@@ -89,7 +107,7 @@ describe('AppLayout Component', () => {
 
   it('toggles theme mode when theme toggle button is clicked', () => {
     render(
-      <AppLayout user={mockUser}>
+      <AppLayout user={null}>
         <div>Content</div>
       </AppLayout>
     );
