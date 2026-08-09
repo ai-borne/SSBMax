@@ -14,7 +14,7 @@ const mockMaterials: StudyMaterial[] = [
     summary: 'Comprehensive guide for Day 1 Screening.',
     contentMarkdown: '# Day 1 Guide',
     estimatedReadTimeMinutes: 5,
-    tags: ['SSB'],
+    tags: ['SSB', 'Day 1'],
     createdAt: '2026-01-01'
   },
   {
@@ -57,13 +57,19 @@ class MockContentRepository implements IContentRepository {
 }
 
 describe('StudyMaterialPage Component', () => {
-  it('renders study materials header, category tabs, and material cards', async () => {
+  it('renders study materials header, offline badge, day modules grid, category tabs, and material cards', async () => {
     const vm = new StudyMaterialViewModel(new MockContentRepository());
     render(<StudyMaterialPage viewModel={vm} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('study-material-page')).toBeInTheDocument();
       expect(screen.getByText(strings.studyMaterial.title)).toBeInTheDocument();
+      expect(screen.getByTestId('offline-badge')).toBeInTheDocument();
+      expect(screen.getByTestId('ssb-day-modules-grid')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-card-1')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-card-2')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-card-3-4')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-card-5')).toBeInTheDocument();
       expect(screen.getByTestId('material-card-mat_1')).toBeInTheDocument();
       expect(screen.getByTestId('material-card-mat_2')).toBeInTheDocument();
     });
@@ -84,7 +90,7 @@ describe('StudyMaterialPage Component', () => {
     expect(screen.getByTestId('material-card-mat_2')).toBeInTheDocument();
   });
 
-  it('opens material detail modal when a card is clicked', async () => {
+  it('opens accessible StudyReaderModal with ARIA attributes when a card is clicked', async () => {
     const handleSelect = vi.fn();
     const vm = new StudyMaterialViewModel(new MockContentRepository());
     render(<StudyMaterialPage viewModel={vm} onSelectMaterial={handleSelect} />);
@@ -96,12 +102,14 @@ describe('StudyMaterialPage Component', () => {
     fireEvent.click(screen.getByTestId('material-card-mat_1'));
 
     expect(handleSelect).toHaveBeenCalledWith(mockMaterials[0]);
-    expect(screen.getByTestId('material-modal')).toBeInTheDocument();
+    const readerModal = screen.getByTestId('study-reader-modal');
+    expect(readerModal).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
 
-    const closeBtn = screen.getByTestId('close-material-modal');
+    const closeBtn = screen.getByTestId('modal-close-button');
     fireEvent.click(closeBtn);
 
-    expect(screen.queryByTestId('material-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('study-reader-modal')).not.toBeInTheDocument();
   });
 
   it('toggles mark as completed state on material card', async () => {

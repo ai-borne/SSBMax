@@ -1,14 +1,52 @@
 import { FC, useEffect, useState } from 'react';
-import { BookOpen, Clock, CheckCircle, Search, ChevronRight, X } from 'lucide-react';
+import { BookOpen, Search, CheckCircle, Clock, ChevronRight } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { StudyMaterialViewModel } from '../../viewmodels/StudyMaterialViewModel';
 import { ContentRepository } from '../../repositories/ContentRepository';
 import { StudyMaterial } from '../../types/testContent';
+import { StudyDayCard, StudyDayInfo } from './StudyDayCard';
+import { StudyReaderModal } from './StudyReaderModal';
+import { OfflineBadge } from '../common/OfflineBadge';
 
 export interface StudyMaterialPageProps {
   viewModel?: StudyMaterialViewModel;
   onSelectMaterial?: (material: StudyMaterial) => void;
 }
+
+const ssbDayModules: StudyDayInfo[] = [
+  {
+    dayNumber: '1',
+    stageBadge: 'Stage I Screening',
+    title: 'Day 1: Screening Tests',
+    subtitle: 'Officer Intelligence Rating (OIR) Verbal/Non-Verbal & Picture Perception & Discussion Test (PPDT).',
+    estimatedMinutes: 25,
+    topics: ['OIR Verbal', 'Non-Verbal', 'PPDT Story', 'Group Discussion']
+  },
+  {
+    dayNumber: '2',
+    stageBadge: 'Stage II Psychology',
+    title: 'Day 2: Psych Battery',
+    subtitle: 'Thematic Apperception (TAT), Word Association (WAT), Situation Reaction (SRT), and Self Description (SD).',
+    estimatedMinutes: 40,
+    topics: ['TAT 12 Slides', 'WAT 60 Words', 'SRT 60 Scenarios', 'SD 5 Paragraphs']
+  },
+  {
+    dayNumber: '3-4',
+    stageBadge: 'Stage II Outdoor & IO',
+    title: 'Day 3 & 4: GTO & Interview',
+    subtitle: 'Group Testing Officer tasks (GD, GPE, PGT, HGT, Command Task) & Personal Interview with President/IO.',
+    estimatedMinutes: 35,
+    topics: ['Group Discussion', 'GPE Plan', 'Obstacle Course', 'PI Dossier']
+  },
+  {
+    dayNumber: '5',
+    stageBadge: 'Stage II Final Board',
+    title: 'Day 5: Conference & Medicals',
+    subtitle: 'Final Assessor Board Conference, Selection Results announcement, Special Medical Board guidelines.',
+    estimatedMinutes: 20,
+    topics: ['Board Conference', 'Assessor Review', 'Medical Standards']
+  }
+];
 
 export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSelectMaterial }) => {
   const [vm] = useState<StudyMaterialViewModel>(() => viewModel || new StudyMaterialViewModel(new ContentRepository()));
@@ -37,8 +75,8 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSel
     vm.setCategoryFilter(cat);
   };
 
-  const handleToggleComplete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleToggleComplete = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     vm.markAsCompleted(id);
     setRefreshState((prev) => prev + 1);
   };
@@ -48,15 +86,27 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSel
     onSelectMaterial?.(material);
   };
 
+  const handleSelectDay = (dayNum: string) => {
+    const matched = rawMaterials.find(m => m.category.includes(`Day ${dayNum}`) || m.tags?.includes(`Day ${dayNum}`));
+    if (matched) {
+      openMaterial(matched);
+    } else {
+      setSelectedCategory('All');
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300" data-testid="study-material-page">
       {/* Header Banner */}
       <div className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-6 shadow-md shadow-slate-200/50 dark:shadow-lg backdrop-blur-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">
-              <BookOpen className="w-4 h-4" />
-              <span>{strings.nav.study}</span>
+            <div className="flex items-center gap-3 text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">
+              <div className="flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4" />
+                <span>{strings.nav.study}</span>
+              </div>
+              <OfflineBadge />
             </div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{strings.studyMaterial.title}</h1>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">{strings.dashboard.subtitle}</p>
@@ -69,7 +119,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSel
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search guides & notes..."
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500"
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500 min-h-[44px]"
               data-testid="search-materials-input"
             />
           </div>
@@ -83,7 +133,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSel
               <button
                 key={cat}
                 onClick={() => handleCategoryChange(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                   isActive
                     ? 'bg-sky-600 text-white shadow-sm'
                     : 'bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
@@ -97,7 +147,19 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSel
         </div>
       </div>
 
-      {/* Materials List */}
+      {/* Day-Wise SSB Study Hub */}
+      <div>
+        <h2 className="text-lg font-black text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+          <span>5-Day SSB Process Modules</span>
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="ssb-day-modules-grid">
+          {ssbDayModules.map((dayInfo) => (
+            <StudyDayCard key={dayInfo.dayNumber} dayInfo={dayInfo} onSelectDay={handleSelectDay} />
+          ))}
+        </div>
+      </div>
+
+      {/* Study Materials Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredMaterials.map((material) => {
           const isDone = vm.isCompleted(material.id);
@@ -116,7 +178,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSel
                   </span>
                   <button
                     onClick={(e) => handleToggleComplete(material.id, e)}
-                    className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded transition-colors ${
+                    className={`min-h-[44px] flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
                       isDone
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                         : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
@@ -147,36 +209,14 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSel
         })}
       </div>
 
-      {/* Reader Modal */}
-      {selectedMaterial && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" data-testid="material-modal">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50 dark:bg-slate-950/60">
-              <div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/30">
-                  {selectedMaterial.category}
-                </span>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-2">{selectedMaterial.title}</h2>
-              </div>
-              <button
-                onClick={() => setSelectedMaterial(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
-                data-testid="close-material-modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto space-y-4 text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-              <p className="font-semibold text-slate-900 dark:text-white border-l-4 border-sky-500 pl-3 py-1 bg-sky-500/5 rounded-r">
-                {selectedMaterial.summary}
-              </p>
-              <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300">
-                {selectedMaterial.contentMarkdown}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Accessible Study Reader Modal */}
+      <StudyReaderModal
+        material={selectedMaterial}
+        isOpen={Boolean(selectedMaterial)}
+        isCompleted={selectedMaterial ? vm.isCompleted(selectedMaterial.id) : false}
+        onClose={() => setSelectedMaterial(null)}
+        onToggleCompleted={(id) => handleToggleComplete(id)}
+      />
     </div>
   );
 };
