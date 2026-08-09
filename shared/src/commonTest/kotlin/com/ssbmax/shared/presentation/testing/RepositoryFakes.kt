@@ -784,8 +784,12 @@ class FakeBackgroundTaskScheduler : com.ssbmax.shared.platform.worker.Background
 /** Fake for [com.ssbmax.shared.domain.repository.OirResultRepository], used by [com.ssbmax.shared.presentation.oirresult.OirResultViewModel] via `GetOirResultUseCase`. */
 class FakeOirResultRepository : com.ssbmax.shared.domain.repository.OirResultRepository {
     var oirResult: Result<com.ssbmax.shared.domain.model.OIRTestResult?> = Result.success(null)
+    var lastRequestedSubmissionId: String? = null
 
-    override suspend fun getOirResult(submissionId: String) = oirResult
+    override suspend fun getOirResult(submissionId: String): Result<com.ssbmax.shared.domain.model.OIRTestResult?> {
+        lastRequestedSubmissionId = submissionId
+        return oirResult
+    }
 }
 
 /**
