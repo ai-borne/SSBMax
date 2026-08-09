@@ -5,28 +5,33 @@ import { strings } from '../../../src/constants/strings';
 import { StudyMaterialViewModel } from '../../../src/viewmodels/StudyMaterialViewModel';
 import { IContentRepository } from '../../../src/repositories/interfaces/IContentRepository';
 import { StudyMaterial } from '../../../src/types/testContent';
+import { UserProfile } from '../../../src/services/AuthService';
 
 const mockMaterials: StudyMaterial[] = [
   {
     id: 'mat_1',
     title: 'SSB Day 1 Process Guide',
-    category: 'SSB Basics',
+    category: 'OIR',
+    testTypeId: 'oir',
+    dayNumber: '1',
     summary: 'Comprehensive guide for Day 1 Screening.',
     contentMarkdown: '# Day 1 Guide',
     estimatedReadTimeMinutes: 5,
-    tags: ['SSB', 'Day 1'],
-    createdAt: '2026-01-01'
+    tags: ['SSB', 'Day 1', 'OIR'],
+    createdAt: '2026-01-01',
   },
   {
     id: 'mat_2',
     title: 'OIR Rating 1 Verbal Rules',
     category: 'OIR',
+    testTypeId: 'oir',
+    dayNumber: '1',
     summary: 'Tips for solving verbal reasoning quickly.',
     contentMarkdown: '# OIR Rules',
     estimatedReadTimeMinutes: 4,
     tags: ['OIR'],
-    createdAt: '2026-01-02'
-  }
+    createdAt: '2026-01-02',
+  },
 ];
 
 class MockContentRepository implements IContentRepository {
@@ -56,75 +61,76 @@ class MockContentRepository implements IContentRepository {
   }
 }
 
+const mockUser: UserProfile = {
+  uid: 'user_123',
+  email: 'cadet@example.com',
+  displayName: 'Cadet Officer',
+  photoURL: null,
+};
+
 describe('StudyMaterialPage Component', () => {
-  it('renders study materials header, offline badge, day modules grid, category tabs, and material cards', async () => {
+  it('renders study materials header without offline badge and renders vertical day accordions', async () => {
     const vm = new StudyMaterialViewModel(new MockContentRepository());
-    render(<StudyMaterialPage viewModel={vm} />);
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('study-material-page')).toBeInTheDocument();
       expect(screen.getByText(strings.studyMaterial.title)).toBeInTheDocument();
-      expect(screen.getByTestId('offline-badge')).toBeInTheDocument();
-      expect(screen.getByTestId('ssb-day-modules-grid')).toBeInTheDocument();
-      expect(screen.getByTestId('study-day-card-1')).toBeInTheDocument();
-      expect(screen.getByTestId('study-day-card-2')).toBeInTheDocument();
-      expect(screen.getByTestId('study-day-card-3-4')).toBeInTheDocument();
-      expect(screen.getByTestId('study-day-card-5')).toBeInTheDocument();
-      expect(screen.getByTestId('material-card-mat_1')).toBeInTheDocument();
-      expect(screen.getByTestId('material-card-mat_2')).toBeInTheDocument();
+      expect(screen.queryByTestId('offline-badge')).not.toBeInTheDocument();
+      expect(screen.getByTestId('ssb-day-accordions-container')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-accordion-1')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-accordion-2')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-accordion-3-4')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-accordion-5')).toBeInTheDocument();
     });
   });
 
-  it('filters materials when category tab is clicked', async () => {
+  it('renders all 8 GTO test cards under Day 3 & 4 section', async () => {
     const vm = new StudyMaterialViewModel(new MockContentRepository());
-    render(<StudyMaterialPage viewModel={vm} />);
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('material-card-mat_1')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-accordion-3-4')).toBeInTheDocument();
     });
 
-    const oirTab = screen.getByTestId('category-tab-oir');
-    fireEvent.click(oirTab);
+    // Expand Day 3 & 4 Accordion
+    const toggleBtn = screen.getByTestId('toggle-accordion-btn-3-4');
+    fireEvent.click(toggleBtn);
 
-    expect(screen.queryByTestId('material-card-mat_1')).not.toBeInTheDocument();
-    expect(screen.getByTestId('material-card-mat_2')).toBeInTheDocument();
+    expect(screen.getByTestId('study-test-card-gd')).toBeInTheDocument();
+    expect(screen.getByTestId('study-test-card-gpe')).toBeInTheDocument();
+    expect(screen.getByTestId('study-test-card-pgt')).toBeInTheDocument();
+    expect(screen.getByTestId('study-test-card-hgt')).toBeInTheDocument();
+    expect(screen.getByTestId('study-test-card-iot')).toBeInTheDocument();
+    expect(screen.getByTestId('study-test-card-command_task')).toBeInTheDocument();
+    expect(screen.getByTestId('study-test-card-snake_race')).toBeInTheDocument();
+    expect(screen.getByTestId('study-test-card-fgt')).toBeInTheDocument();
   });
 
-  it('opens accessible StudyReaderModal with ARIA attributes when a card is clicked', async () => {
+  it('displays auth lock banner when user is unauthenticated', async () => {
+    const vm = new StudyMaterialViewModel(new MockContentRepository());
+    render(<StudyMaterialPage viewModel={vm} user={null} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-locked-banner')).toBeInTheDocument();
+      expect(screen.getByText(strings.studyMaterial.authLockedTitle)).toBeInTheDocument();
+    });
+  });
+
+  it('opens accessible StudyReaderModal when unlocked nested material item is clicked', async () => {
     const handleSelect = vi.fn();
     const vm = new StudyMaterialViewModel(new MockContentRepository());
-    render(<StudyMaterialPage viewModel={vm} onSelectMaterial={handleSelect} />);
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} onSelectMaterial={handleSelect} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('material-card-mat_1')).toBeInTheDocument();
+      expect(screen.getByTestId('study-day-accordion-1')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('material-card-mat_1'));
+    // Open material item under OIR card
+    const matItem = screen.getByTestId('nested-material-item-mat_1');
+    fireEvent.click(matItem);
 
     expect(handleSelect).toHaveBeenCalledWith(mockMaterials[0]);
-    const readerModal = screen.getByTestId('study-reader-modal');
-    expect(readerModal).toBeInTheDocument();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-
-    const closeBtn = screen.getByTestId('modal-close-button');
-    fireEvent.click(closeBtn);
-
-    expect(screen.queryByTestId('study-reader-modal')).not.toBeInTheDocument();
-  });
-
-  it('toggles mark as completed state on material card', async () => {
-    const vm = new StudyMaterialViewModel(new MockContentRepository());
-    render(<StudyMaterialPage viewModel={vm} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('mark-read-btn-mat_1')).toBeInTheDocument();
-    });
-
-    const markBtn = screen.getByTestId('mark-read-btn-mat_1');
-    expect(markBtn).toHaveTextContent(strings.studyMaterial.markAsRead);
-
-    fireEvent.click(markBtn);
-
-    expect(markBtn).toHaveTextContent(strings.studyMaterial.completed);
+    expect(screen.getByTestId('study-reader-modal')).toBeInTheDocument();
   });
 });

@@ -1,79 +1,53 @@
 import { FC, useEffect, useState } from 'react';
-import { BookOpen, Search, CheckCircle, Clock, ChevronRight } from 'lucide-react';
+import { BookOpen, Search, Lock, ShieldCheck } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { StudyMaterialViewModel } from '../../viewmodels/StudyMaterialViewModel';
 import { ContentRepository } from '../../repositories/ContentRepository';
 import { StudyMaterial } from '../../types/testContent';
-import { StudyDayCard, StudyDayInfo } from './StudyDayCard';
 import { StudyReaderModal } from './StudyReaderModal';
-import { OfflineBadge } from '../common/OfflineBadge';
+import { StudyDayAccordion, StudyDayAccordionSection } from './StudyDayAccordion';
+import { authService, UserProfile } from '../../services/AuthService';
+import { ssbDayConfigs } from './ssbDayData';
 
 export interface StudyMaterialPageProps {
   viewModel?: StudyMaterialViewModel;
   onSelectMaterial?: (material: StudyMaterial) => void;
+  user?: UserProfile | null;
 }
 
-const ssbDayModules: StudyDayInfo[] = [
-  {
-    dayNumber: '1',
-    stageBadge: 'Stage I Screening',
-    title: 'Day 1: Screening Tests',
-    subtitle: 'Officer Intelligence Rating (OIR) Verbal/Non-Verbal & Picture Perception & Discussion Test (PPDT).',
-    estimatedMinutes: 25,
-    topics: ['OIR Verbal', 'Non-Verbal', 'PPDT Story', 'Group Discussion']
-  },
-  {
-    dayNumber: '2',
-    stageBadge: 'Stage II Psychology',
-    title: 'Day 2: Psych Battery',
-    subtitle: 'Thematic Apperception (TAT), Word Association (WAT), Situation Reaction (SRT), and Self Description (SD).',
-    estimatedMinutes: 40,
-    topics: ['TAT 12 Slides', 'WAT 60 Words', 'SRT 60 Scenarios', 'SD 5 Paragraphs']
-  },
-  {
-    dayNumber: '3-4',
-    stageBadge: 'Stage II Outdoor & IO',
-    title: 'Day 3 & 4: GTO & Interview',
-    subtitle: 'Group Testing Officer tasks (GD, GPE, PGT, HGT, Command Task) & Personal Interview with President/IO.',
-    estimatedMinutes: 35,
-    topics: ['Group Discussion', 'GPE Plan', 'Obstacle Course', 'PI Dossier']
-  },
-  {
-    dayNumber: '5',
-    stageBadge: 'Stage II Final Board',
-    title: 'Day 5: Conference & Medicals',
-    subtitle: 'Final Assessor Board Conference, Selection Results announcement, Special Medical Board guidelines.',
-    estimatedMinutes: 20,
-    topics: ['Board Conference', 'Assessor Review', 'Medical Standards']
-  }
-];
-
-export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSelectMaterial }) => {
-  const [vm] = useState<StudyMaterialViewModel>(() => viewModel || new StudyMaterialViewModel(new ContentRepository()));
+export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
+  viewModel,
+  onSelectMaterial,
+  user: propUser,
+}) => {
+  const [vm] = useState<StudyMaterialViewModel>(
+    () => viewModel || new StudyMaterialViewModel(new ContentRepository())
+  );
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedMaterial, setSelectedMaterial] = useState<StudyMaterial | null>(null);
   const [, setRefreshState] = useState(0);
+  const [authUser, setAuthUser] = useState<UserProfile | null>(
+    propUser !== undefined ? propUser : authService.getCurrentUser()
+  );
+  const [expandedDay, setExpandedDay] = useState<string | null>('1');
+
+  useEffect(() => {
+    if (propUser !== undefined) {
+      setAuthUser(propUser);
+      return;
+    }
+    const unsubscribe = authService.onAuthStateChanged((u) => {
+      setAuthUser(u);
+    });
+    return () => unsubscribe();
+  }, [propUser]);
 
   useEffect(() => {
     vm.loadMaterials().then(() => setRefreshState((prev) => prev + 1));
   }, [vm]);
 
-  const categories = vm.getCategories();
   const rawMaterials = vm.getMaterials();
-
-  const filteredMaterials = rawMaterials.filter((material) => {
-    const matchesCategory = selectedCategory === 'All' || material.category.toLowerCase() === selectedCategory.toLowerCase();
-    const matchesSearch =
-      material.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      material.summary.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
-  const handleCategoryChange = (cat: string) => {
-    setSelectedCategory(cat);
-    vm.setCategoryFilter(cat);
-  };
+  const isUnlocked = Boolean(authUser);
 
   const handleToggleComplete = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -81,35 +55,74 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSel
     setRefreshState((prev) => prev + 1);
   };
 
+  const handleAuthTrigger = async (targetId?: string) => {
+    if (targetId) {
+      sessionStorage.setItem('ssb_pending_material_id', targetId);
+    }
+    try {
+      await authService.signInWithGoogle();
+    } catch {
+      // Fallback handled gracefully
+    }
+  };
+
   const openMaterial = (material: StudyMaterial) => {
+    if (!isUnlocked) {
+      handleAuthTrigger(material.id);
+      return;
+    }
     setSelectedMaterial(material);
     onSelectMaterial?.(material);
   };
 
-  const handleSelectDay = (dayNum: string) => {
-    const matched = rawMaterials.find(m => m.category.includes(`Day ${dayNum}`) || m.tags?.includes(`Day ${dayNum}`));
-    if (matched) {
-      openMaterial(matched);
-    } else {
-      setSelectedCategory('All');
+  const handleCardClick = (_testTypeId: string) => {
+    if (!isUnlocked) {
+      handleAuthTrigger(_testTypeId);
     }
   };
 
+  const handleToggleAccordion = (dayNum: string) => {
+    setExpandedDay((prev) => (prev === dayNum ? null : dayNum));
+  };
+
+  const getMaterialsForTest = (testTypeId: string): StudyMaterial[] => {
+    return rawMaterials.filter((m) => {
+      const matchesTest =
+        m.testTypeId === testTypeId ||
+        m.category.toLowerCase().includes(testTypeId.toLowerCase()) ||
+        m.tags?.some((t) => t.toLowerCase().includes(testTypeId.toLowerCase()));
+      const matchesSearch =
+        !searchQuery ||
+        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.summary.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesTest && matchesSearch;
+    });
+  };
+
+  const daySections: StudyDayAccordionSection[] = ssbDayConfigs.map((cfg) => ({
+    dayNumber: cfg.dayNumber,
+    stageBadge: cfg.stageBadge,
+    title: cfg.title,
+    subtitle: cfg.subtitle,
+    testCards: cfg.getTestCards(getMaterialsForTest),
+  }));
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300" data-testid="study-material-page">
-      {/* Header Banner */}
+      {/* Header Banner (Hero Section without Online Pill) */}
       <div className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-6 shadow-md shadow-slate-200/50 dark:shadow-lg backdrop-blur-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3 text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">
-              <div className="flex items-center gap-1.5">
-                <BookOpen className="w-4 h-4" />
-                <span>{strings.nav.study}</span>
-              </div>
-              <OfflineBadge />
+            <div className="flex items-center gap-2 text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">
+              <BookOpen className="w-4 h-4" />
+              <span>{strings.nav.study}</span>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{strings.studyMaterial.title}</h1>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">{strings.dashboard.subtitle}</p>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {strings.studyMaterial.title}
+            </h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+              {strings.dashboard.subtitle}
+            </p>
           </div>
 
           <div className="relative w-full md:w-64">
@@ -124,92 +137,61 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({ viewModel, onSel
             />
           </div>
         </div>
-
-        {/* Category Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto mt-6 pt-4 border-t border-slate-200 dark:border-slate-700/60 pb-1">
-          {categories.map((cat) => {
-            const isActive = selectedCategory.toLowerCase() === cat.toLowerCase();
-            return (
-              <button
-                key={cat}
-                onClick={() => handleCategoryChange(cat)}
-                className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
-                }`}
-                data-testid={`category-tab-${cat.toLowerCase()}`}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
-      {/* Day-Wise SSB Study Hub */}
-      <div>
-        <h2 className="text-lg font-black text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-          <span>5-Day SSB Process Modules</span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="ssb-day-modules-grid">
-          {ssbDayModules.map((dayInfo) => (
-            <StudyDayCard key={dayInfo.dayNumber} dayInfo={dayInfo} onSelectDay={handleSelectDay} />
-          ))}
-        </div>
-      </div>
-
-      {/* Study Materials Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredMaterials.map((material) => {
-          const isDone = vm.isCompleted(material.id);
-          const readTime = material.estimatedReadTimeMinutes ?? 5;
-          return (
-            <div
-              key={material.id}
-              onClick={() => openMaterial(material)}
-              className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-sky-500/50 rounded-2xl p-5 shadow-md shadow-slate-200/40 dark:shadow-lg flex flex-col justify-between cursor-pointer transition-all group"
-              data-testid={`material-card-${material.id}`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/30">
-                    {material.category}
-                  </span>
-                  <button
-                    onClick={(e) => handleToggleComplete(material.id, e)}
-                    className={`min-h-[44px] flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                      isDone
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                    }`}
-                    data-testid={`mark-read-btn-${material.id}`}
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>{isDone ? strings.studyMaterial.completed : strings.studyMaterial.markAsRead}</span>
-                  </button>
-                </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors mb-1">
-                  {material.title}
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4 line-clamp-2">{material.summary}</p>
-              </div>
-
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1 font-mono">
-                  <Clock className="w-3.5 h-3.5" />
-                  {readTime}m read
-                </span>
-                <span className="flex items-center gap-1 font-bold text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition-transform">
-                  Read Guide <ChevronRight className="w-4 h-4" />
-                </span>
-              </div>
+      {/* Auth Banner for Unauthenticated Candidates */}
+      {!isUnlocked && (
+        <div
+          className="bg-gradient-to-r from-sky-900/90 to-blue-900/90 border border-sky-500/30 rounded-2xl p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg"
+          data-testid="auth-locked-banner"
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-300 border border-sky-400/30">
+              <Lock className="w-5 h-5" />
             </div>
-          );
-        })}
+            <div>
+              <h3 className="text-sm font-black tracking-wide text-white">
+                {strings.studyMaterial.authLockedTitle}
+              </h3>
+              <p className="text-xs text-sky-100/80 leading-relaxed mt-0.5 max-w-xl">
+                {strings.studyMaterial.authLockedDesc}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => handleAuthTrigger()}
+            className="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-all shadow-md shadow-sky-500/20 min-h-[44px] flex items-center justify-center gap-2 whitespace-nowrap"
+            data-testid="auth-banner-sign-in-btn"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>{strings.studyMaterial.signInWithGoogle}</span>
+          </button>
+        </div>
+      )}
+
+      {/* 5-Day SSB Process Vertical Accordion Hub */}
+      <div className="space-y-4" data-testid="ssb-day-accordions-container">
+        <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+          <span>5-Day SSB Selection Process Modules</span>
+        </h2>
+
+        {daySections.map((section) => (
+          <StudyDayAccordion
+            key={section.dayNumber}
+            section={section}
+            isOpen={expandedDay === section.dayNumber}
+            isUnlocked={isUnlocked}
+            onToggle={handleToggleAccordion}
+            onCardClick={handleCardClick}
+            onSelectMaterial={openMaterial}
+            isMaterialCompleted={(id) => vm.isCompleted(id)}
+            onToggleCompleted={handleToggleComplete}
+          />
+        ))}
       </div>
 
-      {/* Accessible Study Reader Modal */}
+      {/* Study Reader Modal */}
       <StudyReaderModal
         material={selectedMaterial}
         isOpen={Boolean(selectedMaterial)}

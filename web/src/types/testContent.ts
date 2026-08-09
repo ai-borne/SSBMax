@@ -75,6 +75,8 @@ export interface StudyMaterial {
   estimatedReadTimeMinutes: number;
   tags: string[];
   createdAt: string;
+  dayNumber?: '1' | '2' | '3-4' | '5';
+  testTypeId?: 'oir' | 'ppdt' | 'piq' | 'tat' | 'wat' | 'srt' | 'sd' | 'gd' | 'gpe' | 'pgt' | 'hgt' | 'iot' | 'command_task' | 'snake_race' | 'fgt' | 'interview' | 'conference';
 }
 
 export interface BatchDocument<T> {
