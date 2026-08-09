@@ -97,4 +97,23 @@ describe('TestDayAccordion Component', () => {
     const toggleBtn = screen.getByTestId('accordion-toggle-3-4');
     expect(toggleBtn.className).toContain('min-h-[56px]');
   });
+
+  it('should apply Level 1 elevation to accordion container and Level 2 elevation to simulator cards', () => {
+    render(
+      <TestDayAccordion
+        dayOverview={day34Overview}
+        userTier="officer"
+        onStartTest={vi.fn()}
+      />
+    );
+
+    const accordion = screen.getByTestId('test-day-accordion-3-4');
+    expect(accordion.className).toContain('dark:bg-slate-900');
+    expect(accordion.className).toContain('dark:border-slate-800');
+
+    const card = screen.getByTestId('test-simulator-card-gd');
+    expect(card.className).toContain('dark:bg-slate-800/90');
+    expect(card.className).toContain('dark:border-slate-700/80');
+    expect(card.className).toContain('dark:shadow-slate-950/60');
+  });
 });

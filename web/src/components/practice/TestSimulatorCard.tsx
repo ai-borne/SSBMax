@@ -54,12 +54,12 @@ export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
   return (
     <div
       data-testid={`test-simulator-card-${test.id}`}
-      className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+      className="bg-white dark:bg-slate-800/90 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 rounded-2xl p-5 shadow-sm hover:shadow-md dark:shadow-xl dark:shadow-slate-950/60 transition-all duration-200 flex flex-col justify-between"
     >
       <div>
         {/* Header & Badges */}
         <div className="flex items-center justify-between gap-2 mb-3">
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50">
             {test.shortCode}
           </span>
           <span
@@ -83,7 +83,7 @@ export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
             {test.olqsEvaluated.slice(0, 3).map((olq, idx) => (
               <span
                 key={idx}
-                className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400"
+                className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-600/40"
               >
                 {olq}
               </span>
@@ -93,7 +93,7 @@ export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
       </div>
 
       {/* Footer & Action Button */}
-      <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+      <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-2">
         <span className="flex items-center gap-1 text-[11px] font-mono text-slate-500 dark:text-slate-400">
           <Clock className="w-3.5 h-3.5" />
           {test.timeLimit}

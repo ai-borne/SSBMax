@@ -37,4 +37,15 @@ describe('OLQFactorRadarSVG Component', () => {
 
     expect(screen.getByText('90%')).toBeInTheDocument();
   });
+
+  it('applies Level 2 elevation styling to container and Level 3 micro badge styling to view toggle', () => {
+    render(<OLQFactorRadarSVG />);
+
+    const container = screen.getByTestId('olq-radar-svg');
+    expect(container.className).toContain('dark:bg-slate-800/90');
+    expect(container.className).toContain('dark:border-slate-700/80');
+
+    const toggleBtn = screen.getByTestId('radar-view-toggle');
+    expect(toggleBtn.className).toContain('dark:bg-slate-700/60');
+  });
 });

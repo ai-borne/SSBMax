@@ -118,8 +118,8 @@ export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, cla
   const polygonPoints = getPoints(valuesToRender, cx, cy, r);
 
   return (
-    <div className={`space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm ${className}`} data-testid="olq-radar-svg">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+    <div className={`space-y-4 bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm dark:shadow-xl dark:shadow-slate-950/60 ${className}`} data-testid="olq-radar-svg">
+      <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5 text-sky-600 dark:text-sky-400" />
           <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
@@ -128,7 +128,7 @@ export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, cla
         </div>
         <button
           onClick={() => setViewMode(viewMode === '4factor' ? '15olq' : '4factor')}
-          className="min-h-[44px] min-w-[44px] px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          className="min-h-[44px] min-w-[44px] px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           data-testid="radar-view-toggle"
         >
           {viewMode === '4factor' ? <Layers className="w-4 h-4 text-sky-500" /> : <BarChart2 className="w-4 h-4 text-sky-500" />}
@@ -147,7 +147,7 @@ export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, cla
               cy={cy}
               r={r * level}
               fill="none"
-              className="stroke-slate-200 dark:stroke-slate-800"
+              className="stroke-slate-200 dark:stroke-slate-700/80"
               strokeWidth="1"
               strokeDasharray={level < 1.0 ? '3 3' : undefined}
             />
@@ -165,7 +165,7 @@ export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, cla
                 y1={cy}
                 x2={x2}
                 y2={y2}
-                className="stroke-slate-200 dark:stroke-slate-800"
+                className="stroke-slate-200 dark:stroke-slate-700/80"
                 strokeWidth="1"
               />
             );
@@ -202,9 +202,9 @@ export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, cla
       </div>
 
       {/* 4 Factor Summary Legend */}
-      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 dark:border-slate-700/60">
         {factorGroups.map((g, idx) => (
-          <div key={g.code} className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
+          <div key={g.code} className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
             <span className="font-semibold text-slate-700 dark:text-slate-300">{g.name.split(':')[1] || g.name}</span>
             <span className="font-mono font-bold text-sky-600 dark:text-sky-400">{factorAverages[idx]}%</span>
           </div>
