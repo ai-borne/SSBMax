@@ -247,20 +247,9 @@ CheckTestEligibilityUseCase(TestType.PPDT, userId)
 7. `DifficultyProgressionRepository.recordPerformance(...)` — local difficulty-adaptation bookkeeping, Android/data concern kept in the ViewModel rather than the use case
 8. UiState updates: `isSubmitted = true`, `phase = SUBMITTED` → `PPDTTestScreen`'s `LaunchedEffect(uiState.isSubmitted)` navigates to the result screen
 
-On failure (any of steps 1–5 throws), the use case's `Result.failure` is surfaced as `TestError.SUBMIT_FAILED` and `completeTestSession` — if step 5 itself is the one that never ran — leaves the durable session `ACTIVE` so the user can retry rather than orphaning it. **This description is only complete for a failure in step 1 or 2.** See the callout immediately below for what "failure" actually means once step 3 has run.
+On failure, `Result.failure` surfaces as `TestError.SUBMIT_FAILED`.
 
-### ⚠️ Fault isolation across steps 3–5 (read this before debugging any "submission failed" report)
-
-Steps 3–5 run inside `SubmitPPDTTestUseCase`'s single `runCatching { ... }` block — not independently, and not with any per-step recovery. If step 3 (the `submissions/{id}` write) **succeeds** but step 4 or step 5 then throws, the use case still returns `Result.failure` as a whole. Concretely, when that happens:
-
-- The submission is **durably in Firestore already** — the candidate's story is not lost.
-- The ViewModel never reaches step 6 (it's gated on the use case's overall success), so `SubmissionAnalysisTrigger.trigger(...)` is never called. The submission sits at `analysisStatus: PENDING_ANALYSIS` forever, with nothing left to advance it — the "AI is analyzing your story" state on the result screen never resolves, because the result screen is never reached at all.
-- The durable `test_sessions` doc never reaches `SUBMITTED` (step 5 didn't run), so it stays `ACTIVE` — which is itself the precondition for the Section 17 #15/#16 incident class if the candidate then exits and later retries.
-- The user sees `TestError.SUBMIT_FAILED` ("Failed to submit test. Please try again") for a submission that, from Firestore's point of view, already exists and is fully formed.
-
-**This is not hypothetical — it happened on 2026-08-09** (Section 17 #17): a `firestore.rules` bug in step 4's target collection denied every write there for two days, making every PPDT submission in that window look like a client-visible failure while silently succeeding at the data layer.
-
-**Diagnostic implication:** if a user reports "submission failed," do not assume the `submissions/{id}` write is where the bug is — check whether that document actually exists in Firestore *before* investigating step 3's code. Section 25 is the concrete method for telling these situations apart.
+**⚠️ Steps 3–5 share one `runCatching` with no per-step recovery.** If step 3 (the `submissions/{id}` write) succeeds but step 4 or 5 then throws, the whole use case still reports failure — even though the submission is already durably in Firestore. Consequences: step 6 never runs, so analysis is never triggered and the submission sits at `PENDING_ANALYSIS` forever; the session (step 5 didn't run) stays `ACTIVE`; the user sees "Failed to submit" for a submission that, server-side, already succeeded. **Do not assume a "submission failed" report means the `submissions/{id}` write is broken** — check whether that document exists before debugging step 3. Real incident: Section 17 #17. Diagnostic method: Section 25.
 
 ---
 
@@ -430,19 +419,14 @@ test_content/ppdt/image_batches/{batchId}
 
 ### `test_sessions/{userId_testId}`
 
-Durable session doc, shared across all test types (not PPDT-specific — every `Submit*TestUseCase`/`Load*TestUseCase` in `shared` uses the same `TestSessionRepository`/`GitLiveTestSessionRepository`). Doc id is deterministic — `{userId}_{testId}` (e.g. `abc123_ppdt_standard`) — the client reuses the same doc on every retake rather than minting a new one, so `createTestSession()` is a `set()` (full-document replace) over whatever doc is already there, not always an insert.
+Durable session doc, shared across all test types (same `TestSessionRepository` for every `Submit*`/`Load*TestUseCase`). Doc id is deterministic (`{userId}_{testId}`) and reused across retakes, so `createTestSession()` is a `set()` (full-document replace), not always an insert.
 
 ```
-id: String                    ← same value as the doc id
-userId: String
-testId: String
-testType: String               ← "PPDT" | "OIR" | "TAT" | ...
-startTime: Long
-expiresAt: Long                 ← startTime + 2 hours; informational (countdown UI) only —
-                                   NOT a security boundary, see Section 24
+id, userId, testId, testType: String
+startTime, expiresAt: Long        ← expiresAt = startTime + 2h; informational only, not a security boundary (Section 24)
 isActive: Boolean
-status: String                  ← "ACTIVE" | "SUBMITTED" | "ABANDONED" | "EXPIRED"
-endTime: Long?                  ← set only by a terminal transition (completeTestSession/abandonTestSession)
+status: String                    ← "ACTIVE" | "SUBMITTED" | "ABANDONED" | "EXPIRED"
+endTime: Long?                    ← set only by a terminal transition
 ```
 
 **PPDT's lifecycle:**
@@ -452,23 +436,17 @@ endTime: Long?                  ← set only by a terminal transition (completeT
                     │
                     ▼
                 ┌────────┐
-     ┌─────────►│ ACTIVE │◄────────────────┐
-     │          └───┬────┘                  │
-     │              │                       │ owner restarts over their own
-clean submit         │ exit (X / back)        │ session — retake, OR a session
-(completeTest        │ → pauseTest()           │ left stuck ACTIVE by a failed
-Session, step 5       │ → abandonTestSession     │ load/submit reclaimed by the
-of Section 8)         ▼                       │ next createTestSession() set()
+     ┌─────────►│ ACTIVE │◄────────────────┐  owner restarts over their own
+     │          └───┬────┘                  │  session (retake, or reclaiming
+clean submit         │ exit → pauseTest()      │  a session stuck ACTIVE by a
+(step 5, Section 8)   │ → abandonTestSession     │  failed load/submit)
+                      ▼                       │
               ┌───────────┐   ┌───────────┐    │
               │ SUBMITTED │   │ ABANDONED │────┘
               └───────────┘   └───────────┘
 ```
 
-Every transition — including `ACTIVE → ACTIVE`, a retake landing on a still-live session — is a Firestore write gated by `firestore.rules`' `test_sessions` match block. **This gate is the single most-incident-prone part of the whole PPDT pipeline; see Section 24 for the rule itself and Section 17 #15/#16 for the two production incidents it has already caused.** PPDT specifically:
-
-- `LoadPPDTTestUseCase` creates it (`ACTIVE`) before fetching the question; if the question fetch then fails, the use case now abandons the just-created session rather than leaving it orphaned `ACTIVE` (fixed 2026-08-09, Section 17 #16's cleanup).
-- `SubmitPPDTTestUseCase` completes it (`SUBMITTED`) as the **last** of its three Firestore writes — see Section 8's fault-isolation callout for what happens when an earlier step in that same use case throws first.
-- `PPDTTestViewModel.pauseTest()` abandons it (`ABANDONED`) on exit (X button or hardware/predictive back — both routed through the same exit dialog, Section 3).
+Every transition here — including `ACTIVE → ACTIVE` — is gated by `firestore.rules`' `test_sessions` rule, the single most-incident-prone part of this pipeline. Rule + reasoning: Section 24. Incidents: Section 17 #15/#16.
 
 ---
 
@@ -635,11 +613,11 @@ _Update this section as bugs are found and improvements are made._
 | 12 | In-memory gender filter (Room era) | Historical: the Room cache filtered by gender in-memory after fetching. `GitLivePPDTImageCacheManager` filters at the SQL layer natively — this class of bug can't recur post-migration. | ✅ Superseded by KMP migration |
 | 13 | Cold-start Firestore version check (Room era) | Historical: Room's cache checked Firestore's version on every warm launch. `GitLivePPDTImageCacheManager`'s `STALENESS_TTL_HOURS = 24` gate (Section 6) is the direct successor. | ✅ Superseded by KMP migration |
 | 14 | Image whitespace bands in IMAGE_VIEWING phase | `aspectRatio(4f / 3f)` + `ContentScale.Crop` carried into the KMP port (Section 6). | ✅ Fixed, carried into KMP port |
-| 15 | **Stuck-ACTIVE `test_sessions` doc (2026-08-08)** | Root cause: `SubmitPPDTTestUseCase` never called `completeTestSession()` on a clean submit, and `PPDTTestViewModel` had no `pauseTest()` at all — exiting via the X button or hardware/predictive back left the durable `test_sessions` doc `ACTIVE` forever (up to its 2-hour `expiresAt`), which combined with a since-tightened `firestore.rules` update rule to permanently block retakes ("Cloud connection required" incident). **Fix (commit `6a9a7c1c`):** `SubmitPPDTTestUseCase` now calls `completeTestSession(session.sessionId)` after a successful submit; `PPDTTestViewModel.pauseTest()` now calls `abandonTestSession(session.sessionId)`; `PPDTTestScreen` gained a `BackHandler` so hardware/predictive back routes through the same exit dialog as the X button instead of bypassing `pauseTest()` entirely; `firestore.rules`' `test_sessions` update rule now also allows a terminal session starting a fresh attempt and reclaiming an ACTIVE session past its `expiresAt`. Same-shaped bug and fix landed for TAT/WAT/SRT/SDT one commit later (`c58f4793`, 2026-08-08) — see those tests' `pauseTest`/`completeTestSession` coverage. A `firestore-tests/` rules-unit-testing CI job now guards the `test_sessions` update rule itself against a repeat of this class of regression. **Superseded by #16 below — the rule this fix shipped was itself broken again one day later.** | ⚠️ Superseded by #16 |
-| 16 | **`test_sessions` retake regression (2026-08-08 → 2026-08-09)** | A follow-up commit (`4694e2d2`) investigating a fresh "Cloud connection required" report theorized that `request.time.toMillis()` comparisons were silently broken in this ruleset, and — "fixing" that non-issue — deleted the update rule's only reclaim branch entirely, so `ACTIVE → ACTIVE` matched no legal transition at all. Any session doc stuck `ACTIVE` (from #15's remaining gap, or simply an in-progress session) became a **permanent** `PERMISSION_DENIED` lockout for that test; confirmed hitting both OIR and PPDT on-device ("Cloud connection required" / "Could not create a secure test session"). Emulator bisection (Section 25's method) disproved the stated root cause: `request.time.toMillis()` comparisons work correctly in this ruleset; the deleted branch was the actual bug. **Fix (commit `3a602506`):** restored the "owner restarts over their own session" transition — deliberately allowing `ACTIVE → ACTIVE`, not just terminal/expired → `ACTIVE`, because the owner already holds that session and gains no new access by restarting it (see Section 24's rule commentary for the full reasoning). Also added session-leak cleanup to `LoadPPDTTestUseCase`/`LoadTATTestUseCase` and the WAT/SRT/SDT ViewModels — a session created just before a question-fetch failure was previously left orphaned `ACTIVE` in all of these (only OIR already cleaned up after itself). | ✅ Fixed |
-| 17 | **Subscription usage doc-id mismatch — silent submission-flow failure (2026-08-09)** | Commit `d6abd123` ("harden idempotent submission and quota integrity") added `request.resource.data.month == document` to the `create` rule for `users/{userId}/subscription/{document}`. `document` is the Firestore doc id (`usage_2026-08`); `month` is the bare field value (`2026-08`) that `GitLiveSubscriptionRepository.getMonthlyUsage` reads back — the two can never be equal, so every user's **first monthly usage write, for every test type** (all of OIR/PPDT/TAT/WAT/SRT/SD/GTO/Interview share `TestUsageRecorder`), was permanently denied from the moment the commit shipped. Because `SubmitPPDTTestUseCase` calls `recordTestUsage()` *after* the submission write inside one `runCatching` (Section 8's fault-isolation callout), this surfaced as "Failed to submit test" for submissions that had, in fact, already persisted — and silently skipped the OLQ analysis trigger (`analysisTrigger.trigger()` only runs in the ViewModel's success branch). Confirmed via Firestore: usage docs existed for every month `2025-11` through `2026-06`; none for `2026-07`/`2026-08`. **Fix (commit `37df6f41`):** reconstruct the expected doc id from the field instead of comparing unlike values (`document == 'usage_' + request.resource.data.month`). See Section 24. | ✅ Fixed |
-| 18 | **Rules-unit test cross-file interference** | Adding `subscription_usage.rules.test.mjs` alongside `test_sessions.rules.test.mjs` exposed that Node's test runner parallelizes across files by default; both files' `clearFirestore()` calls raced against the one shared emulator instance mid-run, producing flaky failures unrelated to either rule set. **Fix:** `firestore-tests/package.json`'s `test` script now runs `node --test --test-concurrency=1 *.rules.test.mjs`. | ✅ Fixed |
-| 19 | **Regression tripwire added for `firestore-tests/`** | #16 and #17 both shipped because a rules change looked like a safe tightening and nothing forced anyone to notice a legitimate transition had silently broken. `firestore-tests/REQUIRED_TESTS.txt` + `verify-required-tests.mjs` (wired as npm's `pretest` hook) doesn't prevent edits to the test files — it fails CI loudly, naming the specific missing test and pointing at why it existed, if a pinned regression test is deleted or renamed without a matching edit to the manifest. Verified by deliberately deleting a pinned test and confirming the tripwire caught it. | ✅ Added (process improvement) |
+| 15 | **Stuck-ACTIVE `test_sessions` doc (2026-08-08)** | `SubmitPPDTTestUseCase` never completed the session on submit; no `pauseTest()`/`BackHandler` existed, so exiting left it `ACTIVE` forever, and the rules blocked retaking it ("Cloud connection required"). Fixed in `6a9a7c1c` (session completion/abandonment wiring); same fix landed for TAT/WAT/SRT/SDT in `c58f4793`. Full detail: Section 24. | ⚠️ Superseded by #16 |
+| 16 | **`test_sessions` retake regression (2026-08-08→09)** | `4694e2d2` "fixed" a wrongly-diagnosed root cause and deleted the rule's only reclaim branch, permanently blocking retakes on any stuck-`ACTIVE` session (hit both OIR and PPDT). Fixed in `3a602506`; also added session-leak cleanup to PPDT/TAT/WAT/SRT/SDT load paths. Full detail + rule reasoning: Section 24. | ✅ Fixed |
+| 17 | **Subscription usage doc-id mismatch (2026-08-09)** | `d6abd123` compared a `month` field to a differently-formatted doc id, permanently denying every user's first monthly usage write for every test type — surfaced as "Failed to submit test" on submissions that had already persisted (Section 8's fault-isolation note), and silently skipped OLQ analysis triggering. Fixed in `37df6f41`. Full detail: Section 24. | ✅ Fixed |
+| 18 | **Rules-unit test cross-file interference** | Node's test runner parallelizes `*.rules.test.mjs` files by default; concurrent `clearFirestore()` calls against the shared emulator produced flaky failures. Fixed via `--test-concurrency=1` in `firestore-tests/package.json`. | ✅ Fixed |
+| 19 | **Regression tripwire for `firestore-tests/`** | #16 and #17 both shipped invisibly because nothing forced review when coverage weakened. `REQUIRED_TESTS.txt` + `verify-required-tests.mjs` (npm's `pretest` hook) fails CI if a pinned test is deleted/renamed without a matching manifest edit. | ✅ Added |
 
 ---
 
@@ -757,7 +735,7 @@ Failure to bump the version = app continues serving the old images regardless of
      └──► TestSessionRepository.abandonTestSession(session.sessionId)  ← session doc → ABANDONED
 ```
 
-**Every arrow above that writes to `test_sessions` or `users/{userId}/subscription/{month}` is gated by `firestore.rules` — see Section 24 for those rules and Section 17 #15–#17 for the three production incidents they've already caused.** If a step in this diagram is failing and the Kotlin code at that step looks correct, suspect the rule before the code (Section 25).
+Writes to `test_sessions` and `users/{userId}/subscription/{month}` above are gated by `firestore.rules` (Section 24) — if a step here fails and the Kotlin looks correct, suspect the rule first (Section 25).
 
 ---
 
@@ -814,15 +792,13 @@ All gaps listed below were confirmed by code analysis before the improvement pha
 | Bug | Stuck-ACTIVE `test_sessions` doc — `SubmitPPDTTestUseCase` never completed the session, `PPDTTestViewModel` had no `pauseTest()`, no `BackHandler` on the screen (Section 17, #15) | `6a9a7c1c` | ⚠️ Superseded by next row |
 | CI | `firestore-tests/` rules-unit-testing suite added, guarding `test_sessions`' update rule against a repeat regression | `c58f4793` | ✅ Done |
 
-**Firestore rules incident pass (2026-08-09)** — see Section 17 #16–#19 and Section 24 for full detail:
+**Firestore rules incident pass (2026-08-09)** — full detail in Section 17 #16–#19 and Section 24:
 
 | Fix | What | Commit | Status |
 |-----|------|--------|--------|
-| Bug | `test_sessions` retake regression — a "fix" for a theorized (and disproven) `request.time.toMillis()` bug deleted the update rule's reclaim branch, permanently blocking retakes on any stuck-`ACTIVE` session (Section 17 #16) | `4694e2d2` (broke it) → `3a602506` (fixed it) | ✅ Fixed |
-| Bug | Session-leak cleanup added to `LoadPPDTTestUseCase`/`LoadTATTestUseCase`/WAT/SRT/SDT ViewModels — a session created just before a question-fetch failure was left orphaned `ACTIVE` (Section 17 #16) | `3a602506` | ✅ Fixed |
-| Bug | Subscription usage doc-id mismatch (`month == document`) silently denied every user's first monthly usage write, for every test type, making every test submission report "failed" even when it had already persisted (Section 17 #17) | `d6abd123` (broke it) → `37df6f41` (fixed it) | ✅ Fixed |
-| Process | `firestore-tests/` cross-file test interference fixed (`--test-concurrency=1`); `subscription_usage.rules.test.mjs` added; `REQUIRED_TESTS.txt` + `verify-required-tests.mjs` tripwire added as npm's `pretest` hook (Section 17 #18–#19) | `37df6f41` | ✅ Done |
-| Docs | This document: added Section 24 (Firestore Security Rules Governing PPDT) and Section 25 (Debugging Playbook) | — | ✅ Done |
+| Bug | `test_sessions` retake regression + session-leak cleanup (PPDT/TAT/WAT/SRT/SDT) | `4694e2d2` → `3a602506` | ✅ Fixed |
+| Bug | Subscription usage doc-id mismatch, blocked all test submissions' usage recording | `d6abd123` → `37df6f41` | ✅ Fixed |
+| Process | Rules-test CI fixes + tripwire (`REQUIRED_TESTS.txt`) + Sections 24/25 added to this doc | `37df6f41` | ✅ Done |
 
 ---
 
@@ -915,9 +891,9 @@ convert input.jpg -colorspace Gray -noise 4 output_tat.jpg
 
 ## 24. Firestore Security Rules Governing PPDT
 
-**Why this section exists:** every incident in Section 17 #15–#17 originated in `firestore.rules`, not in `shared` or `data-firebase` Kotlin. This is the single highest-impact bug class for PPDT (and every other durable-session test type) because of a specific failure shape: a rule change that *adds* a restriction fails **silently and permanently** for every future request that hits it. There's no crash and no exception anywhere in the write path's own code to bisect — the client just gets `PERMISSION_DENIED` from Firestore's SDK, with a stack trace that bottoms out at `io.grpc.Status.asException` and says nothing about *which clause* of the rule denied it. If you're debugging a PPDT (or any test-type) failure and none of the Kotlin call sites look wrong, suspect this file next — Section 25 is the diagnostic method.
+Every incident in Section 17 #15–#17 originated here, not in `shared`/`data-firebase` Kotlin: a rule that *adds* a restriction fails silently and permanently for every request that hits it, with no exception anywhere in the write path's own code — just `PERMISSION_DENIED` from the SDK, with no indication of which clause denied it. If a PPDT failure doesn't trace to any Kotlin call site, suspect this file next (Section 25 is the diagnostic method).
 
-Full ruleset: `/firestore.rules` (repo root). Rules-unit tests: `/firestore-tests/` (Section 15).
+Full ruleset: `/firestore.rules`. Rules-unit tests: `/firestore-tests/` (Section 15).
 
 ### `test_sessions/{sessionId}` — gates session lifecycle AND question access
 
@@ -952,17 +928,17 @@ match /test_sessions/{sessionId} {
 }
 ```
 
-**Why transition 2 allows `ACTIVE → ACTIVE`, not just terminal/expired → `ACTIVE`:** this is the crux of Section 17 #15 and #16. A candidate's session doc can end up stuck `ACTIVE` well before its 2-hour `expiresAt` any time `abandonTestSession`/`completeTestSession` doesn't run on an exit path — process death, a question-load failure after session creation, an app crash. Requiring the prior session to be terminal or expired before allowing a restart sounds like a reasonable guard, but it buys **no actual security**: the owner already holds that `ACTIVE` session and everything it grants. It only guarantees that the first time the app fails to reach a terminal-state write, the owner is locked out of retaking that test for up to two hours behind a misleading "Cloud connection required" error. **Do not reintroduce a terminal/expired-only guard here** without re-reading Section 17 #15 and #16 in full — this exact mistake has already shipped twice.
+**Why transition 2 allows `ACTIVE → ACTIVE`, not just terminal/expired → `ACTIVE`** (the crux of #15/#16): a session doc can get stuck `ACTIVE` well before its 2-hour `expiresAt` any time an exit path fails to write a terminal state — process death, a question-load failure, a crash. Requiring the prior session to be terminal/expired before allowing a restart buys no security (the owner already holds that session and everything it grants) — it only guarantees the owner gets locked out for up to two hours the first time a terminal write fails. **Don't reintroduce a terminal/expired-only guard here** — it has already shipped twice (#15, #16).
 
-**Why there's no `startTime`/`expiresAt` vs. `request.time.toMillis()` comparison:** tried, removed, and reasoned about twice (the original ruleset, then again during #16's investigation). `startTime`/`expiresAt` are client-clock values the app sets for its own countdown UI — a device clock running even slightly ahead of the server's would spuriously deny an otherwise-legitimate write. They were never the actual abuse guard; ownership + `userId`/`testId`/`testType` immutability + the status-transition whitelist above are what actually prevent misuse (a client can't grant itself someone else's session, can't switch a session's test type mid-flight, and can't invent a transition shape outside the two enumerated above).
+**Why there's no `startTime`/`expiresAt` vs. `request.time.toMillis()` comparison:** they're client-clock values for the countdown UI, not a security boundary — a device clock running ahead of the server's would spuriously deny a legitimate write. Ownership + `userId`/`testId`/`testType` immutability + the status whitelist are the actual guard.
 
-**Downstream dependency (not PPDT-specific, included because it's the same collection/rule):** `test_questions/{testId}`'s read rule requires an `ACTIVE`, non-expired `test_sessions/{userId}_{testId}` doc to exist. PPDT itself doesn't read from `test_questions` (its images come from `test_content/ppdt/...`, Section 6) — this dependency matters for OIR, which shares this exact collection and rule.
+**Shared with OIR:** `test_questions/{testId}`'s read rule requires an `ACTIVE`, non-expired session doc in this same collection. PPDT doesn't read from `test_questions` (its images come from `test_content/ppdt/...`, Section 6), so this dependency is OIR-specific, not PPDT's.
 
 ### `submissions/{submissionId}` — PPDT's create path
 
-PPDT's relevant slice of the multi-test-type `create` rule (see `firestore.rules` for the full rule): `request.resource.data.userId == request.auth.uid`; `keys().hasAll(['testType', 'submittedAt'])`; at least one of `responses`/`data`/`resultId` present (PPDT writes `data` — Section 11). **The rule's OIR-specific `test_sessions` existence check does NOT apply to PPDT** (`request.resource.data.testType != 'OIR'` short-circuits it before that check runs) — so PPDT's `submissions` write has never been blocked by the Section 17 #15/#16 incidents. If a future PPDT submission failure traces to this collection specifically, it is a **different** bug than #15/#16; don't assume the connection without checking.
+Relevant slice of the multi-test-type rule: `userId == request.auth.uid`; `keys().hasAll(['testType', 'submittedAt'])`; one of `responses`/`data`/`resultId` present (PPDT writes `data`). The rule's OIR-specific `test_sessions` existence check does **not** apply to PPDT (`testType != 'OIR'` short-circuits it) — PPDT's `submissions` write has never been implicated in #15/#16.
 
-### `users/{userId}/subscription/{document}` — the actual site of Section 17 #17
+### `users/{userId}/subscription/{document}` — the site of Section 17 #17
 
 ```
 match /subscription/{document} {
@@ -983,75 +959,62 @@ match /subscription/{document} {
 }
 ```
 
-`GitLiveTestUsageRecorder.recordTestUsage()` (`data-firebase/.../GitLiveTestUsageRecorder.kt`) is the only writer, called from step 4 of Section 8's submission flow. Doc id is `usage_{yyyy-MM}` — `GitLiveTestUsageRecorder` and `GitLiveSubscriptionRepository` agree on this convention — but the `month` **field** stored *inside* the doc is the bare `{yyyy-MM}` value, which `getMonthlyUsage()` reads back for display. **Any future rule change here that compares `month` to `document` directly, instead of reconstructing `'usage_' + month`, reintroduces Section 17 #17.** This is a generic trap, not PPDT-specific — anywhere a Firestore wildcard path segment (`{document}`) encodes a prefixed/derived form of a field the document also stores, comparing the two directly instead of reconstructing one from the other will silently and permanently deny every write that hits it.
+`GitLiveTestUsageRecorder.recordTestUsage()` is the only writer, called from step 4 of Section 8's flow. Doc id is `usage_{yyyy-MM}`; the `month` **field** stored inside the doc is the bare `{yyyy-MM}` value (`getMonthlyUsage()` reads it back for display). **Any future rule change that compares `month` to `document` directly, instead of reconstructing `'usage_' + month`, reintroduces #17.** Generic trap, not PPDT-specific: wherever a wildcard path segment encodes a derived form of a field the doc also stores, compare by reconstruction, not direct equality.
 
-### The meta-lesson — applies to any future `firestore.rules` change touching PPDT's collections
-
-A rule that **adds** a restriction is the highest-risk kind of change in this entire codebase: it fails silently (no exception surfaces anywhere in the write path's own logs beyond a generic `PERMISSION_DENIED`), it fails for *every* request matching the new condition rather than some rare edge case, and manual verification against a live deployment ("I tried it and it worked") only proves the one scenario actually tried. That style of verification caught neither Section 17 #15's original bug nor #16's regression — both shipped with commit messages describing exactly that kind of manual, real-app verification. **Any `firestore.rules` change must be accompanied by a `firestore-tests/*.rules.test.mjs` change that fails against the pre-change rule and passes against the post-change rule** (Section 15). Section 25 is the concrete red/green loop that catches this class of bug in practice.
+A rule that *adds* a restriction is the highest-risk change in this codebase — see Section 25 for why and how to verify one safely before it ships.
 
 ---
 
 ## 25. Debugging Playbook: PPDT Submission / Session Failures
 
-Use this when a candidate reports "Failed to submit test," "Cloud connection required," "Could not create a secure test session," or any test-load/submit error whose stack trace bottoms out in `FirebaseFirestoreException: PERMISSION_DENIED`. This is the exact method that found and fixed Section 17 #15–#17; it generalizes to any test type sharing `TestSessionRepository`/`TestUsageRecorder`, not just PPDT.
+Use for "Failed to submit test," "Cloud connection required," "Could not create a secure test session," or anything bottoming out in `FirebaseFirestoreException: PERMISSION_DENIED`. Generalizes to any test type sharing `TestSessionRepository`/`TestUsageRecorder`.
 
-### Step 0 — get an authoritative read of Firestore, not just the client's opinion
+### Step 0 — read Firestore directly; don't trust the client's error alone
 
-The client's error message describes what the *last failing write* looked like from inside one `runCatching` block — it does not tell you whether earlier writes in the same use case already succeeded (Section 8's fault-isolation callout is exactly why this matters). Before touching any code:
+The error describes the *last failing write* inside one `runCatching` block — not whether earlier writes in the same use case already succeeded (Section 8).
 
 ```bash
 adb logcat -v time | grep -E "PPDTTestViewModel|PERMISSION_DENIED|Write failed at"
-```
 
-Then fetch the actual documents via the Firestore REST API (`gcloud auth print-access-token`, plus an `x-goog-user-project` header):
-
-```bash
 TOKEN=$(gcloud auth print-access-token)
 curl -s -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: <project>" \
   "https://firestore.googleapis.com/v1/projects/<project>/databases/(default)/documents/<path>"
 ```
 
-- `submissions/{submissionId}` (id from logs, or query by `userId`+`testType` ordered by `submittedAt`) — **does it exist?** If yes, the submission write succeeded and the real failure is downstream (usage recording or session completion) — do not start by debugging the submission write.
-- `test_sessions/{userId}_{testId}` — what's its `status`? Still `ACTIVE` after a submit attempt means `completeTestSession()` (step 5, Section 8) never ran — consistent with an earlier step throwing first.
-- `users/{userId}/subscription/usage_{yyyy-MM}` — does it exist for the current month? If not, and the user has submitted tests this month, that is Section 17 #17's exact signature.
+Check: does `submissions/{submissionId}` exist (id from logs, or query by `userId`+`testType`)? What's `test_sessions/{userId}_{testId}`'s `status`? Does `users/{userId}/subscription/usage_{yyyy-MM}` exist for the current month?
 
 ### Step 1 — isolate which write actually failed
 
-Cross-reference what exists in Firestore against what `SubmitPPDTTestUseCase`'s steps (Section 8) would have produced by that point:
-
-| `submissions/{id}` exists? | `test_sessions` status | `subscription/usage_{month}` exists & incremented? | Likely failing step |
+| `submissions/{id}` exists? | `test_sessions` status | `usage_{month}` incremented? | Failing step |
 |---|---|---|---|
-| No | unrelated / unchanged | — | Step 3 itself — the actual submission write. Rare; check `submissions`' create rule (this section). |
-| Yes | still `ACTIVE` | missing / not incremented for this submission | Step 4, `recordTestUsage` — check `users/{userId}/subscription/{document}`'s rules (this section). This was Section 17 #17's shape. |
-| Yes | still `ACTIVE` | present, incremented | Step 5, `completeTestSession` — check `test_sessions`' update rule (this section). This was Section 17 #15/#16's shape. |
-| Yes | `SUBMITTED` | present, incremented | Nothing failed server-side. If the client still reported failure, the bug is in `PPDTTestViewModel`/`SubmitPPDTTestUseCase`'s Kotlin, not the rules — look elsewhere in this document. |
+| No | unchanged | — | Step 3, the submission write itself. Rare — check `submissions`' create rule. |
+| Yes | still `ACTIVE` | no | Step 4, `recordTestUsage` — check `subscription/{document}`'s rules (Section 24). #17's shape. |
+| Yes | still `ACTIVE` | yes | Step 5, `completeTestSession` — check `test_sessions`' update rule (Section 24). #15/#16's shape. |
+| Yes | `SUBMITTED` | yes | Nothing failed server-side — bug is in Kotlin, not rules. |
 
-### Step 2 — if it's a rules bug, reproduce it in the emulator before touching production
+### Step 2 — reproduce in the emulator before touching production
 
-**Do not hand-edit `firestore.rules` and redeploy to test a theory.** Section 17 #16 shipped *because* the previous fix was "verified end-to-end against the real app" without an automated test backing it up — that verification style only catches the one scenario tried, not necessarily the actual defect.
+Don't hand-edit `firestore.rules` and redeploy to test a theory — #16 shipped from exactly that shortcut.
 
 ```bash
 firebase emulators:exec --only firestore --project demo-ssbmax-rules-test \
   "npm --prefix firestore-tests test"
-# or, against an emulator that's already running:
+# or against an already-running emulator:
 RULES_TEST_PROJECT_ID=<project> npm --prefix firestore-tests test
 ```
 
-Write a test that constructs the **real** write shape the failing repository method actually produces — field names, doc id pattern, value types, read from the repository source, not guessed — and confirm it fails against the current rule. If you can't make it fail, you haven't found the actual bug yet.
+Write a test using the **real** write shape (field names, doc id, value types — read from the repository source, don't guess) and confirm it fails against the current rule first.
 
-### Step 3 — fix, then prove the fix with the same test, then deploy
+### Step 3 — fix, prove it with the same test, deploy, verify what's live
 
 ```bash
 git stash push firestore.rules -m "verify repro"
-npm --prefix firestore-tests test        # confirm your new test fails against the OLD rule
-git stash pop                             # restore your fix
-npm --prefix firestore-tests test        # confirm it now passes, and nothing else regressed
+npm --prefix firestore-tests test        # confirm the new test fails against the OLD rule
+git stash pop
+npm --prefix firestore-tests test        # confirm it now passes, nothing else regressed
 firebase deploy --only firestore:rules --project <project>
-```
 
-Then confirm the deployed ruleset actually matches the local file — `firebase deploy` reporting success doesn't, by itself, prove what's live:
-
-```bash
+# confirm the deployed ruleset actually matches the local file:
 TOKEN=$(gcloud auth print-access-token)
 RS=$(curl -s -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: <project>" \
   "https://firebaserules.googleapis.com/v1/projects/<project>/releases/cloud.firestore" \
@@ -1063,10 +1026,8 @@ curl -s -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: <project>" \
 diff /tmp/deployed.rules firestore.rules && echo "MATCH"
 ```
 
-### Step 4 — verify on a real device, not just the emulator
+### Step 4 — verify on a real device
 
-The emulator proves the rule is *logically* correct; it doesn't prove the real client (GitLive's Kotlin/Native SDK wrapper, real auth tokens, real network conditions) actually exercises the path you fixed the way you think it does. Reproduce the original user action on-device (`adb logcat` running) and confirm both: no new `PERMISSION_DENIED`, and the Firestore documents involved end up in their expected terminal state (Step 0's queries again, post-fix).
+The emulator proves the rule is logically correct, not that the real SDK/auth/network path actually exercises it as expected. Reproduce the original action on-device (`adb logcat` running); confirm no new `PERMISSION_DENIED` and Firestore docs reach their expected terminal state.
 
-### Common trap: don't trust a commit message's "verified" claim over a failing test
-
-Every rule in this playbook exists because a previous fix claimed exactly the kind of verification this playbook describes and was still wrong (Section 17 #15's "verified end-to-end against the real app," #16's "verified via live bisection against a real deployment"). Neither claim was dishonest — both were real manual verification passes, and both were insufficient, because neither was pinned by a test that outlives the session that wrote it. Treat any rules fix — including future applications of this very playbook — as unverified until a checked-in `firestore-tests/*.rules.test.mjs` test fails on the old rule and passes on the new one.
+**Don't trust a commit message's "verified" claim over a failing test.** #15 and #16 both shipped with sincere, real manual verification described in their commit messages — neither was pinned by a test that outlived the session that wrote it. Treat any rules fix, including this playbook's own future applications, as unverified until a checked-in `firestore-tests/*.rules.test.mjs` test fails on the old rule and passes on the new one.
