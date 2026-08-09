@@ -40,7 +40,7 @@ class GitLiveTestUsageRecorder : TestUsageRecorder {
             } else {
                 null
             }
-            if (submissionId != null && existing?.recordedSubmissionIds?.contains(submissionId) == true) {
+            if (shouldSkipUsageRecording(existing?.recordedSubmissionIds.orEmpty(), submissionId)) {
                 return@runTransaction
             }
 
@@ -108,3 +108,12 @@ class GitLiveTestUsageRecorder : TestUsageRecorder {
         const val USERS_COLLECTION = "users"
     }
 }
+
+/**
+ * The dedup decision `recordTestUsage` uses to keep usage recording idempotent by submission id.
+ * Extracted as a pure function (same pattern as [isOirSubmissionIdentityConflict]) so the one
+ * usage-counting path shared by every test type — including OIR, per the OIR Retake Seal Phase 2
+ * SSOT rule of no OIR-specific branch — can be unit-tested without a live Firestore transaction.
+ */
+internal fun shouldSkipUsageRecording(recordedSubmissionIds: List<String>, submissionId: String?): Boolean =
+    submissionId != null && recordedSubmissionIds.contains(submissionId)
