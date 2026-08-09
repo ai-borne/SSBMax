@@ -22,4 +22,13 @@ describe('TestGridSection Component', () => {
 
     expect(handleStartTest).toHaveBeenCalledWith('oir');
   });
+
+  it('applies Level 2 card elevation styling to child test cards', () => {
+    render(<TestGridSection />);
+
+    const card = screen.getByTestId('grid-card-oir');
+    expect(card.className).toContain('dark:bg-slate-800/90');
+    expect(card.className).toContain('dark:border-slate-700/80');
+    expect(card.className).toContain('dark:shadow-slate-950/60');
+  });
 });

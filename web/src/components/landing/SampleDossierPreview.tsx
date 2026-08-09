@@ -79,7 +79,7 @@ export const SampleDossierPreview: FC = () => {
         {/* 4-Factor Core vs Detailed View Container */}
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-8">
           {/* Left: Lightweight Inline SVG Radar Chart */}
-          <div className="flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-inner w-full">
+          <div className="flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 w-full">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{strings.radar.polygonTitle}</h3>
             
             <svg viewBox="0 0 200 200" className="w-64 h-64 my-2" data-testid="inline-svg-radar">
@@ -117,7 +117,7 @@ export const SampleDossierPreview: FC = () => {
 
           {/* Right: Core Factors List & Expandable Toggle */}
           <div className="flex flex-col gap-4 w-full">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60">
               <div className="flex justify-between items-center mb-3">
                 <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">{strings.radar.recommendationOverviewTitle}</h4>
                 <span className="px-2.5 py-1 rounded-md text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 uppercase">
@@ -147,7 +147,7 @@ export const SampleDossierPreview: FC = () => {
             {/* Interactive Toggle for 15 OLQ Micro Breakdown */}
             <button
               onClick={() => setShowDetailed15(!showDetailed15)}
-              className="mt-2 w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-center gap-2 transition-colors border border-slate-300/80 dark:border-slate-700"
+              className="mt-2 w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-center gap-2 transition-colors border border-slate-300/80 dark:border-slate-600/50 min-h-[44px]"
               data-testid="toggle-15-olq-btn"
             >
               <BarChart3 className="w-4 h-4 text-sky-600 dark:text-sky-400" />
@@ -159,11 +159,11 @@ export const SampleDossierPreview: FC = () => {
 
         {/* 15 OLQ Detailed Breakdown Card (Collapsible) */}
         {showDetailed15 && (
-          <div className="w-full p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 mb-8 animate-fadeIn" data-testid="detailed-15-olq-grid">
+          <div className="w-full p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 mb-8 animate-fadeIn" data-testid="detailed-15-olq-grid">
             <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-4">{strings.radar.microScorecardTitle}</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {olq15List.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between shadow-sm">
+                <div key={idx} className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm">
                   <div>
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.name}</p>
                     <span className="text-[10px] text-slate-500 font-medium">{item.factor}</span>
@@ -178,7 +178,7 @@ export const SampleDossierPreview: FC = () => {
         )}
 
         {/* Side-by-Side Candidate Response Diff Proof */}
-        <div className="w-full p-6 rounded-2xl bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 shadow-xl text-left" data-testid="response-diff-card">
+        <div className="w-full p-6 rounded-2xl bg-slate-100 dark:bg-slate-800/90 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700/80 shadow-xl dark:shadow-slate-950/60 text-left" data-testid="response-diff-card">
           <div className="flex items-center gap-2 mb-4">
             <ShieldCheck className="w-5 h-5 text-sky-600 dark:text-sky-400" />
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">{strings.radar.diffTitle}</h4>

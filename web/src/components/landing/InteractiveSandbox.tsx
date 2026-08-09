@@ -105,7 +105,7 @@ export const InteractiveSandbox: FC = () => {
         </div>
 
         {/* Selected Situation Prompt Card */}
-        <div className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-left mb-6 shadow-inner" data-testid="active-situation-prompt">
+        <div className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-left mb-6 shadow-sm dark:shadow-xl dark:shadow-slate-950/60" data-testid="active-situation-prompt">
           <span className="text-[10px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-400 block mb-1">{strings.landing.sandboxSrtPromptHeader}</span>
           <p className="text-base font-semibold text-slate-900 dark:text-slate-100">{prompts[selectedPromptIndex]}</p>
         </div>
@@ -116,14 +116,14 @@ export const InteractiveSandbox: FC = () => {
           <div className="flex flex-col sm:flex-row gap-2.5">
             <button
               onClick={() => handleChipClick(strings.landing.chipOfficer)}
-              className="flex-1 p-3 text-left rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-sky-500/40 text-xs font-medium text-sky-700 dark:text-sky-200 transition-all active:scale-[0.99]"
+              className="flex-1 p-3 text-left rounded-xl bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-sky-500/40 text-xs font-medium text-sky-700 dark:text-sky-200 transition-all active:scale-[0.99] min-h-[44px]"
               data-testid="chip-officer"
             >
               {strings.landing.chipOfficer}
             </button>
             <button
               onClick={() => handleChipClick(strings.landing.chipAverage)}
-              className="flex-1 p-3 text-left rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition-all active:scale-[0.99]"
+              className="flex-1 p-3 text-left rounded-xl bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700/80 text-xs font-medium text-slate-700 dark:text-slate-300 transition-all active:scale-[0.99] min-h-[44px]"
               data-testid="chip-average"
             >
               {strings.landing.chipAverage}
@@ -162,7 +162,7 @@ export const InteractiveSandbox: FC = () => {
 
         {/* Local Heuristic Result Output Card */}
         {analysis && (
-          <div className="w-full p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-sky-500/40 text-left animate-fadeIn shadow-2xl" data-testid="sandbox-result-card">
+          <div className="w-full p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-sky-500/40 text-left animate-fadeIn shadow-2xl dark:shadow-slate-950/60" data-testid="sandbox-result-card">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
               <div className="flex items-center gap-2">
                 {analysis.isOfficerGrade ? (

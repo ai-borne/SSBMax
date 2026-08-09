@@ -88,7 +88,7 @@ export const TestGridSection: FC<TestGridSectionProps> = ({ onStartTestClick }) 
             return (
               <div
                 key={t.id}
-                className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-xl transition-all flex flex-col justify-between group"
+                className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 shadow-md hover:shadow-xl dark:shadow-xl dark:shadow-slate-950/60 transition-all flex flex-col justify-between group"
                 data-testid={`grid-card-${t.id}`}
               >
                 <div>
@@ -107,7 +107,7 @@ export const TestGridSection: FC<TestGridSectionProps> = ({ onStartTestClick }) 
 
                 <button
                   onClick={() => onStartTestClick?.(t.id)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-600 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                  className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-700/60 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-600 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-2 transition-all border border-slate-200 dark:border-slate-600/50"
                   data-testid={`start-btn-${t.id}`}
                 >
                   <span>{strings.practice.startTest}</span>

@@ -66,6 +66,10 @@ describe('InteractiveSandbox Component & Local Evaluator', () => {
     expect(sandboxEl.className).toContain('dark:bg-slate-900');
     expect(screen.getByText(strings.landing.sandboxSrtPromptHeader)).toBeInTheDocument();
     expect(screen.getByText(strings.landing.sandboxPresetHeader)).toBeInTheDocument();
+
+    const promptCard = screen.getByTestId('active-situation-prompt');
+    expect(promptCard.className).toContain('dark:bg-slate-800/90');
+    expect(promptCard.className).toContain('dark:border-slate-700/80');
   });
 });
 
