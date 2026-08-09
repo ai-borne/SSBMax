@@ -30,3 +30,5 @@ subscription_usage.rules.test.mjs|a doc id that does not match usage_{month} is 
 subscription_usage.rules.test.mjs|a client cannot create a usage doc for another user
 subscription_usage.rules.test.mjs|an existing usage doc accepts an incremental update recording one more submission
 subscription_usage.rules.test.mjs|an update cannot jump a counter by more than one attempt
+submissions.rules.test.mjs|a first OIR submission under a fresh, session-decoupled id succeeds under the create rule
+submissions.rules.test.mjs|a retake creates a second, distinct OIR submission doc against the same test_sessions doc

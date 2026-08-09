@@ -289,15 +289,23 @@ service cloud.firestore {
       // Must include required fields: userId, testType, submittedAt
       // Note: 'responses' can be at root level OR nested in 'data' field (depending on test type)
       // Interview submissions may have 'resultId' instead of responses/data
-      allow create: if isAuthenticated() && 
+      // OIR (OIR Retake Seal, Phase 1+4): each attempt mints its own submission id, distinct from
+      // the durable test_sessions id (docs/plans/OIR_Retake_Seal_Execution_Plan.md), so the
+      // session doc to check is read off the submission's own nested `data.testResult.sessionId`
+      // field (OIRSubmissionMappers.kt's real write shape) -- NOT `request.resource.id`, which is
+      // now a random per-attempt id that never matches a test_sessions doc id.
+      allow create: if isAuthenticated() &&
                        request.resource.data.userId == request.auth.uid &&
                        (!request.resource.data.keys().hasAny(['testType']) ||
                         request.resource.data.testType != 'OIR' ||
-                        (exists(/databases/$(database)/documents/test_sessions/$(request.resource.id)) &&
-                         get(/databases/$(database)/documents/test_sessions/$(request.resource.id)).data.userId == request.auth.uid &&
-                         get(/databases/$(database)/documents/test_sessions/$(request.resource.id)).data.testType == 'OIR')) &&
+                        (request.resource.data.keys().hasAny(['data']) &&
+                         'testResult' in request.resource.data.data &&
+                         'sessionId' in request.resource.data.data.testResult &&
+                         exists(/databases/$(database)/documents/test_sessions/$(request.resource.data.data.testResult.sessionId)) &&
+                         get(/databases/$(database)/documents/test_sessions/$(request.resource.data.data.testResult.sessionId)).data.userId == request.auth.uid &&
+                         get(/databases/$(database)/documents/test_sessions/$(request.resource.data.data.testResult.sessionId)).data.testType == 'OIR')) &&
                        request.resource.data.keys().hasAll(['testType', 'submittedAt']) &&
-                       (request.resource.data.keys().hasAny(['responses']) || 
+                       (request.resource.data.keys().hasAny(['responses']) ||
                         request.resource.data.keys().hasAny(['data']) ||
                         request.resource.data.keys().hasAny(['resultId']));
       
