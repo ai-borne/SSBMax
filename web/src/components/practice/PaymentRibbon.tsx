@@ -51,9 +51,9 @@ export const PaymentRibbon: FC<PaymentRibbonProps> = ({
               data-testid={`tier-card-${tier.id}`}
               className={`snap-center shrink-0 w-[280px] sm:w-[300px] md:w-auto p-5 rounded-2xl flex flex-col justify-between transition-all duration-200 ${
                 isCommand
-                  ? 'bg-gradient-to-b from-amber-500/10 via-slate-900/90 to-slate-900 border-2 border-amber-500/50 dark:border-amber-400/60 shadow-lg shadow-amber-500/10'
+                  ? 'bg-gradient-to-b from-amber-500/10 via-amber-50/40 to-white dark:from-amber-500/10 dark:via-slate-900/90 dark:to-slate-900 border-2 border-amber-500/50 dark:border-amber-400/60 shadow-lg shadow-amber-500/10'
                   : isOfficer
-                  ? 'bg-gradient-to-b from-sky-500/10 via-slate-900/90 to-slate-900 border-2 border-sky-500 dark:border-sky-400 shadow-xl shadow-sky-500/10'
+                  ? 'bg-gradient-to-b from-sky-500/10 via-sky-50/40 to-white dark:from-sky-500/10 dark:via-slate-900/90 dark:to-slate-900 border-2 border-sky-500 dark:border-sky-400 shadow-xl shadow-sky-500/10'
                   : 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-sm'
               }`}
             >

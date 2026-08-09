@@ -25,4 +25,15 @@ describe('SampleDossierPreview Component', () => {
     fireEvent.click(toggleBtn);
     expect(screen.queryByTestId('detailed-15-olq-grid')).not.toBeInTheDocument();
   });
+
+  it('renders response-diff-card with adaptive theme classes and SSOT strings', () => {
+    render(<SampleDossierPreview />);
+    const diffCard = screen.getByTestId('response-diff-card');
+    
+    expect(diffCard.className).toContain('bg-slate-100');
+    expect(diffCard.className).toContain('dark:bg-slate-900');
+    expect(screen.getByText(strings.radar.diffTitle)).toBeInTheDocument();
+    expect(screen.getByText(strings.radar.proofBadge)).toBeInTheDocument();
+  });
 });
+

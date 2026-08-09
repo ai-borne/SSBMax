@@ -66,7 +66,7 @@ export const SampleDossierPreview: FC = () => {
         {/* Header Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider mb-4">
           <Eye className="w-4 h-4 text-amber-500" />
-          <span>OFFICER ASSESSOR DOSSIER PROOF</span>
+          <span>{strings.radar.proofBadge}</span>
         </div>
 
         <h2 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight text-center mb-3">
@@ -79,8 +79,8 @@ export const SampleDossierPreview: FC = () => {
         {/* 4-Factor Core vs Detailed View Container */}
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-8">
           {/* Left: Lightweight Inline SVG Radar Chart */}
-          <div className="flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-inner w-full">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">4 SSB Core Factor Radar Polygon</h3>
+          <div className="flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-inner w-full">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{strings.radar.polygonTitle}</h3>
             
             <svg viewBox="0 0 200 200" className="w-64 h-64 my-2" data-testid="inline-svg-radar">
               {/* Outer & Inner Grid Rings */}
@@ -119,13 +119,13 @@ export const SampleDossierPreview: FC = () => {
           <div className="flex flex-col gap-4 w-full">
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
               <div className="flex justify-between items-center mb-3">
-                <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">Assessor Recommendation Overview</h4>
+                <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">{strings.radar.recommendationOverviewTitle}</h4>
                 <span className="px-2.5 py-1 rounded-md text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 uppercase">
-                  RECOMMENDED
+                  {strings.radar.recommendationBadge}
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
-                Candidate exhibits high Factor I & III command output with strong decision speed and group initiative. Recommended for conference probe on minor social adaptability details.
+                {strings.radar.recommendationSummary}
               </p>
             </div>
 
@@ -160,7 +160,7 @@ export const SampleDossierPreview: FC = () => {
         {/* 15 OLQ Detailed Breakdown Card (Collapsible) */}
         {showDetailed15 && (
           <div className="w-full p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 mb-8 animate-fadeIn" data-testid="detailed-15-olq-grid">
-            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-4">Complete 15 Officer Like Qualities (OLQ) Micro Scorecard</h4>
+            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-4">{strings.radar.microScorecardTitle}</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {olq15List.map((item, idx) => (
                 <div key={idx} className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between shadow-sm">
@@ -178,21 +178,21 @@ export const SampleDossierPreview: FC = () => {
         )}
 
         {/* Side-by-Side Candidate Response Diff Proof */}
-        <div className="w-full p-6 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-xl text-left" data-testid="response-diff-card">
+        <div className="w-full p-6 rounded-2xl bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 shadow-xl text-left" data-testid="response-diff-card">
           <div className="flex items-center gap-2 mb-4">
-            <ShieldCheck className="w-5 h-5 text-sky-400" />
-            <h4 className="text-sm font-bold text-white">Assessor Response Comparison Diff (SRT Sample)</h4>
+            <ShieldCheck className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">{strings.radar.diffTitle}</h4>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest block mb-1">Average Candidate Response</span>
-              <p className="text-slate-300">"He informed the police station and waited for help to arrive."</p>
-              <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 rounded">Passive (Score: 6.0)</span>
+            <div className="p-3.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest block mb-1">{strings.radar.diffAvgLabel}</span>
+              <p className="text-slate-700 dark:text-slate-300">{strings.radar.diffAvgResponse}</p>
+              <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded">{strings.radar.diffAvgBadge}</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-sky-950/40 border border-sky-500/40">
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Recommended Officer Action</span>
-              <p className="text-slate-200 font-medium">"Immediately pulled emergency chain, alerted passengers, organized bucket relay, and safely extinguished fire."</p>
-              <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 rounded">Officer Grade (Score: 9.2)</span>
+            <div className="p-3.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-500/40">
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block mb-1">{strings.radar.diffRecLabel}</span>
+              <p className="text-slate-800 dark:text-slate-200 font-medium">{strings.radar.diffRecResponse}</p>
+              <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded">{strings.radar.diffRecBadge}</span>
             </div>
           </div>
         </div>
@@ -200,3 +200,4 @@ export const SampleDossierPreview: FC = () => {
     </section>
   );
 };
+

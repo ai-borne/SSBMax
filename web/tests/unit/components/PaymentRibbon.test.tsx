@@ -77,4 +77,14 @@ describe('PaymentRibbon Component', () => {
     expect(officerBtn.className).toContain('min-h-[44px]');
     expect(commandBtn.className).toContain('min-h-[44px]');
   });
+
+  it('should use adaptive background classes for Officer and Command tier cards in light and dark mode', () => {
+    render(<PaymentRibbon />);
+
+    const officerCard = screen.getByTestId('tier-card-officer');
+    const commandCard = screen.getByTestId('tier-card-command');
+
+    expect(officerCard.className).toContain('dark:via-slate-900');
+    expect(commandCard.className).toContain('dark:via-slate-900');
+  });
 });

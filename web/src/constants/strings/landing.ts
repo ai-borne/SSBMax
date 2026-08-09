@@ -27,5 +27,27 @@ export const landingStrings = {
   analyzeOlqButton: 'Analyze Officer Qualities (OLQ)',
   analyzing: 'Evaluating Response...',
   resultFactorHeader: 'Assessor Factor Analysis Result',
-  instantBadge: 'INSTANT LOCAL EVALUATION (< 50ms)'
+  instantBadge: 'INSTANT LOCAL EVALUATION (< 50ms)',
+  gridBadge: 'FULL 5-DAY SELECTION BOARD BATTERY',
+  stage1: 'Stage I: Day 1 Screening',
+  stage2: 'Stage II: Day 2 Psychology',
+  sandboxPresetHeader: '⚡ Tap 1-Click Mobile Preset Response:',
+  sandboxSrtPromptHeader: 'Standardized SRT Prompt',
+  sandboxCustomPlaceholder: 'Or type custom reaction here...',
+  sandboxFactorScoreHeader: 'Factor Score',
+  sandboxAssessedOlqsHeader: 'Assessed OLQs:',
+  sandboxSituationPrefix: 'Situation #',
+  heuristicOfficerTitle: 'Factor I & III High Command Output',
+  heuristicOfficerFeedback: 'Outstanding Officer Mindset: Immediate initiative, structured delegation, and goal completion.',
+  heuristicAverageTitle: 'Factor II Moderate Social Response',
+  heuristicAverageFeedback: 'Good Cooperative Reaction: Follows procedure, but could demonstrate stronger direct leadership.',
+  heuristicPassiveTitle: 'Passive Initial Reaction',
+  heuristicPassiveFeedback: 'Passive Response: Add explicit personal action verbs (e.g. "immediately organized", "took charge").',
+  olqInitiative: 'Initiative (OLQ-6)',
+  olqSpeedDecision: 'Speed of Decision (OLQ-8)',
+  olqOrganizing: 'Organizing Ability (OLQ-3)',
+  olqCooperation: 'Cooperation (OLQ-5)',
+  olqDuty: 'Sense of Duty (OLQ-7)',
+  olqProactive: 'Requires Proactive Action'
 } as const;
+

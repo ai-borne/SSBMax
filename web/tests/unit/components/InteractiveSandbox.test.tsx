@@ -56,4 +56,16 @@ describe('InteractiveSandbox Component & Local Evaluator', () => {
 
     expect(screen.getByText('8.8 / 10')).toBeInTheDocument();
   });
+
+  it('supports light and dark theme adaptive styling and SSOT headers', () => {
+    render(<InteractiveSandbox />);
+    const sandboxEl = screen.getByTestId('interactive-sandbox');
+    
+    // Check adaptive background & text classes (not hardcoded bg-slate-900 alone)
+    expect(sandboxEl.className).toContain('bg-white');
+    expect(sandboxEl.className).toContain('dark:bg-slate-900');
+    expect(screen.getByText(strings.landing.sandboxSrtPromptHeader)).toBeInTheDocument();
+    expect(screen.getByText(strings.landing.sandboxPresetHeader)).toBeInTheDocument();
+  });
 });
+

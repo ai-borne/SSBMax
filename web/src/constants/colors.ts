@@ -1,7 +1,7 @@
 export const themeColors = {
   dark: {
-    bgPrimary: '#0f172a',
-    bgSecondary: '#1e293b',
+    bgPrimary: '#0b0f19',
+    bgSecondary: '#0f172a',
     bgCard: '#1e293b',
     bgElevated: '#334155',
     textPrimary: '#f8fafc',

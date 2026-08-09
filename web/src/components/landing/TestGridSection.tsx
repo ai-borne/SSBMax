@@ -10,57 +10,57 @@ export const TestGridSection: FC<TestGridSectionProps> = ({ onStartTestClick }) 
   const tests = [
     {
       id: 'oir',
-      stage: 'Stage I: Day 1 Screening',
+      stage: strings.landing.stage1,
       title: strings.practice.oirTitle,
       desc: strings.practice.oirDesc,
       icon: Shield,
       badge: strings.practice.freeBadge,
-      badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+      badgeColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
     },
     {
       id: 'ppdt',
-      stage: 'Stage I: Day 1 Screening',
+      stage: strings.landing.stage1,
       title: strings.practice.ppdtTitle,
       desc: strings.practice.ppdtDesc,
       icon: FileText,
       badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
     },
     {
       id: 'tat',
-      stage: 'Stage II: Day 2 Psychology',
+      stage: strings.landing.stage2,
       title: strings.practice.tatTitle,
       desc: strings.practice.tatDesc,
       icon: Brain,
       badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
     },
     {
       id: 'wat',
-      stage: 'Stage II: Day 2 Psychology',
+      stage: strings.landing.stage2,
       title: strings.practice.watTitle,
       desc: strings.practice.watDesc,
       icon: Brain,
       badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
     },
     {
       id: 'srt',
-      stage: 'Stage II: Day 2 Psychology',
+      stage: strings.landing.stage2,
       title: strings.practice.srtTitle,
       desc: strings.practice.srtDesc,
       icon: Brain,
       badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
     },
     {
       id: 'sd',
-      stage: 'Stage II: Day 2 Psychology',
+      stage: strings.landing.stage2,
       title: strings.practice.sdTitle,
       desc: strings.practice.sdDesc,
       icon: Users,
       badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
     }
   ];
 
@@ -70,8 +70,8 @@ export const TestGridSection: FC<TestGridSectionProps> = ({ onStartTestClick }) 
         {/* Section Header */}
         <div className="text-center max-w-3xl mb-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-xs font-bold uppercase tracking-wider mb-4">
-            <Shield className="w-4 h-4 text-sky-600" />
-            <span>FULL 5-DAY SELECTION BOARD BATTERY</span>
+            <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+            <span>{strings.landing.gridBadge}</span>
           </div>
           <h2 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-3">
             {strings.landing.featureTitle}
@@ -88,7 +88,7 @@ export const TestGridSection: FC<TestGridSectionProps> = ({ onStartTestClick }) 
             return (
               <div
                 key={t.id}
-                className="p-6 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-xl transition-all flex flex-col justify-between group"
+                className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-xl transition-all flex flex-col justify-between group"
                 data-testid={`grid-card-${t.id}`}
               >
                 <div>

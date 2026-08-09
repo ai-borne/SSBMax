@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useTheme } from '../../src/hooks/useTheme';
+import { themeColors } from '../../src/constants/colors';
 
 describe('useTheme hook - Advanced System & Mode Tests', () => {
   beforeEach(() => {
@@ -11,6 +12,21 @@ describe('useTheme hook - Advanced System & Mode Tests', () => {
   afterEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove('dark');
+  });
+
+  it('should enforce distinct 4-level dark mode elevation system tokens', () => {
+    expect(themeColors.dark.bgPrimary).toBe('#0b0f19'); // Level 0
+    expect(themeColors.dark.bgSecondary).toBe('#0f172a'); // Level 1
+    expect(themeColors.dark.bgCard).toBe('#1e293b'); // Level 2
+    expect(themeColors.dark.bgElevated).toBe('#334155'); // Level 3
+
+    const darkElevations = new Set([
+      themeColors.dark.bgPrimary,
+      themeColors.dark.bgSecondary,
+      themeColors.dark.bgCard,
+      themeColors.dark.bgElevated
+    ]);
+    expect(darkElevations.size).toBe(4);
   });
 
   it('should support system theme mode and resolve based on matchMedia', () => {
