@@ -1,5 +1,6 @@
 import { useState, useMemo, FC } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
+import { LandingPage } from './components/landing/LandingPage';
 import { HeroSection } from './components/landing/HeroSection';
 import { CandidateDashboard } from './components/dashboard/CandidateDashboard';
 import { PracticeTestsPage } from './components/practice/PracticeTestsPage';
@@ -60,9 +61,9 @@ export const App: FC = () => {
       ) : (
         <>
           {activeTab === 'home' && (
-            <HeroSection
+            <LandingPage
               onStartFreeClick={() => handleStartTest('oir')}
-              onUnlockProClick={() => setActiveTab('pricing')}
+              onStartTestClick={handleStartTest}
             />
           )}
           {activeTab === 'dashboard' && (

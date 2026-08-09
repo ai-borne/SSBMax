@@ -1,13 +1,18 @@
 import { FC } from 'react';
-import { Shield, Sparkles, ArrowRight, CheckCircle2, Award, Zap, BarChart } from 'lucide-react';
+import { Shield, Sparkles, ArrowRight, CheckCircle2, Eye, Zap, BarChart, Award } from 'lucide-react';
 import { strings } from '../../constants/strings';
 
 export interface HeroSectionProps {
   onStartFreeClick?: () => void;
   onUnlockProClick?: () => void;
+  onViewSampleDossierClick?: () => void;
 }
 
-export const HeroSection: FC<HeroSectionProps> = ({ onStartFreeClick, onUnlockProClick }) => {
+export const HeroSection: FC<HeroSectionProps> = ({
+  onStartFreeClick,
+  onUnlockProClick,
+  onViewSampleDossierClick
+}) => {
   return (
     <section className="relative overflow-hidden py-12 md:py-20 flex flex-col items-center text-center" data-testid="hero-section">
       {/* Glow Background Gradient Orbs */}
@@ -23,16 +28,25 @@ export const HeroSection: FC<HeroSectionProps> = ({ onStartFreeClick, onUnlockPr
 
         {/* Main Headline */}
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight mb-6">
-          {strings.landing.heroTitle.split('AI Precision')[0]}
+          {strings.landing.heroTitle.split('Officer Precision')[0]}
           <span className="bg-gradient-to-r from-sky-600 via-blue-600 to-amber-600 dark:from-sky-400 dark:via-sky-300 dark:to-amber-400 bg-clip-text text-transparent">
-            AI Precision
+            Officer Precision
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-2xl font-normal leading-relaxed mb-8">
+        <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-2xl font-normal leading-relaxed mb-6">
           {strings.landing.heroSubtitle}
         </p>
+
+        {/* 3-Step Guided Journey Badge */}
+        <div className="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 mb-8" data-testid="guided-journey-steps">
+          <span className="text-sky-600 dark:text-sky-400">{strings.landing.step1}</span>
+          <span className="text-slate-400">➔</span>
+          <span className="text-amber-600 dark:text-amber-400">{strings.landing.step2}</span>
+          <span className="text-slate-400">➔</span>
+          <span className="text-emerald-600 dark:text-emerald-400">{strings.landing.step3}</span>
+        </div>
 
         {/* Call-to-Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center mb-12">
@@ -46,13 +60,24 @@ export const HeroSection: FC<HeroSectionProps> = ({ onStartFreeClick, onUnlockPr
           </button>
 
           <button
-            onClick={onUnlockProClick}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-amber-600 dark:text-amber-400 border border-amber-500/40 font-bold text-base rounded-xl shadow-md dark:shadow-lg transition-all"
-            data-testid="unlock-pro-btn"
+            onClick={onViewSampleDossierClick ?? onUnlockProClick}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300/80 dark:border-slate-700 font-bold text-base rounded-xl shadow-md transition-all"
+            data-testid="view-sample-dossier-btn"
           >
-            <Award className="w-5 h-5 text-amber-500 dark:text-amber-400" />
-            <span>{strings.landing.unlockPro}</span>
+            <Eye className="w-5 h-5 text-amber-500" />
+            <span>{strings.landing.viewSampleDossier}</span>
           </button>
+
+          {onUnlockProClick && (
+            <button
+              onClick={onUnlockProClick}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40 font-bold text-base rounded-xl transition-all"
+              data-testid="unlock-pro-btn"
+            >
+              <Award className="w-5 h-5 text-amber-500" />
+              <span>{strings.landing.unlockPro}</span>
+            </button>
+          )}
         </div>
 
         {/* Key Tactical Stats Grid */}
