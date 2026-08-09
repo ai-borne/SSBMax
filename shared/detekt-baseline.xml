@@ -2,7 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ComplexCondition:OIRTestViewModel.kt$OIRTestViewModel$isActive &amp;&amp; _uiState.value.isTimerActive &amp;&amp; _uiState.value.timeRemainingSeconds &gt; 0 &amp;&amp; !_uiState.value.isCompleted</ID>
     <ID>CyclomaticComplexMethod:DashboardTestScoreChip.kt$@Composable fun TestScoreChip( testName: String, score: Float?, isOLQBased: Boolean = true, isRefreshing: Boolean = false, onClick: (() -&gt; Unit)? = null )</ID>
     <ID>CyclomaticComplexMethod:InterviewSessionScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun InterviewSessionScreen( sessionId: String, onNavigateBack: () -&gt; Unit, onNavigateToResult: (String) -&gt; Unit, onNavigateToHome: () -&gt; Unit, viewModel: InterviewSessionViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>CyclomaticComplexMethod:MarkdownText.kt$@Composable fun MarkdownText( content: String, modifier: Modifier = Modifier, textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant )</ID>
@@ -16,12 +15,12 @@
     <ID>CyclomaticComplexMethod:PIQSubmissionBuilder.kt$internal fun buildPIQSubmission( state: PIQTestUiState, userId: String, status: SubmissionStatus ): PIQSubmission</ID>
     <ID>CyclomaticComplexMethod:PIQSubmissionParser.kt$internal fun parsePIQSubmission(data: Map&lt;String, Any&gt;): PIQSubmission</ID>
     <ID>CyclomaticComplexMethod:PIQTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PIQTestScreen( testId: String, onNavigateBack: () -&gt; Unit = {}, onNavigateToResult: (String) -&gt; Unit = {}, viewModel: PIQTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
-    <ID>CyclomaticComplexMethod:PPDTTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PPDTTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: PPDTTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
-    <ID>CyclomaticComplexMethod:SDTTestScreen.kt$@Composable fun SDTTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: SDTTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
-    <ID>CyclomaticComplexMethod:SRTTestScreen.kt$@Composable fun SRTTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: SRTTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
-    <ID>CyclomaticComplexMethod:TATTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun TATTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: TATTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:PPDTTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class) @Composable fun PPDTTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: PPDTTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:SDTTestScreen.kt$@OptIn(ExperimentalComposeUiApi::class) @Composable fun SDTTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: SDTTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:SRTTestScreen.kt$@OptIn(ExperimentalComposeUiApi::class) @Composable fun SRTTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: SRTTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:TATTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class) @Composable fun TATTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: TATTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>CyclomaticComplexMethod:TopicTestsTab.kt$private fun getTestColor(testType: TestType): Color</ID>
-    <ID>DestructuringDeclarationWithTooManyEntries:SSBRecommendationBanner.kt$val (backgroundColor, gradientColors, iconTint, icon) = when (model.recommendation) { RecommendationOutcome.RECOMMENDED -&gt; BannerStyle(Color(0xFF1B5E20), listOf(Color(0xFF2E7D32), Color(0xFF1B5E20)), Color.White, Icons.Default.CheckCircle) RecommendationOutcome.BORDERLINE -&gt; BannerStyle(Color(0xFFF57F17), listOf(Color(0xFFFFA000), Color(0xFFF57F17)), Color.White, Icons.Default.Warning) RecommendationOutcome.NOT_RECOMMENDED -&gt; BannerStyle(Color(0xFFB71C1C), listOf(Color(0xFFC62828), Color(0xFFB71C1C)), Color.White, Icons.Default.Cancel) }</ID>
+    <ID>CyclomaticComplexMethod:WATTestScreen.kt$@OptIn(ExperimentalComposeUiApi::class) @Composable fun WATTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: WATTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>EmptyFunctionBlock:DomainLogger.kt$NoOpLogger${}</ID>
     <ID>ForbiddenComment:InstructorHomeViewModel.kt$InstructorHomeViewModel$* ViewModel for the Instructor Home Screen — Phase 5 KMP port of the Android * original (`app/.../ui/home/instructor/InstructorHomeViewModel.kt`). * * A real `androidx.lifecycle.ViewModel` using `viewModelScope` (Phase 1 of * the KMP-convergence plan). Real change from the Android original: * `System.currentTimeMillis()` (JVM-only) -&gt; * `Clock.System.now().toEpochMilliseconds()`. The mock `students`/`batches` * data and the `// TODO: Load batches and students from BatchRepository` * comment are carried forward unchanged — `BatchRepository` doesn't exist in * either the Android original or `:shared` yet; not something this port * introduces or is scoped to fix.</ID>
     <ID>ForbiddenComment:InstructorHomeViewModel.kt$InstructorHomeViewModel$// TODO: Load batches and students from BatchRepository</ID>
@@ -29,7 +28,6 @@
     <ID>ForbiddenComment:SSBOverviewComponents.kt$* Extracted private composables for [SSBOverviewScreen], split out purely to * keep both files under the repo's 300-line Quality Limit -- no behavior * change from having them inline. The Android original's "watch video" * button is kept as a visual no-op (`onClick = {}`), matching the Android * original's own `// TODO: Open video` no-op exactly.</ID>
     <ID>ForbiddenComment:SSBPhase.kt$TestType$* Test types within each phase * * 🔒 SECURITY TODO: When implementing GTO and IO (Interview) ViewModels: * * CRITICAL - All new test ViewModels MUST implement these security measures: * * 1. AUTHENTICATION GUARD: * ```kotlin * val user = observeCurrentUser().first() * val userId = user?.id ?: run { * securityLogger.logUnauthenticatedAccess(testType = TestType.GTO, context = "GTOViewModel.loadTest") * _uiState.update { it.copy(error = "Authentication required. Please login to continue.") } * return@launch * } * ``` * * 2. SUBSCRIPTION LIMIT CHECK: * ```kotlin * private suspend fun checkTestEligibility(userId: String): TestEligibility { * return subscriptionManager.canTakeTest(userId, TestType.GTO) * } * ``` * * 3. USAGE RECORDING AFTER SUBMISSION: * ```kotlin * subscriptionManager.recordTestUsage(userId, TestType.GTO, submissionId) * ``` * * 4. INJECT THESE DEPENDENCIES: * - ObserveCurrentUserUseCase * - DifficultyProgressionManager * - SubscriptionManager * - SecurityEventLogger * * 5. REFERENCE IMPLEMENTATIONS: * - See: app/src/main/kotlin/com/ssbmax/ui/tests/tat/TATTestViewModel.kt * - See: app/src/main/kotlin/com/ssbmax/ui/tests/ppdt/PPDTTestViewModel.kt * * ⚠️ WARNING: Skipping these steps will create a security vulnerability allowing * unlimited test attempts and bypassing subscription limits! * * ✅ VERIFIED SECURE: OIR, WAT, SRT, TAT, PPDT * ❌ PENDING: GTO, IO (SD not implemented yet)</ID>
     <ID>ForbiddenComment:SettingsScreen.kt$// TODO: matches Android original's unwired "open email intent" action</ID>
-    <ID>ForbiddenComment:StudentProfileScreen.kt$/* TODO: matches Android original's unwired action */</ID>
     <ID>ForbiddenComment:SubmissionsResultsGraph.kt$// own `onInstituteClick` callback is also just a `// TODO: Navigate to</ID>
     <ID>FunctionNaming:String0.commonMain.kt$@InternalResourceApi internal fun _collectCommonMainString0Resources(map: MutableMap&lt;String, StringResource&gt;)</ID>
     <ID>FunctionNaming:String1.commonMain.kt$@InternalResourceApi internal fun _collectCommonMainString1Resources(map: MutableMap&lt;String, StringResource&gt;)</ID>
@@ -44,6 +42,34 @@
     <ID>FunctionNaming:String9.commonMain.kt$@InternalResourceApi internal fun _collectCommonMainString9Resources(map: MutableMap&lt;String, StringResource&gt;)</ID>
     <ID>FunctionParameterNaming:SharedDatabaseQueries.kt$SharedDatabaseQueries$`value`: Long</ID>
     <ID>FunctionParameterNaming:SharedDatabaseQueries.kt$SharedDatabaseQueries$value_: Long</ID>
+    <ID>HardcodedComposeColor:HistoricResultsComponents.kt$0xFF4CAF50</ID>
+    <ID>HardcodedComposeColor:HistoricResultsComponents.kt$0xFFF44336</ID>
+    <ID>HardcodedComposeColor:HistoricResultsComponents.kt$0xFFFFC107</ID>
+    <ID>HardcodedComposeColor:SubmissionsListComponents.kt$0xFF2196F3</ID>
+    <ID>HardcodedComposeColor:SubmissionsListComponents.kt$0xFF4CAF50</ID>
+    <ID>HardcodedComposeColor:SubmissionsListComponents.kt$0xFF9E9E9E</ID>
+    <ID>HardcodedComposeColor:SubmissionsListComponents.kt$0xFFF44336</ID>
+    <ID>HardcodedComposeColor:SubmissionsListComponents.kt$0xFFFF9800</ID>
+    <ID>HardcodedComposeColor:TopicInterviewHistoryComponents.kt$0xFF4CAF50</ID>
+    <ID>HardcodedComposeColor:TopicInterviewHistoryComponents.kt$0xFF8BC34A</ID>
+    <ID>HardcodedComposeColor:TopicInterviewHistoryComponents.kt$0xFFF44336</ID>
+    <ID>HardcodedComposeColor:TopicInterviewHistoryComponents.kt$0xFFFF9800</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF009688</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF0097A7</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF00BCD4</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF1976D2</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF2196F3</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF388E3C</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF3F51B5</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF455A64</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF4CAF50</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF7B1FA2</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF8BC34A</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF9C27B0</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFFD32F2F</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFFF57C00</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFFFF5722</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFFFF9800</ID>
     <ID>LargeClass:GTOAnalysisPrompts.kt$GTOAnalysisPrompts</ID>
     <ID>LargeClass:SharedDatabaseQueries.kt$SharedDatabaseQueries : TransacterImpl</ID>
     <ID>LongMethod:DrawerContent.kt$@Composable fun DrawerContent( currentRoute: String, phase1Expanded: Boolean, phase2Expanded: Boolean, onNavigateToHome: () -&gt; Unit, onNavigateToTopic: (topicId: String) -&gt; Unit, onNavigateToSSBOverview: () -&gt; Unit, onNavigateToMyBatches: () -&gt; Unit, onNavigateToSettings: () -&gt; Unit, onTogglePhase1: () -&gt; Unit, onTogglePhase2: () -&gt; Unit, onSignOut: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
@@ -63,6 +89,7 @@
     <ID>LongMethod:MarkdownText.kt$@Composable fun MarkdownText( content: String, modifier: Modifier = Modifier, textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant )</ID>
     <ID>LongMethod:MarketplaceMockData.kt$MarketplaceMockData$fun getInstitutes(): List&lt;CoachingInstitute&gt;</ID>
     <ID>LongMethod:MarketplaceScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MarketplaceScreen( onNavigateBack: () -&gt; Unit, onInstituteClick: (String) -&gt; Unit = {}, viewModel: MarketplaceViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:OIRTestScreen.kt$@OptIn(ExperimentalComposeUiApi::class) @Composable fun OIRTestScreen( onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: OIRTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:OLQDashboardCard.kt$@Composable fun OLQDashboardCard( processedData: ProcessedDashboardData, onNavigateToResult: (TestType, String) -&gt; Unit = { _, _ -&gt; }, isLoading: Boolean = false, isRefreshing: Boolean = false, onRefresh: () -&gt; Unit = {}, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:PIQContextBuilder.kt$PIQContextBuilder$fun buildComprehensivePIQContext(piqMap: Map&lt;String, Any&gt;): String</ID>
     <ID>LongMethod:PIQPage1EducationFields.kt$@Composable fun PIQPage1EducationFields( answers: Map&lt;String, String&gt;, onFieldChange: (String, String) -&gt; Unit )</ID>
@@ -72,7 +99,7 @@
     <ID>LongMethod:PIQSubmissionParser.kt$internal fun parsePIQSubmission(data: Map&lt;String, Any&gt;): PIQSubmission</ID>
     <ID>LongMethod:PIQTest.kt$PIQSubmission$fun toMap(): Map&lt;String, Any?&gt;</ID>
     <ID>LongMethod:PIQTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PIQTestScreen( testId: String, onNavigateBack: () -&gt; Unit = {}, onNavigateToResult: (String) -&gt; Unit = {}, viewModel: PIQTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
-    <ID>LongMethod:PPDTTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PPDTTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: PPDTTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:PPDTTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class) @Composable fun PPDTTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: PPDTTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:PhaseCards.kt$@Composable internal fun Phase2Card( progress: Phase2Progress?, onPhaseClick: () -&gt; Unit, onTopicClick: (String) -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:PsychTestsGraph.kt$fun NavGraphBuilder.psychTestsGraph(navController: NavHostController)</ID>
     <ID>LongMethod:SSBContentProvider.kt$SSBContentProvider$fun getInfoCards(): List&lt;SSBInfoCard&gt;</ID>
@@ -97,7 +124,7 @@
     <ID>LongMethod:StudyMaterialDetailScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun StudyMaterialDetailScreen( categoryId: String, onNavigateBack: () -&gt; Unit, onNavigateToRelatedMaterial: (String) -&gt; Unit = {}, viewModel: StudyMaterialDetailViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:SubscriptionPlanComparisonCards.kt$@Composable private fun PlanCard( tier: SubscriptionTierModel, isCurrentPlan: Boolean, onUpgrade: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:SubscriptionSection.kt$@Composable fun SubscriptionSection( currentTier: SubscriptionTier, onUpgradeClick: () -&gt; Unit, onManageSubscriptionClick: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
-    <ID>LongMethod:TATTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun TATTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: TATTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:TATTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class) @Composable fun TATTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: TATTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:TopicContentLoader.kt$TopicContentLoader$private fun getIntroduction(testType: String): String</ID>
     <ID>LongMethod:TopicContentLoaderConference.kt$internal fun conferenceIntroduction(): String</ID>
     <ID>LongMethod:UpgradePlanCard.kt$@Composable internal fun AnimatedPlanCard( plan: SubscriptionPlan, currentTier: SubscriptionTier, selectedBillingCycle: BillingCycle, isVisible: Boolean, onUpgradeClick: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
@@ -109,7 +136,7 @@
     <ID>LongParameterList:NotificationSwitchItems.kt$( preferences: NotificationPreferences?, onTogglePushNotifications: (Boolean) -&gt; Unit, onToggleGradingComplete: (Boolean) -&gt; Unit, onToggleFeedbackAvailable: (Boolean) -&gt; Unit, onToggleBatchInvitation: (Boolean) -&gt; Unit, onToggleGeneralAnnouncement: (Boolean) -&gt; Unit, onToggleStudyReminders: (Boolean) -&gt; Unit, onToggleTestReminders: (Boolean) -&gt; Unit, onToggleMarketplaceUpdates: (Boolean) -&gt; Unit )</ID>
     <ID>LongParameterList:PIQContextPersonalSections.kt$( fatherName: String, fatherOccupation: String, fatherEducation: String, fatherIncome: String, motherName: String, motherOccupation: String, motherEducation: String, parentsAlive: String, ageAtFatherDeath: String, ageAtMotherDeath: String, guardianName: String, guardianOccupation: String, siblings: List&lt;Map&lt;String, Any&gt;&gt; )</ID>
     <ID>LongParameterList:PIQContextPersonalSections.kt$( fullName: String, age: String, gender: String, state: String, district: String, maritalStatus: String, religion: String, motherTongue: String, permanentAddress: String, presentAddress: String, maxResidencePopulation: String, isDistrictHQ: Boolean, height: String, weight: String )</ID>
-    <ID>LongParameterList:PsychAnalysisOrchestrators.kt$( testType: TestType, submissionId: String, userId: String, prompt: String, recommendations: List&lt;String&gt;, submissionRepository: SubmissionRepository, userProfileRepository: UserProfileRepository, aiService: AIService, getOLQDashboard: GetOLQDashboardUseCase, logger: DomainLogger, analyze: suspend (String) -&gt; Result&lt;com.ssbmax.shared.domain.service.ResponseAnalysis&gt;, markAnalyzing: suspend () -&gt; Unit, markFailed: suspend () -&gt; Unit, writeResult: suspend (OLQAnalysisResult) -&gt; Unit )</ID>
+    <ID>LongParameterList:PsychAnalysisOrchestrators.kt$( testType: TestType, submissionId: String, userId: String, prompt: String, recommendations: List&lt;String&gt;, submissionRepository: SubmissionRepository, userProfileRepository: UserProfileRepository, aiService: AIService, getOLQDashboard: GetOLQDashboardUseCase, logger: DomainLogger, analyze: suspend (String) -&gt; Result&lt;com.ssbmax.shared.domain.service.ResponseAnalysis&gt;, markAnalyzing: suspend () -&gt; Result&lt;Unit&gt;, markFailed: suspend () -&gt; Unit, writeResult: suspend (OLQAnalysisResult) -&gt; Result&lt;Unit&gt; )</ID>
     <ID>LongParameterList:SDTInProgressPhase.kt$( question: String, questionNumber: Int, totalQuestions: Int, answer: String, onAnswerChange: (String) -&gt; Unit, charCount: Int, minChars: Int, maxChars: Int, timeRemaining: Int, canMoveNext: Boolean, onNext: () -&gt; Unit, onSkip: () -&gt; Unit, onShowExitDialog: () -&gt; Unit )</ID>
     <ID>LongParameterList:SRTInProgressPhase.kt$( situation: String, situationNumber: Int, totalSituations: Int, timeRemaining: Int, response: String, onResponseChange: (String) -&gt; Unit, minChars: Int, maxChars: Int, canMoveNext: Boolean, onNext: () -&gt; Unit, onSkip: () -&gt; Unit, onShowExitDialog: () -&gt; Unit )</ID>
     <ID>LongParameterList:SSBMaxDrawer.kt$( userProfile: UserProfile?, subscriptionTier: SubscriptionTier?, isLoadingProfile: Boolean = false, currentRoute: String, phase1Expanded: Boolean, phase2Expanded: Boolean, onNavigateToHome: () -&gt; Unit, onNavigateToTopic: (topicId: String) -&gt; Unit, onNavigateToSSBOverview: () -&gt; Unit, onNavigateToMyBatches: () -&gt; Unit, onNavigateToSettings: () -&gt; Unit, onEditProfile: () -&gt; Unit, onTogglePhase1: () -&gt; Unit, onTogglePhase2: () -&gt; Unit, onSignOut: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
@@ -123,6 +150,7 @@
     <ID>LongParameterList:SharedDatabaseQueries.kt$SharedDatabaseQueries$( id: String, word: String, sequenceNumber: Long, timeAllowedSeconds: Long, category: String?, difficulty: String?, batchId: String, cachedAt: Long, lastUsed: Long?, usageCount: Long, )</ID>
     <ID>LongParameterList:SharedDatabaseQueries.kt$SharedDatabaseQueries$( testType: String, difficulty: String, totalAttempts: Long, totalQuestionsAttempted: Long, correctAnswers: Long, incorrectAnswers: Long, averageScore: Double, averageTimeSeconds: Double, currentLevel: String, readyForNextLevel: Long, lastAttemptAt: Long, firstAttemptAt: Long, updatedAt: Long, )</ID>
     <ID>LongParameterList:SubscriptionManagementViewModel.kt$SubscriptionTierModel$( val displayName: String, val price: String, val oirTestLimit: Int, val tatTestLimit: Int, val watTestLimit: Int, val srtTestLimit: Int, val ppdtTestLimit: Int, val piqTestLimit: Int, val sdTestLimit: Int, val gtoTestLimit: Int, val interviewTestLimit: Int, val features: List&lt;String&gt; )</ID>
+    <ID>LongParameterList:TATTestViewModel.kt$TATTestViewModel$( private val loadTATTest: LoadTATTestUseCase, private val submitTATTest: SubmitTATTestUseCase, private val observeCurrentUser: ObserveCurrentUserUseCase, private val checkTestEligibility: CheckTestEligibilityUseCase, private val getSubscriptionTier: GetSubscriptionTierUseCase, private val usageRecorder: TestUsageRecorder, private val analysisTrigger: SubmissionAnalysisTrigger, private val testSessionRepository: TestSessionRepository, private val logger: DomainLogger, private val analyticsTracker: AnalyticsTracker )</ID>
     <ID>LongParameterList:UnifiedOLQResultTemplate.kt$( uiState: T, paddingValues: PaddingValues, submissionConfirmationContent: @Composable (T) -&gt; Unit, testSpecificContent: (@Composable (T) -&gt; Unit)?, submissionStatus: SubmissionStatus?, showInstructorReview: Boolean, onNavigateHome: () -&gt; Unit, onRetry: (() -&gt; Unit)? )</ID>
     <ID>LongParameterList:WATInProgressPhase.kt$( word: String, wordNumber: Int, totalWords: Int, timeRemaining: Int, response: String, onResponseChange: (String) -&gt; Unit, onSubmit: () -&gt; Unit, onSkip: () -&gt; Unit, onShowExitDialog: () -&gt; Unit )</ID>
     <ID>MaxLineLength:CheckInterviewPrerequisitesUseCase.kt$CheckInterviewPrerequisitesUseCase$is OIRStatus.CompletedBelowThreshold -&gt; failureReasons.add("Score at least 50% in OIR test (current: ${oirStatus.score.toInt()}%)")</ID>
@@ -174,7 +202,6 @@
     <ID>MaxLineLength:InterviewResultScreen.kt$OLQListCard(titleRes = Res.string.interview_result_weaknesses_title, olqs = uiState.weaknesses, isPositive = false)</ID>
     <ID>MaxLineLength:InterviewResultScreen.kt$Text(text = stringResource(Res.string.interview_result_olq_scores_title), style = MaterialTheme.typography.titleMedium)</ID>
     <ID>MaxLineLength:InterviewSessionComponents.kt$Text(text = stringResource(Res.string.interview_char_count, responseText.length), style = MaterialTheme.typography.labelSmall)</ID>
-    <ID>MaxLineLength:InterviewSessionScreen.kt$)</ID>
     <ID>MaxLineLength:InterviewSessionScreen.kt$Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.interview_cd_exit), tint = MaterialTheme.colorScheme.error)</ID>
     <ID>MaxLineLength:InterviewSessionScreen.kt$contentDescription = if (uiState.isTTSMuted) stringResource(Res.string.interview_cd_unmute_tts) else stringResource(Res.string.interview_cd_mute_tts)</ID>
     <ID>MaxLineLength:InterviewSessionScreen.kt$imageVector = if (uiState.isTTSMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp</ID>
@@ -230,7 +257,6 @@
     <ID>MaxLineLength:PIQTestScreen.kt$nextButtonText = if (uiState.currentPage == PIQPage.PAGE_2) stringResource(Res.string.piq_review) else stringResource(Res.string.piq_next)</ID>
     <ID>MaxLineLength:PPDTComponents.kt$Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))</ID>
     <ID>MaxLineLength:PPDTComponents.kt$Text(text = currentPhase.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
-    <ID>MaxLineLength:PPDTComponents.kt$leadingIconContentColor = if (isLowTime) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer</ID>
     <ID>MaxLineLength:PPDTInstructionsPhase.kt$Icon(imageVector = Icons.Default.Image, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)</ID>
     <ID>MaxLineLength:PPDTInstructionsPhase.kt$Row</ID>
     <ID>MaxLineLength:PPDTInstructionsPhase.kt$Text(text = number, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)</ID>
@@ -238,7 +264,6 @@
     <ID>MaxLineLength:PPDTReviewPhase.kt$Text(text = stringResource(Res.string.ppdt_review_story_label), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)</ID>
     <ID>MaxLineLength:PPDTReviewPhase.kt$Text(text = stringResource(Res.string.ppdt_review_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)</ID>
     <ID>MaxLineLength:PPDTTest.kt$PPDTSubmission$val analysisStatus: com.ssbmax.shared.domain.model.scoring.AnalysisStatus = com.ssbmax.shared.domain.model.scoring.AnalysisStatus.PENDING_ANALYSIS</ID>
-    <ID>MaxLineLength:PPDTTestViewModel.kt$PPDTTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "No connection. Please check your network and try again.") }</ID>
     <ID>MaxLineLength:PPDTWritingPhase.kt$color = if (charactersCount &gt;= minCharacters) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error</ID>
     <ID>MaxLineLength:Phase1DetailViewModel.kt$Phase1DetailViewModel$description</ID>
     <ID>MaxLineLength:PsychologySection.kt$PsychologyChip(stringResource(Res.string.dashboard_test_self_desc), results.sdResult?.overallScore, TestType.SD, results.sdResult?.submissionId, onNavigateToResult, isRefreshing)</ID>
@@ -249,30 +274,12 @@
     <ID>MaxLineLength:ResultScoreCards.kt$Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)</ID>
     <ID>MaxLineLength:ResultSections.kt$Card</ID>
     <ID>MaxLineLength:ResultSections.kt$Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary, modifier = modifier)</ID>
-    <ID>MaxLineLength:SDTTestViewModel.kt$SDTTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "Authentication required. Please login to continue.") }</ID>
-    <ID>MaxLineLength:SDTTestViewModel.kt$SDTTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "Cloud connection required. Please check your internet connection.") }</ID>
-    <ID>MaxLineLength:SDTTestViewModel.kt$SDTTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "No connection. Please check your network and try again.") }</ID>
     <ID>MaxLineLength:SRTInProgressPhase.kt$containerColor = if (timeRemaining &lt;= 60) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primaryContainer</ID>
     <ID>MaxLineLength:SRTInstructionsPhase.kt$Text(stringResource(Res.string.srt_instructions_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)</ID>
     <ID>MaxLineLength:SRTInstructionsPhase.kt$Text(stringResource(Res.string.srt_tips_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)</ID>
     <ID>MaxLineLength:SRTReviewPhase.kt$Text(stringResource(Res.string.srt_situation_prefix, number), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)</ID>
-    <ID>MaxLineLength:SRTTestViewModel.kt$SRTTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "Authentication required. Please login to continue.") }</ID>
-    <ID>MaxLineLength:SRTTestViewModel.kt$SRTTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "Cloud connection required. Please check your internet connection.") }</ID>
-    <ID>MaxLineLength:SRTTestViewModel.kt$SRTTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "No connection. Please check your network and try again.") }</ID>
     <ID>MaxLineLength:SSBPhase.kt$TestType$get() = this in listOf(PPDT, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, IO) // PIQ is for reference, not graded</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$DetailRow(icon = Icons.Default.ReportProblem, label = stringResource(Res.string.ssb_banner_critical_weaknesses_label), value = model.criticalWeaknessNames.joinToString(", "))</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$DetailRow(icon = Icons.Default.Warning, label = stringResource(Res.string.ssb_banner_factor_consistency_label), value = stringResource(Res.string.ssb_banner_factor_consistency_value))</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$QuickStatChip(label = stringResource(Res.string.ssb_banner_critical_label), value = if (model.hasCriticalWeakness) "⚠" else "✓", isOk = !model.hasCriticalWeakness, iconTint = iconTint)</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$QuickStatChip(label = stringResource(Res.string.ssb_banner_factor_ii_label), value = if (model.factorIIAutoReject) "⚠" else "✓", isOk = !model.factorIIAutoReject, iconTint = iconTint)</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$QuickStatChip(label = stringResource(Res.string.ssb_banner_limitations_label), value = "${model.limitationCount}/${model.maxLimitations}", isOk = model.limitationsOk, iconTint = iconTint)</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$RecommendationOutcome.BORDERLINE -&gt; BannerStyle(Color(0xFFF57F17), listOf(Color(0xFFFFA000), Color(0xFFF57F17)), Color.White, Icons.Default.Warning)</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$RecommendationOutcome.NOT_RECOMMENDED -&gt; BannerStyle(Color(0xFFB71C1C), listOf(Color(0xFFC62828), Color(0xFFB71C1C)), Color.White, Icons.Default.Cancel)</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$RecommendationOutcome.RECOMMENDED -&gt; BannerStyle(Color(0xFF1B5E20), listOf(Color(0xFF2E7D32), Color(0xFF1B5E20)), Color.White, Icons.Default.CheckCircle)</ID>
     <ID>MaxLineLength:SSBRecommendationBanner.kt$Row</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$Text(text = model.recommendationText, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$Text(text = model.subtitleText, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f), textAlign = TextAlign.Center)</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$Text(text = value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (isOk) Color.White else Color.Yellow)</ID>
-    <ID>MaxLineLength:SSBRecommendationBanner.kt$contentDescription = stringResource(if (isExpanded) Res.string.ssb_banner_collapse_cd else Res.string.ssb_banner_expand_cd)</ID>
     <ID>MaxLineLength:SharedDatabaseQueries.kt$SharedDatabaseQueries$"SELECT GPEBatchMetadata.batchId, GPEBatchMetadata.downloadedAt, GPEBatchMetadata.imageCount, GPEBatchMetadata.version FROM GPEBatchMetadata ORDER BY downloadedAt DESC"</ID>
     <ID>MaxLineLength:SharedDatabaseQueries.kt$SharedDatabaseQueries$"SELECT GTOBatchMetadata.batchId, GTOBatchMetadata.downloadedAt, GTOBatchMetadata.taskCount, GTOBatchMetadata.version FROM GTOBatchMetadata ORDER BY downloadedAt DESC"</ID>
     <ID>MaxLineLength:SharedDatabaseQueries.kt$SharedDatabaseQueries$"SELECT OIRBatchMetadata.batchId, OIRBatchMetadata.downloadedAt, OIRBatchMetadata.questionCount, OIRBatchMetadata.version FROM OIRBatchMetadata ORDER BY downloadedAt DESC"</ID>
@@ -299,6 +306,7 @@
     <ID>MaxLineLength:SharedDatabaseQueries.kt$SharedDatabaseQueries.SelectTestResultsByUserQuery$"""SELECT TestResult.id, TestResult.testId, TestResult.userId, TestResult.score, TestResult.maxScore, TestResult.completedAt, TestResult.timeSpentMinutes FROM TestResult WHERE userId = ? ORDER BY completedAt DESC"""</ID>
     <ID>MaxLineLength:StartInterviewViewModel.kt$StartInterviewViewModel$/** Load past interview results for history display. See [PendingInterviewSession]'s doc comment for the pre-existing dead-field gap this carries forward. */</ID>
     <ID>MaxLineLength:StartInterviewViewModel.kt$StartInterviewViewModel$loadingMessage = if (hasCachedQuestions) "Preparing interview..." else "Generating personalized questions (30-60s)..."</ID>
+    <ID>MaxLineLength:String0.commonMain.kt$StringResource</ID>
     <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.GTO_CT, "Command Task", Icons.Default.MilitaryTech, "GTO", 15, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore)</ID>
     <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.GTO_GD, "Group Discussion", Icons.Default.Forum, "GTO", 20, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore)</ID>
     <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.GTO_GOR, "Group Obstacle Race", Icons.AutoMirrored.Filled.DirectionsRun, "GTO", 60, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore)</ID>
@@ -313,24 +321,11 @@
     <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.TAT, "TAT", Icons.Default.EditNote, "Psychology", 30, 12, phase2Progress.psychologyProgress.status, phase2Progress.psychologyProgress.latestScore)</ID>
     <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.WAT, "WAT", Icons.Default.EditNote, "Psychology", 15, 60, phase2Progress.psychologyProgress.status, phase2Progress.psychologyProgress.latestScore)</ID>
     <ID>MaxLineLength:StudyMaterialsComponents.kt$Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)</ID>
-    <ID>MaxLineLength:StudyMaterialsViewModel.kt$StudyMaterialsViewModel$StudyCategoryItem(StudyCategory.CURRENT_AFFAIRS, "Current Affairs", Icons.Default.Public, 120, true, Color(0xFFF3E5F5), Color(0xFF673AB7), Color(0xFF311B92))</ID>
-    <ID>MaxLineLength:StudyMaterialsViewModel.kt$StudyMaterialsViewModel$StudyCategoryItem(StudyCategory.GENERAL_TIPS, "General SSB Tips", Icons.Default.Lightbulb, 56, false, Color(0xFFFFF8E1), Color(0xFFFF9800), Color(0xFFE65100))</ID>
-    <ID>MaxLineLength:StudyMaterialsViewModel.kt$StudyMaterialsViewModel$StudyCategoryItem(StudyCategory.GTO_TASKS, "GTO Tasks Guide", Icons.Default.Groups, 28, true, Color(0xFFE3F2FD), Color(0xFF2196F3), Color(0xFF0D47A1))</ID>
-    <ID>MaxLineLength:StudyMaterialsViewModel.kt$StudyMaterialsViewModel$StudyCategoryItem(StudyCategory.INTERVIEW_PREP, "Interview Prep", Icons.Default.RecordVoiceOver, 45, true, Color(0xFFFCE4EC), Color(0xFFE91E63), Color(0xFF880E4F))</ID>
-    <ID>MaxLineLength:StudyMaterialsViewModel.kt$StudyMaterialsViewModel$StudyCategoryItem(StudyCategory.OIR_PREP, "OIR Test Prep", Icons.Default.Quiz, 24, false, Color(0xFFE3F2FD), Color(0xFF1976D2), Color(0xFF0D47A1))</ID>
-    <ID>MaxLineLength:StudyMaterialsViewModel.kt$StudyMaterialsViewModel$StudyCategoryItem(StudyCategory.PHYSICAL_FITNESS, "Physical Fitness", Icons.Default.FitnessCenter, 22, false, Color(0xFFFFEBEE), Color(0xFFF44336), Color(0xFFB71C1C))</ID>
-    <ID>MaxLineLength:StudyMaterialsViewModel.kt$StudyMaterialsViewModel$StudyCategoryItem(StudyCategory.PIQ_PREP, "PIQ Form Guide", Icons.AutoMirrored.Filled.Assignment, 15, false, Color(0xFFF3E5F5), Color(0xFF9C27B0), Color(0xFF4A148C))</ID>
-    <ID>MaxLineLength:StudyMaterialsViewModel.kt$StudyMaterialsViewModel$StudyCategoryItem(StudyCategory.PPDT_TECHNIQUES, "PPDT Techniques", Icons.Default.Image, 18, false, Color(0xFFE8F5E9), Color(0xFF4CAF50), Color(0xFF1B5E20))</ID>
-    <ID>MaxLineLength:StudyMaterialsViewModel.kt$StudyMaterialsViewModel$StudyCategoryItem(StudyCategory.PSYCHOLOGY_TESTS, "Psychology Tests", Icons.Default.Psychology, 32, true, Color(0xFFE0F7FA), Color(0xFF009688), Color(0xFF004D40))</ID>
     <ID>MaxLineLength:SubmissionRepository.kt$SubmissionRepository$suspend</ID>
     <ID>MaxLineLength:TATInstructionsPhase.kt$Text(stringResource(Res.string.tat_instructions_section_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)</ID>
     <ID>MaxLineLength:TATInstructionsPhase.kt$Text(stringResource(Res.string.tat_instructions_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)</ID>
     <ID>MaxLineLength:TATInstructionsPhase.kt$Text(stringResource(Res.string.tat_tips_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)</ID>
-    <ID>MaxLineLength:TATTestScreen.kt$uiState.error != null -&gt; ErrorState(error = uiState.error!!, onRetry = { viewModel.loadTest(testId) }, modifier = Modifier.fillMaxSize())</ID>
-    <ID>MaxLineLength:TATTestViewModel.kt$TATTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "Cloud connection required. Please check your internet connection.") }</ID>
-    <ID>MaxLineLength:TATTestViewModel.kt$TATTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "No connection. Please check your network and try again.") }</ID>
     <ID>MaxLineLength:TATWritingPhase.kt$Text(stringResource(Res.string.tat_blank_slide_reminder_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)</ID>
-    <ID>MaxLineLength:TATWritingPhase.kt$text = stringResource(if (sequenceNumber == 12) Res.string.tat_writing_title_blank else Res.string.tat_writing_title)</ID>
     <ID>MaxLineLength:TopicComponents.kt$Card</ID>
     <ID>MaxLineLength:TopicComponents.kt$LazyColumn</ID>
     <ID>MaxLineLength:TopicComponents.kt$Text(text = material.duration, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
@@ -345,9 +340,6 @@
     <ID>MaxLineLength:TopicViewModel.kt$TopicViewModel$logger.d(TAG, "Feature flag check for $testType -- useCloudContent(master)=${ContentFeatureFlags.useCloudContent}, isTopicCloudEnabled=$useCloud")</ID>
     <ID>MaxLineLength:WATInstructionsPhase.kt$Text(stringResource(Res.string.wat_instructions_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)</ID>
     <ID>MaxLineLength:WATInstructionsPhase.kt$Text(stringResource(Res.string.wat_tips_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)</ID>
-    <ID>MaxLineLength:WATTestScreen.kt$uiState.error != null -&gt; ErrorState(error = uiState.error!!, onRetry = { viewModel.loadTest(testId) }, modifier = Modifier.fillMaxSize())</ID>
-    <ID>MaxLineLength:WATTestViewModel.kt$WATTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "Cloud connection required. Please check your internet connection.") }</ID>
-    <ID>MaxLineLength:WATTestViewModel.kt$WATTestViewModel$_uiState.update { it.copy(isLoading = false, loadingMessage = null, error = "No connection. Please check your network and try again.") }</ID>
     <ID>MayBeConst:ContentFeatureFlags.kt$ContentFeatureFlags$// Always fallback to local on errors (safety net) val fallbackToLocalOnError: Boolean = true</ID>
     <ID>MayBeConst:ContentFeatureFlags.kt$ContentFeatureFlags$// Master switch: Enable/disable cloud content // Migration complete - flags permanently enabled val useCloudContent: Boolean = true</ID>
     <ID>MayBeConst:ContentFeatureFlags.kt$ContentFeatureFlags$// Query optimization flags val enableOfflinePersistence: Boolean = true</ID>
@@ -370,15 +362,12 @@
     <ID>MissingComposePreview:SubmissionConfirmationCard.kt$@Composable fun SubmissionConfirmationCard( subtitle: String, modifier: Modifier = Modifier, title: String = stringResource(Res.string.result_test_submitted_title), additionalContent: (@Composable () -&gt; Unit)? = null )</ID>
     <ID>MissingComposePreview:SubscriptionBadge.kt$@Composable fun SubscriptionBadge( subscriptionType: SubscriptionTier, modifier: Modifier = Modifier )</ID>
     <ID>MissingComposePreview:UnifiedOLQResultTemplate.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun &lt;T : UnifiedResultUiState&gt; UnifiedOLQResultTemplate( uiState: T, testTitle: String, submissionConfirmationContent: @Composable (T) -&gt; Unit, modifier: Modifier = Modifier, testSpecificContent: (@Composable (T) -&gt; Unit)? = null, submissionStatus: SubmissionStatus? = null, showInstructorReview: Boolean = true, onNavigateHome: () -&gt; Unit, onRetry: (() -&gt; Unit)? = null )</ID>
-    <ID>NestedBlockDepth:CheckInterviewPrerequisitesUseCase.kt$CheckInterviewPrerequisitesUseCase$suspend operator fun invoke( userId: String, bypassSubscriptionCheck: Boolean = false, bypassPrerequisites: Boolean = false ): Result&lt;PrerequisiteCheckResult&gt;</ID>
     <ID>NestedBlockDepth:GetHistoricResultsUseCase.kt$GetHistoricResultsUseCase$suspend operator fun invoke( userId: String, testType: TestType? = null ): Result&lt;List&lt;HistoricResult&gt;&gt;</ID>
-    <ID>RethrowCaughtException:OIRTestViewModel.kt$OIRTestViewModel$throw e</ID>
+    <ID>ReturnCount:PPDTAnalysisOrchestrator.kt$PPDTAnalysisOrchestrator$suspend fun analyze(submissionId: String)</ID>
     <ID>ReturnCount:SessionManager.kt$SessionManager$suspend fun loadNextQuestion(): Result&lt;InterviewQuestion?&gt;</ID>
     <ID>ReturnCount:SessionManager.kt$SessionManager$suspend fun loadSession(sessionId: String): Result&lt;Unit&gt;</ID>
     <ID>ReturnCount:TATAnalysisOrchestrator.kt$TATAnalysisOrchestrator$suspend fun analyze(submissionId: String)</ID>
     <ID>ThrowsCount:OIRTestViewModel.kt$OIRTestViewModel$fun loadTest(testId: String = "oir_standard")</ID>
-    <ID>TooGenericExceptionThrown:OIRTestViewModel.kt$OIRTestViewModel$throw Exception("All questions failed validation.")</ID>
-    <ID>TooGenericExceptionThrown:OIRTestViewModel.kt$OIRTestViewModel$throw Exception("No questions available.")</ID>
     <ID>UnusedParameter:DashboardTestScoreChip.kt$isOLQBased: Boolean = true</ID>
     <ID>UnusedParameter:InstructorPlaceholderScreens.kt$onBatchCreated: (String) -&gt; Unit = {}</ID>
     <ID>UnusedParameter:InstructorPlaceholderScreens.kt$onNavigateToStudent: (String) -&gt; Unit = {}</ID>
