@@ -8,6 +8,7 @@ export interface TestDayAccordionProps {
   dayOverview: SSBDayOverview;
   userTier?: AccessTier;
   defaultExpanded?: boolean;
+  searchQuery?: string;
   onStartTest: (testId: string) => void;
   onUnlockTier?: (tier: AccessTier) => void;
 }
@@ -16,11 +17,27 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
   dayOverview,
   userTier = 'cadet',
   defaultExpanded = true,
+  searchQuery,
   onStartTest,
   onUnlockTier,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const tests = getTestConfigsForDay(dayOverview.dayNumber);
+  const allTests = getTestConfigsForDay(dayOverview.dayNumber);
+
+  const tests = searchQuery
+    ? allTests.filter(
+        (t) =>
+          t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          t.shortCode.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : allTests;
+
+  if (searchQuery && tests.length === 0) {
+    return null;
+  }
+
+  const activeExpanded = searchQuery ? true : isExpanded;
 
   const toggleAccordion = () => {
     setIsExpanded((prev) => !prev);
@@ -38,7 +55,7 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
       <button
         id={headerId}
         onClick={toggleAccordion}
-        aria-expanded={isExpanded}
+        aria-expanded={activeExpanded}
         aria-controls={contentId}
         data-testid={`accordion-toggle-${dayOverview.dayNumber}`}
         className="w-full min-h-[56px] px-6 py-4 flex items-center justify-between gap-4 text-left hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/50"
@@ -66,7 +83,7 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
         <div className="flex items-center gap-2">
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 transition-transform duration-200 ${
-              isExpanded ? 'rotate-180 bg-sky-500/10 text-sky-600 dark:text-sky-400' : ''
+              activeExpanded ? 'rotate-180 bg-sky-500/10 text-sky-600 dark:text-sky-400' : ''
             }`}
           >
             <ChevronDown className="w-4 h-4" />
@@ -75,7 +92,7 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
       </button>
 
       {/* Accordion Content Region */}
-      {isExpanded && (
+      {activeExpanded && (
         <div
           id={contentId}
           role="region"

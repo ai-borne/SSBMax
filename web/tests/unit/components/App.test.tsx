@@ -67,7 +67,7 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
     fireEvent.click(screen.getByTestId('nav-item-tests'));
 
     // Launch free OIR test
-    const launchOIRBtn = screen.getByTestId('launch-test-oir');
+    const launchOIRBtn = screen.getByTestId('launch-button-oir');
     fireEvent.click(launchOIRBtn);
 
     // Header and navigation should be hidden in test mode
