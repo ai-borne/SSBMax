@@ -90,7 +90,7 @@ export const HeroSection: FC<HeroSectionProps> = ({
             </div>
             <div>
               <p className="text-sm font-bold text-slate-900 dark:text-white">{strings.landing.statOlq}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Psychology & GTO Metrics</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{strings.landing.statOlqSub}</p>
             </div>
           </div>
 
@@ -100,7 +100,7 @@ export const HeroSection: FC<HeroSectionProps> = ({
             </div>
             <div>
               <p className="text-sm font-bold text-slate-900 dark:text-white">{strings.landing.statStage}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Screening to Interview</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{strings.landing.statStageSub}</p>
             </div>
           </div>
 
@@ -110,7 +110,7 @@ export const HeroSection: FC<HeroSectionProps> = ({
             </div>
             <div>
               <p className="text-sm font-bold text-slate-900 dark:text-white">{strings.landing.statAi}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Confidential Assessor Dossier</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{strings.landing.statAiSub}</p>
             </div>
           </div>
         </div>

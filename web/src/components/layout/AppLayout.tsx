@@ -87,7 +87,7 @@ export const AppLayout: FC<AppLayoutProps> = ({
             </div>
           ) : (
             <header className="w-full h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 flex items-center shadow-sm" data-testid="command-header">
-              <div className="max-w-7xl w-full mx-auto flex items-center justify-between">
+              <div className="max-w-7xl w-full mx-auto flex items-center justify-between relative">
                 {/* Brand Logo & Title */}
                 <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavClick('home')} data-testid="brand-logo">
                   <div className="p-2 rounded-xl bg-gradient-to-tr from-sky-600 to-blue-600 text-white shadow-md shadow-sky-600/20 group-hover:scale-105 transition-transform">
@@ -106,8 +106,8 @@ export const AppLayout: FC<AppLayoutProps> = ({
                   </div>
                 </div>
 
-                {/* Unified Pill Segmented Control Navigation Bar */}
-                <nav className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700/50" data-testid="unified-pill-nav">
+                {/* Unified Pill Segmented Control Navigation Bar (Mathematically Centered) */}
+                <nav className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700/50 absolute left-1/2 -translate-x-1/2" data-testid="unified-pill-nav">
                   {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
