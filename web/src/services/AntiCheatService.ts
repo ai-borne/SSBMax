@@ -27,6 +27,9 @@ export class AntiCheatService {
   private boundKeyDownHandler: (e: KeyboardEvent) => void;
   private boundVisibilityHandler: () => void;
   private boundBlurHandler: () => void;
+  private boundPasteHandler: (e: ClipboardEvent) => void;
+  private boundDropHandler: (e: DragEvent) => void;
+  private boundFullscreenHandler: () => void;
 
   constructor(options: AntiCheatOptions = {}) {
     this.maxViolations = options.maxViolations || 3;
@@ -37,6 +40,9 @@ export class AntiCheatService {
     this.boundKeyDownHandler = this.handleKeyDown.bind(this);
     this.boundVisibilityHandler = this.handleVisibilityChange.bind(this);
     this.boundBlurHandler = this.handleBlur.bind(this);
+    this.boundPasteHandler = this.handlePaste.bind(this);
+    this.boundDropHandler = this.handleDrop.bind(this);
+    this.boundFullscreenHandler = this.handleFullscreenChange.bind(this);
   }
 
   public activate(): void {
@@ -48,9 +54,14 @@ export class AntiCheatService {
     // Suppress context menu & right-click / iOS long-press callout
     window.addEventListener('contextmenu', this.boundContextMenuHandler, true);
     window.addEventListener('keydown', this.boundKeyDownHandler, true);
+    window.addEventListener('paste', this.boundPasteHandler as EventListener, true);
+    window.addEventListener('drop', this.boundDropHandler as EventListener, true);
     document.addEventListener('visibilitychange', this.boundVisibilityHandler, true);
     window.addEventListener('blur', this.boundBlurHandler, true);
     window.addEventListener('pagehide', this.boundVisibilityHandler, true);
+
+    // Cross-browser Fullscreen Change Event Listeners with Feature Detection
+    this.addFullscreenListeners();
 
     // Apply mobile touch-callout & user-select restrictions on active test container
     if (document.body) {
@@ -66,9 +77,13 @@ export class AntiCheatService {
 
     window.removeEventListener('contextmenu', this.boundContextMenuHandler, true);
     window.removeEventListener('keydown', this.boundKeyDownHandler, true);
+    window.removeEventListener('paste', this.boundPasteHandler as EventListener, true);
+    window.removeEventListener('drop', this.boundDropHandler as EventListener, true);
     document.removeEventListener('visibilitychange', this.boundVisibilityHandler, true);
     window.removeEventListener('blur', this.boundBlurHandler, true);
     window.removeEventListener('pagehide', this.boundVisibilityHandler, true);
+
+    this.removeFullscreenListeners();
 
     // Restore text selection & touch callouts
     if (document.body) {
@@ -119,6 +134,60 @@ export class AntiCheatService {
     }
   }
 
+  private handlePaste(e: ClipboardEvent): void {
+    // Preserve Input Method Editor (IME) composition for vernacular / virtual keyboards
+    const target = e.target as any;
+    if ((e as any).isComposing || target?.isComposing) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.onWarning) {
+      this.onWarning(strings.anticheat.pasteBlocked, this.violationCount);
+    }
+  }
+
+  private handleDrop(e: DragEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.onWarning) {
+      this.onWarning(strings.anticheat.dropBlocked, this.violationCount);
+    }
+  }
+
+  private addFullscreenListeners(): void {
+    if (typeof document === 'undefined') return;
+    const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
+    events.forEach(evt => document.addEventListener(evt, this.boundFullscreenHandler, true));
+  }
+
+  private removeFullscreenListeners(): void {
+    if (typeof document === 'undefined') return;
+    const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
+    events.forEach(evt => document.removeEventListener(evt, this.boundFullscreenHandler, true));
+  }
+
+  private handleFullscreenChange(): void {
+    const isFullscreenSupported = typeof document !== 'undefined' && (
+      document.fullscreenEnabled ||
+      (document as any).webkitFullscreenEnabled ||
+      (document as any).mozFullScreenEnabled ||
+      (document as any).msFullscreenEnabled
+    );
+    if (!isFullscreenSupported) return;
+
+    const isFullscreen = !!(
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      (document as any).mozFullScreenElement ||
+      (document as any).msFullscreenElement
+    );
+
+    if (!isFullscreen) {
+      this.recordUnfocusViolation(strings.anticheat.fullscreenExited);
+    }
+  }
+
   private handleBlur(): void {
     this.recordUnfocusViolation();
   }
@@ -129,7 +198,7 @@ export class AntiCheatService {
     }
   }
 
-  private recordUnfocusViolation(): void {
+  private recordUnfocusViolation(customMessage?: string): void {
     const now = Date.now();
     // Debounce unfocus events within 1000ms to prevent double-counting simultaneous blur + visibilitychange on mobile OS
     if (now - this.lastUnfocusTimestamp < 1000) {
@@ -139,7 +208,8 @@ export class AntiCheatService {
 
     this.violationCount++;
 
-    const message = strings.anticheat.windowUnfocused
+    const template = customMessage || strings.anticheat.windowUnfocused;
+    const message = template
       .replace('{count}', this.violationCount.toString())
       .replace('{max}', this.maxViolations.toString());
 

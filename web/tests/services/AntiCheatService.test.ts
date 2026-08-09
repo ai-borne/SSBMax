@@ -109,4 +109,45 @@ describe('AntiCheatService Cross-Platform Tests', () => {
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
     Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
   });
+
+  it('should intercept paste events and warn candidate, but preserve IME composition', () => {
+    // 1. Standard Paste Event
+    const pasteEvent = new Event('paste', { cancelable: true, bubbles: true });
+    const preventDefaultSpy = vi.spyOn(pasteEvent, 'preventDefault');
+
+    window.dispatchEvent(pasteEvent);
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(warningMessages[0].message).toBe(strings.anticheat.pasteBlocked);
+
+    // 2. IME Composition Paste Event (should NOT be prevented)
+    const imeEvent = new Event('paste', { cancelable: true, bubbles: true }) as any;
+    imeEvent.isComposing = true;
+    const imePreventSpy = vi.spyOn(imeEvent, 'preventDefault');
+
+    window.dispatchEvent(imeEvent);
+
+    expect(imePreventSpy).not.toHaveBeenCalled();
+  });
+
+  it('should intercept drop events and warn candidate', () => {
+    const dropEvent = new Event('drop', { cancelable: true, bubbles: true });
+    const preventDefaultSpy = vi.spyOn(dropEvent, 'preventDefault');
+
+    window.dispatchEvent(dropEvent);
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(warningMessages[0].message).toBe(strings.anticheat.dropBlocked);
+  });
+
+  it('should track fullscreen exit and issue warning when fullscreen is supported', () => {
+    Object.defineProperty(document, 'fullscreenEnabled', { value: true, configurable: true });
+    Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+
+    document.dispatchEvent(new Event('fullscreenchange'));
+
+    expect(antiCheatService.getViolations()).toBe(1);
+    expect(warningMessages[0].message).toContain('Fullscreen mode exited');
+  });
 });
+

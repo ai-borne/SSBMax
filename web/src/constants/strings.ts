@@ -330,6 +330,9 @@ export const strings = {
   anticheat: {
     contextMenuBlocked: 'Right-click context menu is disabled during active standardized test mode.',
     shortcutBlocked: 'Keyboard shortcuts are restricted during active standardized test mode.',
+    pasteBlocked: 'Pasting pre-written content is restricted during active standardized timed test sessions.',
+    dropBlocked: 'Drag-and-drop text insertion is restricted during active standardized timed test sessions.',
+    fullscreenExited: 'Warning: Fullscreen mode exited ({count}/{max}). Please maintain fullscreen during timed tests.',
     windowUnfocused: 'Warning: Tab switch / window unfocus detected ({count}/{max}). Repeated violations will trigger test submission.',
     autoSubmitted: 'Test automatically submitted due to multiple window unfocus violations.'
   }
