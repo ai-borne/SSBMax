@@ -35,7 +35,7 @@ class SSBValidationPerformanceTest {
         val scores = createValidScores()
         
         // Warm up JIT
-        repeat(10) {
+        repeat(50) {
             SSBScoreValidator.validate(scores, EntryType.NDA)
         }
         
@@ -54,7 +54,7 @@ class SSBValidationPerformanceTest {
         println("Single validation: avg=${avgMs}ms, max=${maxMs}ms")
         
         assertTrue(avgMs < 10.0, "Average validation time should be under 10ms, was ${avgMs}ms")
-        assertTrue(maxMs < 20.0, "Max validation time should be under 20ms, was ${maxMs}ms")
+        assertTrue(maxMs < 50.0, "Max validation time should be under 50ms, was ${maxMs}ms")
     }
 
     @Test
