@@ -94,4 +94,16 @@ describe('useTheme hook - Advanced System & Mode Tests', () => {
     });
     expect(result.current.theme).toBe('system');
   });
+
+  it('should synchronize theme changes across multiple hook instances', () => {
+    const { result: hookA } = renderHook(() => useTheme());
+    const { result: hookB } = renderHook(() => useTheme());
+
+    act(() => {
+      hookA.current.setTheme('dark');
+    });
+
+    expect(hookA.current.theme).toBe('dark');
+    expect(hookB.current.theme).toBe('dark');
+  });
 });
