@@ -133,4 +133,14 @@ describe('StudyMaterialPage Component', () => {
     expect(handleSelect).toHaveBeenCalledWith(mockMaterials[0]);
     expect(screen.getByTestId('study-reader-modal')).toBeInTheDocument();
   });
+
+  it('renders tier badges on study cards for UI symmetry', async () => {
+    const vm = new StudyMaterialViewModel(new MockContentRepository());
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tier-badge-oir')).toHaveTextContent('FREE GUIDE');
+      expect(screen.getByTestId('tier-badge-ppdt')).toHaveTextContent('PRO DOSSIER');
+    });
+  });
 });

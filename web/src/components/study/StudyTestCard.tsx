@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import { Lock, FileText, CheckCircle, Clock, ChevronRight } from 'lucide-react';
 import { StudyMaterial } from '../../types/testContent';
+import { AccessTier } from '../../constants/ssbSelectionProcess';
 
 export interface SSBTestCardInfo {
   id: string;
@@ -8,6 +9,7 @@ export interface SSBTestCardInfo {
   title: string;
   shortCode: string;
   description: string;
+  requiredTier?: AccessTier;
   materials: StudyMaterial[];
 }
 
@@ -28,6 +30,30 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
   isMaterialCompleted,
   onToggleCompleted,
 }) => {
+  const getTierBadgeStyle = () => {
+    switch (cardInfo.requiredTier) {
+      case 'command':
+        return 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30';
+      case 'officer':
+        return 'bg-sky-500/10 dark:bg-sky-500/20 text-sky-700 dark:text-sky-400 border-sky-500/30';
+      case 'cadet':
+      default:
+        return 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30';
+    }
+  };
+
+  const getTierBadgeLabel = () => {
+    switch (cardInfo.requiredTier) {
+      case 'command':
+        return 'COMMAND DOSSIER';
+      case 'officer':
+        return 'PRO DOSSIER';
+      case 'cadet':
+      default:
+        return 'FREE GUIDE';
+    }
+  };
+
   return (
     <div
       onClick={() => onCardClick(cardInfo.testTypeId)}
@@ -36,9 +62,17 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
     >
       <div>
         <div className="flex items-center justify-between gap-2 mb-2">
-          <span className="px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/30">
-            {cardInfo.shortCode}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              {cardInfo.shortCode}
+            </span>
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getTierBadgeStyle()}`}
+              data-testid={`tier-badge-${cardInfo.testTypeId}`}
+            >
+              {getTierBadgeLabel()}
+            </span>
+          </div>
           {!isUnlocked && (
             <span
               className="flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30"
