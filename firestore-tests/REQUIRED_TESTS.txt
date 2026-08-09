@@ -1,0 +1,32 @@
+# Regression tests that must never silently disappear from *.rules.test.mjs.
+#
+# This file is a tripwire, not a test suite: verify-required-tests.mjs checks that every
+# title listed below still exists as a `test('...')` in the named file. If a pinned test is
+# deleted or its title edited without a matching edit here, CI fails loudly -- with the reason
+# the test existed in the first place -- instead of quietly going green again because the
+# regression check behind it is gone. This is how the Aug 2026 test_sessions and subscription
+# usage incidents shipped: a rules change looked like a safe tightening, nothing in CI exercised
+# the rules file, and no automated test told anyone a legitimate transition had been silently
+# broken.
+#
+# Adding new tests does NOT require touching this file. Removing or renaming one of the tests
+# below DOES -- and that edit has to be deliberate and visible in the diff, with a reason in the
+# commit message for why the regression it guards against can no longer happen.
+#
+# format: <file>|<exact test title>
+test_sessions.rules.test.mjs|an ACTIVE session may transition to a terminal status (submit)
+test_sessions.rules.test.mjs|a terminal session may start a fresh attempt (retake)
+test_sessions.rules.test.mjs|an expired ACTIVE session may be reclaimed by a fresh attempt
+test_sessions.rules.test.mjs|the owner may restart over their own still-live ACTIVE session
+test_sessions.rules.test.mjs|createTestSession's full-document replace over a stuck ACTIVE doc is allowed
+test_sessions.rules.test.mjs|a restart cannot masquerade as a terminal session going terminal again
+test_sessions.rules.test.mjs|another user cannot update someone else's session
+test_sessions.rules.test.mjs|userId, testId, and testType are immutable on update
+test_sessions.rules.test.mjs|an unauthenticated client cannot update a session
+test_sessions.rules.test.mjs|a client cannot create a session with someone else's userId
+test_sessions.rules.test.mjs|a client cannot delete a session
+subscription_usage.rules.test.mjs|the real write shape (bare month field, usage_-prefixed doc id) is allowed
+subscription_usage.rules.test.mjs|a doc id that does not match usage_{month} is rejected
+subscription_usage.rules.test.mjs|a client cannot create a usage doc for another user
+subscription_usage.rules.test.mjs|an existing usage doc accepts an incremental update recording one more submission
+subscription_usage.rules.test.mjs|an update cannot jump a counter by more than one attempt

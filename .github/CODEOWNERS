@@ -8,5 +8,6 @@
 /.github/               @sunilpawar-git
 /lint/                  @sunilpawar-git
 firestore.rules         @sunilpawar-git
+/firestore-tests/       @sunilpawar-git
 *.gradle.kts            @sunilpawar-git
 gradle/libs.versions.toml @sunilpawar-git

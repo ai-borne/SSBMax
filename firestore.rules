@@ -98,7 +98,14 @@ service cloud.firestore {
                           'srtTestsUsed', 'ppdtTestsUsed', 'piqTestsUsed', 'gtoTestsUsed',
                           'interviewTestsUsed', 'sdTestsUsed', 'recordedSubmissionIds', 'lastUpdated'
                         ]) &&
-                        request.resource.data.month == document &&
+                        // The doc id is `usage_{month}` (GitLiveTestUsageRecorder /
+                        // GitLiveSubscriptionRepository) but the `month` field itself holds the
+                        // bare value (e.g. "2026-08", no "usage_" prefix -- see
+                        // GitLiveSubscriptionRepository.getMonthlyUsage, which reads the same bare
+                        // value back). Comparing `month` directly to `document` (the doc id) can
+                        // never match and permanently denied every user's first usage write of
+                        // every month; reconstruct the doc id instead.
+                        document == 'usage_' + request.resource.data.month &&
                         request.resource.data.recordedSubmissionIds is list &&
                         request.resource.data.lastUpdated is int &&
                          // Allow counts 0-10 on create (transaction may increment immediately)
