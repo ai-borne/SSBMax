@@ -60,7 +60,7 @@ jobs:
       - name: Verify sensitive files are not tracked
         run: |
           echo "🔍 Checking for sensitive files in git..."
-          SENSITIVE_FILES=("local.properties" "functions/.env" "functions/.env.local" ".env" "google-services.json" "service-account.json" "firebase-admin-key.json")
+          SENSITIVE_FILES=("local.properties" "functions/.env" "functions/.env.local" ".env" ".env.production" "*.env.production" "google-services.json" "service-account.json" "firebase-admin-key.json")
           FOUND_SENSITIVE=0
           for file in "${SENSITIVE_FILES[@]}"; do
             if git ls-files | grep -q "^${file}$"; then
