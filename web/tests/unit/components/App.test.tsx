@@ -31,23 +31,24 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders default home section on initial load', () => {
+  it('renders default home section and PublicHeader on initial load', () => {
     render(<App />);
 
     expect(screen.getByTestId('hero-section')).toBeInTheDocument();
-    expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
+    expect(screen.getByTestId('public-header')).toBeInTheDocument();
+    expect(screen.getByTestId('public-brand-logo')).toBeInTheDocument();
   });
 
-  it('navigates to dashboard, practice, study, reports, and pricing tabs', () => {
+  it('navigates to practice, dashboard, study, reports, and pricing tabs', () => {
     render(<App />);
 
-    // Click Dashboard nav
+    // Click Practice link on PublicHeader
+    fireEvent.click(screen.getByTestId('public-nav-practice'));
+    expect(screen.getByTestId('practice-tests-page')).toBeInTheDocument();
+
+    // Click Dashboard nav on Command Header
     fireEvent.click(screen.getByTestId('nav-item-dashboard'));
     expect(screen.getByTestId('candidate-dashboard')).toBeInTheDocument();
-
-    // Click Practice nav
-    fireEvent.click(screen.getByTestId('nav-item-practice'));
-    expect(screen.getByTestId('practice-tests-page')).toBeInTheDocument();
 
     // Click Study nav
     fireEvent.click(screen.getByTestId('nav-item-study'));
@@ -65,8 +66,8 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
   it('launches full-screen test runner and hides header/footer, then exits back to app layout', async () => {
     render(<App />);
 
-    // Go to practice page
-    fireEvent.click(screen.getByTestId('nav-item-practice'));
+    // Go to practice page from PublicHeader
+    fireEvent.click(screen.getByTestId('public-nav-practice'));
 
     // Launch free OIR test
     const launchOIRBtn = screen.getByTestId('launch-test-oir');

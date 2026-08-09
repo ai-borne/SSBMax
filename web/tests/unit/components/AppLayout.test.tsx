@@ -3,6 +3,14 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { AppLayout } from '../../../src/components/layout/AppLayout';
 import { strings } from '../../../src/constants/strings';
 
+const mockUser = {
+  uid: 'user_123',
+  email: 'cadet@ssbmax.in',
+  displayName: 'Cadet Officer',
+  photoURL: null,
+  isPaidMember: true
+};
+
 describe('AppLayout Component', () => {
   beforeEach(() => {
     localStorage.setItem('theme', 'dark');
@@ -16,7 +24,7 @@ describe('AppLayout Component', () => {
 
   it('renders children content within layout shell', () => {
     render(
-      <AppLayout>
+      <AppLayout user={mockUser}>
         <div data-testid="test-child">Child Content</div>
       </AppLayout>
     );
@@ -25,9 +33,9 @@ describe('AppLayout Component', () => {
     expect(screen.getByText('Child Content')).toBeInTheDocument();
   });
 
-  it('renders title, brand logo, and navigation items', () => {
+  it('renders title, brand logo, and command navigation items for authenticated user', () => {
     render(
-      <AppLayout activeTab="home">
+      <AppLayout activeTab="dashboard" user={mockUser}>
         <div>Content</div>
       </AppLayout>
     );
@@ -41,10 +49,21 @@ describe('AppLayout Component', () => {
     expect(screen.getByTestId('nav-item-pricing')).toBeInTheDocument();
   });
 
+  it('renders PublicHeader for unauthenticated user on landing page', () => {
+    render(
+      <AppLayout activeTab="home" user={null}>
+        <div>Public Landing Content</div>
+      </AppLayout>
+    );
+
+    expect(screen.getByTestId('public-header')).toBeInTheDocument();
+    expect(screen.getByTestId('public-cta-start-free')).toBeInTheDocument();
+  });
+
   it('triggers onTabChange callback when navigation item is clicked', () => {
     const handleTabChange = vi.fn();
     render(
-      <AppLayout activeTab="home" onTabChange={handleTabChange}>
+      <AppLayout activeTab="dashboard" user={mockUser} onTabChange={handleTabChange}>
         <div>Content</div>
       </AppLayout>
     );
@@ -57,7 +76,7 @@ describe('AppLayout Component', () => {
 
   it('toggles mobile menu drawer when mobile menu button is clicked', () => {
     render(
-      <AppLayout>
+      <AppLayout user={mockUser}>
         <div>Content</div>
       </AppLayout>
     );
@@ -71,7 +90,7 @@ describe('AppLayout Component', () => {
 
   it('toggles theme mode when theme toggle button is clicked', () => {
     render(
-      <AppLayout>
+      <AppLayout user={mockUser}>
         <div>Content</div>
       </AppLayout>
     );
