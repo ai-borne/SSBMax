@@ -351,8 +351,69 @@ class GetOLQDashboardUseCaseTest {
         // even if it was different in the raw data (regression prevention)
         val finalOirResult = data?.dashboard?.phase1Results?.oirResult
         assertNotNull(finalOirResult)
-        assertEquals("The sessionId must be reconciled with the document ID for navigation consistency", 
+        assertEquals("The sessionId must be reconciled with the document ID for navigation consistency",
             submissionId, finalOirResult?.sessionId)
+    }
+
+    /**
+     * OIR RETAKE SEAL (Phase 1, Option B) — characterization test.
+     *
+     * Once OIR mints a fresh submission id per attempt, a user can have multiple OIR
+     * submission documents. This pins that the dashboard reflects the most recently
+     * submitted one — [getLatestOIRSubmission]'s real implementation already queries
+     * `orderBy(submittedAt, DESCENDING).limit(1)`, so this test simulates that contract
+     * by only stubbing the newer of two attempts, and asserts the dashboard's reconciled
+     * id matches it. Guards against a future "simplification" back to a fixed-id lookup.
+     */
+    @Test
+    fun `dashboard reflects the most recent of multiple OIR submissions for a user`() = runTest {
+        val userId = "user_retake"
+        val newerSubmissionId = "oir_attempt_2"
+
+        val newerResult = OIRTestResult(
+            testId = "oir_standard",
+            sessionId = "stale_session_ref",
+            userId = userId,
+            totalQuestions = 10,
+            correctAnswers = 8,
+            incorrectAnswers = 2,
+            skippedQuestions = 0,
+            totalTimeSeconds = 600,
+            timeTakenSeconds = 300,
+            rawScore = 8,
+            percentageScore = 80f,
+            categoryScores = emptyMap(),
+            difficultyBreakdown = emptyMap(),
+            answeredQuestions = emptyList(),
+            completedAt = System.currentTimeMillis()
+        )
+        val newerSubmission = OIRSubmission(
+            id = newerSubmissionId,
+            userId = userId,
+            testId = "oir_standard",
+            testResult = newerResult,
+            submittedAt = System.currentTimeMillis(),
+            status = SubmissionStatus.SUBMITTED_PENDING_REVIEW
+        )
+
+        // getLatestOIRSubmission's real query already orders by submittedAt DESC and
+        // limits to 1 — simulate that contract by only ever returning the newer attempt.
+        coEvery { submissionRepository.getLatestOIRSubmission(userId) } returns Result.success(newerSubmission)
+        coEvery { submissionRepository.getLatestTATSubmission(any()) } returns Result.success(null)
+        coEvery { submissionRepository.getLatestWATSubmission(any()) } returns Result.success(null)
+        coEvery { submissionRepository.getLatestSRTSubmission(any()) } returns Result.success(null)
+        coEvery { submissionRepository.getLatestSDTSubmission(any()) } returns Result.success(null)
+        coEvery { submissionRepository.getLatestPPDTSubmission(any()) } returns Result.success(null)
+        coEvery { gtoRepository.getUserResults(any(), any()) } returns Result.success(emptyList())
+        coEvery { interviewRepository.getLatestResult(any()) } returns Result.success(null)
+
+        val result = getOLQDashboardUseCase(userId)
+
+        assertTrue(result.isSuccess)
+        val finalOirResult = result.getOrNull()?.dashboard?.phase1Results?.oirResult
+        assertNotNull(finalOirResult)
+        assertEquals(newerSubmissionId, finalOirResult?.sessionId)
+        assertEquals(80f, finalOirResult?.percentageScore)
     }
 
     // =========================================================================

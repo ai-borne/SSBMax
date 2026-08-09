@@ -78,8 +78,8 @@ fun OIRTestScreen(
     var showExitDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isCompleted) {
-        if (uiState.isCompleted && uiState.sessionId != null && uiState.subscriptionType != null) {
-            onTestComplete(uiState.sessionId!!, uiState.subscriptionType!!)
+        if (uiState.isCompleted && uiState.submissionId != null && uiState.subscriptionType != null) {
+            onTestComplete(uiState.submissionId!!, uiState.subscriptionType!!)
         }
     }
 

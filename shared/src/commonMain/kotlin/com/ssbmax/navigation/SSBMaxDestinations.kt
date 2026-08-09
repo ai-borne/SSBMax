@@ -106,17 +106,17 @@ sealed class SSBMaxDestinations {
         }
     }
     @Serializable
-    data class OIRTestResult(val sessionId: String) : SSBMaxDestinations() {
+    data class OIRTestResult(val submissionId: String) : SSBMaxDestinations() {
         companion object {
-            const val route = "test/oir/result/{sessionId}"
-            fun createRoute(sessionId: String) = "test/oir/result/$sessionId"
+            const val route = "test/oir/result/{submissionId}"
+            fun createRoute(submissionId: String) = "test/oir/result/$submissionId"
         }
     }
     @Serializable
-    data class OIRAnswerReview(val sessionId: String) : SSBMaxDestinations() {
+    data class OIRAnswerReview(val submissionId: String) : SSBMaxDestinations() {
         companion object {
-            const val route = "test/oir/review/{sessionId}"
-            fun createRoute(sessionId: String) = "test/oir/review/$sessionId"
+            const val route = "test/oir/review/{submissionId}"
+            fun createRoute(submissionId: String) = "test/oir/review/$submissionId"
         }
     }
     @Serializable

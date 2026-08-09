@@ -303,7 +303,7 @@ class OIRTestViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue(state.isCompleted)
-        assertNotNull(state.sessionId)
+        assertNotNull(state.submissionId)
         assertEquals(SubscriptionTier.FREE, state.subscriptionType)
         assertNotNull(state.testResult)
         assertEquals(false, state.isTimerActive)

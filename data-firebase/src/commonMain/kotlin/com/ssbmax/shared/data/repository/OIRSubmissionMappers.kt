@@ -92,6 +92,20 @@ internal fun OIRSubmission.toDataDto() = OIRDataDto(
     gradingTimestamp = gradingTimestamp
 )
 
+/**
+ * True when a document already occupying an OIR submission's id belongs to a different
+ * identity (user or test type) — a genuine collision, not a retry of the same attempt.
+ * Extracted from [GitLivePersonalTestSubmissionRepository.submitOIR] purely for JVM
+ * testability (the gitlive Firestore SDK isn't unit-testable). Pure, behavior-preserving
+ * extraction — same equality check the inline guard used before extraction.
+ */
+internal fun isOirSubmissionIdentityConflict(
+    existingUserId: String?,
+    existingTestType: String?,
+    incomingUserId: String,
+    incomingTestType: String
+): Boolean = !(existingUserId == incomingUserId && existingTestType == incomingTestType)
+
 internal fun OIRDataDto.toDomain(): OIRSubmission {
     val result = OirTestResultDto(
         testId = testResult.testId,

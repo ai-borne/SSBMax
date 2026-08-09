@@ -240,7 +240,7 @@ class OIRTestViewModel(
                     it.copy(
                         session = completedSession.copy(isCompleted = true),
                         isSubmitting = false,
-                        isCompleted = true, sessionId = submissionId,
+                        isCompleted = true, submissionId = submissionId,
                         subscriptionType = subscriptionType,
                         testResult = scoreCalculator.calculate(completedSession)
                     )

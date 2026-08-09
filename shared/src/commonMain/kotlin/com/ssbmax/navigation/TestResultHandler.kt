@@ -29,7 +29,7 @@ object TestResultHandler {
 
     /**
      * Handle test submission navigation based on subscription tier.
-     * @param submissionId The ID of the submitted test (or sessionId for OIR)
+     * @param submissionId The ID of the submitted test
      * @param subscriptionTier User's subscription tier (FREE, PRO, PREMIUM)
      * @param testType The type of test that was submitted
      * @param navController Navigation controller for routing

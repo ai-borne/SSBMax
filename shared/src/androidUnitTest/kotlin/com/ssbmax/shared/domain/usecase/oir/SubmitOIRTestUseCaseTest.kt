@@ -60,7 +60,7 @@ class SubmitOIRTestUseCaseTest {
 
     @Test
     fun `invoke successful orchestration runs all 5 steps in order`() = runTest {
-        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("session-001")
+        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("ignored")
 
         val result = useCase(testSession)
 
@@ -70,31 +70,62 @@ class SubmitOIRTestUseCaseTest {
         coVerifyOrder {
             mockScoreCalculator.calculate(testSession)
             mockSubmissionRepo.submitOIR(any(), null)
-            mockUsageRecorder.recordTestUsage(TestType.OIR, testSession.userId, testSession.sessionId)
+            mockUsageRecorder.recordTestUsage(TestType.OIR, testSession.userId, any())
             mockSessionRepo.completeTestSession(testSession.sessionId)
             mockDashboardUseCase.invalidateCache(testSession.userId)
         }
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // Fresh submission id per attempt (OIR Retake Seal, Phase 1 — Option B)
+    // ──────────────────────────────────────────────────────────────────────────
+
     @Test
-    fun `invoke returns submissionId on success`() = runTest {
-        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("session-001")
+    fun `invoke mints a submission id distinct from the session id`() = runTest {
+        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("ignored")
 
         val result = useCase(testSession)
 
-        assertEquals("session-001", result.getOrNull())
+        assertTrue(result.isSuccess)
+        assertNotEquals(testSession.sessionId, result.getOrNull())
     }
 
     @Test
-    fun `repeated submit attempts reuse the durable session submission ID`() = runTest {
-        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("session-001")
+    fun `invoke mints a different submission id on each call for the same session`() = runTest {
+        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("ignored")
 
-        assertEquals("session-001", useCase(testSession).getOrNull())
-        assertEquals("session-001", useCase(testSession).getOrNull())
+        val first = useCase(testSession).getOrNull()
+        val second = useCase(testSession).getOrNull()
 
-        coVerify(exactly = 2) {
-            mockUsageRecorder.recordTestUsage(TestType.OIR, testSession.userId, testSession.sessionId)
-        }
+        assertNotNull(first)
+        assertNotNull(second)
+        assertNotEquals(first, second)
+    }
+
+    @Test
+    fun `submitOIR is invoked with the freshly minted id, not the session id`() = runTest {
+        val submissionSlot = slot<OIRSubmission>()
+        coEvery { mockSubmissionRepo.submitOIR(capture(submissionSlot), null) } returns Result.success("ignored")
+
+        val result = useCase(testSession)
+
+        assertEquals(submissionSlot.captured.id, result.getOrNull())
+        assertNotEquals(testSession.sessionId, submissionSlot.captured.id)
+    }
+
+    @Test
+    fun `repeated submit attempts (retakes) each mint and record their own submission id`() = runTest {
+        val submittedIds = mutableListOf<OIRSubmission>()
+        coEvery { mockSubmissionRepo.submitOIR(capture(submittedIds), null) } returns Result.success("ignored")
+
+        val first = useCase(testSession).getOrNull()
+        val second = useCase(testSession).getOrNull()
+
+        assertNotNull(first)
+        assertNotNull(second)
+        assertNotEquals(first, second)
+        coVerify(exactly = 1) { mockUsageRecorder.recordTestUsage(TestType.OIR, testSession.userId, first!!) }
+        coVerify(exactly = 1) { mockUsageRecorder.recordTestUsage(TestType.OIR, testSession.userId, second!!) }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -135,7 +166,7 @@ class SubmitOIRTestUseCaseTest {
             mockk<OIRQuestion>(relaxed = true) { every { id } returns "q2" }
         )
         val sessionWithQuestions = testSession.copy(questions = questions)
-        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("session-001")
+        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("ignored")
 
         useCase(sessionWithQuestions)
 
@@ -144,7 +175,7 @@ class SubmitOIRTestUseCaseTest {
 
     @Test
     fun `invoke marks questions used even when completeTestSession fails`() = runTest {
-        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("session-001")
+        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("ignored")
         coEvery { mockSessionRepo.completeTestSession(any()) } throws RuntimeException("session error")
 
         val result = useCase(testSession)

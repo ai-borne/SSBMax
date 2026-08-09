@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalUuidApi::class)
 package com.ssbmax.shared.domain.usecase.oir
 
 import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 import com.ssbmax.shared.domain.model.*
 import com.ssbmax.shared.domain.repository.SubmissionRepository
@@ -14,12 +17,14 @@ import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
  *
  * Steps (run in strict order — any failure short-circuits remaining steps):
  *  1. Calculate score from the completed session.
- *  2. Persist the submission using the durable session ID as its idempotency key.
- *  3. Record test usage with that same key so retries are deduplicated.
+ *  2. Persist the submission under a freshly minted submission ID, distinct from the
+ *     durable session ID — each attempt (including a retake of the same session) gets
+ *     its own document, matching PPDT/TAT/WAT/SRT/SD.
+ *  3. Record test usage against that submission ID so every attempt counts.
  *  4. Mark the test session as ended in Firestore.
  *  5. Invalidate the OLQ dashboard cache only after durable persistence succeeds.
  *
- * Returns `Result<String>` — the submission ID on success.
+ * Returns `Result<String>` — the freshly minted submission ID on success.
  */
 class SubmitOIRTestUseCase constructor(
     private val scoreCalculator: OIRTestScoreCalculator,
@@ -35,10 +40,11 @@ class SubmitOIRTestUseCase constructor(
             // Step 1: Calculate score
             val result = scoreCalculator.calculate(session)
 
-            // Step 2: Persist submission — use session ID as the document ID so the
-            // result screen can load it without an extra Firestore lookup
+            // Step 2: Persist submission under a fresh, unique ID — each attempt (including a
+            // retake of the same session) gets its own document, so a retake's result is never
+            // silently dropped by an id collision with a prior attempt.
             val submission = OIRSubmission(
-                id          = session.sessionId,
+                id          = Uuid.random().toString(),
                 userId      = session.userId,
                 testId      = session.testId,
                 testResult  = result,
@@ -47,8 +53,8 @@ class SubmitOIRTestUseCase constructor(
             )
             submissionRepository.submitOIR(submission, null).getOrThrow()
 
-            // Step 3: Charge only after the result is durable. The stable submission ID makes
-            // a retry safe for implementations that persist usage idempotency records.
+            // Step 3: Charge only after the result is durable. The fresh, unique submission ID
+            // means every attempt is counted — there is no cross-attempt id collision to dedupe.
             usageRecorder.recordTestUsage(TestType.OIR, session.userId, submission.id)
 
             // Step 4: Complete the durable test session

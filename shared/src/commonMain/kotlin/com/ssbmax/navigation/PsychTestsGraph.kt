@@ -32,7 +32,7 @@ fun NavGraphBuilder.psychTestsGraph(navController: NavHostController) {
     }
 
     composable<SSBMaxDestinations.OIRTestResult> { backStackEntry ->
-        val submissionId = backStackEntry.toRoute<SSBMaxDestinations.OIRTestResult>().sessionId
+        val submissionId = backStackEntry.toRoute<SSBMaxDestinations.OIRTestResult>().submissionId
         OIRTestResultScreen(
             submissionId = submissionId,
             onNavigateHome = {
@@ -52,7 +52,7 @@ fun NavGraphBuilder.psychTestsGraph(navController: NavHostController) {
     }
 
     composable<SSBMaxDestinations.OIRAnswerReview> { backStackEntry ->
-        val submissionId = backStackEntry.toRoute<SSBMaxDestinations.OIRAnswerReview>().sessionId
+        val submissionId = backStackEntry.toRoute<SSBMaxDestinations.OIRAnswerReview>().submissionId
         OIRAnswerReviewScreen(
             submissionId = submissionId,
             onNavigateBack = { navController.navigateUp() }

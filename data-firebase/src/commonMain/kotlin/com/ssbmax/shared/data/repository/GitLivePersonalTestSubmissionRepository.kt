@@ -140,16 +140,17 @@ class GitLivePersonalTestSubmissionRepository {
     // ===========================
 
     suspend fun submitOIR(submission: OIRSubmission, batchId: String?): Result<String> = try {
-        // The session ID is the idempotency key. Once a finalized document exists, a
-        // retry must return it rather than issue an update that could mutate the result.
+        // Each attempt now writes under a fresh submission id (OIR Retake Seal, Phase 1),
+        // so this branch is only reachable on a genuine same-id retry (e.g. a client-side
+        // resubmit of an in-flight request) — a real retake never collides here.
         val existing = submissionsCollection.document(submission.id).get()
         if (existing.exists) {
-            if (existing.data(FirestoreRawMapSerializer)[FIELD_USER_ID] == submission.userId &&
-                existing.data(FirestoreRawMapSerializer)[FIELD_TEST_TYPE] == TestType.OIR.name
-            ) {
-                Result.success(submission.id)
-            } else {
+            val existingUserId = existing.data(FirestoreRawMapSerializer)[FIELD_USER_ID] as? String
+            val existingTestType = existing.data(FirestoreRawMapSerializer)[FIELD_TEST_TYPE] as? String
+            if (isOirSubmissionIdentityConflict(existingUserId, existingTestType, submission.userId, TestType.OIR.name)) {
                 Result.failure(IllegalStateException("Submission identity conflict"))
+            } else {
+                Result.success(submission.id)
             }
         } else {
             val doc = SubmissionDocDto(

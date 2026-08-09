@@ -197,12 +197,12 @@ class OIRTestScreenUiTest {
 
     @Test
     fun completedTest_triggersCallback() = runComposeUiTest {
-        val sessionId = "session-oir-123"
+        val submissionId = "submission-oir-123"
         var completedId: String? = null
         var completedType: SubscriptionTier? = null
         uiStateFlow.value = uiStateFlow.value.copy(
             isCompleted = true,
-            sessionId = sessionId,
+            submissionId = submissionId,
             subscriptionType = SubscriptionTier.FREE
         )
 
@@ -214,7 +214,7 @@ class OIRTestScreenUiTest {
         }
         waitForIdle()
 
-        assert(completedId == sessionId) { "Expected callback with $sessionId, got $completedId" }
+        assert(completedId == submissionId) { "Expected callback with $submissionId, got $completedId" }
         assert(completedType == SubscriptionTier.FREE)
     }
 
