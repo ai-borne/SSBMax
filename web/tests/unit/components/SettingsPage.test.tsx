@@ -4,13 +4,76 @@ import { SettingsPage } from '../../../src/components/settings/SettingsPage';
 import { strings } from '../../../src/constants/strings';
 
 describe('SettingsPage Component', () => {
-  it('renders settings title, appearance card, notification toggles, and system diagnostics', () => {
-    render(<SettingsPage theme="dark" />);
+  it('renders settings title, account section with PII warning, appearance card, FAQs, and system diagnostics', () => {
+    render(<SettingsPage theme="dark" userName="Cadet Vikram" userEmail="vikram@ssbmax.in" />);
 
     expect(screen.getByTestId('settings-page')).toBeInTheDocument();
+    expect(screen.getByTestId('account-section')).toBeInTheDocument();
+    expect(screen.getByTestId('pii-privacy-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('pii-privacy-warning')).toHaveTextContent(strings.account.piqPrivacyWarning);
+    expect(screen.getByTestId('account-display-name')).toHaveTextContent('Cadet Vikram');
+    expect(screen.getByTestId('account-email')).toHaveTextContent('vikram@ssbmax.in');
+
     expect(screen.getByTestId('current-theme-label')).toHaveTextContent(strings.settings.themeDark);
+    expect(screen.getByTestId('faq-section')).toBeInTheDocument();
+    expect(screen.getByTestId('legal-section')).toBeInTheDocument();
     expect(screen.getByTestId('app-version-value')).toHaveTextContent('v1.0.0-PRO');
     expect(screen.getByTestId('pwa-status-value')).toHaveTextContent('Active (Workbox SW)');
+  });
+
+  it('triggers account action handlers for edit diagnostic, upgrade pass, and sign out', () => {
+    const onEditDiagnostic = vi.fn();
+    const onUpgrade = vi.fn();
+    const onSignOut = vi.fn();
+
+    render(
+      <SettingsPage
+        isGuest={false}
+        isPro={false}
+        onEditDiagnostic={onEditDiagnostic}
+        onUpgrade={onUpgrade}
+        onSignOut={onSignOut}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('edit-diagnostic-btn'));
+    expect(onEditDiagnostic).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('upgrade-pass-btn'));
+    expect(onUpgrade).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('sign-out-btn'));
+    expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('toggles FAQ accordion expansion and collapsing', () => {
+    render(<SettingsPage />);
+
+    // Q0 is expanded by default in FAQSection
+    expect(screen.getByTestId('faq-answer-0')).toBeInTheDocument();
+    expect(screen.queryByTestId('faq-answer-1')).not.toBeInTheDocument();
+
+    // Click Q1 trigger to expand Q1
+    fireEvent.click(screen.getByTestId('faq-trigger-1'));
+    expect(screen.getByTestId('faq-answer-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('faq-answer-0')).not.toBeInTheDocument();
+
+    // Click Q1 trigger again to collapse
+    fireEvent.click(screen.getByTestId('faq-trigger-1'));
+    expect(screen.queryByTestId('faq-answer-1')).not.toBeInTheDocument();
+  });
+
+  it('triggers onViewPrivacy and onViewTerms handlers', () => {
+    const onViewPrivacy = vi.fn();
+    const onViewTerms = vi.fn();
+
+    render(<SettingsPage onViewPrivacy={onViewPrivacy} onViewTerms={onViewTerms} />);
+
+    fireEvent.click(screen.getByTestId('view-privacy-btn'));
+    expect(onViewPrivacy).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('view-terms-btn'));
+    expect(onViewTerms).toHaveBeenCalledTimes(1);
   });
 
   it('triggers onToggleTheme handler when theme button is clicked', () => {

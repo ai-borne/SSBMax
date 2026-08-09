@@ -149,7 +149,28 @@ export const commonStrings = {
     prepStatus: 'Preparation Stage',
     editDiagnostic: 'Edit Profile',
     upgradeTier: 'Upgrade Pass',
-    signOut: 'Sign Out Account'
+    signOut: 'Sign Out Account',
+    piqPrivacyWarning: 'Privacy Warning: For candidate secrecy and cybersecurity, do not enter sensitive PII (Aadhaar, Govt ID numbers, or Passport details) into form fields.'
+  },
+  faq: {
+    title: 'Frequently Asked Questions (FAQs)',
+    subtitle: 'Everything you need to know about SSBMax preparatory tools, AI dossier reports, and Officer Pass.',
+    q1: 'How does the AI Assessor Dossier evaluate 15 Officer-Like Qualities (OLQs)?',
+    a1: 'Our AI assessment engine analyzes psychological responses (TAT, WAT, SRT, SD) against Services Selection Board assessor benchmark norms to generate 4-Factor OLQ radar scores and detailed assessor feedback.',
+    q2: 'Can I practice tests offline without internet connectivity?',
+    a2: 'Yes! All study materials and test batteries auto-save progress offline via IndexedDB. Your test responses will automatically queue and sync to Cloud Firestore when you reconnect.',
+    q3: 'What is included in the Pro Officer Pass subscription?',
+    a3: 'Pro Officer Pass unlocks unlimited Stage II psychological test batteries, full AI 15-OLQ dossier generation, PPDT canvas practice, and priority assessor feedback.',
+    q4: 'Is there a money-back guarantee for subscriptions?',
+    a4: 'Yes, we offer a 100% 7-day money-back guarantee. If you are not completely satisfied with your Officer Pass, request a refund from Settings to receive a full refund via Razorpay.',
+    q5: 'How is my preparatory data kept secure and private?',
+    a5: 'All candidate data and AI dossiers are encrypted using TLS 1.3 256-bit encryption. Your psychological test responses are strictly private and never shared with third parties.'
+  },
+  legalSection: {
+    title: 'Legal Policies & Compliance',
+    subtitle: 'Review SSBMax candidate terms, privacy rights, and refund rules.',
+    viewPrivacy: 'View Privacy Policy',
+    viewTerms: 'View Terms & Refund Policy'
   },
   settings: {
     title: 'Candidate Command Settings',
