@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
+import ssbmax.shared.generated.resources.gd_exit_cd
 import ssbmax.shared.generated.resources.gd_response_placeholder
 import ssbmax.shared.generated.resources.gd_review_response
 import ssbmax.shared.generated.resources.gd_topic_label
@@ -69,7 +70,11 @@ fun GDDiscussionPhase(
                         Text(timeRemaining, color = if (isTimeLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
                     }
                 },
-                navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Default.Close, null) } }
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.Close, stringResource(Res.string.gd_exit_cd))
+                    }
+                }
             )
         },
         bottomBar = {

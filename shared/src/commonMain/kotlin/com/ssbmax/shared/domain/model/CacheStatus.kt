@@ -11,5 +11,17 @@ data class CacheStatus(
     val verbalCount: Int,
     val nonVerbalCount: Int,
     val numericalCount: Int,
-    val spatialCount: Int
+    val spatialCount: Int,
+    val readiness: OIRCacheReadiness = OIRCacheReadiness.NOT_INITIALIZED,
+    val expectedBatches: Int = 0,
+    val lastError: String? = null
 )
+
+enum class OIRCacheReadiness {
+    NOT_INITIALIZED,
+    METADATA_UNAVAILABLE,
+    SYNCING,
+    READY,
+    INSUFFICIENT_CONTENT,
+    FAILED
+}

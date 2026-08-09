@@ -10,6 +10,7 @@ import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.model.scoring.AnalysisStatus
 import com.ssbmax.shared.domain.repository.SubmissionRepository
+import com.ssbmax.shared.domain.repository.TestSessionRepository
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
 import com.ssbmax.shared.domain.repository.UserProfileRepository
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
@@ -31,7 +32,8 @@ class SubmitPPDTTestUseCase constructor(
     private val submissionRepository: SubmissionRepository,
     private val userProfileRepository: UserProfileRepository,
     private val getSubscriptionTier: GetSubscriptionTierUseCase,
-    private val usageRecorder: TestUsageRecorder
+    private val usageRecorder: TestUsageRecorder,
+    private val testSessionRepository: TestSessionRepository
 ) {
 
     suspend operator fun invoke(session: PPDTTestSession): Result<SubmitPPDTTestResult> = runCatching {
@@ -60,6 +62,7 @@ class SubmitPPDTTestUseCase constructor(
 
         submissionRepository.submitPPDT(submission, null).getOrThrow()
         usageRecorder.recordTestUsage(TestType.PPDT, session.userId, submissionId)
+        testSessionRepository.completeTestSession(session.sessionId).getOrThrow()
 
         SubmitPPDTTestResult(submissionId, submission, subscriptionType)
     }

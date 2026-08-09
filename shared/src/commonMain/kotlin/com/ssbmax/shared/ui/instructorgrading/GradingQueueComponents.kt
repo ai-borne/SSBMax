@@ -29,7 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.domain.model.GradingPriority
@@ -126,10 +126,10 @@ private fun GradingCard(
 @Composable
 private fun PriorityBadge(priority: GradingPriority) {
     val color = when (priority) {
-        GradingPriority.URGENT -> Color.Red
-        GradingPriority.HIGH -> Color(0xFFFF9800)
-        GradingPriority.NORMAL -> Color(0xFF2196F3)
-        GradingPriority.LOW -> Color.Gray
+        GradingPriority.URGENT -> MaterialTheme.colorScheme.error
+        GradingPriority.HIGH -> MaterialTheme.colorScheme.tertiary
+        GradingPriority.NORMAL -> MaterialTheme.colorScheme.primary
+        GradingPriority.LOW -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     Surface(

@@ -129,16 +129,29 @@
     <string name="oir_previous">Previous</string>
     <string name="oir_next">Next</string>
     <string name="oir_submit_test">Submit Test</string>
+    <string name="oir_submit_confirmation_title">Submit test?</string>
+    <string name="oir_submit_confirmation_message">Are you sure you want to submit? Unanswered questions will be marked as skipped.</string>
+    <string name="oir_submit_confirm">Submit</string>
+    <string name="oir_submitting">Submitting your OIR test…</string>
+    <string name="oir_skip">Skip</string>
     <string name="oir_progress_format">%1$d/%2$d</string>
     <string name="oir_correct">Correct!</string>
     <string name="oir_incorrect">Incorrect</string>
     <string name="oir_error_auth_required">Authentication required. Please login to continue.</string>
     <string name="oir_error_submit_failed">Failed to submit test. Please try again.</string>
+    <string name="oir_error_session_unavailable">Could not create a secure test session. Please check your connection and try again.</string>
     <string name="oir_error_invalid_question">Invalid question state. Please click Submit Test button.</string>
     <string name="oir_error_questions_unavailable">OIR questions are temporarily unavailable. Please check your connection and try again.</string>
+    <string name="oir_retry">Retry</string>
     <string name="oir_question_figure_description">OIR question figure</string>
+    <string name="oir_timer_content_description">Time remaining</string>
+    <string name="oir_question_figure_loading">Loading question figure…</string>
+    <string name="oir_question_figure_error">Question figure unavailable</string>
     <string name="oir_multi_select_hint">Select exactly 2 options</string>
     <string name="oir_multi_select_selections_complete">2 options selected</string>
+    <string name="oir_option_selected">Selected</string>
+    <string name="oir_option_correct">Correct answer</string>
+    <string name="oir_option_incorrect">Incorrect answer</string>
 
     <!-- OIR test result screen (Phase 5 port of app/.../ui/tests/oir/OIRTestResultScreen.kt).
          The Android original hardcoded these strings (a pre-existing lint-rule violation,
@@ -159,15 +172,23 @@
     <string name="oir_result_time_taken">Time Taken</string>
     <string name="oir_result_raw_score">Raw Score</string>
     <string name="oir_result_performance_by_category">Performance by Category</string>
-    <string name="oir_result_difficulty_breakdown">Difficulty Breakdown</string>
     <string name="oir_result_correct_of_total">%1$d/%2$d correct</string>
-    <string name="oir_result_avg_time">Avg: %1$ds/q</string>
+    <string name="oir_result_category_progress">Category score: %1$d percent</string>
+    <string name="oir_result_avg_time">Avg: %1$s/q</string>
+    <string name="oir_result_less_than_one_second">&lt;1</string>
     <string name="oir_result_review_answers">Review Answers</string>
-    <string name="oir_result_retake_test">Retake Test</string>
+    <string name="oir_result_take_another_test">Take Another Test</string>
     <string name="oir_result_back_home">Back to Home</string>
     <string name="oir_result_submission_not_found">Submission not found</string>
     <string name="oir_result_parse_failed">Failed to parse submission data</string>
     <string name="oir_result_load_failed">Failed to load submission</string>
+    <string name="oir_review_title">Review Answers</string>
+    <string name="oir_review_cd_back">Back to results</string>
+    <string name="oir_review_answer">Question %1$d</string>
+    <string name="oir_review_selected_answer">Your answer: %1$s</string>
+    <string name="oir_review_correct_answer">Correct answer: %1$s</string>
+    <string name="oir_review_explanation">Explanation: %1$s</string>
+    <string name="oir_review_not_answered">Not answered</string>
 
     <!-- Test-limit-reached dialog (Phase 5 port of app/.../ui/tests/common/TestLimitReachedDialog.kt),
          shared across every test type, first wired for OIR. Hardcoded strings in the
@@ -275,6 +296,9 @@
     <string name="ppdt_writing_placeholder">Start writing your story here...</string>
     <string name="ppdt_writing_minimum_label">Minimum: %1$d characters</string>
     <string name="ppdt_writing_count_format">%1$d / %2$d</string>
+    <string name="ppdt_writing_hide_keyboard">Hide keyboard</string>
+    <string name="ppdt_timer_content_description">Time remaining: %1$d seconds</string>
+    <string name="ppdt_progress_content_description">Writing progress: %1$d percent</string>
     <string name="ppdt_review_title">Review Your Submission</string>
     <string name="ppdt_review_story_label">Your Story</string>
     <string name="ppdt_review_character_count">%1$d characters</string>
@@ -324,6 +348,8 @@
     <string name="tat_image_number">Picture %1$d of %2$d</string>
     <string name="tat_observe_carefully">Observe carefully</string>
     <string name="tat_picture_content_description">TAT picture %1$d</string>
+    <string name="tat_timer_content_description">Time remaining: %1$d seconds</string>
+    <string name="tat_progress_content_description">Picture viewing progress: %1$d percent</string>
     <string name="tat_blank_slide_instruction">No picture -- use your imagination</string>
     <string name="tat_writing_title">Write Your Story</string>
     <string name="tat_writing_title_blank">Write Your Imagination</string>
@@ -350,6 +376,7 @@
     <string name="wat_continue_test">Continue Test</string>
     <string name="wat_progress_format">%1$d / %2$d</string>
     <string name="wat_timer_format">%1$ds</string>
+    <string name="wat_timer_content_description">Time remaining: %1$d seconds</string>
     <string name="wat_response_placeholder">Type your response...</string>
     <string name="wat_skip">Skip</string>
     <string name="wat_submit">Submit</string>
@@ -378,6 +405,8 @@
     <string name="srt_loading">Loading SRT test situations from cloud...</string>
     <string name="srt_test">SRT Test</string>
     <string name="srt_back_cd">Back</string>
+    <string name="srt_timer_content_description">Time remaining: %1$d seconds</string>
+    <string name="srt_progress_content_description">Situation progress: %1$d percent</string>
     <string name="srt_full_title">SRT - Situation Reaction Test</string>
     <string name="srt_subtitle">Describe how you would react in practical situations</string>
     <string name="srt_instructions_title">Instructions</string>
@@ -432,6 +461,8 @@
     <string name="sdt_instruction_6">Be honest and specific in your responses</string>
     <string name="sdt_start_test">Start Test</string>
     <string name="sdt_question_header">Question %1$d/%2$d</string>
+    <string name="sdt_timer_content_description">Time remaining: %1$d seconds</string>
+    <string name="sdt_progress_content_description">Question progress: %1$d percent</string>
     <string name="sdt_answer_label">Your Answer</string>
     <string name="sdt_char_count">Characters: %1$d / %2$d (Min: %3$d)</string>
     <string name="sdt_action_skip">Skip</string>
@@ -725,9 +756,13 @@
     <string name="interview_button_start">Start Interview</string>
 
     <string name="interview_question_number">Question %1$d of %2$d</string>
+    <string name="interview_progress_content_description">Interview progress: %1$d percent</string>
     <string name="interview_cd_mute_tts">Mute audio</string>
     <string name="interview_cd_unmute_tts">Unmute audio</string>
     <string name="interview_cd_exit">Exit Interview</string>
+    <string name="gd_exit_cd">Exit group discussion</string>
+    <string name="gpe_exit_cd">Exit group planning exercise</string>
+    <string name="lecturette_exit_cd">Exit lecturette</string>
     <string name="interview_exit_title">Exit Interview?</string>
     <string name="interview_exit_message">Are you sure you want to exit? Your progress will be saved, but you\'ll need to start a new interview session to continue.</string>
     <string name="interview_exit_confirm">Exit</string>
@@ -761,6 +796,7 @@
 
     <!-- Student Profile screen (Phase 5: Profile vertical) -->
     <string name="profile_title">Profile</string>
+    <string name="profile_loading">Loading profile</string>
     <string name="profile_settings">Settings</string>
     <string name="profile_premium_member">Premium Member</string>
     <string name="profile_stats_title">Your Statistics</string>
@@ -852,6 +888,7 @@
 
     <!-- Subscription Management screen (Phase 5: Settings vertical) -->
     <string name="subscription_mgmt_title">Subscription &amp; Billing</string>
+    <string name="subscription_mgmt_loading">Loading subscription data</string>
     <string name="subscription_mgmt_cd_back">Back</string>
     <string name="subscription_mgmt_current_plan_label">Current Plan</string>
     <string name="subscription_mgmt_renews_on">Renews on %1$s</string>

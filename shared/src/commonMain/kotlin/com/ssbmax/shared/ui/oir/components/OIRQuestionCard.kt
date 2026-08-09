@@ -1,6 +1,7 @@
 package com.ssbmax.shared.ui.oir.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -15,7 +16,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import org.jetbrains.compose.resources.stringResource
@@ -28,6 +34,8 @@ import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.oir_multi_select_hint
 import ssbmax.shared.generated.resources.oir_multi_select_selections_complete
 import ssbmax.shared.generated.resources.oir_question_figure_description
+import ssbmax.shared.generated.resources.oir_question_figure_error
+import ssbmax.shared.generated.resources.oir_question_figure_loading
 
 /**
  * KMP port of `app/.../ui/tests/oir/components/OIRQuestionCard.kt`.
@@ -148,19 +156,34 @@ private fun OIRQuestionTextCard(questionText: String) {
 
 @Composable
 private fun OIRQuestionFigureCard(imageUrl: String) {
+    var isLoading by remember(imageUrl) { mutableStateOf(true) }
+    var hasError by remember(imageUrl) { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = stringResource(Res.string.oir_question_figure_description),
-            contentScale = ContentScale.Fit,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 200.dp)
-                .padding(12.dp)
-        )
+                .heightIn(min = 200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = stringResource(Res.string.oir_question_figure_description),
+                contentScale = ContentScale.Fit,
+                onLoading = { isLoading = true; hasError = false },
+                onSuccess = { isLoading = false; hasError = false },
+                onError = { isLoading = false; hasError = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            )
+            when {
+                isLoading -> Text(stringResource(Res.string.oir_question_figure_loading))
+                hasError -> Text(stringResource(Res.string.oir_question_figure_error))
+            }
+        }
     }
 }
 

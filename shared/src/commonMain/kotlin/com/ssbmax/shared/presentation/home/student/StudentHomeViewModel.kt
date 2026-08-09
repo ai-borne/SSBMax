@@ -1,6 +1,7 @@
 package com.ssbmax.shared.presentation.home.student
 
 import com.ssbmax.shared.domain.model.Phase1Progress
+import com.ssbmax.shared.domain.repository.TestContentRepository
 import com.ssbmax.shared.domain.model.Phase2Progress
 import com.ssbmax.shared.domain.model.TestProgress
 import com.ssbmax.shared.domain.model.TestStatus
@@ -58,6 +59,7 @@ class StudentHomeViewModel(
     private val authRepository: AuthRepository,
     private val userProfileRepository: UserProfileRepository,
     private val testProgressRepository: TestProgressRepository,
+    private val testContentRepository: TestContentRepository,
     private val getOLQDashboard: GetOLQDashboardUseCase,
     private val notificationRepository: NotificationRepository,
     private val logger: DomainLogger,
@@ -72,6 +74,7 @@ class StudentHomeViewModel(
         observeUserProfile()
         observeTestProgress()
         observeNotifications()
+        prepareOirCache()
         loadDashboard(forceRefresh = false) // Use cache on initial load
     }
 
@@ -191,6 +194,25 @@ class StudentHomeViewModel(
                 _uiState.update { it.copy(notificationCount = 0) }
             }
         }
+    }
+
+    private fun prepareOirCache() {
+        viewModelScope.launch {
+            val user = authRepository.currentUser.value ?: return@launch
+            _uiState.update { it.copy(isPreparingOir = true) }
+            testContentRepository.initializeOIRCache()
+                .onFailure { logger.e(tag, "OIR cache preparation failed for user ${user.id}", it) }
+            _uiState.update {
+                it.copy(
+                    isPreparingOir = false,
+                    oirCacheStatus = testContentRepository.getOIRCacheStatus()
+                )
+            }
+        }
+    }
+
+    fun retryOirPreparation() {
+        prepareOirCache()
     }
 
     fun refreshProgress() {

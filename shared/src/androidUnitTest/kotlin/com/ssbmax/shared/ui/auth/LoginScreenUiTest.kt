@@ -6,6 +6,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
@@ -95,6 +96,7 @@ class LoginScreenUiTest {
         setContent { withTestDependencies { LoginScreen() } }
 
         onNodeWithTag("loading_indicator").assertIsDisplayed()
+        onNodeWithContentDescription("Continue with Google").assertIsDisplayed()
         onNodeWithTag("google_signin_button").assertIsNotEnabled()
     }
 

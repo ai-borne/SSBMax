@@ -35,10 +35,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.presentation.settings.SubscriptionManagementUiState
 import com.ssbmax.shared.presentation.settings.SubscriptionManagementViewModel
 import com.ssbmax.shared.presentation.settings.SubscriptionTierModel
+import com.ssbmax.shared.ui.common.loadingSemantics
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.subscription_mgmt_cd_back
+import ssbmax.shared.generated.resources.subscription_mgmt_loading
 import ssbmax.shared.generated.resources.subscription_mgmt_compare_plans
 import ssbmax.shared.generated.resources.subscription_mgmt_error_generic
 import ssbmax.shared.generated.resources.subscription_mgmt_retry
@@ -88,7 +90,8 @@ fun SubscriptionManagementScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .padding(paddingValues)
+                        .loadingSemantics(stringResource(Res.string.subscription_mgmt_loading)),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()

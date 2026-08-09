@@ -41,10 +41,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.OIRTestResult
 import com.ssbmax.shared.presentation.oirresult.OirResultViewModel
+import com.ssbmax.shared.ui.common.loadingSemantics
 import org.koin.compose.viewmodel.koinViewModel
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.oir_result_cd_home
-import ssbmax.shared.generated.resources.oir_result_difficulty_breakdown
 import ssbmax.shared.generated.resources.oir_result_error_title
 import ssbmax.shared.generated.resources.oir_result_go_home
 import ssbmax.shared.generated.resources.oir_result_loading
@@ -65,8 +65,9 @@ import ssbmax.shared.generated.resources.oir_result_title
  * the violation forward.
  *
  * Split from a single 517-line file into this file (scaffold + loading/error
- * states) plus [OIRTestResultSections.kt] (score/stats/category/difficulty/
- * action cards) to stay under this repo's 300-line-per-file Quality Limit —
+ * states) plus [OIRTestResultSections.kt] (score/stats cards) and
+ * [OIRTestResultCards.kt] (category/action cards) to stay under this repo's
+ * 300-line-per-file Quality Limit —
  * same delegate-composable-file precedent as the home vertical's
  * `StudentHomeSections.kt`/`PhaseProgressRibbon.kt`.
  */
@@ -75,7 +76,7 @@ import ssbmax.shared.generated.resources.oir_result_title
 fun OIRTestResultScreen(
     submissionId: String,
     onNavigateHome: () -> Unit = {},
-    onRetakeTest: () -> Unit = {},
+    onTakeAnotherTest: () -> Unit = {},
     onReviewAnswers: () -> Unit = {},
     viewModel: OirResultViewModel = koinViewModel(),
     modifier: Modifier = Modifier
@@ -113,7 +114,7 @@ fun OIRTestResultScreen(
                 result = uiState.result!!,
                 paddingValues = paddingValues,
                 modifier = modifier,
-                onRetakeTest = onRetakeTest,
+                onTakeAnotherTest = onTakeAnotherTest,
                 onReviewAnswers = onReviewAnswers,
                 onNavigateHome = onNavigateHome
             )
@@ -124,7 +125,10 @@ fun OIRTestResultScreen(
 @Composable
 private fun LoadingState(paddingValues: PaddingValues) {
     Box(
-        modifier = Modifier.fillMaxSize().padding(paddingValues),
+        modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .loadingSemantics(stringResource(Res.string.oir_result_loading)),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -199,7 +203,7 @@ private fun ResultContent(
     result: OIRTestResult,
     paddingValues: PaddingValues,
     modifier: Modifier,
-    onRetakeTest: () -> Unit,
+    onTakeAnotherTest: () -> Unit,
     onReviewAnswers: () -> Unit,
     onNavigateHome: () -> Unit
 ) {
@@ -218,21 +222,12 @@ private fun ResultContent(
                 modifier = Modifier.padding(vertical = 8.dp)
             )
         }
-        items(result.categoryScores.values.toList()) { categoryScore ->
+        items(visibleOIRCategoryScores(result.categoryScores)) { categoryScore ->
             CategoryPerformanceCard(categoryScore = categoryScore)
         }
         item {
-            Text(
-                text = stringResource(Res.string.oir_result_difficulty_breakdown),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
-        item { DifficultyBreakdownCard(difficultyScores = result.difficultyBreakdown) }
-        item {
             ActionButtonsCard(
-                onRetakeTest = onRetakeTest,
+                onTakeAnotherTest = onTakeAnotherTest,
                 onReviewAnswers = onReviewAnswers,
                 onBackToHome = onNavigateHome
             )

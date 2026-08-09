@@ -60,7 +60,7 @@ jobs:
       - name: Verify sensitive files are not tracked
         run: |
           echo "🔍 Checking for sensitive files in git..."
-          SENSITIVE_FILES=("local.properties" "functions/.env" "functions/.env.local" ".env" "google-services.json" "service-account.json" "firebase-admin-key.json")
+          SENSITIVE_FILES=("local.properties" "functions/.env" "functions/.env.local" ".env" ".env.production" "*.env.production" "google-services.json" "service-account.json" "firebase-admin-key.json")
           FOUND_SENSITIVE=0
           for file in "${SENSITIVE_FILES[@]}"; do
             if git ls-files | grep -q "^${file}$"; then
@@ -209,11 +209,14 @@ jobs:
   # as CocoaPods-shaped cinterops -- SPM's Firebase integration never
   # produces the .framework bundles they link against) requires a Kotlin
   # Native compiler whose bundled Clang can parse the target SDK's headers.
-  # Verified locally: Xcode 26.6 (iOS 26.5 SDK) is newer than Kotlin 2.1.0's
-  # Native compiler supports (fails with "module '_c_standard_library_
-  # obsolete' requires feature 'found_incompatible_headers__check_search_
-  # paths'" during cinterop). 16.0 is the newest version the Kotlin Gradle
-  # Plugin itself reports testing against.
+  #
+  # Kotlin 2.2.20 added Xcode 26 support (see the 2.2.20 release notes), so
+  # this job uses Xcode 26.2. That is the floor for the Swift package graph
+  # too: the resolved firebase-ios-sdk pulls swift-protobuf 1.38.x, whose
+  # Package.swift requires Swift tools 6.2.0 -- Xcode 16.x ships Swift 6.0
+  # and fails xcodebuild with "using Swift tools version 6.2.0 but the
+  # installed version is 6.0.0". Do NOT drop back to Xcode 16.x without
+  # also pinning swift-protobuf to a Swift-6.0-compatible version.
   ios-tests:
     name: iOS (shared tests + Xcode build)
     runs-on: macos-15
@@ -224,10 +227,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Select Xcode 16
+      - name: Select Xcode 26.2
         uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1
         with:
-          xcode-version: '16.0'
+          xcode-version: '26.2'
 
       - name: Set up JDK 21
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
@@ -315,6 +318,46 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7
 
+  # ── Firestore rules-unit tests ───────────────────────────────────────
+  # Guards against a repeat of the stuck-ACTIVE test_sessions incident: a
+  # firestore.rules change that looked like a tightening (or a
+  # simplification of the update rule's three-way OR) silently broke a real
+  # client transition, and nothing in CI exercised the rules file to catch
+  # it before merge. See firestore-tests/test_sessions.rules.test.mjs.
+  firestore-rules:
+    name: Firestore Rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      # firebase-tools' Firestore emulator requires Java 21+; this job had no JDK at all
+      # (silent failure since the job's introduction: "firebase-tools no longer supports
+      # Java version before 21" before a single rules test ever ran).
+      - name: Set up JDK 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools
+
+      - name: Install rules-test dependencies
+        working-directory: firestore-tests
+        run: npm ci
+
+      - name: Run rules-unit tests against the emulator
+        run: firebase emulators:exec --only firestore --project demo-ssbmax-rules-test "npm --prefix firestore-tests test"
+
   # ── Detekt (Kotlin static analysis) ──────────────────────────────────
   # Fails only on NEW smells; existing ones are grandfathered per-module via
   # detekt-baseline.xml (a ratchet target to drive down over time).
@@ -345,24 +388,51 @@ jobs:
           path: '**/build/reports/detekt/detekt.html'
           retention-days: 7
 
+  # ── Web Platform CI (ssbmax-web) ────────────────────────────────────
+  web-ci:
+    name: Web Platform CI (ssbmax-web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Run Codebase Audit
+        run: node scripts/audit-web-codebase.js
+
+      - name: Run Web Unit Tests
+        working-directory: web
+        run: npm test
+
+      - name: Build Web Production Artifacts
+        working-directory: web
+        run: npm run build
+
   # ── Single required check for branch protection ──────────────────────
   # Make THIS the required status check in branch-protection rules; it stays
   # stable even as the jobs above are added or renamed.
   #
-  # ios-tests deliberately isn't in `needs` yet: it's a brand-new pipeline
-  # (Phase 0b, KMP-convergence plan) that has never run in actual CI, and it
-  # could only be verified structurally here, not end-to-end -- this
-  # session's Kotlin Native compiler couldn't parse this machine's Xcode
-  # 26.6 SDK headers, a local-environment mismatch unrelated to whether the
-  # job itself is correct (CI pins Xcode 16.0 precisely to avoid that). Watch
-  # it run for real on the next few PRs, then add `ios-tests` to `needs`
-  # below once it's confirmed green -- don't block merges on an unverified
-  # gate.
+  # ios-tests deliberately isn't in `needs` yet: it's the newest pipeline
+  # (Phase 0b, KMP-convergence plan) and has only recently started running
+  # green in real CI after the Xcode 26.2 pin (see the ios-tests job above).
+  # Once it's confirmed green across a few PRs, add `ios-tests` to `needs`
+  # below -- don't block merges on a gate that's still being validated.
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
     if: always()
-    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, build]
+    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, build, firestore-rules, web-ci]
     steps:
       - name: Verify all jobs succeeded
         run: |
@@ -372,13 +442,18 @@ jobs:
           echo "detekt:             ${{ needs.detekt.result }}"
           echo "unit-tests:         ${{ needs.unit-tests.result }}"
           echo "build:              ${{ needs.build.result }}"
+          echo "firestore-rules:    ${{ needs.firestore-rules.result }}"
+          echo "web-ci:             ${{ needs.web-ci.result }}"
           if [ "${{ needs.wrapper-validation.result }}" != "success" ] || \
              [ "${{ needs.security-scan.result }}" != "success" ] || \
              [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.detekt.result }}" != "success" ] || \
              [ "${{ needs.unit-tests.result }}" != "success" ] || \
-             [ "${{ needs.build.result }}" != "success" ]; then
+             [ "${{ needs.build.result }}" != "success" ] || \
+             [ "${{ needs.firestore-rules.result }}" != "success" ] || \
+             [ "${{ needs.web-ci.result }}" != "success" ]; then
             echo "❌ One or more CI jobs failed."
             exit 1
           fi
           echo "✅ All CI jobs passed."
+

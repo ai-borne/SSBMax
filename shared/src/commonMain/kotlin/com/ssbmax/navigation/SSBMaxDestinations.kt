@@ -113,6 +113,13 @@ sealed class SSBMaxDestinations {
         }
     }
     @Serializable
+    data class OIRAnswerReview(val sessionId: String) : SSBMaxDestinations() {
+        companion object {
+            const val route = "test/oir/review/{sessionId}"
+            fun createRoute(sessionId: String) = "test/oir/review/$sessionId"
+        }
+    }
+    @Serializable
     data class PPDTTest(val testId: String) : SSBMaxDestinations() {
         companion object {
             const val route = "test/ppdt/{testId}"

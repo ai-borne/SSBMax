@@ -2,13 +2,15 @@ package com.ssbmax.shared.data.repository
 
 import com.ssbmax.shared.db.SharedDatabase
 import com.ssbmax.shared.domain.model.CacheStatus
+import com.ssbmax.shared.domain.model.OIRCacheReadiness
 import com.ssbmax.shared.domain.model.OIRQuestionType
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
 import kotlinx.serialization.Serializable
 
@@ -31,21 +33,20 @@ import kotlinx.serialization.Serializable
  * [GitLiveOIRQuestionSelector.toEntity] can stay signature-compatible with the
  * Android original's `Map`-based `toEntity`.
  *
- * One behavior difference, documented rather than silently dropped: Android's
- * phase-2 background batch download used a Hilt-injected `@ApplicationScope`
- * `CoroutineScope` that outlives this manager. No such app-wide singleton
- * scope exists yet in `shared`'s Koin graph (Phase 3/4 scope per this repo's
- * DI-parity notes), so this port owns a private `SupervisorJob`-backed scope
- * instead. Functionally equivalent for a `single`-scoped Koin instance (which
- * lives for the app's process lifetime same as the Android singleton), but
- * revisit this if `GitLiveOIRQuestionCacheManager` ever becomes non-singleton.
+ * Background downloads use the application-owned scope supplied by Koin. The
+ * manager never creates an untracked scope, so application shutdown can cancel
+ * pending Phase 2 work deterministically.
  */
 class GitLiveOIRQuestionCacheManager(
     private val database: SharedDatabase,
-    private val selector: GitLiveOIRQuestionSelector
+    private val selector: GitLiveOIRQuestionSelector,
+    private val backgroundScope: CoroutineScope
 ) {
     private val queries get() = database.sharedDatabaseQueries
-    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val syncMutex = Mutex()
+    private var readiness = OIRCacheReadiness.NOT_INITIALIZED
+    private var expectedBatches = 0
+    private var lastSyncError: String? = null
 
     private companion object {
         const val FIRESTORE_COLLECTION = "test_content"
@@ -54,7 +55,6 @@ class GitLiveOIRQuestionCacheManager(
         const val FIRESTORE_META = "meta"
         const val FIRESTORE_META_CONFIG = "config"
         const val PHASE_1_LAST = 4
-        const val LEGACY_BATCH_COUNT = 20
     }
 
     internal data class MetaConfig(val contentVersion: Int?, val batchCount: Int)
@@ -66,62 +66,69 @@ class GitLiveOIRQuestionCacheManager(
      * remote contentVersion differs from local; otherwise top up missing batches.
      * Phase 1 (1..4) is blocking; the rest downloads in the background.
      */
-    suspend fun initialSync(): Result<Unit> = try {
-        val meta = fetchMetaConfig()
-        val localVersion = queries.selectOIRSyncMetadata().executeAsOneOrNull()?.contentVersion?.toInt()
-        val needsReconcile = meta.contentVersion != null && meta.contentVersion != localVersion
+    suspend fun initialSync(): Result<Unit> = syncMutex.withLock {
+        readiness = OIRCacheReadiness.SYNCING
+        lastSyncError = null
+        runCatching {
+            val meta = fetchMetaConfig().getOrThrow()
+            expectedBatches = meta.batchCount
+            val localVersion = queries.selectOIRSyncMetadata().executeAsOneOrNull()?.contentVersion?.toInt()
+            val needsReconcile = meta.contentVersion != localVersion
 
-        var shouldSync = true
-        if (needsReconcile) {
-            queries.deleteAllOIRQuestions()
-            queries.deleteAllOIRBatchMetadata()
-        } else {
-            val allPresent = (1..meta.batchCount).all { isBatchDownloaded(batchId(it)) }
-            if (allPresent) {
-                shouldSync = false
+            if (needsReconcile) {
+                queries.deleteAllOIRQuestions()
+                queries.deleteAllOIRBatchMetadata()
             }
-        }
-
-        if (shouldSync) {
-            for (i in 1..minOf(PHASE_1_LAST, meta.batchCount)) {
-                downloadBatch(batchId(i))
-            }
+            val missingBatches = (1..meta.batchCount).filterNot { isBatchDownloaded(batchId(it)) }
+            val blockingBatches = missingBatches.filter { it <= PHASE_1_LAST }
+            blockingBatches.forEach { downloadBatch(batchId(it)).getOrThrow() }
             meta.contentVersion?.let {
                 queries.upsertOIRSyncMetadata(contentVersion = it.toLong(), lastSyncAt = Clock.System.now().toEpochMilliseconds())
             }
-
-            backgroundScope.launch {
-                for (i in (PHASE_1_LAST + 1)..meta.batchCount) {
-                    downloadBatch(batchId(i))
+            readiness = if (hasEnoughQuestions()) OIRCacheReadiness.READY
+            else OIRCacheReadiness.INSUFFICIENT_CONTENT
+        missingBatches.filter { it > PHASE_1_LAST }.takeIf { it.isNotEmpty() }?.let { batches ->
+                backgroundScope.launch {
+                    val failure = batches.firstNotNullOfOrNull { batch ->
+                        downloadBatch(batchId(batch)).exceptionOrNull()
+                    }
+                    if (failure != null) {
+                        lastSyncError = failure.message
+                        readiness = OIRCacheReadiness.FAILED
+                    }
                 }
             }
+            Unit
+        }.onFailure { error ->
+            lastSyncError = error.message
+            readiness = if (error.message?.contains("metadata", ignoreCase = true) == true) {
+                OIRCacheReadiness.METADATA_UNAVAILABLE
+            } else OIRCacheReadiness.FAILED
         }
-
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
     }
 
     private fun isBatchDownloaded(batchId: String): Boolean =
         queries.countOIRBatchMetadataById(batchId).executeAsOne() > 0
 
-    /** Read `test_content/oir/meta/config`; missing/unreadable doc falls back to the legacy shape. */
-    internal suspend fun fetchMetaConfig(): MetaConfig = try {
+    /** Read `test_content/oir/meta/config`; missing or malformed metadata fails closed. */
+    internal suspend fun fetchMetaConfig(): Result<MetaConfig> {
+        return try {
         val doc = Firebase.firestore.collection(FIRESTORE_COLLECTION)
             .document(FIRESTORE_OIR_DOC)
             .collection(FIRESTORE_META)
             .document(FIRESTORE_META_CONFIG)
             .get()
         if (!doc.exists) {
-            MetaConfig(contentVersion = null, batchCount = LEGACY_BATCH_COUNT)
+            Result.failure(IllegalStateException("OIR metadata document is unavailable"))
         } else {
-            MetaConfig(
-                contentVersion = doc.get<Long?>("contentVersion")?.toInt(),
-                batchCount = doc.get<Long?>("batchCount")?.toInt() ?: LEGACY_BATCH_COUNT
-            )
+            val batchCount = doc.get<Long?>("batchCount")?.toInt()
+                ?: return Result.failure(IllegalStateException("OIR metadata batch count is missing"))
+            if (batchCount <= 0) return Result.failure(IllegalStateException("OIR metadata batch count is invalid"))
+            Result.success(MetaConfig(doc.get<Long?>("contentVersion")?.toInt(), batchCount))
         }
     } catch (e: Exception) {
-        MetaConfig(contentVersion = null, batchCount = LEGACY_BATCH_COUNT)
+        Result.failure(IllegalStateException("OIR metadata read failed", e))
+        }
     }
 
     /** Download a single batch from Firestore and persist it. Idempotent -- returns early if already local. */
@@ -180,13 +187,15 @@ class GitLiveOIRQuestionCacheManager(
     }
 
     /** Delegates question selection to [GitLiveOIRQuestionSelector]; triggers a sync first if the cache is thin. */
-    suspend fun getTestQuestions(count: Int = 50, difficulty: String? = null): Result<List<com.ssbmax.shared.domain.model.OIRQuestion>> {
-        val cachedCount = queries.selectTotalOIRQuestionCount().executeAsOne()
-        if (cachedCount < count) {
-            initialSync()
-        }
-        return selector.selectQuestions(count, difficulty)
+    suspend fun getTestQuestions(count: Int = 50): Result<List<com.ssbmax.shared.domain.model.OIRQuestion>> {
+        if (!hasEnoughQuestions()) initialSync().getOrThrow()
+        val selected = selector.selectQuestions(count).getOrThrow()
+        return if (selected.size == count) Result.success(selected)
+        else Result.failure(IllegalStateException("OIR cache has insufficient valid questions"))
     }
+
+    private suspend fun hasEnoughQuestions(): Boolean =
+        selector.selectQuestions(count = 50).getOrNull()?.size == 50
 
     suspend fun markQuestionsUsed(questionIds: List<String>) {
         try {
@@ -206,10 +215,13 @@ class GitLiveOIRQuestionCacheManager(
             verbalCount = queries.selectOIRQuestionCountByType(OIRQuestionType.VERBAL_REASONING.name).executeAsOne().toInt(),
             nonVerbalCount = queries.selectOIRQuestionCountByType(OIRQuestionType.NON_VERBAL_REASONING.name).executeAsOne().toInt(),
             numericalCount = queries.selectOIRQuestionCountByType(OIRQuestionType.NUMERICAL_ABILITY.name).executeAsOne().toInt(),
-            spatialCount = queries.selectOIRQuestionCountByType(OIRQuestionType.SPATIAL_REASONING.name).executeAsOne().toInt()
+            spatialCount = queries.selectOIRQuestionCountByType(OIRQuestionType.SPATIAL_REASONING.name).executeAsOne().toInt(),
+            readiness = readiness,
+            expectedBatches = expectedBatches,
+            lastError = lastSyncError
         )
     } catch (e: Exception) {
-        CacheStatus(0, 0, null, 0, 0, 0, 0)
+        CacheStatus(0, 0, null, 0, 0, 0, 0, OIRCacheReadiness.FAILED, expectedBatches, e.message)
     }
 
     suspend fun clearCache(): Result<Unit> = try {

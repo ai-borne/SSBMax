@@ -17,14 +17,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ssbmax.shared.ui.common.ensureCoilNetworkFetcherRegistered
+import com.ssbmax.shared.ui.common.progressSemantics
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.ppdt_image_content_description
 import ssbmax.shared.generated.resources.ppdt_image_observe_instruction
+import ssbmax.shared.generated.resources.ppdt_progress_content_description
 
 /**
  * KMP port of `app/.../ui/tests/ppdt/components/phases/PPDTImageViewingPhase.kt`.
@@ -87,9 +90,19 @@ private fun PPDTImageCard(imageUrl: String) {
 
 @Composable
 private fun PPDTTimerProgressBar(timeRemainingSeconds: Int, totalSeconds: Int) {
+    val progressDescription = stringResource(
+        Res.string.ppdt_progress_content_description,
+        (timeRemainingSeconds * 100 / totalSeconds).coerceIn(0, 100)
+    )
     LinearProgressIndicator(
         progress = { timeRemainingSeconds / totalSeconds.toFloat() },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .progressSemantics(
+                description = progressDescription,
+                current = timeRemainingSeconds.toFloat(),
+                maximum = totalSeconds.toFloat()
+            ),
         color = MaterialTheme.colorScheme.primary
     )
 }

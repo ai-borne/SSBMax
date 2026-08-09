@@ -19,6 +19,8 @@ import kotlin.time.Clock
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
@@ -459,6 +461,24 @@ class GetOLQDashboardUseCaseTest {
     }
 
     // Helper to create test OLQ results
+    private fun createOirResult(submissionId: String): OIRTestResult = OIRTestResult(
+        testId = "oir_standard",
+        sessionId = "internal-$submissionId",
+        userId = "user_concurrent_submission",
+        totalQuestions = 50,
+        correctAnswers = 40,
+        incorrectAnswers = 10,
+        skippedQuestions = 0,
+        totalTimeSeconds = 3_000,
+        timeTakenSeconds = 2_000,
+        rawScore = 40,
+        percentageScore = 80f,
+        categoryScores = emptyMap(),
+        difficultyBreakdown = emptyMap(),
+        answeredQuestions = emptyList(),
+        completedAt = 1L
+    )
+
     private fun createOLQResult(
         submissionId: String,
         testType: TestType,
@@ -584,6 +604,53 @@ class GetOLQDashboardUseCaseTest {
             "forceRefresh=true should bypass cache",
             "ppdt_new",
             result.getOrNull()?.dashboard?.phase1Results?.ppdtOLQResult?.submissionId
+        )
+    }
+
+    @Test
+    fun `invalidation after concurrent fetch prevents stale dashboard cache`() = runTest {
+        val userId = "user_concurrent_submission"
+        val oldSubmission = mockk<OIRSubmission> {
+            every { id } returns "oir_old"
+            every { testResult } returns createOirResult("oir_old")
+        }
+        val newSubmission = mockk<OIRSubmission> {
+            every { id } returns "oir_new"
+            every { testResult } returns createOirResult("oir_new")
+        }
+
+        coEvery { submissionRepository.getLatestOIRSubmission(userId) } returns Result.success(oldSubmission)
+        coEvery { submissionRepository.getLatestPPDTSubmission(any()) } returns Result.success(null)
+        coEvery { submissionRepository.getLatestTATSubmission(any()) } returns Result.success(null)
+        coEvery { submissionRepository.getLatestWATSubmission(any()) } returns Result.success(null)
+        coEvery { submissionRepository.getLatestSRTSubmission(any()) } returns Result.success(null)
+        coEvery { submissionRepository.getLatestSDTSubmission(any()) } returns Result.success(null)
+        coEvery { gtoRepository.getUserResults(any(), any()) } returns Result.success(emptyList())
+        coEvery { interviewRepository.getLatestResult(any()) } returns Result.success(null)
+        val initial = getOLQDashboardUseCase(userId)
+        assertTrue("Initial dashboard fetch failed: ${initial.exceptionOrNull()}", initial.isSuccess)
+        assertEquals("oir_old", initial.getOrNull()?.dashboard?.phase1Results?.oirResult?.sessionId)
+
+        val fetchStarted = CompletableDeferred<Unit>()
+        val releaseFetch = CompletableDeferred<Unit>()
+        coEvery { submissionRepository.getLatestOIRSubmission(userId) } coAnswers {
+            fetchStarted.complete(Unit)
+            releaseFetch.await()
+            Result.success(newSubmission)
+        }
+
+        val inFlightFetch = async { getOLQDashboardUseCase(userId, forceRefresh = true) }
+        fetchStarted.await()
+        val invalidation = async { getOLQDashboardUseCase.invalidateCache(userId) }
+        releaseFetch.complete(Unit)
+        inFlightFetch.await()
+        invalidation.await()
+
+        val afterSubmission = getOLQDashboardUseCase(userId)
+        assertEquals(
+            "Invalidation must evict the snapshot fetched before Home resumes",
+            "oir_new",
+            afterSubmission.getOrNull()?.dashboard?.phase1Results?.oirResult?.sessionId
         )
     }
 

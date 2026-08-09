@@ -9,6 +9,7 @@ import com.ssbmax.shared.domain.model.TATTestConfig
 import com.ssbmax.shared.domain.model.TestEligibility
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.model.scoring.AnalysisStatus
+import com.ssbmax.shared.domain.repository.TestSessionRepository
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
 import com.ssbmax.shared.domain.service.SubmissionAnalysisTrigger
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
@@ -74,6 +75,7 @@ class TATTestViewModel(
     private val getSubscriptionTier: GetSubscriptionTierUseCase,
     private val usageRecorder: TestUsageRecorder,
     private val analysisTrigger: SubmissionAnalysisTrigger,
+    private val testSessionRepository: TestSessionRepository,
     private val logger: DomainLogger,
     private val analyticsTracker: AnalyticsTracker
 ) : ViewModel() {
@@ -85,6 +87,7 @@ class TATTestViewModel(
     private var timerGeneration = 0L
     private var timerJob: Job? = null
     private var capturedUserId: String? = null
+    private var capturedSessionId: String? = null
 
     fun loadTest(testId: String = "tat_standard") {
         viewModelScope.launch {
@@ -122,16 +125,17 @@ class TATTestViewModel(
             _uiState.update { it.copy(loadingMessage = "Fetching questions from cloud...") }
 
             loadTATTest(userId, testId)
-                .onSuccess { questions ->
-                    if (questions.isEmpty()) {
+                .onSuccess { result ->
+                    if (result.questions.isEmpty()) {
                         logger.e(tag, "No TAT questions found for test: $testId", null)
                         _uiState.update { it.copy(isLoading = false, loadingMessage = null, error = TestError.LOAD_FAILED) }
                         return@onSuccess
                     }
+                    capturedSessionId = result.sessionId
                     _uiState.update {
                         it.copy(
                             isLoading = false, loadingMessage = null,
-                            testId = testId, questions = questions, config = TATTestConfig(),
+                            testId = testId, questions = result.questions, config = TATTestConfig(),
                             phase = TATPhase.INSTRUCTIONS, startTime = Clock.System.now().toEpochMilliseconds()
                         )
                     }
@@ -236,6 +240,7 @@ class TATTestViewModel(
                 .onSuccess { submissionId ->
                     analysisTrigger.trigger(TestType.TAT, submissionId)
                     usageRecorder.recordTestUsage(TestType.TAT, userId, submissionId)
+                    capturedSessionId?.let { testSessionRepository.completeTestSession(it) }
                     _uiState.update {
                         it.copy(
                             isLoading = false, isSubmitted = true, submissionId = submissionId,
@@ -249,6 +254,17 @@ class TATTestViewModel(
                     logger.e(tag, "Failed to submit TAT test for user: $userId", error)
                     _uiState.update { it.copy(isLoading = false, error = TestError.SUBMIT_FAILED) }
                 }
+        }
+    }
+
+    // Exiting a test must abandon the durable session (mirrors PPDT/OIR's pauseTest()) so a
+    // retake isn't blocked by a stuck-ACTIVE test_sessions doc for up to its 2-hour expiresAt.
+    fun pauseTest() {
+        val sessionId = capturedSessionId ?: return
+        _uiState.update { it.copy(isTimerActive = false) }
+        timerJob?.cancel()
+        viewModelScope.launch {
+            testSessionRepository.abandonTestSession(sessionId)
         }
     }
 

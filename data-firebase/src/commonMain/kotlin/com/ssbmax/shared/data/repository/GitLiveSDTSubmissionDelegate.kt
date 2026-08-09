@@ -9,7 +9,6 @@ import com.ssbmax.shared.domain.model.scoring.AnalysisStatus
 import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
 import dev.gitlive.firebase.firestore.Direction
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.transform
 import kotlinx.serialization.Serializable
 
@@ -109,7 +108,6 @@ internal class GitLiveSDTSubmissionDelegate(private val store: GitLiveOlqResultS
                 if (filter.shouldFilterSnapshot(dto.data.analysisStatus, dto.data.olqResult != null, snapshot.metadata)) return@transform
                 emit(dto.data.toDomain())
             }
-            .catch { emit(null) }
 }
 
 // ===========================

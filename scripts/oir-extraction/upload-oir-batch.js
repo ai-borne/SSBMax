@@ -20,7 +20,7 @@ const path = require('path');
 
 const BUCKET = 'ssbmax-49e68.firebasestorage.app';
 const STORAGE_DIR = 'oir/pdf_questions';
-const OUT_DIR = path.join(__dirname, 'out');
+const OUT_DIR = process.env.OIR_OUT_DIR || path.join(__dirname, 'out');
 const IMG_DIR = path.join(OUT_DIR, 'images');
 
 const batchId = process.argv[2];

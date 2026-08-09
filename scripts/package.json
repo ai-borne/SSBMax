@@ -4,7 +4,10 @@
   "description": "Automated Firestore collections setup for SSBMax",
   "main": "setup-firestore.js",
   "scripts": {
-    "setup": "node setup-firestore.js"
+    "setup": "node setup-firestore.js",
+    "oir:health": "node check-oir-content-health.js",
+    "oir:meta:dry-run": "node set-oir-meta-config.js",
+    "test:oir": "node test-oir-tooling.js"
   },
   "dependencies": {
     "firebase-admin": "^12.0.0",

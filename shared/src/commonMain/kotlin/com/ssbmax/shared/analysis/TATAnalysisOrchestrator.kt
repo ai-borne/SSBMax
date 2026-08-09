@@ -49,6 +49,10 @@ class TATAnalysisOrchestrator(
         if (submission.stories.isEmpty()) return
 
         submissionRepository.updateTATAnalysisStatus(submissionId, AnalysisStatus.ANALYZING)
+            .onFailure {
+                logger.e(TAG, "Failed to mark TAT submission ANALYZING: $submissionId: ${it.message}")
+                return
+            }
 
         val questions = testContentRepository.getTATQuestions(submission.testId).getOrNull().orEmpty()
         val candidateGender = runCatching {

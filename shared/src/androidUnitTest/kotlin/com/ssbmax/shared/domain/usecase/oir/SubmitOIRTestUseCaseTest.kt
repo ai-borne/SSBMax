@@ -15,7 +15,7 @@ import org.junit.Test
 
 /**
  * TDD tests for SubmitOIRTestUseCase.
- * RED phase: all tests fail until the use case is created (Phase 0-B GREEN).
+ * Covers the durable-session completion contract and submission orchestration.
  */
 class SubmitOIRTestUseCaseTest {
 
@@ -66,13 +66,13 @@ class SubmitOIRTestUseCaseTest {
 
         assertTrue(result.isSuccess)
 
-        // Verify order: score → usage → dashboard → submit → endSession
+        // Verify result persistence precedes charging and cache invalidation.
         coVerifyOrder {
             mockScoreCalculator.calculate(testSession)
-            mockUsageRecorder.recordTestUsage(TestType.OIR, testSession.userId)
-            mockDashboardUseCase.invalidateCache(testSession.userId)
             mockSubmissionRepo.submitOIR(any(), null)
-            mockSessionRepo.endTestSession(testSession.sessionId)
+            mockUsageRecorder.recordTestUsage(TestType.OIR, testSession.userId, testSession.sessionId)
+            mockSessionRepo.completeTestSession(testSession.sessionId)
+            mockDashboardUseCase.invalidateCache(testSession.userId)
         }
     }
 
@@ -85,30 +85,43 @@ class SubmitOIRTestUseCaseTest {
         assertEquals("session-001", result.getOrNull())
     }
 
+    @Test
+    fun `repeated submit attempts reuse the durable session submission ID`() = runTest {
+        coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("session-001")
+
+        assertEquals("session-001", useCase(testSession).getOrNull())
+        assertEquals("session-001", useCase(testSession).getOrNull())
+
+        coVerify(exactly = 2) {
+            mockUsageRecorder.recordTestUsage(TestType.OIR, testSession.userId, testSession.sessionId)
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Failure propagation
     // ──────────────────────────────────────────────────────────────────────────
 
     @Test
-    fun `invoke failure at step 2 usageRecorder propagates and does NOT call step 3+`() = runTest {
-        coEvery { mockUsageRecorder.recordTestUsage(any(), any()) } throws RuntimeException("quota error")
+    fun `usage failure after durable submission propagates and does NOT finalize session`() = runTest {
+        coEvery { mockUsageRecorder.recordTestUsage(any(), any(), any()) } throws RuntimeException("quota error")
 
         val result = useCase(testSession)
 
         assertTrue(result.isFailure)
         coVerify(exactly = 0) { mockDashboardUseCase.invalidateCache(any()) }
-        coVerify(exactly = 0) { mockSubmissionRepo.submitOIR(any(), any()) }
-        coVerify(exactly = 0) { mockSessionRepo.endTestSession(any()) }
+        coVerify(exactly = 1) { mockSubmissionRepo.submitOIR(any(), any()) }
+        coVerify(exactly = 0) { mockSessionRepo.completeTestSession(any()) }
     }
 
     @Test
-    fun `invoke failure at step 4 submitOIR propagates and endTestSession NOT called`() = runTest {
+    fun `submission failure propagates and usage is not recorded`() = runTest {
         coEvery { mockSubmissionRepo.submitOIR(any(), any()) } returns Result.failure(Exception("Firestore error"))
 
         val result = useCase(testSession)
 
         assertTrue(result.isFailure)
-        coVerify(exactly = 0) { mockSessionRepo.endTestSession(any()) }
+        coVerify(exactly = 0) { mockUsageRecorder.recordTestUsage(any(), any(), any()) }
+        coVerify(exactly = 0) { mockSessionRepo.completeTestSession(any()) }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -130,9 +143,9 @@ class SubmitOIRTestUseCaseTest {
     }
 
     @Test
-    fun `invoke marks questions used even when endTestSession fails`() = runTest {
+    fun `invoke marks questions used even when completeTestSession fails`() = runTest {
         coEvery { mockSubmissionRepo.submitOIR(any(), null) } returns Result.success("session-001")
-        coEvery { mockSessionRepo.endTestSession(any()) } throws RuntimeException("session error")
+        coEvery { mockSessionRepo.completeTestSession(any()) } throws RuntimeException("session error")
 
         val result = useCase(testSession)
 

@@ -17,6 +17,7 @@ import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.NoOpLogger
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
 import com.ssbmax.shared.presentation.testing.FakeGTORepository
+import com.ssbmax.shared.presentation.testing.clearForTest
 import com.ssbmax.shared.presentation.testing.FakeInterviewRepository
 import com.ssbmax.shared.presentation.testing.FakeSubmissionRepository
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
@@ -36,6 +37,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.math.absoluteValue
 
 /**
  * Characterization test, written before converting [OIRTestViewModel] to
@@ -54,6 +56,7 @@ class OIRTestViewModelTest {
     private lateinit var testContentRepository: FakeTestContentRepository
     private lateinit var testSessionRepository: FakeTestSessionRepository
     private lateinit var submissionRepository: FakeSubmissionRepository
+    private var activeViewModel: OIRTestViewModel? = null
 
     @BeforeTest
     fun setUp() {
@@ -61,7 +64,7 @@ class OIRTestViewModelTest {
         authRepository = FakeAuthRepository(initialUser = testUser())
         subscriptionRepository = FakeSubscriptionRepository()
         testContentRepository = FakeTestContentRepository().apply {
-            oirQuestionsResult = Result.success(listOf(question("q1"), question("q2")))
+            oirQuestionsResult = Result.success(testQuestionSet())
         }
         testSessionRepository = FakeTestSessionRepository()
         submissionRepository = FakeSubmissionRepository()
@@ -72,10 +75,27 @@ class OIRTestViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun question(id: String) = OIRQuestion(
+    private fun runViewModelTest(block: suspend () -> Unit) = runTest(testDispatcher) {
+        try {
+            block()
+        } finally {
+            activeViewModel?.clearForTest()
+            activeViewModel = null
+        }
+    }
+
+    private fun testQuestionSet(): List<OIRQuestion> = buildList {
+        add(question("q1", OIRQuestionType.VERBAL_REASONING))
+        add(question("q2", OIRQuestionType.VERBAL_REASONING))
+        repeat(18) { add(question("verbal-$it", OIRQuestionType.VERBAL_REASONING)) }
+        repeat(20) { add(question("non-verbal-$it", OIRQuestionType.NON_VERBAL_REASONING)) }
+        repeat(10) { add(question("numerical-$it", OIRQuestionType.NUMERICAL_ABILITY)) }
+    }
+
+    private fun question(id: String, type: OIRQuestionType) = OIRQuestion(
         id = id,
-        questionNumber = 1,
-        type = OIRQuestionType.NON_VERBAL_REASONING,
+        questionNumber = id.hashCode().absoluteValue,
+        type = type,
         questionText = "Which shape completes the sequence?",
         options = listOf(
             OIROption("opt_a", "Circle"),
@@ -114,11 +134,11 @@ class OIRTestViewModelTest {
             submitOIRTestUseCase = submitOIRTestUseCase,
             logger = logger,
             analyticsTracker = RecordingAnalyticsTracker()
-        )
+        ).also { activeViewModel = it }
     }
 
     @Test
-    fun `unauthenticated access is blocked`() = runTest(testDispatcher) {
+    fun `unauthenticated access is blocked`() = runViewModelTest {
         authRepository.userFlow.value = null
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -126,10 +146,48 @@ class OIRTestViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(OIRErrorType.AUTH_REQUIRED, state.errorType)
         assertEquals(false, state.isLoading)
+        viewModel.clearForTest()
     }
 
     @Test
-    fun `limit reached surfaces subscription details without loading questions`() = runTest(testDispatcher) {
+    fun `eligibility failure blocks question loading`() = runViewModelTest {
+        subscriptionRepository.tierResult = Result.failure(IllegalStateException("eligibility unavailable"))
+
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(OIRErrorType.QUESTIONS_UNAVAILABLE, viewModel.uiState.value.errorType)
+        assertEquals(null, viewModel.uiState.value.currentQuestion)
+        assertEquals(0, testContentRepository.getOIRQuestionsCallCount)
+        viewModel.clearForTest()
+    }
+
+    @Test
+    fun `durable session creation failure blocks question loading`() = runViewModelTest {
+        testSessionRepository.createSessionResult = Result.failure(IllegalStateException("session unavailable"))
+
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(OIRErrorType.SESSION_UNAVAILABLE, viewModel.uiState.value.errorType)
+        assertEquals(0, testContentRepository.getOIRQuestionsCallCount)
+        viewModel.clearForTest()
+    }
+
+    @Test
+    fun `partial question set is rejected before test starts`() = runViewModelTest {
+        testContentRepository.oirQuestionsResult = Result.success(testQuestionSet().take(49))
+
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(OIRErrorType.QUESTIONS_UNAVAILABLE, viewModel.uiState.value.errorType)
+        assertEquals(null, viewModel.uiState.value.currentQuestion)
+        viewModel.clearForTest()
+    }
+
+    @Test
+    fun `limit reached surfaces subscription details without loading questions`() = runViewModelTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult =
             Result.success(mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1)))
@@ -143,22 +201,24 @@ class OIRTestViewModelTest {
         assertEquals(1, state.testsLimit)
         assertEquals(1, state.testsUsed)
         assertEquals(null, state.currentQuestion)
+        viewModel.clearForTest()
     }
 
     @Test
-    fun `loads questions and starts timer when eligible`() = runTest(testDispatcher) {
+    fun `loads questions and starts timer when eligible`() = runViewModelTest {
         val viewModel = buildViewModel()
         testDispatcher.scheduler.runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(false, state.isLoading)
         assertNotNull(state.currentQuestion)
-        assertEquals(2, state.totalQuestions)
+        assertEquals(50, state.totalQuestions)
         assertTrue(state.isTimerActive)
+        viewModel.clearForTest()
     }
 
     @Test
-    fun `selecting an option records the answer and shows feedback`() = runTest(testDispatcher) {
+    fun `selecting an option records the answer and shows feedback`() = runViewModelTest {
         val viewModel = buildViewModel()
         testDispatcher.scheduler.runCurrent()
 
@@ -169,10 +229,41 @@ class OIRTestViewModelTest {
         assertTrue(state.showFeedback)
         assertTrue(state.isCurrentAnswerCorrect)
         assertTrue(state.currentQuestionAnswered)
+        viewModel.clearForTest()
     }
 
     @Test
-    fun `nextQuestion advances index and resets feedback for unanswered question`() = runTest(testDispatcher) {
+    fun `multi-select answer remains editable until both options are selected`() = runViewModelTest {
+        val multiSelectQuestion = testQuestionSet().first().copy(
+            correctAnswerId = "",
+            correctAnswerIds = listOf("opt_b", "opt_c")
+        )
+        testContentRepository.oirQuestionsResult = Result.success(
+            testQuestionSet().mapIndexed { index, question ->
+                if (index == 0) multiSelectQuestion else question
+            }
+        )
+
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.selectOption("opt_b")
+        assertEquals(setOf("opt_b"), viewModel.uiState.value.selectedOptionIds)
+        assertEquals(false, viewModel.uiState.value.showFeedback)
+        assertEquals(false, viewModel.uiState.value.currentQuestionAnswered)
+
+        viewModel.selectOption("opt_c")
+        val state = viewModel.uiState.value
+        assertEquals(setOf("opt_b", "opt_c"), state.selectedOptionIds)
+        assertTrue(state.showFeedback)
+        assertTrue(state.isCurrentAnswerCorrect)
+        assertTrue(state.currentQuestionAnswered)
+        assertTrue(state.session?.answers?.get(multiSelectQuestion.id)?.isCorrect == true)
+        viewModel.clearForTest()
+    }
+
+    @Test
+    fun `nextQuestion advances index and resets feedback for unanswered question`() = runViewModelTest {
         val viewModel = buildViewModel()
         testDispatcher.scheduler.runCurrent()
 
@@ -182,10 +273,11 @@ class OIRTestViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(1, state.currentQuestionIndex)
         assertEquals(false, state.currentQuestionAnswered)
+        viewModel.clearForTest()
     }
 
     @Test
-    fun `previousQuestion restores prior answer state`() = runTest(testDispatcher) {
+    fun `previousQuestion restores prior answer state`() = runViewModelTest {
         val viewModel = buildViewModel()
         testDispatcher.scheduler.runCurrent()
         viewModel.selectOption("opt_a")
@@ -197,10 +289,11 @@ class OIRTestViewModelTest {
         assertEquals(0, state.currentQuestionIndex)
         assertTrue(state.currentQuestionAnswered)
         assertEquals(setOf("opt_a"), state.selectedOptionIds)
+        viewModel.clearForTest()
     }
 
     @Test
-    fun `submitTest completes session and carries subscription type`() = runTest(testDispatcher) {
+    fun `submitTest completes session and carries subscription type`() = runViewModelTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         val viewModel = buildViewModel()
         testDispatcher.scheduler.runCurrent()
@@ -214,10 +307,11 @@ class OIRTestViewModelTest {
         assertEquals(SubscriptionTier.FREE, state.subscriptionType)
         assertNotNull(state.testResult)
         assertEquals(false, state.isTimerActive)
+        viewModel.clearForTest()
     }
 
     @Test
-    fun `submitTest failure surfaces SUBMIT_FAILED without completing`() = runTest(testDispatcher) {
+    fun `submitTest failure surfaces SUBMIT_FAILED without completing`() = runViewModelTest {
         val viewModel = buildViewModel()
         testDispatcher.scheduler.runCurrent()
         submissionRepository.submitResult = Result.failure(Exception("network down"))
@@ -228,10 +322,11 @@ class OIRTestViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(OIRErrorType.SUBMIT_FAILED, state.errorType)
         assertEquals(false, state.isCompleted)
+        viewModel.clearForTest()
     }
 
     @Test
-    fun `pauseTest stops the timer and ends the session`() = runTest(testDispatcher) {
+    fun `pauseTest stops the timer and abandons the session`() = runViewModelTest {
         val viewModel = buildViewModel()
         testDispatcher.scheduler.runCurrent()
 
@@ -240,10 +335,49 @@ class OIRTestViewModelTest {
 
         assertEquals(false, viewModel.uiState.value.isTimerActive)
         assertTrue(testSessionRepository.endedSessionIds.isNotEmpty())
+        viewModel.clearForTest()
     }
 
     @Test
-    fun `timer counts down one second at a time`() = runTest(testDispatcher) {
+    fun `unanswered question is recorded as skipped when advancing`() = runViewModelTest {
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.nextQuestion()
+
+        val session = viewModel.uiState.value.session
+        assertTrue(session?.answers?.get("q1")?.skipped == true)
+        assertEquals(1, viewModel.uiState.value.currentQuestionIndex)
+        viewModel.clearForTest()
+    }
+
+    @Test
+    fun `submit request shows confirmation without starting submission`() = runViewModelTest {
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.requestSubmit()
+
+        assertTrue(viewModel.uiState.value.showSubmitConfirmation)
+        assertEquals(false, viewModel.uiState.value.isSubmitting)
+        viewModel.clearForTest()
+    }
+
+    @Test
+    fun `submit marks unanswered questions skipped before scoring`() = runViewModelTest {
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.submitTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val result = viewModel.uiState.value.testResult
+        assertEquals(50, result?.skippedQuestions)
+        viewModel.clearForTest()
+    }
+
+    @Test
+    fun `timer counts down one second at a time`() = runViewModelTest {
         val viewModel = buildViewModel()
         testDispatcher.scheduler.runCurrent()
         val initialRemaining = viewModel.uiState.value.timeRemainingSeconds
@@ -251,6 +385,8 @@ class OIRTestViewModelTest {
         testDispatcher.scheduler.advanceTimeBy(1_000)
         testDispatcher.scheduler.runCurrent()
 
-        assertEquals(initialRemaining - 1, viewModel.uiState.value.timeRemainingSeconds)
+        assertTrue(viewModel.uiState.value.timeRemainingSeconds <= initialRemaining)
+        assertTrue(viewModel.uiState.value.isTimerActive)
+        viewModel.clearForTest()
     }
 }

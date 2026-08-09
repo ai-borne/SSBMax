@@ -1,5 +1,6 @@
 package com.ssbmax.shared.presentation.home.student
 
+import com.ssbmax.shared.domain.model.CacheStatus
 import com.ssbmax.shared.domain.model.Phase1Progress
 import com.ssbmax.shared.domain.model.Phase2Progress
 import com.ssbmax.shared.domain.usecase.dashboard.ProcessedDashboardData
@@ -27,5 +28,7 @@ data class StudentHomeUiState(
     val isRefreshingDashboard: Boolean = false,
     val dashboard: ProcessedDashboardData? = null,
     val dashboardError: String? = null,
-    val lastRefreshTime: Long? = null
+    val lastRefreshTime: Long? = null,
+    val oirCacheStatus: CacheStatus? = null,
+    val isPreparingOir: Boolean = false
 )

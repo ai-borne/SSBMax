@@ -410,7 +410,6 @@ def run_set(set_num, pdf_path):
             "options": [{"id": OPT_IDS[i], "text": o["text"]} for i, o in enumerate(options)],
             "correctAnswerId": correct,
             "explanation": explanation,
-            "difficulty": "MEDIUM",
             "timeSeconds": 60,
         }
         if fname:

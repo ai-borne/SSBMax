@@ -48,11 +48,11 @@ if git diff --cached --name-only | grep -E "firestore\.rules"; then
   fi
 fi
 
-# 4. Run lint checks (all modules)
-echo "Running lint checks..."
-if ! ./gradlew lintDebug --no-daemon --quiet 2>&1; then
-  echo "❌ ERROR: Lint checks failed"
-  echo "   → Fix lint issues: ./gradlew lintDebug"
+# 4. Run lint and UI enforcement checks (all modules)
+echo "Running lint and UI enforcement checks..."
+if ! ./gradlew lintDebug :lint:test :detekt-rules:test :shared:detekt --no-daemon --quiet 2>&1; then
+  echo "❌ ERROR: Lint or UI enforcement checks failed"
+  echo "   → Fix issues: ./gradlew lintDebug :lint:test :detekt-rules:test :shared:detekt"
   exit 1
 fi
 

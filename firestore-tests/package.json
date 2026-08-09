@@ -1,0 +1,14 @@
+{
+  "name": "ssbmax-firestore-rules-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Firestore rules-unit tests for firestore.rules -- run via `firebase emulators:exec`, not standalone (needs the emulator up on 8080). See test_sessions.rules.test.mjs for the CLAUDE.md-documented lesson this guards: the stuck-ACTIVE test_sessions incident shipped because no automated test exercised the update rule's legal/illegal transitions before merge.",
+  "type": "module",
+  "scripts": {
+    "pretest": "node verify-required-tests.mjs",
+    "test": "node --test --test-concurrency=1 *.rules.test.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1"
+  }
+}

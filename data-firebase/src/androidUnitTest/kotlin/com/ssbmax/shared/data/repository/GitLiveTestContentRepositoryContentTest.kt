@@ -2,6 +2,9 @@ package com.ssbmax.shared.data.repository
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.ssbmax.shared.db.SharedDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,7 +28,7 @@ class GitLiveTestContentRepositoryContentTest {
         SharedDatabase.Schema.create(driver)
         database = SharedDatabase(driver)
         repository = GitLiveTestContentRepository(
-            oirCacheManager = GitLiveOIRQuestionCacheManager(database, GitLiveOIRQuestionSelector(database)),
+            oirCacheManager = GitLiveOIRQuestionCacheManager(database, GitLiveOIRQuestionSelector(database), CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)),
             watWordCacheManager = GitLiveWATWordCacheManager(database),
             srtSituationCacheManager = GitLiveSRTSituationCacheManager(database),
             ppdtImageCacheManager = GitLivePPDTImageCacheManager(database),

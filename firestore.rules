@@ -49,9 +49,9 @@ service cloud.firestore {
       // Users can create their own profile
       allow create: if isAuthenticated() && request.auth.uid == userId;
       
-      // Users can update their own profile (except role)
+      // Users can update their own profile (except privileged membership and role fields)
       allow update: if isOwner(userId) && 
-                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isPaidMember', 'membershipPlan', 'paymentId', 'orderId']);
       
       // No one can delete user profiles
       allow delete: if false;
@@ -96,8 +96,18 @@ service cloud.firestore {
                         request.resource.data.keys().hasAll([
                           'month', 'oirTestsUsed', 'tatTestsUsed', 'watTestsUsed',
                           'srtTestsUsed', 'ppdtTestsUsed', 'piqTestsUsed', 'gtoTestsUsed',
-                          'interviewTestsUsed', 'sdTestsUsed', 'lastUpdated'
+                          'interviewTestsUsed', 'sdTestsUsed', 'recordedSubmissionIds', 'lastUpdated'
                         ]) &&
+                        // The doc id is `usage_{month}` (GitLiveTestUsageRecorder /
+                        // GitLiveSubscriptionRepository) but the `month` field itself holds the
+                        // bare value (e.g. "2026-08", no "usage_" prefix -- see
+                        // GitLiveSubscriptionRepository.getMonthlyUsage, which reads the same bare
+                        // value back). Comparing `month` directly to `document` (the doc id) can
+                        // never match and permanently denied every user's first usage write of
+                        // every month; reconstruct the doc id instead.
+                        document == 'usage_' + request.resource.data.month &&
+                        request.resource.data.recordedSubmissionIds is list &&
+                        request.resource.data.lastUpdated is int &&
                          // Allow counts 0-10 on create (transaction may increment immediately)
                         request.resource.data.oirTestsUsed >= 0 && request.resource.data.oirTestsUsed <= 10 &&
                         request.resource.data.tatTestsUsed >= 0 && request.resource.data.tatTestsUsed <= 10 &&
@@ -109,29 +119,37 @@ service cloud.firestore {
                         request.resource.data.interviewTestsUsed >= 0 && request.resource.data.interviewTestsUsed <= 10 &&
                         request.resource.data.sdTestsUsed >= 0 && request.resource.data.sdTestsUsed <= 10;
         
-        // Users can UPDATE usage 
-        // Allow updates for transactions with basic validation
-        // Note: Transactions do multiple updates - validate only what changed
+        // A client may record exactly one attempt: one counter increases by one,
+        // and exactly one new submission ID is appended. Existing attempts cannot
+        // be removed or replayed by changing the document directly.
         allow update: if isOwner(userId) &&
-                         // Basic security: If incrementing a test counter, ensure it only increases
-                         (request.resource.data.oirTestsUsed == resource.data.oirTestsUsed || 
-                          request.resource.data.oirTestsUsed > resource.data.oirTestsUsed) &&
-                         (request.resource.data.tatTestsUsed == resource.data.tatTestsUsed || 
-                          request.resource.data.tatTestsUsed > resource.data.tatTestsUsed) &&
-                         (request.resource.data.watTestsUsed == resource.data.watTestsUsed || 
-                          request.resource.data.watTestsUsed > resource.data.watTestsUsed) &&
-                         (request.resource.data.srtTestsUsed == resource.data.srtTestsUsed || 
-                          request.resource.data.srtTestsUsed > resource.data.srtTestsUsed) &&
-                        (request.resource.data.ppdtTestsUsed == resource.data.ppdtTestsUsed || 
-                          request.resource.data.ppdtTestsUsed > resource.data.ppdtTestsUsed) &&
-                        (request.resource.data.piqTestsUsed == resource.data.piqTestsUsed || 
-                          request.resource.data.piqTestsUsed > resource.data.piqTestsUsed) &&
-                        (request.resource.data.gtoTestsUsed == resource.data.gtoTestsUsed || 
-                          request.resource.data.gtoTestsUsed > resource.data.gtoTestsUsed) &&
-                         (request.resource.data.interviewTestsUsed == resource.data.interviewTestsUsed || 
-                          request.resource.data.interviewTestsUsed > resource.data.interviewTestsUsed) &&
-                         (request.resource.data.sdTestsUsed == resource.data.sdTestsUsed || 
-                          request.resource.data.sdTestsUsed > resource.data.sdTestsUsed);
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.month == resource.data.month &&
+                         request.resource.data.lastUpdated is int &&
+                         request.resource.data.recordedSubmissionIds is list &&
+                         ((!resource.data.keys().hasAny(['recordedSubmissionIds']) &&
+                           request.resource.data.recordedSubmissionIds.size() == 1) ||
+                          (resource.data.keys().hasAny(['recordedSubmissionIds']) &&
+                           request.resource.data.recordedSubmissionIds.size() == resource.data.recordedSubmissionIds.size() + 1 &&
+                           request.resource.data.recordedSubmissionIds.hasAll(resource.data.recordedSubmissionIds))) &&
+                         request.resource.data.oirTestsUsed >= resource.data.oirTestsUsed &&
+                         request.resource.data.oirTestsUsed <= resource.data.oirTestsUsed + 1 &&
+                         request.resource.data.tatTestsUsed >= resource.data.tatTestsUsed &&
+                         request.resource.data.tatTestsUsed <= resource.data.tatTestsUsed + 1 &&
+                         request.resource.data.watTestsUsed >= resource.data.watTestsUsed &&
+                         request.resource.data.watTestsUsed <= resource.data.watTestsUsed + 1 &&
+                         request.resource.data.srtTestsUsed >= resource.data.srtTestsUsed &&
+                         request.resource.data.srtTestsUsed <= resource.data.srtTestsUsed + 1 &&
+                         request.resource.data.ppdtTestsUsed >= resource.data.ppdtTestsUsed &&
+                         request.resource.data.ppdtTestsUsed <= resource.data.ppdtTestsUsed + 1 &&
+                         request.resource.data.piqTestsUsed >= resource.data.piqTestsUsed &&
+                         request.resource.data.piqTestsUsed <= resource.data.piqTestsUsed + 1 &&
+                         request.resource.data.gtoTestsUsed >= resource.data.gtoTestsUsed &&
+                         request.resource.data.gtoTestsUsed <= resource.data.gtoTestsUsed + 1 &&
+                         request.resource.data.interviewTestsUsed >= resource.data.interviewTestsUsed &&
+                         request.resource.data.interviewTestsUsed <= resource.data.interviewTestsUsed + 1 &&
+                         request.resource.data.sdTestsUsed >= resource.data.sdTestsUsed &&
+                         request.resource.data.sdTestsUsed <= resource.data.sdTestsUsed + 1;
         
         // NEVER allow delete (audit trail)
         allow delete: if false;
@@ -170,7 +188,8 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
                      exists(/databases/$(database)/documents/test_sessions/$(request.auth.uid + '_' + testId)) &&
                      get(/databases/$(database)/documents/test_sessions/$(request.auth.uid + '_' + testId)).data.isActive == true &&
-                     get(/databases/$(database)/documents/test_sessions/$(request.auth.uid + '_' + testId)).data.expiresAt > request.time.toMillis();
+                     get(/databases/$(database)/documents/test_sessions/$(request.auth.uid + '_' + testId)).data.expiresAt > request.time.toMillis() &&
+                                          get(/databases/$(database)/documents/test_sessions/$(request.auth.uid + '_' + testId)).data.status == 'ACTIVE';
       
       // No write access for clients
       allow write: if false;
@@ -196,18 +215,59 @@ service cloud.firestore {
       // Users can read their own test sessions
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       
-      // Users can create test sessions
-      allow create: if isAuthenticated() && 
+      // Users can create only an active session owned by themselves.
+      //
+      // startTime/expiresAt are deliberately NOT compared against request.time.toMillis():
+      // they are client-clock values, and a device clock running even slightly ahead of the
+      // server's would deny an otherwise-valid session. They are informational fields backing
+      // the 2-hour countdown UI, not a security boundary -- ownership plus the shape checks
+      // below are the actual guard.
+      allow create: if isAuthenticated() &&
+                       request.resource.id == request.auth.uid + '_' + request.resource.data.testId &&
                        request.resource.data.userId == request.auth.uid &&
-                       request.resource.data.isActive == true;
+                       request.resource.data.isActive == true &&
+                       request.resource.data.status == 'ACTIVE';
+
+      // Identity and test configuration are immutable across any update. Two legal
+      // transitions on the shared userId_testId doc:
+      //   1. an active session going terminal (submit/abandon/expire);
+      //   2. the owner starting a fresh attempt over their own prior session -- the client
+      //      reuses the same doc id every time a test is retaken (see
+      //      GitLiveTestSessionRepository's class doc), so createTestSession() always lands
+      //      as a full-document replace on top of whatever is already there.
+      //
+      // (2) deliberately does NOT require the prior session to be terminal or past its
+      // expiresAt. Requiring that is exactly what caused the "Cloud connection required" /
+      // "Could not create a secure test session" incident: any exit path that misses
+      // abandonTestSession (process death, or a load that fails after the session write)
+      // leaves the doc stuck ACTIVE, and the owner is then locked out of their own test for
+      // the full two hours behind a misleading connectivity error. Blocking the owner here
+      // buys no security -- they already hold an ACTIVE session and can already read
+      // test_questions with it, and the identical reset is reachable in two writes (abandon,
+      // then re-create) which transition (1) permits unconditionally. Ownership,
+      // userId/testId/testType immutability and the status whitelist are the real guards.
+      //
+      // (Note for future editors: request.time.toMillis() comparisons are NOT broken here.
+      // An earlier fix removed them on that theory; a clause-by-clause emulator bisection
+      // disproved it. They are omitted because startTime/expiresAt are client-clock values,
+      // not because the operator misbehaves.)
+      allow update: if isAuthenticated() &&
+                       resource.data.userId == request.auth.uid &&
+                       request.resource.data.userId == resource.data.userId &&
+                       request.resource.data.testId == resource.data.testId &&
+                       request.resource.data.testType == resource.data.testType &&
+                       (
+                         (resource.data.status == 'ACTIVE' &&
+                          request.resource.data.isActive == false &&
+                          request.resource.data.status in ['ABANDONED', 'SUBMITTED', 'EXPIRED'] &&
+                          request.resource.data.startTime == resource.data.startTime &&
+                          request.resource.data.expiresAt == resource.data.expiresAt) ||
+                         (request.resource.data.isActive == true &&
+                          request.resource.data.status == 'ACTIVE')
+                       );
       
-      // Users can update their own sessions
-      allow update: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
-      
-      // Users can delete their own expired sessions
-      allow delete: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
+      // Sessions are retained as an audit trail; clients cannot delete them.
+      allow delete: if false;
     }
     
     // ============================================
@@ -231,6 +291,11 @@ service cloud.firestore {
       // Interview submissions may have 'resultId' instead of responses/data
       allow create: if isAuthenticated() && 
                        request.resource.data.userId == request.auth.uid &&
+                       (!request.resource.data.keys().hasAny(['testType']) ||
+                        request.resource.data.testType != 'OIR' ||
+                        (exists(/databases/$(database)/documents/test_sessions/$(request.resource.id)) &&
+                         get(/databases/$(database)/documents/test_sessions/$(request.resource.id)).data.userId == request.auth.uid &&
+                         get(/databases/$(database)/documents/test_sessions/$(request.resource.id)).data.testType == 'OIR')) &&
                        request.resource.data.keys().hasAll(['testType', 'submittedAt']) &&
                        (request.resource.data.keys().hasAny(['responses']) || 
                         request.resource.data.keys().hasAny(['data']) ||
@@ -242,7 +307,7 @@ service cloud.firestore {
       allow update: if isAuthenticated() &&
                        ((resource.data.userId == request.auth.uid && resource.data.status == 'IN_PROGRESS') ||
                         // Allow status and data.analysisStatus updates for background analysis workers
-                        (resource.data.userId == request.auth.uid && 
+                        (resource.data.userId == request.auth.uid &&
                          resource.data.status in ['PENDING_ANALYSIS', 'ANALYZING', 'SUBMITTED_PENDING_REVIEW']) ||
                         (resource.data.instructorId == request.auth.uid) ||
                         (isAssessor() && resource.data.keys().hasAny(['batchId']) &&
@@ -409,12 +474,7 @@ service cloud.firestore {
     match /topic_content/{topicId} {
       // All authenticated users can read topic content
       allow read: if isAuthenticated();
-      
-      // ⚠️ PRODUCTION SECURITY NOTE:
-      // Migration write access should be removed after initial migration is complete.
-      // For now, allowing writes for migration tool. Once migration is done, change to:
-      // allow write: if false; (and manage content via Firebase Console only)
-      allow write: if isAuthenticated();
+      allow write: if false;
     }
     
     // ============================================
@@ -423,17 +483,8 @@ service cloud.firestore {
     
     match /study_materials/{materialId} {
       // All authenticated users can read study materials
-      // (Premium filtering can be added later if needed)
       allow read: if isAuthenticated();
-      
-      // ⚠️ PRODUCTION SECURITY NOTE:
-      // Migration write access should be removed after initial migration is complete.
-      // For now, allowing creates for migration tool. Once migration is done, change to:
-      // allow create: if false; (and manage content via Firebase Console only)
-      allow create: if isAuthenticated();
-      
-      // No update/delete from clients
-      allow update, delete: if false;
+      allow write: if false;
     }
     
     // ============================================
@@ -575,22 +626,30 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // Interview responses - users can write their own responses
+    // Interview responses - users can write their own responses (cannot modify olqScores/analyzedBy)
     match /interview_responses/{responseId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow write: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid &&
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['olqScores', 'analyzedBy']);
     }
 
-    // Interview results - users can read/write their own results
+    // Webhook logs - server-side backend only (no client access)
+    match /webhook_logs/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Interview results - users can read their own results
     match /interview_results/{resultId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow write: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow write: if false;
     }
 
-    // Question cache - authenticated users can read/write cached questions
+    // Question cache - read-only for authenticated clients
     match /question_cache/{docId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if false;
     }
 
     // Generic questions pool - read-only for users

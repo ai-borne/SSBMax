@@ -12,7 +12,6 @@ import com.ssbmax.shared.domain.model.scoring.AnalysisStatus
 import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
 import dev.gitlive.firebase.firestore.Direction
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.transform
 import kotlin.time.Clock
 import kotlinx.serialization.Serializable
@@ -170,7 +169,6 @@ class GitLivePsychTestSubmissionRepository internal constructor(
                 }
                 emit(dto.data.toDomain())
             }
-            .catch { emit(null) }
 
     // ===========================
     // WAT (delegated)

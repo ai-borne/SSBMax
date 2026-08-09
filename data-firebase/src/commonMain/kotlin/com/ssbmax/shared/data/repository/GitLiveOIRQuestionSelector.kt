@@ -33,34 +33,46 @@ class GitLiveOIRQuestionSelector(
     private val queries get() = database.sharedDatabaseQueries
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Returns [count] questions, maintaining type distribution. [difficulty] null = any. */
-    suspend fun selectQuestions(count: Int = 50, difficulty: String? = null): Result<List<OIRQuestion>> = try {
+    /** Returns [count] valid questions, maintaining the required type distribution. */
+    suspend fun selectQuestions(count: Int = 50): Result<List<OIRQuestion>> = try {
         val targets = OIRQuestionDistribution.counts(count)
         val unusedThreshold = Clock.System.now().toEpochMilliseconds() - (UNUSED_THRESHOLD_DAYS * 24 * 60 * 60 * 1000L)
 
-        val selected = targets.mapValues { (type, target) ->
-            fetchByType(type.name, unusedThreshold, target, difficulty)
-        }.toMutableMap()
-
-        val currentTotal = selected.values.sumOf { it.size }
-        if (currentTotal < count) {
-            var remaining = count - currentTotal
-            for ((type, target) in targets) {
-                if (remaining <= 0) break
-                if (selected.getValue(type).size < target) continue
-                val extra = fetchByType(type.name, unusedThreshold, target + remaining, difficulty)
-                val gained = extra.size - selected.getValue(type).size
-                if (gained > 0) {
-                    selected[type] = extra
-                    remaining -= gained
-                }
-            }
-        }
-
+        val selected = selectByType(targets, unusedThreshold)
+        topUpIfNeeded(selected, targets, count, unusedThreshold)
         val all = selected.values.flatten().shuffled()
         Result.success(all.map { toDomain(it) })
     } catch (e: Exception) {
         Result.failure(e)
+    }
+
+    private fun selectByType(
+        targets: Map<OIRQuestionType, Int>,
+        unusedThreshold: Long
+    ): MutableMap<OIRQuestionType, List<CachedOIRQuestionRow>> = targets.mapValues { (type, target) ->
+        fetchByType(type.name, unusedThreshold, target)
+    }.toMutableMap()
+
+    private fun topUpIfNeeded(
+        selected: MutableMap<OIRQuestionType, List<CachedOIRQuestionRow>>,
+        targets: Map<OIRQuestionType, Int>,
+        count: Int,
+        unusedThreshold: Long
+    ) {
+        val currentTotal = selected.values.sumOf { it.size }
+        if (currentTotal >= count) return
+
+        var remaining = count - currentTotal
+        for ((type, target) in targets) {
+            if (remaining <= 0) break
+            if (selected.getValue(type).size < target) continue
+            val extra = fetchByType(type.name, unusedThreshold, target + remaining)
+            val gained = extra.size - selected.getValue(type).size
+            if (gained > 0) {
+                selected[type] = extra
+                remaining -= gained
+            }
+        }
     }
 
     /**
@@ -68,20 +80,14 @@ class GitLiveOIRQuestionSelector(
      * (x3) and drops anything [OIRQuestionValidator] rejects, so duds already in
      * the pool are skipped at selection time.
      */
-    private fun fetchByType(type: String, unusedThreshold: Long, count: Int, difficulty: String?): List<CachedOIRQuestionRow> {
+    private fun fetchByType(type: String, unusedThreshold: Long, count: Int): List<CachedOIRQuestionRow> {
         var questions = filterValid(
-            applyDifficulty(queries.selectUnusedOIRQuestionsByType(type, unusedThreshold, (count * 3).toLong()).executeAsList(), difficulty)
+            queries.selectUnusedOIRQuestionsByType(type, unusedThreshold, (count * 3).toLong()).executeAsList()
         )
         if (questions.size < count) {
-            questions = filterValid(applyDifficulty(queries.selectOIRQuestionsByType(type, (count * 3).toLong()).executeAsList(), difficulty))
+            questions = filterValid(queries.selectOIRQuestionsByType(type, (count * 3).toLong()).executeAsList())
         }
         return questions.take(count)
-    }
-
-    private fun applyDifficulty(questions: List<CachedOIRQuestionRow>, difficulty: String?): List<CachedOIRQuestionRow> {
-        if (difficulty == null) return questions
-        val filtered = questions.filter { it.difficulty == difficulty }
-        return filtered.ifEmpty { questions }
     }
 
     private fun filterValid(questions: List<CachedOIRQuestionRow>): List<CachedOIRQuestionRow> =
@@ -110,7 +116,9 @@ class GitLiveOIRQuestionSelector(
             correctAnswerId = questionMap["correctAnswerId"] as? String ?: "",
             explanation = questionMap["explanation"] as? String ?: "",
             questionImageUrl = questionMap["questionImageUrl"] as? String,
-            difficulty = questionMap["difficulty"] as? String ?: "MEDIUM",
+            // The SQLDelight column is retained for legacy cache compatibility, but is not
+            // part of OIR selection. Empty is the explicit representation of missing metadata.
+            difficulty = questionMap["difficulty"] as? String ?: "",
             tags = tagsList?.joinToString(",") ?: "",
             batchId = batchId,
             cachedAt = cachedAt,
@@ -135,7 +143,10 @@ class GitLiveOIRQuestionSelector(
                 ?.let { runCatching { json.decodeFromString(ListSerializer(String.serializer()), it) }.getOrDefault(emptyList()) }
                 ?: emptyList(),
             explanation = entity.explanation,
-            difficulty = QuestionDifficulty.valueOf(entity.difficulty),
+            difficulty = entity.difficulty
+                .takeIf { it.isNotBlank() }
+                ?.let { runCatching { QuestionDifficulty.valueOf(it) }.getOrNull() }
+                ?: QuestionDifficulty.MEDIUM,
             timeSeconds = 60,
             questionImageUrl = entity.questionImageUrl?.let { normalizeStorageUrl(it) }
         )

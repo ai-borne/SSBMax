@@ -22,7 +22,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.SubscriptionTier
@@ -63,7 +65,7 @@ import ssbmax.shared.generated.resources.tat_test_title
  * ported -- inlined here the same way `PPDTTestScreen`/`OIRTestScreen`
  * inline their loading/error states.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun TATTestScreen(
     testId: String,
@@ -84,6 +86,13 @@ fun TATTestScreen(
         if (uiState.isSubmitted && uiState.submissionId != null && uiState.subscriptionType != null) {
             onTestComplete(uiState.submissionId!!, uiState.subscriptionType!!)
         }
+    }
+
+    // Hardware/predictive back must go through the same exit path as the back-arrow icon --
+    // otherwise it silently pops the nav stack and leaves the durable test_sessions doc stuck
+    // ACTIVE (see PPDTTestScreen's identical fix for the same bug).
+    BackHandler(enabled = uiState.questions.isNotEmpty() && !uiState.isSubmitted) {
+        showExitDialog = true
     }
 
     if (uiState.isProfileIncomplete) {
@@ -182,7 +191,7 @@ fun TATTestScreen(
     if (showExitDialog) {
         TATExitDialog(
             onDismiss = { showExitDialog = false },
-            onExit = { showExitDialog = false; onNavigateBack() }
+            onExit = { showExitDialog = false; viewModel.pauseTest(); onNavigateBack() }
         )
     }
 

@@ -4,6 +4,7 @@ import com.ssbmax.shared.domain.model.PPDTPhase
 import com.ssbmax.shared.domain.model.TestEligibility
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.DifficultyProgressionRepository
+import com.ssbmax.shared.domain.repository.TestSessionRepository
 import com.ssbmax.shared.domain.service.SubmissionAnalysisTrigger
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.ppdt.LoadPPDTTestUseCase
@@ -66,6 +67,7 @@ class PPDTTestViewModel(
     private val checkTestEligibility: CheckTestEligibilityUseCase,
     private val analysisTrigger: SubmissionAnalysisTrigger,
     private val difficultyProgression: DifficultyProgressionRepository,
+    private val testSessionRepository: TestSessionRepository,
     private val logger: DomainLogger,
     private val analyticsTracker: AnalyticsTracker
 ) : ViewModel() {
@@ -220,6 +222,9 @@ class PPDTTestViewModel(
     fun pauseTest() {
         val session = _uiState.value.session ?: return
         _uiState.update { it.copy(isTimerActive = false, session = session.copy(isPaused = true)) }
+        viewModelScope.launch {
+            testSessionRepository.abandonTestSession(session.sessionId)
+        }
     }
 
     private fun startTimer(seconds: Int) {

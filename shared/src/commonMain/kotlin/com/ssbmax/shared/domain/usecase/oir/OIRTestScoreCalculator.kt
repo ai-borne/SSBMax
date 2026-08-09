@@ -17,13 +17,16 @@ class OIRTestScoreCalculator constructor(
 
         val correctAnswers   = scoredAnswers.values.count { it.isCorrect }
         val incorrectAnswers = scoredAnswers.values.count { !it.isCorrect && !it.skipped }
-        val skippedQuestions = session.questions.size - scoredAnswers.size
-
-        val rawScore = scoredAnswers.values.filter { it.isCorrect }.sumOf { answer ->
-            session.questions.find { it.id == answer.questionId }?.difficulty?.points ?: 1
+        val skippedQuestions = session.questions.count { question ->
+            session.answers[question.id]?.skipped ?: true
         }
-        val maxScore        = session.questions.sumOf { it.difficulty.points }
-        val percentageScore = if (maxScore > 0) (rawScore.toFloat() / maxScore) * 100 else 0f
+
+        val rawScore        = correctAnswers
+        val percentageScore = if (session.questions.isNotEmpty()) {
+            (correctAnswers.toFloat() / session.questions.size) * 100
+        } else {
+            0f
+        }
 
         val categoryScores = OIRQuestionType.values().associateWith { type ->
             val catQs      = session.questions.filter { it.type == type }
@@ -39,17 +42,6 @@ class OIRTestScoreCalculator constructor(
             )
         }
 
-        val difficultyScores = QuestionDifficulty.values().associateWith { diff ->
-            val diffQs      = session.questions.filter { it.difficulty == diff }
-            val diffAnswers = diffQs.mapNotNull { q -> scoredAnswers[q.id] }
-            val correct     = diffAnswers.count { it.isCorrect }
-            DifficultyScore(
-                difficulty     = diff,
-                totalQuestions = diffQs.size,
-                correctAnswers = correct,
-                percentage     = if (diffQs.isNotEmpty()) (correct.toFloat() / diffQs.size) * 100 else 0f
-            )
-        }
 
         val answeredQuestions = buildAnsweredQuestions(session, scoredAnswers)
 
@@ -66,7 +58,7 @@ class OIRTestScoreCalculator constructor(
             rawScore            = rawScore,
             percentageScore     = percentageScore,
             categoryScores      = categoryScores,
-            difficultyBreakdown = difficultyScores,
+            difficultyBreakdown = emptyMap(),
             answeredQuestions   = answeredQuestions,
             completedAt         = Clock.System.now().toEpochMilliseconds()
         )

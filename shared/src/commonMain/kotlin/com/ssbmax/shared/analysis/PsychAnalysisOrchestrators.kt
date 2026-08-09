@@ -33,11 +33,14 @@ private suspend fun runPsychAnalysis(
     getOLQDashboard: GetOLQDashboardUseCase,
     logger: DomainLogger,
     analyze: suspend (String) -> Result<com.ssbmax.shared.domain.service.ResponseAnalysis>,
-    markAnalyzing: suspend () -> Unit,
+    markAnalyzing: suspend () -> Result<Unit>,
     markFailed: suspend () -> Unit,
-    writeResult: suspend (OLQAnalysisResult) -> Unit
+    writeResult: suspend (OLQAnalysisResult) -> Result<Unit>
 ) {
-    markAnalyzing()
+    markAnalyzing().onFailure {
+        logger.e("PsychAnalysis", "Failed to mark $testType submission ANALYZING: $submissionId: ${it.message}")
+        return
+    }
 
     val olqScores = AnalysisRetry.withRetry { analyze(prompt) }
     if (olqScores == null) {
@@ -70,7 +73,11 @@ private suspend fun runPsychAnalysis(
             analyzedAt = Clock.System.now().toEpochMilliseconds(),
             aiConfidence = olqScores.values.firstOrNull()?.confidence ?: 50
         )
-    )
+    ).onFailure {
+        logger.e("PsychAnalysis", "Failed to persist $testType OLQ result: $submissionId: ${it.message}")
+        markFailed()
+        return
+    }
     runCatching { getOLQDashboard.invalidateCache(userId) }
         .onFailure { logger.w("PsychAnalysis", "Failed to invalidate dashboard cache: ${it.message}") }
 }

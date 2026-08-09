@@ -65,11 +65,8 @@ class GitLiveTestContentRepository(
     override suspend fun getOIRQuestions(testId: String): Result<List<OIRQuestion>> =
         getOIRTestQuestions(50)
 
-    override suspend fun getOIRTestQuestions(count: Int, difficulty: String?): Result<List<OIRQuestion>> = try {
-        if (oirCacheManager.getCacheStatus().cachedQuestions == 0) {
-            oirCacheManager.initialSync().getOrThrow()
-        }
-        oirCacheManager.getTestQuestions(count, difficulty)
+    override suspend fun getOIRTestQuestions(count: Int): Result<List<OIRQuestion>> = try {
+        oirCacheManager.getTestQuestions(count)
     } catch (e: Exception) {
         Result.failure(e)
     }

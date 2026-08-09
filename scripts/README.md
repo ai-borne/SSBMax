@@ -9,6 +9,29 @@ This directory contains automation scripts for Firebase setup and maintenance.
 3. **google-services.json** exists in `app/` directory
 4. **Node.js** installed (check with `node --version`)
 
+## OIR Content Operations
+
+The canonical OIR bank is stored at `test_content/oir/batches/batch_pdf_001..028`.
+These commands are read-only unless `--commit` is explicitly supplied:
+
+```bash
+# Verify metadata, all batch IDs/totals, stable IDs, valid coverage, and every HTTPS image.
+node check-oir-content-health.js
+
+# Preview the current metadata target; this is always a dry run.
+node set-oir-meta-config.js
+
+# Publish metadata only after review (production write).
+node set-oir-meta-config.js --version 4 --batches 28 --commit
+```
+
+`set-oir-meta-config.js` rejects a committed content-version downgrade and its default dry run
+requires no credentials or network access. Set `FIREBASE_SERVICE_ACCOUNT` to the service-account
+JSON path; no credential is stored in this repository. Use `oir-extraction/upload-oir-batch.js`
+for new batch ingestion and run the health
+check after a reviewed production upload. New OIR question JSON must not include a
+difficulty field; legacy fields are tolerated only when reading existing data.
+
 ## Available Scripts
 
 ### 1. Firestore Collections Setup

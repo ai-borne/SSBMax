@@ -65,17 +65,17 @@ class SSBMaxFirebaseMessagingService : FirebaseMessagingService(), KoinComponent
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         
-        android.util.Log.d(TAG, "Message received from: ${message.from}")
+        android.util.Log.d(TAG, "FCM message received")
         
         // Check if message contains data payload
         if (message.data.isNotEmpty()) {
-            android.util.Log.d(TAG, "Message data payload: ${message.data}")
+            android.util.Log.d(TAG, "FCM data payload received")
             handleDataPayload(message.data)
         }
         
         // Check if message contains notification payload
         message.notification?.let {
-            android.util.Log.d(TAG, "Message notification: ${it.title} - ${it.body}")
+            android.util.Log.d(TAG, "FCM notification payload received")
             handleNotificationPayload(it.title, it.body, message.data)
         }
     }
@@ -89,12 +89,12 @@ class SSBMaxFirebaseMessagingService : FirebaseMessagingService(), KoinComponent
             catch (e: Exception) { null }
         } ?: NotificationType.GENERAL_ANNOUNCEMENT
         
-        val title = data["title"] ?: "SSBMax Notification"
+        val title = data["title"] ?: getString(com.ssbmax.R.string.notification_default_title)
         val message = data["message"] ?: ""
         val actionUrl = data["actionUrl"]
         val notificationId = data["notificationId"]
         
-        android.util.Log.i(TAG, "Handling data payload - Type: $type, Title: $title")
+        android.util.Log.i(TAG, "Handling FCM data payload")
         
         // Show notification
         showNotification(
@@ -128,7 +128,7 @@ class SSBMaxFirebaseMessagingService : FirebaseMessagingService(), KoinComponent
         
         showNotification(
             type = type,
-            title = title ?: "SSBMax",
+            title = title ?: getString(com.ssbmax.R.string.notification_default_title),
             message = body ?: "",
             actionUrl = data["actionUrl"],
             notificationId = data["notificationId"]
@@ -184,14 +184,14 @@ class SSBMaxFirebaseMessagingService : FirebaseMessagingService(), KoinComponent
             NotificationType.FEEDBACK_AVAILABLE -> {
                 notificationBuilder.addAction(
                     android.R.drawable.ic_menu_view,
-                    "View Results",
+                    getString(com.ssbmax.R.string.notification_action_view_results),
                     pendingIntent
                 )
             }
             NotificationType.BATCH_INVITATION -> {
                 notificationBuilder.addAction(
                     android.R.drawable.ic_menu_view,
-                    "View Invitation",
+                    getString(com.ssbmax.R.string.notification_action_view_invitation),
                     pendingIntent
                 )
             }
@@ -217,7 +217,7 @@ class SSBMaxFirebaseMessagingService : FirebaseMessagingService(), KoinComponent
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(channelId, channelName, importance).apply {
-                description = "SSBMax notifications for $channelName"
+                description = getString(com.ssbmax.R.string.notification_channel_description, channelName)
                 enableLights(true)
                 enableVibration(true)
             }
@@ -247,13 +247,13 @@ class SSBMaxFirebaseMessagingService : FirebaseMessagingService(), KoinComponent
      */
     private fun getChannelNameForType(type: NotificationType): String {
         return when (type) {
-            NotificationType.GRADING_COMPLETE -> "Grading Complete"
-            NotificationType.FEEDBACK_AVAILABLE -> "New Feedback"
-            NotificationType.BATCH_INVITATION -> "Batch Invitations"
-            NotificationType.GENERAL_ANNOUNCEMENT -> "Announcements"
-            NotificationType.STUDY_REMINDER -> "Study Reminders"
-            NotificationType.TEST_REMINDER -> "Test Reminders"
-            NotificationType.MARKETPLACE_UPDATE -> "Marketplace Updates"
+            NotificationType.GRADING_COMPLETE -> getString(com.ssbmax.R.string.notification_channel_grading)
+            NotificationType.FEEDBACK_AVAILABLE -> getString(com.ssbmax.R.string.notification_channel_feedback)
+            NotificationType.BATCH_INVITATION -> getString(com.ssbmax.R.string.notification_channel_batch)
+            NotificationType.GENERAL_ANNOUNCEMENT -> getString(com.ssbmax.R.string.notification_channel_general)
+            NotificationType.STUDY_REMINDER -> getString(com.ssbmax.R.string.notification_channel_study_reminders)
+            NotificationType.TEST_REMINDER -> getString(com.ssbmax.R.string.notification_channel_test_reminders)
+            NotificationType.MARKETPLACE_UPDATE -> getString(com.ssbmax.R.string.notification_channel_marketplace)
         }
     }
     

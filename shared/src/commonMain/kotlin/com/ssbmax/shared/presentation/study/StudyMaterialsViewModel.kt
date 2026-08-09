@@ -10,7 +10,7 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.RecordVoiceOver
-import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.ssbmax.shared.domain.util.DomainLogger
 import androidx.lifecycle.ViewModel
@@ -51,15 +51,15 @@ class StudyMaterialsViewModel(
         viewModelScope.launch {
             try {
                 val categories = listOf(
-                    StudyCategoryItem(StudyCategory.OIR_PREP, "OIR Test Prep", Icons.Default.Quiz, 24, false, Color(0xFFE3F2FD), Color(0xFF1976D2), Color(0xFF0D47A1)),
-                    StudyCategoryItem(StudyCategory.PPDT_TECHNIQUES, "PPDT Techniques", Icons.Default.Image, 18, false, Color(0xFFE8F5E9), Color(0xFF4CAF50), Color(0xFF1B5E20)),
-                    StudyCategoryItem(StudyCategory.PSYCHOLOGY_TESTS, "Psychology Tests", Icons.Default.Psychology, 32, true, Color(0xFFE0F7FA), Color(0xFF009688), Color(0xFF004D40)),
-                    StudyCategoryItem(StudyCategory.PIQ_PREP, "PIQ Form Guide", Icons.AutoMirrored.Filled.Assignment, 15, false, Color(0xFFF3E5F5), Color(0xFF9C27B0), Color(0xFF4A148C)),
-                    StudyCategoryItem(StudyCategory.GTO_TASKS, "GTO Tasks Guide", Icons.Default.Groups, 28, true, Color(0xFFE3F2FD), Color(0xFF2196F3), Color(0xFF0D47A1)),
-                    StudyCategoryItem(StudyCategory.INTERVIEW_PREP, "Interview Prep", Icons.Default.RecordVoiceOver, 45, true, Color(0xFFFCE4EC), Color(0xFFE91E63), Color(0xFF880E4F)),
-                    StudyCategoryItem(StudyCategory.GENERAL_TIPS, "General SSB Tips", Icons.Default.Lightbulb, 56, false, Color(0xFFFFF8E1), Color(0xFFFF9800), Color(0xFFE65100)),
-                    StudyCategoryItem(StudyCategory.CURRENT_AFFAIRS, "Current Affairs", Icons.Default.Public, 120, true, Color(0xFFF3E5F5), Color(0xFF673AB7), Color(0xFF311B92)),
-                    StudyCategoryItem(StudyCategory.PHYSICAL_FITNESS, "Physical Fitness", Icons.Default.FitnessCenter, 22, false, Color(0xFFFFEBEE), Color(0xFFF44336), Color(0xFFB71C1C))
+                    StudyCategoryItem(StudyCategory.OIR_PREP, "OIR Test Prep", Icons.Default.Quiz, 24, false),
+                    StudyCategoryItem(StudyCategory.PPDT_TECHNIQUES, "PPDT Techniques", Icons.Default.Image, 18, false),
+                    StudyCategoryItem(StudyCategory.PSYCHOLOGY_TESTS, "Psychology Tests", Icons.Default.Psychology, 32, true),
+                    StudyCategoryItem(StudyCategory.PIQ_PREP, "PIQ Form Guide", Icons.AutoMirrored.Filled.Assignment, 15, false),
+                    StudyCategoryItem(StudyCategory.GTO_TASKS, "GTO Tasks Guide", Icons.Default.Groups, 28, true),
+                    StudyCategoryItem(StudyCategory.INTERVIEW_PREP, "Interview Prep", Icons.Default.RecordVoiceOver, 45, true),
+                    StudyCategoryItem(StudyCategory.GENERAL_TIPS, "General SSB Tips", Icons.Default.Lightbulb, 56, false),
+                    StudyCategoryItem(StudyCategory.CURRENT_AFFAIRS, "Current Affairs", Icons.Default.Public, 120, true),
+                    StudyCategoryItem(StudyCategory.PHYSICAL_FITNESS, "Physical Fitness", Icons.Default.FitnessCenter, 22, false)
                 )
 
                 val totalArticles = categories.sumOf { it.articleCount }
@@ -101,10 +101,7 @@ data class StudyCategoryItem(
     val title: String,
     val icon: ImageVector,
     val articleCount: Int,
-    val isPremium: Boolean,
-    val backgroundColor: Color,
-    val iconColor: Color,
-    val textColor: Color
+    val isPremium: Boolean
 )
 
 enum class StudyCategory {

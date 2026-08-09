@@ -17,67 +17,22 @@ import com.ssbmax.shared.domain.util.AnalyticsTracker
 import com.ssbmax.shared.domain.util.DomainLogger
 import com.ssbmax.shared.domain.util.SecurityEvents
 import com.ssbmax.shared.domain.validation.OIRQuestionValidator
+import com.ssbmax.shared.domain.validation.OIRTestQuestionSetValidator
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
+
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
-import kotlin.random.Random
 
-/**
- * KMP port of the Android `app/.../ui/tests/oir/OIRTestViewModel.kt`.
- *
- * Phase 1 of the KMP-convergence plan: a real `androidx.lifecycle.ViewModel`
- * using `viewModelScope`, converged with `app`'s existing 57-call-site idiom
- * and this module's own DI (`viewModelOf`) / screen (`koinViewModel()`)
- * conventions — no more manual `CoroutineScope` + `close()`.
- *
- * Deviations from the Android original, all deliberate and documented (none silent):
- * - `subscriptionManager.canTakeTest`/`TestUsageRecorder` (Android `core:data`
- *   `SubscriptionManager`) replaced by [CheckTestEligibilityUseCase] — see
- *   that use case's own doc comment for what it does and doesn't carry
- *   forward (debug bypass, Room mirror, security-event logging).
- * - `SecurityEventLogger`'s unauthenticated-access event is restored (Phase
- *   7a) via the injected [AnalyticsTracker]; [DomainLogger] still gets the
- *   same "blocked unauthenticated access" log line every other ported
- *   ViewModel in this phase uses.
- * - `MemoryLeakTracker`/`trackMemoryLeaks` (Android-only, wraps
- *   `androidx.lifecycle.ViewModel` lifecycle + `java.lang.ref.WeakReference`)
- *   dropped entirely — there is no KMP equivalent, and `viewModelScope`
- *   already makes the leak class it targeted (timer coroutine outliving the
- *   screen) structurally impossible: it is cancelled automatically in
- *   [onCleared], with no manual bookkeeping needed.
- * - `coil.ImageLoader`/`android.content.Context`-based next-question image
- *   prefetch dropped — [com.ssbmax.shared.ui.oir.components.OIRQuestionView]
- *   uses Coil3's `AsyncImage` directly with its default (already-caching)
- *   `SingletonImageLoader`; the prefetch was a perceived-latency
- *   optimization, not a correctness requirement, and re-adding it would mean
- *   injecting a platform image loader into presentation code Coil3 already
- *   makes unnecessary.
- * - `java.util.UUID.randomUUID()` (JVM-only) replaced with
- *   `kotlin.random.Random`-based ID generation (same pattern already used
- *   elsewhere in this migration for ID generation — see this plan's Phase 2
- *   note on the `String.format`/UUID-style JVM-only gotchas).
- * - `com.ssbmax.time.Clock` (Android app-local abstraction) replaced with
- *   `kotlinx.datetime.Clock.System`, matching every other ported ViewModel.
- *
- * At 311 lines this is ~11 lines over this repo's 300-line Quality Limit —
- * flagged rather than silently ignored. Not split: this is one cohesive
- * state machine (load -> answer -> navigate -> submit -> timer), same
- * shape and similar size as the Android original; splitting it across
- * files the way the UI layer's delegate-composable files do would scatter
- * a single StateFlow's mutations across multiple files rather than
- * localizing a genuinely reusable chunk, which this plan's own "simplicity
- * first" rule weighs against doing just to hit a line count.
- */
+/** Coordinates eligibility, question readiness, answering, timing, and submission for OIR. */
 class OIRTestViewModel(
     private val testContentRepository: TestContentRepository,
     private val testSessionRepository: TestSessionRepository,
@@ -131,22 +86,36 @@ class OIRTestViewModel(
                 throw e
             } catch (e: Exception) {
                 logger.e(tag, "Exception checking OIR test eligibility", e)
+                _uiState.update { it.copy(isLoading = false, errorType = OIRErrorType.QUESTIONS_UNAVAILABLE) }
+                return@launch
             }
+            var createdSessionId: String? = null
             try {
-                val questions = testContentRepository.getOIRTestQuestions(count = 50, difficulty = null)
-                    .getOrElse { throw it }
-                    .takeIf { it.isNotEmpty() } ?: throw Exception("No questions available.")
+                val config = OIRTestConfig(testId = testId)
+                val sessionId = testSessionRepository
+                    .createTestSession(userId, testId, TestType.OIR)
+                    .getOrElse {
+                        logger.e(tag, "Failed to create durable OIR test session", it)
+                        _uiState.update { state ->
+                            state.copy(isLoading = false, errorType = OIRErrorType.SESSION_UNAVAILABLE)
+                        }
+                        return@launch
+                    }
+                createdSessionId = sessionId
+                val questions = testContentRepository.getOIRTestQuestions(
+                    count = config.totalQuestions
+                ).getOrElse { throw it }
                 val validatedQuestions = OIRQuestionValidator.validateAndFilter(questions) { inv ->
                     logger.e(tag, "OIR question validation failed: ${inv.toLogString()}", null)
                 }
-                if (validatedQuestions.isEmpty()) throw Exception("All questions failed validation.")
-                val config = OIRTestConfig()
+                OIRTestQuestionSetValidator.validate(validatedQuestions, config).getOrElse { throw it }
                 val newSession = OIRTestSession(
-                    sessionId = newSessionId(),
+                    sessionId = sessionId,
                     userId = userId, testId = testId,
                     questions = validatedQuestions, answers = emptyMap(),
                     currentQuestionIndex = 0, startTime = Clock.System.now().toEpochMilliseconds(),
-                    timeRemainingSeconds = config.totalTimeMinutes * 60
+                    timeRemainingSeconds = config.totalTimeMinutes * 60,
+                    expiresAt = Clock.System.now().toEpochMilliseconds() + config.totalTimeMinutes * 60_000L
                 )
                 _uiState.update { it.copy(session = newSession) }
                 updateUiFromSession()
@@ -155,6 +124,7 @@ class OIRTestViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                createdSessionId?.let { testSessionRepository.abandonTestSession(it) }
                 logger.e(tag, "Exception loading OIR test", e)
                 _uiState.update { it.copy(isLoading = false, errorType = OIRErrorType.QUESTIONS_UNAVAILABLE) }
             }
@@ -183,12 +153,18 @@ class OIRTestViewModel(
             current.size >= 2 -> current
             else -> current + optionId
         }
-        val isAnswerCorrect = if (question.isMultiSelect) updated == question.correctAnswerIds.toSet()
-        else updated.singleOrNull() == question.correctAnswerId
+        val selectionComplete = !question.isMultiSelect ||
+            updated.size == question.correctAnswerIds.size
+        val isAnswerCorrect = if (question.isMultiSelect) {
+            selectionComplete && updated == question.correctAnswerIds.toSet()
+        } else {
+            updated.singleOrNull() == question.correctAnswerId
+        }
         val answer = OIRAnswer(
             questionId = question.id,
             selectedOptionId = updated.singleOrNull(),
             selectedOptionIds = updated,
+            isCorrect = isAnswerCorrect,
             timeTakenSeconds = timeTaken,
             skipped = false
         )
@@ -196,9 +172,9 @@ class OIRTestViewModel(
             state.copy(
                 session = session.copy(answers = session.answers + (question.id to answer)),
                 selectedOptionIds = updated,
-                showFeedback = true,
+                showFeedback = selectionComplete,
                 isCurrentAnswerCorrect = isAnswerCorrect,
-                currentQuestionAnswered = true
+                currentQuestionAnswered = selectionComplete
             )
         }
     }
@@ -206,11 +182,19 @@ class OIRTestViewModel(
     fun nextQuestion() {
         val session = _uiState.value.session ?: return
         if (session.currentQuestionIndex < session.questions.size - 1) {
-            _uiState.update { it.copy(session = session.copy(currentQuestionIndex = session.currentQuestionIndex + 1)) }
+            val updatedSession = addSkippedAnswerIfNeeded(
+                session,
+                Clock.System.now().toEpochMilliseconds(),
+                _uiState.value.questionStartTimeMs
+            )
+            _uiState.update {
+                it.copy(session = updatedSession.copy(currentQuestionIndex = updatedSession.currentQuestionIndex + 1))
+            }
             updateUiFromSession()
             _uiState.update { it.copy(questionStartTimeMs = Clock.System.now().toEpochMilliseconds()) }
         }
     }
+
 
     fun previousQuestion() {
         val session = _uiState.value.session ?: return
@@ -221,69 +205,70 @@ class OIRTestViewModel(
         }
     }
 
+    fun requestSubmit() {
+        if (_uiState.value.isSubmitting || _uiState.value.isCompleted) return
+        _uiState.update { it.copy(showSubmitConfirmation = true) }
+    }
+
+    fun dismissSubmitConfirmation() {
+        _uiState.update { it.copy(showSubmitConfirmation = false) }
+    }
+
     fun submitTest() {
-        _uiState.update { it.copy(isTimerActive = false) }
+        if (_uiState.value.isSubmitting || _uiState.value.isCompleted) return
+        _uiState.update { it.copy(showSubmitConfirmation = false, isTimerActive = false, isSubmitting = true) }
         timerJob?.cancel()
         val session = _uiState.value.session ?: run {
             logger.e(tag, "OIR test session null during test submission", null)
             return
         }
+        val completedSession = markUnansweredQuestionsSkipped(
+            session,
+            Clock.System.now().toEpochMilliseconds(),
+            _uiState.value.questionStartTimeMs
+        )
+        _uiState.update { it.copy(session = completedSession) }
         viewModelScope.launch {
             try {
-                val subscriptionType = getSubscriptionTier(session.userId).getOrDefault(SubscriptionTier.FREE)
-                val submissionId = submitOIRTestUseCase(session).getOrThrow()
+                val subscriptionType = getSubscriptionTier(completedSession.userId).getOrDefault(SubscriptionTier.FREE)
+                val submissionId = submitOIRTestUseCase(completedSession).getOrThrow()
                 // Note: served questions are marked used inside SubmitOIRTestUseCase --
                 // the single source of truth for submission orchestration. Do NOT mark
                 // them again here (that caused a duplicate write per submit on Android).
                 testContentRepository.clearCache()
                 _uiState.update {
                     it.copy(
-                        session = session.copy(isCompleted = true),
+                        session = completedSession.copy(isCompleted = true),
+                        isSubmitting = false,
                         isCompleted = true, sessionId = submissionId,
                         subscriptionType = subscriptionType,
-                        testResult = scoreCalculator.calculate(session)
+                        testResult = scoreCalculator.calculate(completedSession)
                     )
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                testSessionRepository.expireTestSession(session.sessionId)
                 logger.e(tag, "OIR test submission failed", e)
-                _uiState.update { it.copy(errorType = OIRErrorType.SUBMIT_FAILED) }
+                _uiState.update { it.copy(isSubmitting = false, errorType = OIRErrorType.SUBMIT_FAILED) }
             }
         }
     }
+
 
     fun pauseTest() {
         val session = _uiState.value.session ?: return
         _uiState.update { it.copy(isTimerActive = false, session = session.copy(isPaused = true)) }
         timerJob?.cancel()
         viewModelScope.launch {
-            testSessionRepository.endTestSession(session.sessionId)
+            testSessionRepository.abandonTestSession(session.sessionId)
         }
     }
 
     private fun startTimer() {
         _uiState.update { it.copy(isTimerActive = true, timerStartTime = Clock.System.now().toEpochMilliseconds()) }
         timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            try {
-                while (isActive && _uiState.value.isTimerActive &&
-                    _uiState.value.timeRemainingSeconds > 0 && !_uiState.value.isCompleted
-                ) {
-                    delay(1000)
-                    if (!isActive || !_uiState.value.isTimerActive) break
-                    val newTime = _uiState.value.timeRemainingSeconds - 1
-                    _uiState.update { state ->
-                        state.copy(timeRemainingSeconds = newTime, session = state.session?.copy(timeRemainingSeconds = newTime))
-                    }
-                    if (newTime == 0 && isActive && _uiState.value.isTimerActive) submitTest()
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } finally {
-                _uiState.update { it.copy(isTimerActive = false) }
-            }
-        }
+        timerJob = startOIRTimer(viewModelScope, _uiState, ::submitTest)
     }
 
     private fun updateUiFromSession() {
@@ -311,8 +296,6 @@ class OIRTestViewModel(
         }
     }
 
-    private fun newSessionId(): String =
-        "oir_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(100000, 999999)}"
 
     override fun onCleared() {
         timerJob?.cancel()

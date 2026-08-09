@@ -1,7 +1,11 @@
 package com.ssbmax.shared.ui.oir
 
 import androidx.compose.ui.test.ExperimentalTestApi
+
+
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -108,6 +112,28 @@ class OIRTestScreenUiTest {
     }
 
     @Test
+    fun activeQuestion_doesNotExposeAnswerExplanation() = runComposeUiTest {
+        uiStateFlow.value = uiStateFlow.value.copy(currentQuestion = testQuestions[0])
+        setContent { OIRTestScreen(viewModel = mockViewModel) }
+
+        assert(onAllNodesWithText("Delhi is the capital of India.", substring = true).fetchSemanticsNodes().isEmpty())
+        assert(onAllNodesWithText("Correct!", substring = true).fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun selectedOption_exposesSelectionWithoutAnswerKey() = runComposeUiTest {
+        uiStateFlow.value = uiStateFlow.value.copy(currentQuestion = testQuestions[0])
+        every { mockViewModel.selectOption("opt1") } answers {
+            uiStateFlow.value = uiStateFlow.value.copy(selectedOptionIds = setOf("opt1"))
+        }
+        setContent { OIRTestScreen(viewModel = mockViewModel) }
+
+        onNodeWithText("Mumbai").performClick()
+        onNodeWithText("Mumbai").assertIsSelected()
+        assert(onAllNodesWithText("Delhi is the capital of India.", substring = true).fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
     fun progressIndicator_showsCorrectProgress() = runComposeUiTest {
         uiStateFlow.value = uiStateFlow.value.copy(currentQuestionIndex = 4, totalQuestions = 50)
         setContent { OIRTestScreen(viewModel = mockViewModel) }
@@ -124,6 +150,7 @@ class OIRTestScreenUiTest {
         setContent { OIRTestScreen(viewModel = mockViewModel) }
 
         onNodeWithText("5:00", substring = true).assertIsDisplayed()
+        onNodeWithContentDescription("Time remaining").assertIsDisplayed()
     }
 
     @Test
@@ -132,6 +159,32 @@ class OIRTestScreenUiTest {
         setContent { OIRTestScreen(viewModel = mockViewModel) }
 
         onNodeWithText("Loading", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun loadingState_hidesActiveNavigationControls() = runComposeUiTest {
+        uiStateFlow.value = uiStateFlow.value.copy(isLoading = true)
+        setContent { OIRTestScreen(viewModel = mockViewModel) }
+
+        assert(onAllNodesWithText("1/2").fetchSemanticsNodes().isEmpty())
+        assert(onAllNodesWithText("Next").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun submitButton_showsConfirmationDialog() = runComposeUiTest {
+        uiStateFlow.value = uiStateFlow.value.copy(
+            currentQuestionIndex = 1,
+            totalQuestions = 2,
+            currentQuestion = testQuestions[1]
+        )
+        every { mockViewModel.requestSubmit() } answers {
+            uiStateFlow.value = uiStateFlow.value.copy(showSubmitConfirmation = true)
+        }
+        setContent { OIRTestScreen(viewModel = mockViewModel) }
+
+        onNodeWithText("Submit Test").performClick()
+        onNodeWithText("Submit test?").assertIsDisplayed()
+        onNodeWithText("Unanswered questions", substring = true).assertIsDisplayed()
     }
 
     @Test

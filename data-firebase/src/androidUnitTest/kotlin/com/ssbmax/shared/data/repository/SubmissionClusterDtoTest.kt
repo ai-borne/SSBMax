@@ -1,10 +1,19 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.domain.model.OIRAnswer
+import com.ssbmax.shared.domain.model.OIRAnsweredQuestion
+import com.ssbmax.shared.domain.model.OIROption
+import com.ssbmax.shared.domain.model.OIRQuestion
+import com.ssbmax.shared.domain.model.OIRQuestionType
+import com.ssbmax.shared.domain.model.OIRTestResult
+import com.ssbmax.shared.domain.model.QuestionDifficulty
 import com.ssbmax.shared.domain.model.SRTCategory
 import com.ssbmax.shared.domain.model.SubmissionStatus
 import com.ssbmax.shared.domain.model.TestType
 import kotlin.test.Test
+import kotlinx.serialization.json.Json
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -86,17 +95,100 @@ class SubmissionClusterDtoTest {
     }
 
     @Test
-    fun `OIR answeredQuestions are never round-tripped same real limitation as the Android original`() {
-        val dto = OIRDataDto(
+    fun `OIR submission round-trips summary breakdowns and answer review data`() {
+        val question = OIRQuestion(
+            id = "q1",
+            questionNumber = 1,
+            type = OIRQuestionType.VERBAL_REASONING,
+            questionText = "Choose the correct option",
+            options = listOf(OIROption("a", "Alpha"), OIROption("b", "Beta")),
+            correctAnswerId = "a",
+            explanation = "Alpha is correct",
+            difficulty = QuestionDifficulty.HARD
+        )
+        val answered = OIRAnsweredQuestion(
+            question = question,
+            userAnswer = OIRAnswer("q1", "b", false, 12, selectedOptionIds = setOf("b")),
+            isCorrect = false,
+            correctOption = question.options.first(),
+            selectedOption = question.options[1],
+            correctOptions = listOf(question.options.first()),
+            selectedOptions = listOf(question.options[1])
+        )
+        val submission = com.ssbmax.shared.domain.model.OIRSubmission(
             id = "oir-1",
             userId = "u1",
             testId = "t1",
-            testResult = OIRSubmissionTestResultDto(totalQuestions = 10, correctAnswers = 7),
-            status = "SUBMITTED_PENDING_REVIEW"
+            testResult = OIRTestResult(
+                testId = "t1", sessionId = "session-1", userId = "u1",
+                totalQuestions = 50, correctAnswers = 40, incorrectAnswers = 8, skippedQuestions = 2,
+                totalTimeSeconds = 2400, timeTakenSeconds = 1200, rawScore = 40, percentageScore = 80f,
+                categoryScores = mapOf(OIRQuestionType.VERBAL_REASONING to com.ssbmax.shared.domain.model.CategoryScore(
+                    OIRQuestionType.VERBAL_REASONING, 20, 16, 80f, 30
+                )),
+                difficultyBreakdown = mapOf(QuestionDifficulty.HARD to com.ssbmax.shared.domain.model.DifficultyScore(
+                    QuestionDifficulty.HARD, 10, 7, 70f
+                )),
+                answeredQuestions = listOf(answered), completedAt = 1_700_000_000_000L
+            ),
+            submittedAt = 1_700_000_000_001L,
+            status = SubmissionStatus.SUBMITTED_PENDING_REVIEW
         )
-        val domain = dto.toDomain()
-        assertTrue(domain.testResult.answeredQuestions.isEmpty())
-        assertEquals(7, domain.testResult.correctAnswers)
+
+        val dto = submission.toDataDto()
+        val roundTripped = dto.toDomain()
+        assertTrue(dto.testResult.difficultyBreakdown.isEmpty())
+        assertEquals(submission.testResult.copy(difficultyBreakdown = emptyMap()), roundTripped.testResult)
+        assertEquals(submission.id, roundTripped.id)
+    }
+
+    @Test
+    fun `new OIR result serialization omits legacy difficulty breakdown`() {
+        val dto = OIRSubmissionTestResultDto(
+            totalQuestions = 50,
+            correctAnswers = 25,
+            rawScore = 25,
+            percentageScore = 50f
+        )
+
+        val encoded = Json.encodeToString(OIRSubmissionTestResultDto.serializer(), dto)
+
+        assertFalse(encoded.contains("difficultyBreakdown"))
+    }
+
+    @Test
+    fun `legacy OIR result with complete difficulty breakdown still parses`() {
+        val legacyJson = """
+            {
+              "totalQuestions": 50,
+              "correctAnswers": 40,
+              "rawScore": 40,
+              "percentageScore": 80.0,
+              "difficultyBreakdown": {
+                "EASY": {"totalQuestions": 20, "correctAnswers": 16, "percentage": 80.0},
+                "BROKEN": {"totalQuestions": 10, "correctAnswers": 0, "percentage": 0.0}
+              }
+            }
+        """.trimIndent()
+
+        val dto = Json.decodeFromString(OIRSubmissionTestResultDto.serializer(), legacyJson)
+
+        assertEquals(40, dto.correctAnswers)
+        assertEquals(2, dto.difficultyBreakdown.size)
+        assertTrue(dto.difficultyBreakdown.containsKey("BROKEN"))
+    }
+
+    @Test
+    fun `OIR result mapper drops malformed enum keys and defaults missing optional fields`() {
+        val dto = OirTestResultDto(
+            categoryScores = mapOf("VERBAL_REASONING" to OirCategoryScoreDto(10, 8, 80f, 20), "BROKEN" to OirCategoryScoreDto()),
+            difficultyBreakdown = mapOf("NOT_A_DIFFICULTY" to OirDifficultyScoreDto()),
+            answeredQuestions = emptyList()
+        )
+        val result = dto.toDomain()
+        assertEquals(1, result.categoryScores.size)
+        assertTrue(result.difficultyBreakdown.isEmpty())
+        assertEquals(0, result.totalTimeSeconds)
     }
 
     @Test

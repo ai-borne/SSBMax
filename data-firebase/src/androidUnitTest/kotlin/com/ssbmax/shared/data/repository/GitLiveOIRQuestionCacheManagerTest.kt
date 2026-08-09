@@ -2,6 +2,9 @@ package com.ssbmax.shared.data.repository
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.ssbmax.shared.db.SharedDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -26,7 +29,7 @@ class GitLiveOIRQuestionCacheManagerTest {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         SharedDatabase.Schema.create(driver)
         database = SharedDatabase(driver)
-        manager = GitLiveOIRQuestionCacheManager(database, GitLiveOIRQuestionSelector(database))
+        manager = GitLiveOIRQuestionCacheManager(database, GitLiveOIRQuestionSelector(database), CoroutineScope(SupervisorJob() + Dispatchers.Unconfined))
     }
 
     private fun seedQuestion(id: String, type: String, usageCount: Long = 0L) {

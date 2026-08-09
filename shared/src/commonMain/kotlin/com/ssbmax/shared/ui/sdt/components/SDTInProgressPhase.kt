@@ -31,8 +31,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ssbmax.shared.ui.common.progressSemantics
+import com.ssbmax.shared.ui.common.timerSemantics
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.sdt_action_exit
@@ -41,7 +44,9 @@ import ssbmax.shared.generated.resources.sdt_action_review
 import ssbmax.shared.generated.resources.sdt_action_skip
 import ssbmax.shared.generated.resources.sdt_answer_label
 import ssbmax.shared.generated.resources.sdt_char_count
+import ssbmax.shared.generated.resources.sdt_progress_content_description
 import ssbmax.shared.generated.resources.sdt_question_header
+import ssbmax.shared.generated.resources.sdt_timer_content_description
 
 /**
  * KMP port of `app/.../ui/tests/sdt/SDTTestScreen.kt`'s `QuestionInProgressView`
@@ -70,6 +75,10 @@ fun SDTInProgressPhase(
     onSkip: () -> Unit,
     onShowExitDialog: () -> Unit
 ) {
+    val progressDescription = stringResource(
+        Res.string.sdt_progress_content_description,
+        (questionNumber * 100 / totalQuestions).coerceIn(0, 100)
+    )
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(stringResource(Res.string.sdt_question_header, questionNumber, totalQuestions)) },
@@ -92,7 +101,13 @@ fun SDTInProgressPhase(
         ) {
             LinearProgressIndicator(
                 progress = { questionNumber.toFloat() / totalQuestions },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .progressSemantics(
+                        description = progressDescription,
+                        current = questionNumber.toFloat(),
+                        maximum = totalQuestions.toFloat()
+                    )
             )
 
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -135,6 +150,7 @@ fun SDTInProgressPhase(
 
 @Composable
 private fun SDTTimerDisplay(timeRemaining: Int) {
+    val timerDescription = stringResource(Res.string.sdt_timer_content_description, timeRemaining)
     val minutes = timeRemaining / 60
     val seconds = timeRemaining % 60
     val secondsStr = if (seconds < 10) "0$seconds" else "$seconds"
@@ -143,5 +159,16 @@ private fun SDTTimerDisplay(timeRemaining: Int) {
         timeRemaining > 60 -> MaterialTheme.colorScheme.tertiary
         else -> MaterialTheme.colorScheme.error
     }
-    Text("$minutes:$secondsStr", color = color, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 16.dp))
+    Text(
+        "$minutes:$secondsStr",
+        color = color,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .padding(end = 16.dp)
+            .timerSemantics(
+                description = timerDescription,
+                remainingSeconds = timeRemaining,
+                totalSeconds = 1800
+            )
+    )
 }

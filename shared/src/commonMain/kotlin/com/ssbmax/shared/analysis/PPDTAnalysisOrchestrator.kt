@@ -43,6 +43,10 @@ class PPDTAnalysisOrchestrator(
         if (submission.analysisStatus != AnalysisStatus.PENDING_ANALYSIS) return
 
         submissionRepository.updatePPDTAnalysisStatus(submissionId, AnalysisStatus.ANALYZING)
+            .onFailure {
+                logger.e(TAG, "Failed to mark PPDT submission ANALYZING: $submissionId: ${it.message}")
+                return
+            }
 
         val userProfile = runCatching { userProfileRepository.getUserProfile(submission.userId).first().getOrNull() }
             .getOrNull()
@@ -92,6 +96,11 @@ class PPDTAnalysisOrchestrator(
         )
 
         submissionRepository.updatePPDTOLQResult(submissionId, olqResult)
+            .onFailure {
+                logger.e(TAG, "Failed to persist PPDT OLQ result: $submissionId: ${it.message}")
+                submissionRepository.updatePPDTAnalysisStatus(submissionId, AnalysisStatus.FAILED)
+                return
+            }
         runCatching { getOLQDashboard.invalidateCache(submission.userId) }
             .onFailure { logger.w(TAG, "Failed to invalidate dashboard cache: ${it.message}") }
     }

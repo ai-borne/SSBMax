@@ -177,7 +177,17 @@ if [ -n "$DESIGNSYSTEM_COMPOSABLES" ]; then
 fi
 
 # ============================================
-# 8. Validate commit message doesn't contain secrets
+# 8. Run UI enforcement tests for changed UI/rule files
+# ============================================
+echo "🔍 Running UI enforcement regression tests when needed..."
+
+UI_OR_RULE_FILES=$(echo "$STAGED_FILES" | grep -E '(^shared/src/.*/(ui|commonMain)|^app/src/.*(ui|MainActivity)|^detekt-rules/|^lint/|^config/detekt/)' || true)
+if [ -n "$UI_OR_RULE_FILES" ]; then
+    ./gradlew :lint:test :detekt-rules:test :shared:detekt --no-daemon --quiet
+fi
+
+# ============================================
+# 9. Validate commit message doesn't contain secrets
 # ============================================
 echo "🔍 Checking commit message (if available)..."
 

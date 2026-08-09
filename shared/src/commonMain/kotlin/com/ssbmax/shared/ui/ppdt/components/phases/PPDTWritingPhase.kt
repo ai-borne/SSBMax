@@ -17,13 +17,17 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.ppdt_writing_count_format
+import ssbmax.shared.generated.resources.ppdt_writing_hide_keyboard
 import ssbmax.shared.generated.resources.ppdt_writing_minimum_label
 import ssbmax.shared.generated.resources.ppdt_writing_placeholder
 import ssbmax.shared.generated.resources.ppdt_writing_subtitle
@@ -42,6 +46,7 @@ fun PPDTWritingPhase(
     minCharacters: Int,
     maxCharacters: Int
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -64,6 +69,12 @@ fun PPDTWritingPhase(
                     text = stringResource(Res.string.ppdt_writing_subtitle),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { keyboardController?.hide() }) {
+                Text(stringResource(Res.string.ppdt_writing_hide_keyboard))
             }
         }
 

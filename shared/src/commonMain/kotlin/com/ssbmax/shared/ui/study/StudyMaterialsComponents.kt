@@ -29,7 +29,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ssbmax.shared.presentation.study.StudyCategory
 import com.ssbmax.shared.presentation.study.StudyCategoryItem
+import com.ssbmax.shared.ui.theme.SemanticColors
+import com.ssbmax.shared.ui.theme.semanticColors
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.premium_badge_label
@@ -95,13 +98,15 @@ internal fun CategoryCardVertical(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = category.type.studyColors()
+
     Card(onClick = onClick, modifier = modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
                     Brush.horizontalGradient(
-                        colors = listOf(category.backgroundColor, category.backgroundColor.copy(alpha = 0.7f))
+                        colors = listOf(colors.background, colors.background.copy(alpha = 0.85f))
                     )
                 )
                 .padding(16.dp),
@@ -109,10 +114,10 @@ internal fun CategoryCardVertical(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Box(
-                modifier = Modifier.size(64.dp).clip(CircleShape).background(category.iconColor.copy(alpha = 0.2f)),
+                modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.icon.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = category.icon, contentDescription = null, modifier = Modifier.size(36.dp), tint = category.iconColor)
+                Icon(imageVector = category.icon, contentDescription = null, modifier = Modifier.size(36.dp), tint = colors.icon)
             }
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -125,7 +130,7 @@ internal fun CategoryCardVertical(
                         text = category.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = category.textColor,
+                        color = colors.content,
                         modifier = Modifier.weight(1f)
                     )
 
@@ -150,16 +155,35 @@ internal fun CategoryCardVertical(
                 Text(
                     text = "${category.articleCount} ${if (category.articleCount == 1) "article" else "articles"}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = category.textColor.copy(alpha = 0.7f)
+                    color = colors.content.copy(alpha = 0.75f)
                 )
             }
 
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = category.iconColor,
+                tint = colors.icon,
                 modifier = Modifier.size(24.dp)
             )
         }
     }
+}
+
+private data class StudyCategoryColors(
+    val background: androidx.compose.ui.graphics.Color,
+    val content: androidx.compose.ui.graphics.Color,
+    val icon: androidx.compose.ui.graphics.Color
+)
+
+@Composable
+private fun StudyCategory.studyColors(): StudyCategoryColors {
+    val semantic = MaterialTheme.semanticColors
+    val (background, content) = when (this) {
+        StudyCategory.PPDT_TECHNIQUES -> semantic.success to semantic.onSuccess
+        StudyCategory.INTERVIEW_PREP -> semantic.warning to semantic.onWarning
+        StudyCategory.PHYSICAL_FITNESS -> semantic.error to semantic.onError
+        StudyCategory.OIR_PREP, StudyCategory.GTO_TASKS -> semantic.informational to semantic.onInformational
+        else -> semantic.selected to semantic.onSelected
+    }
+    return StudyCategoryColors(background, content, content)
 }

@@ -1,6 +1,7 @@
 package com.ssbmax.shared.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.window.ComposeUIViewController
 import com.ssbmax.shared.platform.auth.GoogleSignInLauncher
 import com.ssbmax.shared.platform.auth.IosGoogleSignInLauncher
@@ -55,10 +56,18 @@ import org.koin.compose.koinInject
  * unconditionally, so any screen touching notification permissions crashed
  * on iOS with "No NotificationPermissionController provided" the moment it
  * composed -- discovered via a real launch crash reaching `StudentHomeScreen`.
+ *
+ * `onFocusBehavior = OnFocusBehavior.DoNothing`: the CMP-iOS default
+ * (`FocusableAboveKeyboard`) has the platform itself shift/resize the whole
+ * root view above the keyboard on text-field focus. Screens that already
+ * call `Modifier.imePadding()` (e.g. `PPDTWritingPhase`) then get shifted
+ * twice -- once by the platform, once by Compose -- which crops the top app
+ * bar off-screen. Turning this off makes iOS behave like Android, where
+ * `imePadding()` is the only inset-avoidance mechanism.
  */
 fun MainViewController(
     googleSignInLauncher: GoogleSignInLauncher = IosGoogleSignInLauncher()
-) = ComposeUIViewController {
+) = ComposeUIViewController(configure = { onFocusBehavior = OnFocusBehavior.DoNothing }) {
     val notificationPermissionController = koinInject<NotificationPermissionController>()
     CompositionLocalProvider(
         LocalGoogleSignInLauncher provides googleSignInLauncher,

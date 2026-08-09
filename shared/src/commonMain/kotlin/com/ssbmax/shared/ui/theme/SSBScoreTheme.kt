@@ -8,9 +8,9 @@ import androidx.compose.ui.graphics.Color
  */
 object SSBScoreColors {
     // Score colors based on SSB scale
-    val Excellent = Color(0xFF4CAF50)  // Green - scores ≤ 5
-    val Average = Color(0xFFFFC107)   // Amber - scores 6-7
-    val NeedsWork = Color(0xFFF44336) // Red - scores ≥ 8
+    val Excellent = SSBColors.Success  // Green - scores ≤ 5
+    val Average = SSBColors.MilitaryGold   // Amber - scores 6-7
+    val NeedsWork = SSBColors.Error // Red - scores ≥ 8
 
     // Score thresholds (SSB scale)
     const val EXCELLENT_THRESHOLD = 5f

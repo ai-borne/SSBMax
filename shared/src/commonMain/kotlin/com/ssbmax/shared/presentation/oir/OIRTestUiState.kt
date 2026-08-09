@@ -29,6 +29,8 @@ data class OIRTestUiState(
     val isCurrentAnswerCorrect: Boolean = false,
     val currentQuestionAnswered: Boolean = false,
     val isCompleted: Boolean = false,
+    val isSubmitting: Boolean = false,
+    val showSubmitConfirmation: Boolean = false,
     val sessionId: String? = null,
     val subscriptionType: SubscriptionTier? = null,
     /** Result calculated locally after submission — no extra Firestore read needed. */
@@ -51,5 +53,6 @@ enum class OIRErrorType {
     AUTH_REQUIRED,
     QUESTIONS_UNAVAILABLE,
     SUBMIT_FAILED,
+    SESSION_UNAVAILABLE,
     INVALID_QUESTION
 }

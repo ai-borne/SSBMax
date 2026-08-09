@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
+import ssbmax.shared.generated.resources.lecturette_exit_cd
 import ssbmax.shared.generated.resources.lecturette_review_speech
 import ssbmax.shared.generated.resources.lecturette_speech_label
 import ssbmax.shared.generated.resources.lecturette_speech_placeholder
@@ -68,7 +69,11 @@ fun LecturetteSpeechPhase(
                         Text(timeRemaining, color = if (isTimeLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
                     }
                 },
-                navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Default.Close, null) } }
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.Close, stringResource(Res.string.lecturette_exit_cd))
+                    }
+                }
             )
         },
         bottomBar = {

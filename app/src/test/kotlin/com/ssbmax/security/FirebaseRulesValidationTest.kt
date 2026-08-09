@@ -118,8 +118,13 @@ class FirebaseRulesValidationTest {
         val userUpdateRule = content.substringAfter("// Users can update their own profile")
             .substringBefore("// No one can delete user profiles")
 
-        assertTrue("Should prevent role field updates",
-            userUpdateRule.contains("!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])"))
+        assertTrue(
+            "Should prevent role field updates",
+            userUpdateRule.contains(
+                "!request.resource.data.diff(resource.data).affectedKeys()" +
+                    ".hasAny(['role', 'isPaidMember', 'membershipPlan', 'paymentId', 'orderId'])"
+            )
+        )
     }
 
     @Test
@@ -229,6 +234,33 @@ class FirebaseRulesValidationTest {
             sessionRules.contains("resource.data.userId == request.auth.uid"))
         assertTrue("Sessions must have userId",
             sessionRules.contains("request.resource.data.userId == request.auth.uid"))
+    }
+
+    @Test
+    fun `test sessions require durable active metadata on creation`() {
+        val content = getRulesContent()
+        val sessionCreate = content.substringAfter("// Users can create test sessions")
+            .substringBefore("// Users can update their own sessions")
+
+        assertTrue("Sessions require ACTIVE status", sessionCreate.contains("request.resource.data.status == 'ACTIVE'"))
+        // startTime/expiresAt are client-clock informational fields, not a security boundary --
+        // the request.time.toMillis() comparisons were deliberately removed (commit 4694e2d2)
+        // because they silently denied otherwise-valid sessions.
+        assertFalse(
+            "Sessions must not gate creation on client-clock expiry",
+            sessionCreate.contains("request.resource.data.expiresAt > request.time.toMillis()")
+        )
+    }
+
+    @Test
+    fun `test sessions cannot mutate identity or delete audit records`() {
+        val content = getRulesContent()
+        val sessionRules = content.substringAfter("match /test_sessions/{sessionId}")
+            .substringBefore("// TEST SUBMISSIONS")
+
+        assertTrue("Session identity is immutable", sessionRules.contains("request.resource.data.testType == resource.data.testType"))
+        assertTrue("Session deletion is forbidden", sessionRules.contains("allow delete: if false"))
+        assertTrue("Only terminal states are allowed", sessionRules.contains("['ABANDONED', 'SUBMITTED', 'EXPIRED']"))
     }
 
     @Test
@@ -393,12 +425,12 @@ class FirebaseRulesValidationTest {
     }
 
     @Test
-    fun `security notes are present for migration rules`() {
+    fun `security notes document the rules' intent`() {
         val content = getRulesContent()
 
-        assertTrue("Should have production security notes",
-            content.contains("⚠️ PRODUCTION SECURITY NOTE"))
-        assertTrue("Should document migration write access",
-            content.contains("Migration write access should be removed"))
+        assertTrue("Should document the audit-trail retention policy",
+            content.contains("audit trail"))
+        assertTrue("Should document that client-clock values are not a security boundary",
+            content.contains("not a security boundary"))
     }
 }

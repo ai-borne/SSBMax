@@ -141,6 +141,98 @@ class OIRTestScoreCalculatorTest {
     // --- Full calculate() integration ---
 
     @Test
+    fun calculate_correctAnswer_scoresOnePointAndFullPercentage() {
+        val question = singleSelectQuestion()
+        val result = calculator.calculate(
+            session(listOf(question), mapOf("q2" to OIRAnswer("q2", "opt_a")))
+        )
+
+        assertEquals(1, result.rawScore)
+        assertEquals(100f, result.percentageScore)
+    }
+
+    @Test
+    fun calculate_difficultyDoesNotChangeScore() {
+        val easy = singleSelectQuestion()
+        val hard = singleSelectQuestion("q3").copy(difficulty = QuestionDifficulty.HARD)
+        val result = calculator.calculate(
+            session(
+                listOf(easy, hard),
+                mapOf("q2" to OIRAnswer("q2", "opt_a"), "q3" to OIRAnswer("q3", "opt_a"))
+            )
+        )
+
+        assertEquals(2, result.rawScore)
+        assertEquals(100f, result.percentageScore)
+    }
+
+    @Test
+    fun calculate_tenCorrectAnswersInFiftyQuestions_scoresTenAndTwentyPercent() {
+        val questions = (1..50).map { index ->
+            singleSelectQuestion("q$index").copy(questionNumber = index)
+        }
+        val answers = questions.associate { question ->
+            question.id to OIRAnswer(question.id, if (question.questionNumber <= 10) "opt_a" else "opt_b")
+        }
+
+        val result = calculator.calculate(session(questions, answers))
+
+        assertEquals(10, result.rawScore)
+        assertEquals(20f, result.percentageScore)
+    }
+
+    @Test
+    fun calculate_emptySessionReturnsSafeEmptyResult() {
+        val result = calculator.calculate(session(emptyList(), emptyMap()))
+
+        assertEquals(0, result.rawScore)
+        assertEquals(0f, result.percentageScore)
+        assertEquals(0, result.totalQuestions)
+    }
+
+    @Test
+    fun calculate_categoryScoresPreserveCountsAndAverageTiming() {
+        val verbal = singleSelectQuestion("verbal").copy(type = OIRQuestionType.VERBAL_REASONING)
+        val numerical = singleSelectQuestion("numerical").copy(type = OIRQuestionType.NUMERICAL_ABILITY)
+        val result = calculator.calculate(
+            session(
+                listOf(verbal, numerical),
+                mapOf(
+                    "verbal" to OIRAnswer("verbal", "opt_a", timeTakenSeconds = 20),
+                    "numerical" to OIRAnswer("numerical", "opt_b", timeTakenSeconds = 40),
+                )
+            )
+        )
+
+        assertEquals(1, result.categoryScores[OIRQuestionType.VERBAL_REASONING]?.correctAnswers)
+        assertEquals(20, result.categoryScores[OIRQuestionType.VERBAL_REASONING]?.averageTimeSeconds)
+        assertEquals(0, result.categoryScores[OIRQuestionType.NUMERICAL_ABILITY]?.correctAnswers)
+        assertEquals(40, result.categoryScores[OIRQuestionType.NUMERICAL_ABILITY]?.averageTimeSeconds)
+    }
+
+    @Test
+    fun calculate_incorrectAndSkippedScoreZeroAndRemainCounted() {
+        val correct = singleSelectQuestion("correct")
+        val incorrect = singleSelectQuestion("incorrect")
+        val skipped = singleSelectQuestion("skipped")
+        val result = calculator.calculate(
+            session(
+                listOf(correct, incorrect, skipped),
+                mapOf(
+                    "correct" to OIRAnswer("correct", "opt_a"),
+                    "incorrect" to OIRAnswer("incorrect", "opt_b"),
+                    "skipped" to OIRAnswer("skipped", null, skipped = true),
+                )
+            )
+        )
+
+        assertEquals(1, result.rawScore)
+        assertEquals(1, result.correctAnswers)
+        assertEquals(1, result.incorrectAnswers)
+        assertEquals(1, result.skippedQuestions)
+    }
+
+    @Test
     fun calculate_multiSelectCorrect_countsInScore() {
         val question = multiSelectQuestion()
         val answer = OIRAnswer(

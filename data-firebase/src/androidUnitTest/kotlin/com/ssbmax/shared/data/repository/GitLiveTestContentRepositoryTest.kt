@@ -2,6 +2,9 @@ package com.ssbmax.shared.data.repository
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.ssbmax.shared.db.SharedDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -31,7 +34,7 @@ class GitLiveTestContentRepositoryTest {
         SharedDatabase.Schema.create(driver)
         database = SharedDatabase(driver)
         repository = GitLiveTestContentRepository(
-            oirCacheManager = GitLiveOIRQuestionCacheManager(database, GitLiveOIRQuestionSelector(database)),
+            oirCacheManager = GitLiveOIRQuestionCacheManager(database, GitLiveOIRQuestionSelector(database), CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)),
             watWordCacheManager = GitLiveWATWordCacheManager(database),
             srtSituationCacheManager = GitLiveSRTSituationCacheManager(database),
             ppdtImageCacheManager = GitLivePPDTImageCacheManager(database),
@@ -57,15 +60,12 @@ class GitLiveTestContentRepositoryTest {
     }
 
     @Test
-    fun `getOIRTestQuestions degrades to an empty (not failed) list when cache and Firestore are both empty`() = runTest {
-        // Why this matters: GitLiveOIRQuestionCacheManager's initialSync/selectQuestions are
-        // deliberately resilient (fetchMetaConfig defaults on error, downloadBatch failures
-        // inside the sync loop are swallowed) -- an offline first-launch must not crash the
-        // repository layer, it must degrade to "nothing selected yet" so the caller can retry.
+    fun `getOIRTestQuestions fails when cache and Firestore are unavailable`() = runTest {
+        // Why this matters: first-run content must fail closed. A successful empty list
+        // would let callers mistake a partial sync for a usable 50-question test.
         val result = repository.getOIRTestQuestions(count = 50)
 
-        assertTrue(result.isSuccess)
-        assertTrue(result.getOrThrow().isEmpty())
+        assertTrue(result.isFailure)
     }
 
     @Suppress("DEPRECATION")

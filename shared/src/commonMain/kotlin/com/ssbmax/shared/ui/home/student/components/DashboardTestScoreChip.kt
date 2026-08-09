@@ -17,7 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.ui.util.formatOneDecimal
@@ -63,17 +63,17 @@ fun TestScoreChip(
         shape = RoundedCornerShape(8.dp),
         color = when {
             score == null -> MaterialTheme.colorScheme.surfaceVariant
-            score <= 5f -> Color(0xFF4CAF50).copy(alpha = 0.2f) // Green
-            score <= 7f -> Color(0xFFFFC107).copy(alpha = 0.2f) // Amber
-            else -> Color(0xFFF44336).copy(alpha = 0.2f) // Red
+            score <= 5f -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+            score <= 7f -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+            else -> MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
         },
         border = if (score != null) {
             BorderStroke(
                 1.dp,
                 when {
-                    score <= 5f -> Color(0xFF4CAF50)
-                    score <= 7f -> Color(0xFFFFC107)
-                    else -> Color(0xFFF44336)
+                    score <= 5f -> MaterialTheme.colorScheme.tertiary
+                    score <= 7f -> MaterialTheme.colorScheme.secondary
+                    else -> MaterialTheme.colorScheme.error
                 }
             )
         } else null
@@ -95,9 +95,9 @@ fun TestScoreChip(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = when {
-                        score <= 5f -> Color(0xFF4CAF50)
-                        score <= 7f -> Color(0xFFFFC107)
-                        else -> Color(0xFFF44336)
+                        score <= 5f -> MaterialTheme.colorScheme.onTertiary
+                        score <= 7f -> MaterialTheme.colorScheme.onSecondary
+                        else -> MaterialTheme.colorScheme.onError
                     }
                 )
             } else {

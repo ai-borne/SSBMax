@@ -15,7 +15,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.model.WATPhase
@@ -50,6 +52,7 @@ import ssbmax.shared.generated.resources.wat_loading
  * last word), and no profile-required gate (WAT's `loadTest` doesn't check
  * gender/profile completeness, unlike TAT).
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun WATTestScreen(
     testId: String,
@@ -69,6 +72,13 @@ fun WATTestScreen(
         if (uiState.isSubmitted && uiState.submissionId != null && uiState.subscriptionType != null) {
             onTestComplete(uiState.submissionId!!, uiState.subscriptionType!!)
         }
+    }
+
+    // Hardware/predictive back must go through the same exit path as the in-progress "exit"
+    // action -- otherwise it silently pops the nav stack and leaves the durable test_sessions
+    // doc stuck ACTIVE (see PPDTTestScreen's identical fix for the same bug).
+    BackHandler(enabled = uiState.words.isNotEmpty() && !uiState.isSubmitted) {
+        showExitDialog = true
     }
 
     if (uiState.isLimitReached) {
@@ -113,7 +123,7 @@ fun WATTestScreen(
     if (showExitDialog) {
         WATExitDialog(
             onDismiss = { showExitDialog = false },
-            onExit = { showExitDialog = false; onNavigateBack() }
+            onExit = { showExitDialog = false; viewModel.pauseTest(); onNavigateBack() }
         )
     }
 }

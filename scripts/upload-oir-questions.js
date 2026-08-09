@@ -3,7 +3,9 @@
 /**
  * Upload OIR questions to Firestore
  * 
- * Usage: node upload-oir-questions.js
+ * Usage: node upload-oir-questions.js --commit
+ *
+ * Without --commit this command is a safe dry run and performs no Firebase access.
  * 
  * Prerequisites:
  * 1. Firebase Admin SDK initialized
@@ -14,6 +16,12 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
+
+if (!process.argv.includes('--commit')) {
+  console.log('🧪 DRY RUN (default) — no credentials, network, or writes.');
+  console.log('   Re-run with --commit only after reviewing the input and metadata.');
+  process.exit(0);
+}
 
 // Initialize Firebase Admin SDK
 // NOTE: Update this path to your service account key
@@ -66,7 +74,6 @@ async function uploadOIRQuestions() {
       last_updated: admin.firestore.FieldValue.serverTimestamp(),
       batches: questionsData.batches.length,
       distribution: questionsData.metadata.distribution,
-      difficulty_levels: questionsData.metadata.difficulty_levels,
       description: questionsData.metadata.description || ''
     });
     console.log('   ✅ Metadata uploaded');
@@ -123,8 +130,7 @@ async function uploadOIRQuestions() {
     console.log(`   ID: ${sampleQuestion.id}`);
     console.log(`   Type: ${sampleQuestion.type}`);
     console.log(`   Question: ${sampleQuestion.questionText}`);
-    console.log(`   Difficulty: ${sampleQuestion.difficulty}`);
-    
+
     console.log('\n🎉 Upload complete!');
     
   } catch (error) {
@@ -165,15 +171,16 @@ if (args.includes('--help') || args.includes('-h')) {
 📚 OIR Questions Firestore Upload Tool
 
 Usage:
-  node upload-oir-questions.js [options]
+  node upload-oir-questions.js --commit
 
 Options:
+  --commit          Enable Firebase writes (dry run is the default)
   --delete-first    Delete existing questions before uploading (use with caution!)
   --help, -h        Show this help message
 
 Examples:
-  node upload-oir-questions.js
-  node upload-oir-questions.js --delete-first
+  node upload-oir-questions.js --commit
+  node upload-oir-questions.js --commit --delete-first
 
 Environment Variables:
   FIREBASE_SERVICE_ACCOUNT_KEY   Path to Firebase service account key JSON file

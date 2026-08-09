@@ -14,10 +14,10 @@ import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
  *
  * Steps (run in strict order — any failure short-circuits remaining steps):
  *  1. Calculate score from the completed session.
- *  2. Record test usage against the user's subscription quota.
- *  3. Invalidate the OLQ dashboard cache so the new score appears immediately.
- *  4. Persist the submission to Firestore and obtain the submission ID.
- *  5. Mark the test session as ended in Firestore.
+ *  2. Persist the submission using the durable session ID as its idempotency key.
+ *  3. Record test usage with that same key so retries are deduplicated.
+ *  4. Mark the test session as ended in Firestore.
+ *  5. Invalidate the OLQ dashboard cache only after durable persistence succeeds.
  *
  * Returns `Result<String>` — the submission ID on success.
  */
@@ -35,13 +35,7 @@ class SubmitOIRTestUseCase constructor(
             // Step 1: Calculate score
             val result = scoreCalculator.calculate(session)
 
-            // Step 2: Record subscription usage — failure propagates (blocks steps 3+)
-            usageRecorder.recordTestUsage(TestType.OIR, session.userId)
-
-            // Step 3: Invalidate OLQ dashboard cache
-            dashboardUseCase.invalidateCache(session.userId)
-
-            // Step 4: Persist submission — use session ID as the document ID so the
+            // Step 2: Persist submission — use session ID as the document ID so the
             // result screen can load it without an extra Firestore lookup
             val submission = OIRSubmission(
                 id          = session.sessionId,
@@ -53,8 +47,15 @@ class SubmitOIRTestUseCase constructor(
             )
             submissionRepository.submitOIR(submission, null).getOrThrow()
 
-            // Step 5: End the test session
-            testSessionRepository.endTestSession(session.sessionId)
+            // Step 3: Charge only after the result is durable. The stable submission ID makes
+            // a retry safe for implementations that persist usage idempotency records.
+            usageRecorder.recordTestUsage(TestType.OIR, session.userId, submission.id)
+
+            // Step 4: Complete the durable test session
+            testSessionRepository.completeTestSession(session.sessionId).getOrThrow()
+
+            // Step 5: Refresh only after submission persistence and quota recording succeed.
+            dashboardUseCase.invalidateCache(session.userId)
 
             // Step 6: Mark served questions as used (best-effort — never fails the submission)
             runCatching {

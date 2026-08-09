@@ -30,10 +30,11 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,28 +74,25 @@ internal fun NotificationList(
             }
 
             items(items = group.notifications, key = { it.id }) { notification ->
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = { dismissValue ->
-                        if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                            onDelete(notification.id)
-                            true
-                        } else {
-                            false
-                        }
+                val dismissState = rememberSwipeToDismissBoxState()
+                LaunchedEffect(dismissState.currentValue) {
+                    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                        onDelete(notification.id)
                     }
-                )
+                }
 
                 SwipeToDismissBox(
                     state = dismissState,
+                    enableDismissFromStartToEnd = false,
                     backgroundContent = {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.Red, RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
                                 .padding(16.dp),
                             contentAlignment = Alignment.CenterEnd
                         ) {
-                            Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White)
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
                         }
                     },
                     content = {
@@ -197,13 +195,12 @@ private fun getNotificationIcon(type: NotificationType): ImageVector {
     }
 }
 
-private fun getNotificationColor(type: NotificationType): Color {
-    return when (type) {
-        NotificationType.GRADING_COMPLETE -> Color(0xFF4CAF50)
-        NotificationType.FEEDBACK_AVAILABLE -> Color(0xFF2196F3)
-        NotificationType.BATCH_INVITATION -> Color(0xFF9C27B0)
-        NotificationType.GENERAL_ANNOUNCEMENT -> Color(0xFFFF9800)
-        NotificationType.STUDY_REMINDER, NotificationType.TEST_REMINDER -> Color(0xFFFFEB3B)
-        NotificationType.MARKETPLACE_UPDATE -> Color(0xFF00BCD4)
-    }
+@Composable
+private fun getNotificationColor(type: NotificationType) = when (type) {
+    NotificationType.GRADING_COMPLETE -> MaterialTheme.colorScheme.tertiary
+    NotificationType.FEEDBACK_AVAILABLE -> MaterialTheme.colorScheme.primary
+    NotificationType.BATCH_INVITATION -> MaterialTheme.colorScheme.secondary
+    NotificationType.GENERAL_ANNOUNCEMENT -> MaterialTheme.colorScheme.tertiary
+    NotificationType.STUDY_REMINDER, NotificationType.TEST_REMINDER -> MaterialTheme.colorScheme.secondary
+    NotificationType.MARKETPLACE_UPDATE -> MaterialTheme.colorScheme.primary
 }

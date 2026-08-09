@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.presentation.interviewresult.InterviewResultViewModel
+import com.ssbmax.shared.ui.common.loadingSemantics
 import com.ssbmax.shared.ui.components.SSBRecommendationBanner
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -46,6 +47,7 @@ import ssbmax.shared.generated.resources.interview_result_title
 import ssbmax.shared.generated.resources.interview_result_weaknesses_title
 import ssbmax.shared.generated.resources.interview_results_analyzing
 import ssbmax.shared.generated.resources.interview_results_pending_message
+import ssbmax.shared.generated.resources.interview_results_pending_title
 
 /**
  * KMP port of `app/.../ui/interview/result/InterviewResultScreen.kt`.
@@ -139,7 +141,10 @@ fun InterviewResultScreen(
 @Composable
 private fun CenteredLoading(message: String) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .loadingSemantics(message),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -152,7 +157,10 @@ private fun CenteredLoading(message: String) {
 @Composable
 private fun AnalysisPendingContent(onNavigateBack: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .loadingSemantics(stringResource(Res.string.interview_results_pending_title)),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {

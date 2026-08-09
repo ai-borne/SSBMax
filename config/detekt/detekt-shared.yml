@@ -7,5 +7,9 @@
 ssbmax:
   HardcodedComposeText:
     active: true
+  HardcodedComposeColor:
+    active: true
+  IconOnlyControlLabel:
+    active: true
   MissingComposePreview:
     active: true

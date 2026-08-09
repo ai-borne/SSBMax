@@ -16,17 +16,25 @@ This module contains custom Android Lint rules that enforce architectural patter
 | **ViewModelLifecycleCleanup** | ERROR | Resources not cancelled in `onCleared()` | Override `onCleared()` and cleanup |
 | **ComposeHardcodedText** | ERROR | Hardcoded strings in Text composables | Use `stringResource(R.string.xxx)` |
 
+Shared KMP UI is additionally enforced by `:detekt-rules` because Android Lint does not analyze `commonMain`:
+
+| Rule ID | Severity | What It Detects | How to Fix |
+|---------|----------|-----------------|------------|
+| **HardcodedComposeColor** | ERROR | Raw hex/RGB colors in shared UI | Use `MaterialTheme.colorScheme` or an approved semantic token |
+| **IconOnlyControlLabel** | ERROR | IconButton content without a detectable label | Add a localized `contentDescription` to the Icon |
+| **MissingComposePreview** | WARNING | Public reusable shared components without previews | Add a private `@Preview` |
+
 ## 🚀 Running Lint Checks
 
 ```bash
 # Run all lint checks (includes custom rules)
-./gradle.sh lintDebug
+./gradlew lintDebug
 
 # Run lint on specific module
-./gradle.sh :app:lintDebug
+./gradlew :app:lintDebug
 
 # Generate HTML lint report
-./gradle.sh lintDebug
+./gradlew lintDebug
 # Report location: app/build/reports/lint-results-debug.html
 ```
 
@@ -184,6 +192,16 @@ To disable a rule for specific files, edit `app/lint.xml`:
 ```
 
 **⚠️ Use sparingly!** Suppressions should be rare exceptions, not the norm.
+
+## Enforcement exceptions
+
+The only built-in color exception is `shared.ui.theme`, where centralized token definitions are declared. Content-provided gradients may parse their input into `Color` values, but feature screens must not add raw literals. If a genuine external brand requirement cannot use a semantic role, use a narrowly scoped Detekt suppression with both a justification and removal condition:
+
+```kotlin
+@Suppress("HardcodedComposeColor") // Justification: approved external brand asset; removal: when brand token is available.
+```
+
+Icon-only actions never use `contentDescription = null`; decorative icons outside an action remain silent. Do not suppress `IconOnlyControlLabel` for an interactive control.
 
 ## 🧪 Testing Custom Lint Rules
 

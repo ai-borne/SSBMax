@@ -12,6 +12,8 @@ class SSBMaxRuleSetProvider : RuleSetProvider {
         ruleSetId,
         listOf(
             HardcodedComposeTextRule(config),
+            HardcodedComposeColorRule(config),
+            IconOnlyControlLabelRule(config),
             MissingComposePreviewRule(config)
         )
     )

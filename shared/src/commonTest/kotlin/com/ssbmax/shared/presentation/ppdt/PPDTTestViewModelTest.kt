@@ -97,12 +97,14 @@ class PPDTTestViewModelTest {
         submitPPDTTest = SubmitPPDTTestUseCase(
             submissionRepository, userProfileRepository,
             GetSubscriptionTierUseCase(subscriptionRepository),
-            com.ssbmax.shared.presentation.testing.FakeTestUsageRecorder()
+            com.ssbmax.shared.presentation.testing.FakeTestUsageRecorder(),
+            testSessionRepository
         ),
         observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
         checkTestEligibility = CheckTestEligibilityUseCase(subscriptionRepository, RecordingAnalyticsTracker()),
         analysisTrigger = analysisTrigger,
         difficultyProgression = difficultyProgression,
+        testSessionRepository = testSessionRepository,
         logger = NoOpLogger(),
         analyticsTracker = RecordingAnalyticsTracker()
     )
@@ -233,5 +235,33 @@ class PPDTTestViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(false, state.isSubmitted)
         assertEquals(TestError.SUBMIT_FAILED, state.error)
+    }
+
+    // Regression coverage for the "stuck ACTIVE test_sessions doc" incident: exiting a test
+    // (X button -> pauseTest()) must abandon the durable session so the user can retake the
+    // same test type without waiting out its 2-hour expiresAt window.
+    @Test
+    fun `pauseTest abandons the durable test session`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        viewModel.loadTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+        val sessionId = viewModel.uiState.value.session?.sessionId
+        assertNotNull(sessionId)
+
+        viewModel.pauseTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(listOf(sessionId), testSessionRepository.abandonedSessionIds)
+        assertEquals(true, testSessionRepository.completedSessionIds.isEmpty())
+    }
+
+    @Test
+    fun `pauseTest with no loaded session does not touch the session repository`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+
+        viewModel.pauseTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(testSessionRepository.abandonedSessionIds.isEmpty())
     }
 }

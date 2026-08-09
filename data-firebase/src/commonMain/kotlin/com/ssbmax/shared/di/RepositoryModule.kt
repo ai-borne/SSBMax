@@ -60,6 +60,9 @@ import com.ssbmax.shared.domain.repository.TestUsageRecorder
 import com.ssbmax.shared.domain.repository.UnifiedResultRepository
 import com.ssbmax.shared.domain.repository.UserProfileRepository
 import com.ssbmax.shared.platform.isDebugBuild
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -79,6 +82,7 @@ import org.koin.dsl.module
  * 9a-9e for each repository's individual closure) for the full per-repository rationale.
  */
 val repositoryModule = module {
+    single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
     // GitLiveAuthRepository's userRepository constructor param has a Kotlin default
     // value (= GitLiveUserRepository()), but singleOf's reflection-based DSL ignores
     // Kotlin default parameters and always resolves every constructor param through
@@ -119,7 +123,7 @@ val repositoryModule = module {
     single { GitLiveSRTSituationCacheManager(get()) }
     single { GitLiveTATImageCacheManager(get()) }
     single { GitLiveOIRQuestionSelector(get()) }
-    single { GitLiveOIRQuestionCacheManager(get(), get()) }
+    single { GitLiveOIRQuestionCacheManager(get(), get(), get()) }
     single { GitLiveNotificationCacheManager(get()) }
     singleOf(::GitLiveTestContentRepository) bind TestContentRepository::class
     single { GitLiveGTOCollections() }

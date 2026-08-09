@@ -1,9 +1,8 @@
 package com.ssbmax.shared.data.repository
 
-import com.ssbmax.shared.domain.model.CategoryScore
-import com.ssbmax.shared.domain.model.OIRQuestionType
 import com.ssbmax.shared.domain.model.OIRTestResult
 import com.ssbmax.shared.domain.repository.OirResultRepository
+import com.ssbmax.shared.data.repository.toDomain
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 
@@ -47,41 +46,4 @@ class GitLiveOirResultRepository(
         }
     }
 
-    // The Phase 1 domain move replaced the spike's trimmed OIRTestResult with the real
-    // core:domain one, which additionally requires totalTimeSeconds, difficultyBreakdown,
-    // and answeredQuestions (per-question review data). This DTO's Firestore read only ever
-    // fetched the summary fields needed for this spike's "OIR score: X%" demo, so the
-    // per-question/difficulty data defaults to empty here — real values require a fuller
-    // Firestore read, which is Phase 2 (data layer) scope, not this reconciliation.
-    private fun OirTestResultDto.toDomain(): OIRTestResult {
-        val categoryScores = categoryScores.mapNotNull { (key, dto) ->
-            val category = runCatching { OIRQuestionType.valueOf(key) }.getOrNull()
-                ?: return@mapNotNull null
-            category to CategoryScore(
-                category = category,
-                totalQuestions = dto.totalQuestions,
-                correctAnswers = dto.correctAnswers,
-                percentage = dto.percentage,
-                averageTimeSeconds = 0
-            )
-        }.toMap()
-
-        return OIRTestResult(
-            testId = testId,
-            sessionId = sessionId,
-            userId = userId,
-            totalQuestions = totalQuestions,
-            correctAnswers = correctAnswers,
-            incorrectAnswers = incorrectAnswers,
-            skippedQuestions = skippedQuestions,
-            totalTimeSeconds = timeTakenSeconds,
-            timeTakenSeconds = timeTakenSeconds,
-            rawScore = rawScore,
-            percentageScore = percentageScore,
-            categoryScores = categoryScores,
-            difficultyBreakdown = emptyMap(),
-            answeredQuestions = emptyList(),
-            completedAt = completedAt
-        )
-    }
 }

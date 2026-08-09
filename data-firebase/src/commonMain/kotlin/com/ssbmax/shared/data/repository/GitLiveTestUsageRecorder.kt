@@ -17,19 +17,10 @@ import kotlinx.datetime.toLocalDateTime
  * Same Firestore path as the Android original and [GitLiveSubscriptionRepository]:
  * `users/{userId}/subscription/usage_{yyyy-MM}`.
  *
- * Deliberate deviation, documented not silent: the Android original wraps
- * this in a `firestore.runTransaction { }` for atomicity plus an idempotency
- * check against a `recordedSubmissions` list (so a retried submission never
- * double-counts). GitLive's `Transaction` API is not reified for arbitrary
- * document reads in this codebase's confirmed-working surface (see this
- * plan's Phase 2 note: "every repo needing atomicity uses proven
- * read-then-write instead, accepting a small non-atomic race window" —
- * the same precedent [GitLiveQuestionCacheRepository] and others already
- * follow). This recorder follows suit: read-then-write with
- * `FieldValue.increment`, no submission-idempotency de-dup. A double-submit
- * race (two calls for the same submission landing concurrently) would double
- * count usage — same small window every other GitLive repo in this codebase
- * already accepts, not a new gap introduced here.
+ * Usage is keyed by the durable submission ID. The read/check/increment is a
+ * Firestore transaction, so concurrent retries cannot both charge the same ID.
+ * The operation is deliberately kept behind this repository boundary so the use
+ * case cannot accidentally charge before its submission is durable.
  */
 class GitLiveTestUsageRecorder : TestUsageRecorder {
 
@@ -42,31 +33,43 @@ class GitLiveTestUsageRecorder : TestUsageRecorder {
             .document("usage_$month")
 
         val fieldName = fieldNameFor(testType)
-        val snapshot = docRef.get()
+        Firebase.firestore.runTransaction {
+            val snapshot = get(docRef)
+            val existing = if (snapshot.exists) {
+                snapshot.data(SubscriptionUsageDto.serializer())
+            } else {
+                null
+            }
+            if (submissionId != null && existing?.recordedSubmissionIds?.contains(submissionId) == true) {
+                return@runTransaction
+            }
 
-        if (!snapshot.exists) {
-            // New document for the month: write via the typed DTO (matches
-            // GitLiveSubscriptionRepository's own read-side use of the same
-            // DTO) rather than a raw Map — GitLive has no public raw
-            // Map<String, Any> encode path for `.set()` (see this plan's
-            // Phase 2 note on FirestoreRawMapSerializer; a full second
-            // serializer isn't warranted here when the typed DTO already
-            // covers every field this document needs).
-            // userId/month/lastUpdated must be populated: firestore.rules' `subscription/{document}`
-            // create rule requires `data.userId == userId` and hasAll(['month', ..., 'lastUpdated']) —
-            // omitting them (as this used to) makes every first-of-the-month submission PERMISSION_DENIED.
-            docRef.set(
-                SubscriptionUsageDto(
-                    userId = userId,
-                    month = month,
-                    lastUpdated = Clock.System.now().toEpochMilliseconds()
-                ).withIncrementedField(fieldName)
-            )
-        } else {
-            docRef.update(
-                fieldName to FieldValue.increment(1),
-                "lastUpdated" to Clock.System.now().toEpochMilliseconds()
-            )
+            if (!snapshot.exists) {
+                // userId/month/lastUpdated must be populated because the rules validate
+                // these fields on the first write of every monthly usage document.
+                set(
+                    docRef,
+                    SubscriptionUsageDto(
+                        userId = userId,
+                        month = month,
+                        lastUpdated = Clock.System.now().toEpochMilliseconds(),
+                        recordedSubmissionIds = submissionId?.let(::listOf).orEmpty()
+                    ).withIncrementedField(fieldName)
+                )
+            } else {
+                val increment = fieldName to FieldValue.increment(1)
+                val updatedAt = "lastUpdated" to Clock.System.now().toEpochMilliseconds()
+                if (submissionId == null) {
+                    update(docRef, increment, updatedAt)
+                } else {
+                    update(
+                        docRef,
+                        increment,
+                        updatedAt,
+                        "recordedSubmissionIds" to FieldValue.arrayUnion(submissionId)
+                    )
+                }
+            }
         }
     }
 

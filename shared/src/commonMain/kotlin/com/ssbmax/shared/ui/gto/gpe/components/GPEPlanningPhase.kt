@@ -42,6 +42,7 @@ import com.ssbmax.shared.domain.model.GPEQuestion
 import com.ssbmax.shared.ui.common.ensureCoilNetworkFetcherRegistered
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
+import ssbmax.shared.generated.resources.gpe_exit_cd
 import ssbmax.shared.generated.resources.gpe_planning_guidelines
 import ssbmax.shared.generated.resources.gpe_planning_response_label
 import ssbmax.shared.generated.resources.gpe_planning_response_placeholder
@@ -88,7 +89,11 @@ fun GPEPlanningPhase(
                         Text(timeRemaining, color = if (isTimeLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
                     }
                 },
-                navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Default.Close, null) } }
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.Close, stringResource(Res.string.gpe_exit_cd))
+                    }
+                }
             )
         },
         bottomBar = {

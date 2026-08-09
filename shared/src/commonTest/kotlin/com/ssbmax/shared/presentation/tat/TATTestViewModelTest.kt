@@ -98,6 +98,7 @@ class TATTestViewModelTest {
         getSubscriptionTier = GetSubscriptionTierUseCase(subscriptionRepository),
         usageRecorder = usageRecorder,
         analysisTrigger = analysisTrigger,
+        testSessionRepository = testSessionRepository,
         logger = NoOpLogger(),
         analyticsTracker = RecordingAnalyticsTracker()
     )
@@ -154,6 +155,7 @@ class TATTestViewModelTest {
             getSubscriptionTier = GetSubscriptionTierUseCase(subscriptionRepository),
             usageRecorder = usageRecorder,
             analysisTrigger = analysisTrigger,
+            testSessionRepository = testSessionRepository,
             logger = NoOpLogger(),
             analyticsTracker = RecordingAnalyticsTracker()
         )
@@ -177,7 +179,7 @@ class TATTestViewModelTest {
             LoadTATTestUseCase(fakeWithTAT, testSessionRepository, userProfileRepository),
             SubmitTATTestUseCase(submissionRepository), ObserveCurrentUserUseCase(authRepository),
             CheckTestEligibilityUseCase(subscriptionRepository, RecordingAnalyticsTracker()), GetSubscriptionTierUseCase(subscriptionRepository), usageRecorder,
-            analysisTrigger, NoOpLogger(), RecordingAnalyticsTracker()
+            analysisTrigger, testSessionRepository, NoOpLogger(), RecordingAnalyticsTracker()
         )
         viewModel.loadTest()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -208,7 +210,7 @@ class TATTestViewModelTest {
             LoadTATTestUseCase(fakeWithTAT, testSessionRepository, userProfileRepository),
             SubmitTATTestUseCase(submissionRepository), ObserveCurrentUserUseCase(authRepository),
             CheckTestEligibilityUseCase(subscriptionRepository, RecordingAnalyticsTracker()), GetSubscriptionTierUseCase(subscriptionRepository), usageRecorder,
-            analysisTrigger, NoOpLogger(), RecordingAnalyticsTracker()
+            analysisTrigger, testSessionRepository, NoOpLogger(), RecordingAnalyticsTracker()
         )
         viewModel.loadTest()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -221,6 +223,81 @@ class TATTestViewModelTest {
         assertNotNull(state.submissionId)
         assertEquals(1, usageRecorder.recorded.size)
         assertEquals(1, analysisTrigger.triggered.size)
+    }
+
+    // Regression coverage for the "stuck ACTIVE test_sessions doc" incident (fixed for PPDT/OIR
+    // in a prior commit): a successful TAT submission must terminate the durable session created
+    // by LoadTATTestUseCase, or retaking TAT is blocked for up to its 2-hour expiresAt window.
+    @Test
+    fun `submitTest completes the durable test session on success`() = runTest(testDispatcher) {
+        val fakeWithTAT = object : com.ssbmax.shared.domain.repository.TestContentRepository by testContentRepository {
+            override suspend fun getTATQuestions(testId: String, genderTag: com.ssbmax.shared.domain.model.GenderTag?) =
+                Result.success(questions())
+        }
+        val viewModel = TATTestViewModel(
+            LoadTATTestUseCase(fakeWithTAT, testSessionRepository, userProfileRepository),
+            SubmitTATTestUseCase(submissionRepository), ObserveCurrentUserUseCase(authRepository),
+            CheckTestEligibilityUseCase(subscriptionRepository, RecordingAnalyticsTracker()), GetSubscriptionTierUseCase(subscriptionRepository), usageRecorder,
+            analysisTrigger, testSessionRepository, NoOpLogger(), RecordingAnalyticsTracker()
+        )
+        viewModel.loadTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+        val sessionId = "session-1"
+
+        viewModel.submitTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(listOf(sessionId), testSessionRepository.completedSessionIds)
+        assertTrue(testSessionRepository.abandonedSessionIds.isEmpty())
+    }
+
+    @Test
+    fun `submitTest does NOT complete the durable session when submission fails`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        viewModel.loadTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+        submissionRepository.submitResult = Result.failure(Exception("network down"))
+
+        viewModel.submitTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(testSessionRepository.completedSessionIds.isEmpty())
+    }
+
+    // Exiting a test (X button/hardware back -> pauseTest()) must abandon the durable session so
+    // the user can retake TAT without waiting out its 2-hour expiresAt window -- previously TAT's
+    // exit dialog navigated back directly and never touched the ViewModel at all.
+    @Test
+    fun `pauseTest abandons the durable test session`() = runTest(testDispatcher) {
+        val fakeWithTAT = object : com.ssbmax.shared.domain.repository.TestContentRepository by testContentRepository {
+            override suspend fun getTATQuestions(testId: String, genderTag: com.ssbmax.shared.domain.model.GenderTag?) =
+                Result.success(questions())
+        }
+        val viewModel = TATTestViewModel(
+            LoadTATTestUseCase(fakeWithTAT, testSessionRepository, userProfileRepository),
+            SubmitTATTestUseCase(submissionRepository), ObserveCurrentUserUseCase(authRepository),
+            CheckTestEligibilityUseCase(subscriptionRepository, RecordingAnalyticsTracker()), GetSubscriptionTierUseCase(subscriptionRepository), usageRecorder,
+            analysisTrigger, testSessionRepository, NoOpLogger(), RecordingAnalyticsTracker()
+        )
+        viewModel.loadTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+        val sessionId = "session-1"
+
+        viewModel.pauseTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(listOf(sessionId), testSessionRepository.abandonedSessionIds)
+        assertTrue(testSessionRepository.completedSessionIds.isEmpty())
+    }
+
+    @Test
+    fun `pauseTest with no loaded session does not touch the session repository`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+
+        viewModel.pauseTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(testSessionRepository.abandonedSessionIds.isEmpty())
     }
 
     @Test

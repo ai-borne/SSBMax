@@ -21,15 +21,16 @@ import com.ssbmax.utils.ErrorLogger
 class NotificationHelper(
     private val context: Context
 ) {
+    private val psychologyNotifications = PsychologyNotificationHelper(context)
+    private val gtoNotifications = GtoNotificationHelper(context)
 
     companion object {
         private const val TAG = "NotificationHelper"
         private const val CHANNEL_ID_INTERVIEW = "interview_results"
         private const val CHANNEL_NAME_INTERVIEW = "Interview Results"
-        private const val CHANNEL_ID_GTO = "gto_results"
-        private const val CHANNEL_NAME_GTO = "GTO Test Results"
+
         private const val NOTIFICATION_ID_INTERVIEW_RESULT = 1001
-        private const val NOTIFICATION_ID_GTO_RESULT = 2001
+
     }
 
     init {
@@ -47,24 +48,15 @@ class NotificationHelper(
                 CHANNEL_NAME_INTERVIEW,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications when your interview results are ready"
+                description = context.getString(R.string.notification_interview_channel_description)
                 enableVibration(true)
                 enableLights(true)
             }
 
-            val gtoChannel = NotificationChannel(
-                CHANNEL_ID_GTO,
-                CHANNEL_NAME_GTO,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notifications when your GTO test results are ready"
-                enableVibration(true)
-                enableLights(true)
-            }
 
             val notificationManager = context.getSystemService(NotificationManager::class.java)
             notificationManager?.createNotificationChannel(interviewChannel)
-            notificationManager?.createNotificationChannel(gtoChannel)
+
         }
     }
 
@@ -75,7 +67,7 @@ class NotificationHelper(
      * @param resultId The result ID to navigate to
      */
     fun showInterviewResultsReadyNotification(sessionId: String, resultId: String) {
-        Log.d(TAG, "📢 showInterviewResultsReadyNotification called - sessionId: $sessionId, resultId: $resultId")
+        Log.d(TAG, "Showing interview results notification")
 
         try {
             // Build deep link using centralized parser
@@ -176,203 +168,95 @@ class NotificationHelper(
         }
     }
 
-    /**
-     * Show notification when GTO test analysis is complete
-     *
-     * @param submissionId The GTO submission ID
-     * @param testName The test name (e.g., "Group Discussion")
-     * @param testType The GTO test type for building correct deep link
-     */
+    /** Show notification when GTO test analysis is complete. */
     fun showGTOAnalysisCompleteNotification(
-        submissionId: String, 
+        submissionId: String,
         testName: String,
         testType: com.ssbmax.shared.domain.model.gto.GTOTestType
-    ) {
-        Log.d(TAG, "📢 showGTOAnalysisCompleteNotification called - submissionId: $submissionId, test: $testName, type: ${testType.name}")
-
-        try {
-            // Build test-type-specific deep link to GTO result screen
-            // Only implemented test types get specific routes; others use generic submission detail
-            // See SSBMaxDestinations.kt lines 102-110 for implementation status
-            val deepLink = when (testType) {
-                // Implemented test types - use specific result routes
-                com.ssbmax.shared.domain.model.gto.GTOTestType.GROUP_DISCUSSION -> 
-                    "ssbmax://test/gto/gd/result/$submissionId"
-                com.ssbmax.shared.domain.model.gto.GTOTestType.LECTURETTE -> 
-                    "ssbmax://test/gto/lecturette/result/$submissionId"
-                com.ssbmax.shared.domain.model.gto.GTOTestType.GROUP_PLANNING_EXERCISE ->
-                    "ssbmax://test/gto/gpe/result/$submissionId"
-                
-                // Unimplemented test types - use generic submission detail route as fallback
-                // This allows users to access results even if specific screen isn't implemented yet
-                com.ssbmax.shared.domain.model.gto.GTOTestType.PROGRESSIVE_GROUP_TASK,
-                com.ssbmax.shared.domain.model.gto.GTOTestType.HALF_GROUP_TASK,
-                com.ssbmax.shared.domain.model.gto.GTOTestType.GROUP_OBSTACLE_RACE,
-                com.ssbmax.shared.domain.model.gto.GTOTestType.INDIVIDUAL_OBSTACLES,
-                com.ssbmax.shared.domain.model.gto.GTOTestType.COMMAND_TASK -> 
-                    "ssbmax://submission/$submissionId"
-            }
-            
-            Log.d(TAG, "📱 Deep link generated: $deepLink")
-            
-            // Create intent to open results screen
-            val intent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("deepLink", deepLink)
-                putExtra("submissionId", submissionId)
-            }
-
-            val pendingIntent = PendingIntent.getActivity(
-                context,
-                submissionId.hashCode(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            val notification = NotificationCompat.Builder(context, CHANNEL_ID_GTO)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("$testName Results Ready")
-                .setContentText("Your GTO test has been analyzed. Tap to view your OLQ scores!")
-                .setStyle(NotificationCompat.BigTextStyle()
-                    .bigText("Your $testName has been analyzed by AI. View your performance across all 15 Officer-Like Qualities."))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .setVibrate(longArrayOf(0, 250, 250, 250))
-                .build()
-
-            val notificationManager = context.getSystemService(NotificationManager::class.java)
-            val notificationId = NOTIFICATION_ID_GTO_RESULT + submissionId.hashCode()
-
-            if (notificationManager == null) {
-                ErrorLogger.log(
-                    IllegalStateException("NotificationManager is null"),
-                    "Failed to get NotificationManager service"
-                )
-                return
-            }
-
-            // Check if notifications are enabled
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                if (!notificationManager.areNotificationsEnabled()) {
-                    Log.w(TAG, "⚠️ Notifications are disabled by user")
-                }
-            }
-
-            notificationManager.notify(notificationId, notification)
-            Log.d(TAG, "✅ GTO notification sent successfully! ID: $notificationId")
-
-        } catch (e: Exception) {
-            ErrorLogger.log(e, "Failed to show GTO analysis complete notification")
-        }
-    }
+    ) = gtoNotifications.showAnalysisComplete(submissionId, testName, testType)
 
     // ===========================
     // Psychology Test Notifications
     // ===========================
 
-    fun showTATResultsReadyNotification(submissionId: String) {
-        showPsychologyTestResultNotification(submissionId, "TAT", R.string.notification_tat_complete_title, R.string.notification_tat_complete_body)
-    }
+    fun showTATResultsReadyNotification(submissionId: String) =
+        psychologyNotifications.showResultsReady(
+            submissionId,
+            "TAT",
+            R.string.notification_tat_complete_title,
+            R.string.notification_tat_complete_body
+        )
 
-    fun showTATAnalysisFailedNotification(submissionId: String) {
-        showPsychologyTestFailedNotification(submissionId, "TAT", R.string.notification_tat_failed_title, R.string.notification_tat_failed_body)
-    }
+    fun showTATAnalysisFailedNotification(submissionId: String) =
+        psychologyNotifications.showAnalysisFailed(
+            submissionId,
+            "TAT",
+            R.string.notification_tat_failed_title,
+            R.string.notification_tat_failed_body
+        )
 
-    fun showWATResultsReadyNotification(submissionId: String) {
-        showPsychologyTestResultNotification(submissionId, "WAT", R.string.notification_wat_complete_title, R.string.notification_wat_complete_body)
-    }
+    fun showWATResultsReadyNotification(submissionId: String) =
+        psychologyNotifications.showResultsReady(
+            submissionId,
+            "WAT",
+            R.string.notification_wat_complete_title,
+            R.string.notification_wat_complete_body
+        )
 
-    fun showWATAnalysisFailedNotification(submissionId: String) {
-        showPsychologyTestFailedNotification(submissionId, "WAT", R.string.notification_wat_failed_title, R.string.notification_wat_failed_body)
-    }
+    fun showWATAnalysisFailedNotification(submissionId: String) =
+        psychologyNotifications.showAnalysisFailed(
+            submissionId,
+            "WAT",
+            R.string.notification_wat_failed_title,
+            R.string.notification_wat_failed_body
+        )
 
-    fun showSRTResultsReadyNotification(submissionId: String) {
-        showPsychologyTestResultNotification(submissionId, "SRT", R.string.notification_srt_complete_title, R.string.notification_srt_complete_body)
-    }
+    fun showSRTResultsReadyNotification(submissionId: String) =
+        psychologyNotifications.showResultsReady(
+            submissionId,
+            "SRT",
+            R.string.notification_srt_complete_title,
+            R.string.notification_srt_complete_body
+        )
 
-    fun showSRTAnalysisFailedNotification(submissionId: String) {
-        showPsychologyTestFailedNotification(submissionId, "SRT", R.string.notification_srt_failed_title, R.string.notification_srt_failed_body)
-    }
+    fun showSRTAnalysisFailedNotification(submissionId: String) =
+        psychologyNotifications.showAnalysisFailed(
+            submissionId,
+            "SRT",
+            R.string.notification_srt_failed_title,
+            R.string.notification_srt_failed_body
+        )
 
-    fun showSDTResultsReadyNotification(submissionId: String) {
-        showPsychologyTestResultNotification(submissionId, "SDT", R.string.notification_sdt_complete_title, R.string.notification_sdt_complete_body)
-    }
+    fun showSDTResultsReadyNotification(submissionId: String) =
+        psychologyNotifications.showResultsReady(
+            submissionId,
+            "SDT",
+            R.string.notification_sdt_complete_title,
+            R.string.notification_sdt_complete_body
+        )
 
-    fun showSDTAnalysisFailedNotification(submissionId: String) {
-        showPsychologyTestFailedNotification(submissionId, "SDT", R.string.notification_sdt_failed_title, R.string.notification_sdt_failed_body)
-    }
+    fun showSDTAnalysisFailedNotification(submissionId: String) =
+        psychologyNotifications.showAnalysisFailed(
+            submissionId,
+            "SDT",
+            R.string.notification_sdt_failed_title,
+            R.string.notification_sdt_failed_body
+        )
 
-    fun showPPDTResultsReadyNotification(submissionId: String) {
-        showPsychologyTestResultNotification(submissionId, "PPDT", R.string.notification_ppdt_complete_title, R.string.notification_ppdt_complete_body)
-    }
+    fun showPPDTResultsReadyNotification(submissionId: String) =
+        psychologyNotifications.showResultsReady(
+            submissionId,
+            "PPDT",
+            R.string.notification_ppdt_complete_title,
+            R.string.notification_ppdt_complete_body
+        )
 
-    fun showPPDTAnalysisFailedNotification(submissionId: String) {
-        showPsychologyTestFailedNotification(submissionId, "PPDT", R.string.notification_ppdt_failed_title, R.string.notification_ppdt_failed_body)
-    }
-
-    private fun showPsychologyTestResultNotification(submissionId: String, testType: String, titleResId: Int, bodyResId: Int) {
-        Log.d(TAG, "📢 show${testType}ResultsReadyNotification — submissionId: $submissionId")
-        try {
-            val deepLink = "ssbmax://test/${testType.lowercase()}/result/$submissionId"
-            val intent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("deepLink", deepLink)
-            }
-
-            val pendingIntent = PendingIntent.getActivity(
-                context,
-                submissionId.hashCode(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            val notification = NotificationCompat.Builder(context, CHANNEL_ID_INTERVIEW)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle(context.getString(titleResId))
-                .setContentText(context.getString(bodyResId))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .build()
-
-            val notificationManager = context.getSystemService(NotificationManager::class.java)
-            notificationManager?.notify(submissionId.hashCode(), notification)
-        } catch (e: Exception) {
-            ErrorLogger.log(e, "Failed to show $testType result notification")
-        }
-    }
-
-    private fun showPsychologyTestFailedNotification(submissionId: String, testType: String, titleResId: Int, bodyResId: Int) {
-        try {
-            val deepLink = "ssbmax://tests/psychology"
-            val intent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("deepLink", deepLink)
-            }
-
-            val pendingIntent = PendingIntent.getActivity(
-                context,
-                submissionId.hashCode(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            val notification = NotificationCompat.Builder(context, CHANNEL_ID_INTERVIEW)
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                .setContentTitle(context.getString(titleResId))
-                .setContentText(context.getString(bodyResId))
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .build()
-
-            val notificationManager = context.getSystemService(NotificationManager::class.java)
-            notificationManager?.notify(submissionId.hashCode(), notification)
-        } catch (e: Exception) {
-            ErrorLogger.log(e, "Failed to show $testType failed notification")
-        }
-    }
+    fun showPPDTAnalysisFailedNotification(submissionId: String) =
+        psychologyNotifications.showAnalysisFailed(
+            submissionId,
+            "PPDT",
+            R.string.notification_ppdt_failed_title,
+            R.string.notification_ppdt_failed_body
+        )
 }
 

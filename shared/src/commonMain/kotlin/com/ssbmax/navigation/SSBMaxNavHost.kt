@@ -53,8 +53,8 @@ import androidx.navigation.compose.rememberNavController
  * the Android original's own nav graph (`StudentTestsScreen.onNavigateToTest`
  * isn't wired to anything in `SharedNavGraph.kt` either), not a new gap
  * introduced by this port. Every test type's own result screen
- * (`OIRTestResultScreen` excepted, which has a real "Retake Test" callback)
- * still has no "retake" callback of its own, matching the Android originals
+ * (`OIRTestResultScreen` excepted, which has a real "Take Another Test" callback)
+ * still has no "Take Another Test" callback of its own, matching the Android originals
  * exactly -- from a result screen, the only way back to a new test is via
  * Student Home -> Phase1/2Detail -> Topic again, not a missing feature of
  * this port. (Async AI analysis of submissions is NOT a gap, correcting a

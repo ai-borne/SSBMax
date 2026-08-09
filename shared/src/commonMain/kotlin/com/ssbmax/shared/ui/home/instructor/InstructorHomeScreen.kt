@@ -31,7 +31,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import com.ssbmax.shared.ui.theme.semanticColors
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -143,7 +143,7 @@ fun InstructorHomeScreen(
                     value = "${uiState.testsGradedToday}",
                     subtitle = stringResource(Res.string.stat_today),
                     icon = Icons.Default.Check,
-                    color = Color(0xFF4CAF50),
+                    color = MaterialTheme.semanticColors.success,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -152,7 +152,7 @@ fun InstructorHomeScreen(
                     value = "${uiState.pendingGradingCount}",
                     subtitle = stringResource(Res.string.stat_to_grade),
                     icon = Icons.Default.Schedule,
-                    color = Color(0xFFFFA726),
+                    color = MaterialTheme.semanticColors.warning,
                     onClick = onNavigateToGrading,
                     modifier = Modifier.weight(1f)
                 )
@@ -162,7 +162,7 @@ fun InstructorHomeScreen(
                     value = "${uiState.avgResponseTime}h",
                     subtitle = stringResource(Res.string.stat_time),
                     icon = Icons.Default.Speed,
-                    color = Color(0xFF2196F3),
+                    color = MaterialTheme.semanticColors.informational,
                     modifier = Modifier.weight(1f)
                 )
             }

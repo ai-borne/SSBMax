@@ -112,6 +112,18 @@ class WATTestScreenUiTest {
     }
 
     @Test
+    fun activePhase_exposesRemainingTimeSemantics() = runComposeUiTest {
+        uiStateFlow.value = uiStateFlow.value.copy(
+            phase = WATPhase.IN_PROGRESS,
+            currentWordIndex = 0,
+            timeRemaining = 12
+        )
+        setContent { WATTestScreen(testId = "test-123", viewModel = mockViewModel) }
+
+        onNodeWithContentDescription("Time remaining: 12 seconds").assertIsDisplayed()
+    }
+
+    @Test
     fun completedTest_triggersCallback() = runComposeUiTest {
         val submissionId = "sub-456"
         var completedId: String? = null

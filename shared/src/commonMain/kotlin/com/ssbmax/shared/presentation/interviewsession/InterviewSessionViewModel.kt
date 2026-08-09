@@ -69,6 +69,11 @@ class InterviewSessionViewModel(
     private var sessionId: String? = null
 
     /** Starts loading the session. Must be called once, e.g. from the screen's `LaunchedEffect(sessionId)`. */
+    fun retryLoadSession(sessionId: String) {
+        this.sessionId = null
+        loadSession(sessionId)
+    }
+
     fun loadSession(sessionId: String) {
         if (this.sessionId != null) return // already loading/loaded
         this.sessionId = sessionId

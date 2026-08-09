@@ -8,6 +8,7 @@ import com.ssbmax.shared.presentation.testing.FakeGTORepository
 import com.ssbmax.shared.presentation.testing.FakeInterviewRepository
 import com.ssbmax.shared.presentation.testing.FakeNotificationRepository
 import com.ssbmax.shared.presentation.testing.FakeSubmissionRepository
+import com.ssbmax.shared.presentation.testing.FakeTestContentRepository
 import com.ssbmax.shared.presentation.testing.FakeTestProgressRepository
 import com.ssbmax.shared.presentation.testing.FakeUserProfileRepository
 import com.ssbmax.shared.presentation.testing.RecordingAnalyticsTracker
@@ -60,6 +61,7 @@ class StudentHomeViewModelTest {
         authRepository = authRepository,
         userProfileRepository = userProfileRepository,
         testProgressRepository = testProgressRepository,
+        testContentRepository = FakeTestContentRepository(),
         getOLQDashboard = GetOLQDashboardUseCase(
             submissionRepository = submissionRepository,
             gtoRepository = FakeGTORepository(),

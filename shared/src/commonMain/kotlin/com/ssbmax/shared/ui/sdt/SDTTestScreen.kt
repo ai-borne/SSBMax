@@ -14,7 +14,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.SDTPhase
@@ -50,6 +52,7 @@ import ssbmax.shared.generated.resources.sdt_loading
  * the timer expiry straight into REVIEW without an interstitial dialog,
  * confirmed by reading the real `SDTTestViewModel.startTimer()`.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SDTTestScreen(
     testId: String,
@@ -70,6 +73,13 @@ fun SDTTestScreen(
         if (uiState.isSubmitted && uiState.submissionId != null && uiState.subscriptionType != null) {
             onTestComplete(uiState.submissionId!!, uiState.subscriptionType!!)
         }
+    }
+
+    // Hardware/predictive back must go through the same exit path as the in-progress "exit"
+    // action -- otherwise it silently pops the nav stack and leaves the durable test_sessions
+    // doc stuck ACTIVE (see PPDTTestScreen's identical fix for the same bug).
+    BackHandler(enabled = uiState.questions.isNotEmpty() && !uiState.isSubmitted) {
+        showExitDialog = true
     }
 
     if (uiState.isLimitReached) {
@@ -123,7 +133,7 @@ fun SDTTestScreen(
     if (showExitDialog) {
         SDTExitDialog(
             onDismiss = { showExitDialog = false },
-            onExit = { showExitDialog = false; onNavigateBack() }
+            onExit = { showExitDialog = false; viewModel.pauseTest(); onNavigateBack() }
         )
     }
 

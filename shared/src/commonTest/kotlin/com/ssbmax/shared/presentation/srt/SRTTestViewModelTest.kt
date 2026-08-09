@@ -226,4 +226,65 @@ class SRTTestViewModelTest {
         assertEquals(TestError.SUBMIT_FAILED, state.error)
         viewModel.clearForTest() // see the timer note on the first startTest() test
     }
+
+    // Regression coverage for the "stuck ACTIVE test_sessions doc" incident (fixed for PPDT/OIR
+    // in a prior commit): a successful SRT submission must terminate the durable session created
+    // by loadTest(), or retaking SRT is blocked for up to its 2-hour expiresAt window.
+    @Test
+    fun `submitTest completes the durable test session on success`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        viewModel.loadTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.startTest()
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.submitTest()
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals(listOf("session-1"), testSessionRepository.completedSessionIds)
+        assertTrue(testSessionRepository.abandonedSessionIds.isEmpty())
+        viewModel.clearForTest()
+    }
+
+    @Test
+    fun `submitTest failure does NOT complete the durable session`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        viewModel.loadTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.startTest()
+        testDispatcher.scheduler.runCurrent()
+        submissionRepository.submitResult = Result.failure(Exception("network down"))
+
+        viewModel.submitTest()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(testSessionRepository.completedSessionIds.isEmpty())
+        viewModel.clearForTest()
+    }
+
+    // Exiting a test (X button/hardware back -> pauseTest()) must abandon the durable session so
+    // the user can retake SRT without waiting out its 2-hour expiresAt window -- previously SRT's
+    // exit dialog navigated back directly and never touched the ViewModel at all.
+    @Test
+    fun `pauseTest abandons the durable test session`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        viewModel.loadTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.pauseTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(listOf("session-1"), testSessionRepository.abandonedSessionIds)
+        assertTrue(testSessionRepository.completedSessionIds.isEmpty())
+    }
+
+    @Test
+    fun `pauseTest with no loaded session does not touch the session repository`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+
+        viewModel.pauseTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(testSessionRepository.abandonedSessionIds.isEmpty())
+    }
 }

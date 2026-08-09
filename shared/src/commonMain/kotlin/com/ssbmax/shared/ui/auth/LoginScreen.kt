@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.ssbmax.shared.ui.common.loadingSemantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -141,6 +142,7 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .height(56.dp)
                     .testTag("google_signin_button"),
+                // Google branding requires the official white/black button treatment.
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
                     contentColor = Color.Black
@@ -155,7 +157,8 @@ fun LoginScreen(
                     CircularProgressIndicator(
                         modifier = Modifier
                             .height(24.dp)
-                            .testTag("loading_indicator"),
+                            .testTag("loading_indicator")
+                            .loadingSemantics(stringResource(Res.string.login_continue_google)),
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else {

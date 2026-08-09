@@ -29,13 +29,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ssbmax.shared.presentation.profile.StudentProfileUiState
 import com.ssbmax.shared.presentation.profile.StudentProfileViewModel
+import com.ssbmax.shared.ui.common.loadingSemantics
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.profile_phase1_screening
 import ssbmax.shared.generated.resources.profile_phase2_assessment
 import ssbmax.shared.generated.resources.profile_phase_progress_title
+import ssbmax.shared.generated.resources.profile_loading
 import ssbmax.shared.generated.resources.profile_settings
 import ssbmax.shared.generated.resources.profile_title
 
@@ -80,66 +83,61 @@ fun StudentProfileScreen(
     ) { paddingValues ->
         if (uiState.isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .loadingSemantics(stringResource(Res.string.profile_loading)),
                 contentAlignment = Alignment.Center
             ) { CircularProgressIndicator() }
             return@Scaffold
         }
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                ProfileHeader(
-                    name = uiState.userName,
-                    email = uiState.userEmail,
-                    photoUrl = uiState.photoUrl,
-                    isPremium = uiState.isPremium
-                )
-            }
+        StudentProfileContent(
+            uiState = uiState,
+            paddingValues = paddingValues,
+            onNavigateToAchievements = onNavigateToAchievements,
+            onNavigateToHistory = onNavigateToHistory
+        )
+    }
+}
 
-            item {
-                QuickStatsCard(
-                    totalTests = uiState.totalTestsAttempted,
-                    studyHours = uiState.totalStudyHours,
-                    streakDays = uiState.streakDays,
-                    averageScore = uiState.averageScore
-                )
-            }
-
-            item {
-                PhaseProgressCard(
-                    phase1Progress = uiState.phase1Completion,
-                    phase2Progress = uiState.phase2Completion
-                )
-            }
-
-            item {
-                AchievementsCard(
-                    achievements = uiState.recentAchievements,
-                    onViewAll = onNavigateToAchievements
-                )
-            }
-
-            item {
-                TestHistoryCard(
-                    recentTests = uiState.recentTests,
-                    onViewAll = onNavigateToHistory
-                )
-            }
-
-            item {
-                AccountActionsCard(
-                    isPremium = uiState.isPremium,
-                    onUpgradeToPremium = { /* TODO: matches Android original's unwired action */ },
-                    onEditProfile = { /* TODO: matches Android original's unwired action */ },
-                    onViewBadges = onNavigateToAchievements
-                )
-            }
+@Composable
+private fun StudentProfileContent(
+    uiState: StudentProfileUiState,
+    paddingValues: PaddingValues,
+    onNavigateToAchievements: () -> Unit,
+    onNavigateToHistory: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            ProfileHeader(uiState.userName, uiState.userEmail, uiState.photoUrl, uiState.isPremium)
+        }
+        item {
+            QuickStatsCard(
+                totalTests = uiState.totalTestsAttempted,
+                studyHours = uiState.totalStudyHours,
+                streakDays = uiState.streakDays,
+                averageScore = uiState.averageScore
+            )
+        }
+        item { PhaseProgressCard(uiState.phase1Completion, uiState.phase2Completion) }
+        item {
+            AchievementsCard(uiState.recentAchievements, onNavigateToAchievements)
+        }
+        item { TestHistoryCard(uiState.recentTests, onNavigateToHistory) }
+        item {
+            AccountActionsCard(
+                isPremium = uiState.isPremium,
+                onUpgradeToPremium = {},
+                onEditProfile = {},
+                onViewBadges = onNavigateToAchievements
+            )
         }
     }
 }

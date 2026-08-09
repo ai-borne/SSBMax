@@ -134,6 +134,18 @@ class SRTTestScreenUiTest {
     }
 
     @Test
+    fun activePhase_exposesRemainingTimeSemantics() = runComposeUiTest {
+        uiStateFlow.value = uiStateFlow.value.copy(
+            phase = SRTPhase.IN_PROGRESS,
+            currentSituationIndex = 0,
+            timeRemaining = 120
+        )
+        setContent { SRTTestScreen(testId = "test-123", viewModel = mockViewModel) }
+
+        onNodeWithContentDescription("Time remaining: 120 seconds").assertIsDisplayed()
+    }
+
+    @Test
     fun completedTest_triggersCallback() = runComposeUiTest {
         val submissionId = "sub-srt-789"
         var completedId: String? = null

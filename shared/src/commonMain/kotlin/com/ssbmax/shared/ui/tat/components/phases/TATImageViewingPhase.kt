@@ -21,16 +21,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ssbmax.shared.ui.common.ensureCoilNetworkFetcherRegistered
+import com.ssbmax.shared.ui.common.progressSemantics
+import com.ssbmax.shared.ui.common.timerSemantics
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.tat_blank_slide_instruction
 import ssbmax.shared.generated.resources.tat_image_number
+import ssbmax.shared.generated.resources.tat_progress_content_description
+import ssbmax.shared.generated.resources.tat_timer_content_description
 import ssbmax.shared.generated.resources.tat_observe_carefully
 import ssbmax.shared.generated.resources.tat_picture_content_description
 
@@ -56,6 +61,11 @@ fun TATImageViewingPhase(
     sequenceNumber: Int,
     totalSeconds: Int = 30
 ) {
+    val timerDescription = stringResource(Res.string.tat_timer_content_description, timeRemaining)
+    val progressDescription = stringResource(
+        Res.string.tat_progress_content_description,
+        (timeRemaining * 100 / totalSeconds).coerceIn(0, 100)
+    )
     ensureCoilNetworkFetcherRegistered()
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -82,7 +92,12 @@ fun TATImageViewingPhase(
                     Text(
                         "${timeRemaining}s",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = if (timeRemaining <= 10) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        color = if (timeRemaining <= 10) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.timerSemantics(
+                            description = timerDescription,
+                            remainingSeconds = timeRemaining,
+                            totalSeconds = totalSeconds
+                        )
                     )
                 }
             }
@@ -98,7 +113,13 @@ fun TATImageViewingPhase(
 
         LinearProgressIndicator(
             progress = { timeRemaining / totalSeconds.toFloat() },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .progressSemantics(
+                    description = progressDescription,
+                    current = timeRemaining.toFloat(),
+                    maximum = totalSeconds.toFloat()
+                ),
             color = if (timeRemaining < 10) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
         )
     }

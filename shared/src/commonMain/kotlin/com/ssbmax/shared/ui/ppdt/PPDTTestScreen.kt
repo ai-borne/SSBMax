@@ -17,7 +17,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.PPDTPhase
@@ -57,7 +59,7 @@ import ssbmax.shared.generated.resources.ppdt_loading
  * `OIRTestScreen` inlines its loading/error states, per that screen's own
  * documented precedent.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun PPDTTestScreen(
     testId: String,
@@ -72,6 +74,13 @@ fun PPDTTestScreen(
 
     LaunchedEffect(testId) {
         viewModel.loadTest(testId)
+    }
+
+    // Hardware/predictive back must go through the same exit path as the X button --
+    // otherwise it bypasses pauseTest()'s abandonTestSession() call and leaves the durable
+    // test_sessions doc stuck ACTIVE (see PPDTTestViewModel.pauseTest doc).
+    BackHandler(enabled = uiState.session != null && !uiState.isSubmitted) {
+        showExitDialog = true
     }
 
     LaunchedEffect(uiState.isSubmitted) {

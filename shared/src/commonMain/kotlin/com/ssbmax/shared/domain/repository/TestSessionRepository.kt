@@ -17,6 +17,14 @@ interface TestSessionRepository {
      */
     suspend fun createTestSession(userId: String, testId: String, testType: TestType): Result<String>
 
-    /** Ends the test session, invalidating further access to test content. */
-    suspend fun endTestSession(sessionId: String): Result<Unit>
+    /** Marks a successfully submitted session as terminal. */
+    suspend fun completeTestSession(sessionId: String): Result<Unit>
+
+    /** Marks an exited session as abandoned and invalidates content access. */
+    suspend fun abandonTestSession(sessionId: String): Result<Unit>
+
+    /** Marks an unsubmitted session expired after its absolute deadline. */
+    suspend fun expireTestSession(sessionId: String): Result<Unit>
+
+
 }

@@ -27,6 +27,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import org.jetbrains.compose.resources.stringResource
@@ -37,6 +42,9 @@ import com.ssbmax.shared.domain.model.OIROption
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.oir_correct
 import ssbmax.shared.generated.resources.oir_incorrect
+import ssbmax.shared.generated.resources.oir_option_correct
+import ssbmax.shared.generated.resources.oir_option_incorrect
+import ssbmax.shared.generated.resources.oir_option_selected
 
 /**
  * Option-card + post-answer feedback-card composables for [com.ssbmax.shared.ui.oir.components.OIRQuestionView].
@@ -66,12 +74,18 @@ internal fun OIROptionCard(
         else -> MaterialTheme.colorScheme.outline
     }
 
+    val semanticState = optionSemanticState(isCorrect, isWrong, isSelected)
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(if (isDimmed) 0.4f else 1f)
             .border(2.dp, borderColor, MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {
+                role = if (isMultiSelect) Role.Checkbox else Role.RadioButton
+                selected = isSelected
+                if (semanticState != null) stateDescription = semanticState
+            },
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Row(
@@ -85,6 +99,14 @@ internal fun OIROptionCard(
             OIROptionIndicator(isCorrect, isWrong, isSelected, isMultiSelect)
         }
     }
+}
+
+@Composable
+private fun optionSemanticState(isCorrect: Boolean, isWrong: Boolean, isSelected: Boolean): String? = when {
+    isCorrect -> stringResource(Res.string.oir_option_correct)
+    isWrong -> stringResource(Res.string.oir_option_incorrect)
+    isSelected -> stringResource(Res.string.oir_option_selected)
+    else -> null
 }
 
 @Composable

@@ -2,6 +2,7 @@ package com.ssbmax.shared.ui.profile
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import com.ssbmax.shared.presentation.profile.StudentProfileUiState
@@ -94,5 +95,6 @@ class StudentProfileScreenUiTest {
         setContent { StudentProfileScreen(viewModel = mockViewModel) }
 
         onNodeWithText("John Doe").assertDoesNotExist()
+        onNodeWithContentDescription("Loading profile").assertIsDisplayed()
     }
 }

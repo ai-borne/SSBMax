@@ -61,6 +61,7 @@ import ssbmax.shared.generated.resources.user_profile_title_onboarding
  * gesture) — no custom expect/actual shim needed.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@Suppress("DEPRECATION") // commonMain back-handler bridge; NavigationEventHandler has no Compose adapter yet.
 @Composable
 fun UserProfileScreen(
     onNavigateBack: () -> Unit,

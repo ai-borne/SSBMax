@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.oir_exit_test
 import ssbmax.shared.generated.resources.oir_question_format
+import ssbmax.shared.generated.resources.oir_timer_content_description
 
 /**
  * KMP port of `app/.../ui/tests/oir/components/OIRTestTopBar.kt`. One real
@@ -90,7 +91,7 @@ internal fun OIRTimerChip(timeRemainingSeconds: Int) {
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Timer,
-                contentDescription = null,
+                contentDescription = stringResource(Res.string.oir_timer_content_description),
                 modifier = Modifier.size(18.dp)
             )
         },

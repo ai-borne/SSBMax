@@ -75,6 +75,7 @@ data class OIRTestSession(
     val currentQuestionIndex: Int = 0,
     val startTime: Long,
     val timeRemainingSeconds: Int,
+    val expiresAt: Long = startTime + timeRemainingSeconds * 1000L,
     val isPaused: Boolean = false,
     val isCompleted: Boolean = false,
 ) {
@@ -94,6 +95,7 @@ data class OIRTestSession(
         get() = questions.size - answers.size
 }
 
+@Suppress("DEPRECATION")
 data class OIRTestResult(
     val testId: String,
     val sessionId: String,
@@ -107,7 +109,8 @@ data class OIRTestResult(
     val rawScore: Int,
     val percentageScore: Float,
     val categoryScores: Map<OIRQuestionType, CategoryScore>,
-    val difficultyBreakdown: Map<QuestionDifficulty, DifficultyScore>,
+    @Deprecated("Legacy OIR field; no longer calculated for new results")
+    val difficultyBreakdown: Map<QuestionDifficulty, DifficultyScore> = emptyMap(),
     val answeredQuestions: List<OIRAnsweredQuestion>,
     val completedAt: Long,
 ) {
@@ -132,6 +135,7 @@ data class CategoryScore(
     val averageTimeSeconds: Int,
 )
 
+@Deprecated("Legacy OIR field retained for historical result compatibility")
 data class DifficultyScore(
     val difficulty: QuestionDifficulty,
     val totalQuestions: Int,

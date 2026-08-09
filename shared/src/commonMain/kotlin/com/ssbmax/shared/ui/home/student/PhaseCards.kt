@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.domain.model.Phase1Progress
 import com.ssbmax.shared.domain.model.Phase2Progress
-import com.ssbmax.shared.ui.theme.SSBColors
+
 import com.ssbmax.shared.ui.theme.Spacing
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
@@ -53,7 +53,7 @@ internal fun Phase1Card(
     onTopicClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val phaseColor = SSBColors.Info
+    val phaseColor = MaterialTheme.colorScheme.primary
 
     Card(
         modifier = modifier
@@ -138,7 +138,7 @@ internal fun Phase2Card(
     onTopicClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val phaseColor = SSBColors.Success
+    val phaseColor = MaterialTheme.colorScheme.secondary
 
     Card(
         modifier = modifier

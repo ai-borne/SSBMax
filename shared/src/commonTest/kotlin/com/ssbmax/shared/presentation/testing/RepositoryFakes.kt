@@ -80,13 +80,17 @@ class FakeSubscriptionRepository : SubscriptionRepository {
 
 class FakeTestContentRepository : TestContentRepository {
     var oirQuestionsResult: Result<List<OIRQuestion>> = Result.success(emptyList())
+    var getOIRQuestionsCallCount = 0
     var ppdtQuestionResult: Result<PPDTQuestion> = Result.failure(UnsupportedOperationException("not stubbed"))
     var gpeQuestionsResult: Result<List<com.ssbmax.shared.domain.model.GPEQuestion>> = Result.success(emptyList())
     var getRandomLecturetteTopicsResult: Result<List<String>> = Result.success(emptyList())
     var clearCacheCalls = 0
 
     override suspend fun getOIRQuestions(testId: String) = oirQuestionsResult
-    override suspend fun getOIRTestQuestions(count: Int, difficulty: String?) = oirQuestionsResult
+    override suspend fun getOIRTestQuestions(count: Int): Result<List<OIRQuestion>> {
+        getOIRQuestionsCallCount++
+        return oirQuestionsResult
+    }
     override suspend fun initializeOIRCache(): Result<Unit> = Result.success(Unit)
     override suspend fun getOIRCacheStatus(): CacheStatus = CacheStatus(
         cachedQuestions = 0, batchesDownloaded = 0, lastSyncTime = null,
@@ -112,10 +116,29 @@ class FakeTestSessionRepository : TestSessionRepository {
     var endSessionResult: Result<Unit> = Result.success(Unit)
     var endedSessionIds = mutableListOf<String>()
 
+    // Split out from endedSessionIds so tests can assert WHICH terminal transition fired
+    // (e.g. abandon-on-exit vs. complete-on-submit), not just that some transition happened.
+    var completedSessionIds = mutableListOf<String>()
+    var abandonedSessionIds = mutableListOf<String>()
+    var expiredSessionIds = mutableListOf<String>()
+
     override suspend fun hasActiveTestSession(userId: String, testId: String) = hasActiveSessionResult
     override suspend fun createTestSession(userId: String, testId: String, testType: TestType) = createSessionResult
-    override suspend fun endTestSession(sessionId: String): Result<Unit> {
+    override suspend fun completeTestSession(sessionId: String): Result<Unit> {
         endedSessionIds += sessionId
+        completedSessionIds += sessionId
+        return endSessionResult
+    }
+
+    override suspend fun abandonTestSession(sessionId: String): Result<Unit> {
+        endedSessionIds += sessionId
+        abandonedSessionIds += sessionId
+        return endSessionResult
+    }
+
+    override suspend fun expireTestSession(sessionId: String): Result<Unit> {
+        endedSessionIds += sessionId
+        expiredSessionIds += sessionId
         return endSessionResult
     }
 }

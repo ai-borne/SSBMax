@@ -30,7 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -208,7 +208,7 @@ fun OLQDashboardCard(
                 OLQStrengthsSection(
                     title = stringResource(Res.string.dashboard_your_strengths),
                     olqs = processedData.topOLQs,
-                    color = Color(0xFF4CAF50) // Green
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
 
@@ -219,7 +219,7 @@ fun OLQDashboardCard(
                 OLQStrengthsSection(
                     title = stringResource(Res.string.dashboard_focus_areas),
                     olqs = processedData.improvementOLQs,
-                    color = Color(0xFFFFC107) // Amber
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
 

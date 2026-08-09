@@ -10,6 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.presentation.common.TestError
@@ -33,7 +36,12 @@ import ssbmax.shared.generated.resources.test_error_submit_failed
  */
 @Composable
 fun TestErrorState(error: TestError, onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .semantics { liveRegion = LiveRegionMode.Polite },
+        contentAlignment = Alignment.Center
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(text = testErrorMessage(error), style = MaterialTheme.typography.bodyMedium)
             Button(onClick = onRetry) { Text(stringResource(Res.string.test_error_retry_button)) }

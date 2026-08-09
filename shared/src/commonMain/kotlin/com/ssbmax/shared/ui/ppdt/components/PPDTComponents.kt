@@ -13,8 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
+
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,13 +26,17 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.domain.model.PPDTPhase
+import com.ssbmax.shared.ui.common.timerSemantics
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.ppdt_exit_cd
+import ssbmax.shared.generated.resources.ppdt_progress_content_description
 import ssbmax.shared.generated.resources.ppdt_review_button
+import ssbmax.shared.generated.resources.ppdt_timer_content_description
 import ssbmax.shared.generated.resources.ppdt_submit_button
 import ssbmax.shared.generated.resources.ppdt_topbar_title
 
@@ -77,27 +80,32 @@ fun PPDTTopBar(
 
 @Composable
 fun TimerChip(timeRemainingSeconds: Int) {
+    val timerDescription = stringResource(Res.string.ppdt_timer_content_description, timeRemainingSeconds)
     val minutes = timeRemainingSeconds / 60
     val seconds = timeRemainingSeconds % 60
     val isLowTime = timeRemainingSeconds < 30
 
-    AssistChip(
-        onClick = { },
-        label = {
+    Surface(
+        modifier = Modifier.timerSemantics(
+            description = timerDescription,
+            remainingSeconds = timeRemainingSeconds,
+            totalSeconds = 30
+        ),
+        shape = MaterialTheme.shapes.small,
+        color = if (isLowTime) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = if (isLowTime) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(imageVector = Icons.Default.Timer, contentDescription = null, modifier = Modifier.size(18.dp))
             Text(
                 text = "${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}",
                 fontWeight = FontWeight.Bold
             )
-        },
-        leadingIcon = {
-            Icon(imageVector = Icons.Default.Timer, contentDescription = null, modifier = Modifier.size(18.dp))
-        },
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = if (isLowTime) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
-            labelColor = if (isLowTime) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer,
-            leadingIconContentColor = if (isLowTime) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer
-        )
-    )
+        }
+    }
 }
 
 @Composable

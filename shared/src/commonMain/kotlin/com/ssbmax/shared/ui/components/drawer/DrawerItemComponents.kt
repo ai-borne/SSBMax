@@ -20,6 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
@@ -71,7 +75,10 @@ internal fun DrawerMenuItem(
     val verticalPadding = if (isHomeButton) 16.dp else 12.dp
 
     Surface(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { selected = isSelected },
         color = backgroundColor
     ) {
         Row(
@@ -94,7 +101,15 @@ internal fun DrawerExpandableSection(
     content: @Composable () -> Unit
 ) {
     Column {
-        Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle)) {
+        val expansionDescription = stringResource(
+            if (expanded) Res.string.cd_collapse else Res.string.cd_expand
+        )
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(role = Role.Button, onClick = onToggle)
+                .semantics { stateDescription = expansionDescription }
+        ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -108,11 +123,7 @@ internal fun DrawerExpandableSection(
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) {
-                        stringResource(Res.string.cd_collapse)
-                    } else {
-                        stringResource(Res.string.cd_expand)
-                    }
+                    contentDescription = null
                 )
             }
         }
@@ -131,7 +142,11 @@ internal fun DrawerSubMenuItem(
     icon: String,
     onClick: () -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+    ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically

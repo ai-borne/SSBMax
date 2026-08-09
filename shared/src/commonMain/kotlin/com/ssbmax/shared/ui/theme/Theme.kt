@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import com.ssbmax.shared.domain.model.AppTheme
 
 /**
@@ -97,7 +98,11 @@ fun SSBMaxTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = SSBTypography,
-        content = content
-    )
+        typography = SSBTypography
+    ) {
+        CompositionLocalProvider(
+            LocalSemanticColors provides colorScheme.toSemanticColors(),
+            content = content
+        )
+    }
 }

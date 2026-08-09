@@ -35,11 +35,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.presentation.interviewsession.InterviewSessionUiState
+import com.ssbmax.shared.ui.common.loadingSemantics
+import com.ssbmax.shared.ui.common.progressSemantics
 import com.ssbmax.shared.presentation.interviewsession.InterviewSessionViewModel
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -54,6 +56,9 @@ import ssbmax.shared.generated.resources.interview_error_generic
 import ssbmax.shared.generated.resources.interview_exit_confirm
 import ssbmax.shared.generated.resources.interview_exit_message
 import ssbmax.shared.generated.resources.interview_exit_title
+import ssbmax.shared.generated.resources.interview_progress_content_description
+import ssbmax.shared.generated.resources.interview_button_retry
+import ssbmax.shared.generated.resources.interview_generating_questions
 import ssbmax.shared.generated.resources.interview_question_number
 import ssbmax.shared.generated.resources.interview_results_pending_message
 import ssbmax.shared.generated.resources.interview_results_pending_title
@@ -88,6 +93,7 @@ fun InterviewSessionScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     var showExitDialog by remember { mutableStateOf(false) }
     var showPendingDialog by remember { mutableStateOf(false) }
     var hasNavigated by remember { mutableStateOf(false) }
@@ -163,7 +169,7 @@ fun InterviewSessionScreen(
                         Icon(
                             imageVector = if (uiState.isTTSMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                             contentDescription = if (uiState.isTTSMuted) stringResource(Res.string.interview_cd_unmute_tts) else stringResource(Res.string.interview_cd_mute_tts),
-                            tint = if (uiState.isTTSMuted) Color.Red else MaterialTheme.colorScheme.primary
+                            tint = if (uiState.isTTSMuted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                         )
                     }
                     IconButton(onClick = {
@@ -178,8 +184,13 @@ fun InterviewSessionScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when {
-                uiState.isLoading -> LoadingContent()
-                uiState.error != null -> ErrorContent(uiState.error)
+                uiState.isLoading -> LoadingContent(
+                    uiState.loadingMessage ?: stringResource(Res.string.interview_generating_questions)
+                )
+                uiState.error != null -> ErrorContent(
+                    error = uiState.error,
+                    onRetry = { viewModel.retryLoadSession(sessionId) }
+                )
                 uiState.currentQuestion != null -> InterviewContent(uiState = uiState, viewModel = viewModel)
             }
         }
@@ -187,22 +198,44 @@ fun InterviewSessionScreen(
 }
 
 @Composable
-private fun LoadingContent() = Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+private fun LoadingContent(message: String) = Box(
+    Modifier
+        .fillMaxSize()
+        .loadingSemantics(message),
+    contentAlignment = Alignment.Center
+) { CircularProgressIndicator() }
 
 @Composable
-private fun ErrorContent(error: String?) = Column(
+private fun ErrorContent(error: String?, onRetry: () -> Unit) = Column(
     Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
-) { Text(error ?: stringResource(Res.string.interview_error_generic), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error) }
+) {
+    Text(
+        text = error ?: stringResource(Res.string.interview_error_generic),
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.error
+    )
+    Button(onClick = onRetry) { Text(stringResource(Res.string.interview_button_retry)) }
+}
 
 @Composable
 private fun InterviewContent(uiState: InterviewSessionUiState, viewModel: InterviewSessionViewModel) {
+    val progressDescription = stringResource(
+        Res.string.interview_progress_content_description,
+        uiState.getProgressPercentage().toInt().coerceIn(0, 100)
+    )
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         LinearProgressIndicator(
             progress = { uiState.getProgressPercentage() / 100f },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .progressSemantics(
+                    description = progressDescription,
+                    current = uiState.getProgressPercentage().toFloat(),
+                    maximum = 100f
+                )
         )
 
         QuestionCard(

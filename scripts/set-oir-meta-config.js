@@ -11,9 +11,10 @@
  * Usage:
  *   node set-oir-meta-config.js                       # DRY RUN (default)
  *   node set-oir-meta-config.js --commit              # write the meta doc
- *   node set-oir-meta-config.js --version 2 --batches 28 [--commit]
+ *   node set-oir-meta-config.js --version 4 --batches 28 [--commit]
  *
- * Defaults: contentVersion=2, batchCount=28 (20 original + 8 Part-3 batches).
+ * Defaults: contentVersion=4, batchCount=28 (20 practice + 8 topic-family batches).
+ * A committed target lower than the current remote version is rejected.
  * Live write requires the service account (~/Downloads/SSBMax/firebase-admin-key.json
  * or FIREBASE_SERVICE_ACCOUNT=/path).
  */
@@ -27,10 +28,23 @@ const flag = (name, def) => {
   const i = argv.indexOf(name);
   return i >= 0 && argv[i + 1] ? Number(argv[i + 1]) : def;
 };
-const contentVersion = flag('--version', 2);
+const contentVersion = flag('--version', 4);
 const batchCount = flag('--batches', 28);
 
+if (!Number.isInteger(contentVersion) || contentVersion < 1 ||
+    !Number.isInteger(batchCount) || batchCount < 1) {
+  console.error('❌ --version and --batches must be positive integers');
+  process.exit(1);
+}
+
 async function main() {
+  if (!commit) {
+    console.log(`Target meta: { contentVersion: ${contentVersion}, batchCount: ${batchCount} }`);
+    console.log('🧪 DRY RUN (default) — no credentials, network, or write required.');
+    console.log('   Re-run with --commit to read the current remote version and publish.');
+    return;
+  }
+
   const admin = require('firebase-admin');
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT ||
     path.join(process.env.HOME, 'Downloads/SSBMax/firebase-admin-key.json');
@@ -46,19 +60,25 @@ async function main() {
   console.log(`Current meta: ${current.exists ? JSON.stringify(current.data()) : '(none)'}`);
   console.log(`Target  meta: { contentVersion: ${contentVersion}, batchCount: ${batchCount} }`);
 
-  if (!commit) {
-    console.log('🧪 DRY RUN (default) — no write. Re-run with --commit to publish.');
-    console.log('   Effect on clients: every device whose stored contentVersion != ' +
-      `${contentVersion} will clear its OIR cache and re-download batch_pdf_001..${String(batchCount).padStart(3, '0')}.`);
-    return;
+  const currentVersion = current.exists ? current.data().contentVersion : null;
+  if (commit && Number.isInteger(currentVersion) && contentVersion < currentVersion) {
+    throw new Error(`Refusing metadata downgrade from contentVersion ${currentVersion} to ${contentVersion}`);
   }
 
-  // merge:true — a stale meta doc may already hold legacy fields (distribution,
-  // difficulty_levels, etc.) written by older scripts. We only own contentVersion /
-  // batchCount; preserve everything else rather than overwrite the doc.
+  // These fields are the metadata SSOT consumed by operators and clients. Keep
+  // merge:true so unrelated legacy fields remain available during migration, but
+  // always correct the fields owned by this publisher in the same auditable write.
   await ref.set({
     contentVersion,
     batchCount,
+    batches: batchCount,
+    total_questions: 1255,
+    distribution: {
+      VERBAL_REASONING: 20,
+      NON_VERBAL_REASONING: 20,
+      NUMERICAL_ABILITY: 10,
+      SPATIAL_REASONING: admin.firestore.FieldValue.delete(),
+    },
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
   console.log(`✅ Wrote test_content/oir/meta/config = { contentVersion: ${contentVersion}, batchCount: ${batchCount} }`);

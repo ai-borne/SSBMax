@@ -9,10 +9,10 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "node --test test/*.test.js"
   },
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "keywords": [
     "firebase",

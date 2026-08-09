@@ -1,12 +1,8 @@
 package com.ssbmax.shared.data.repository
 
-import com.ssbmax.shared.domain.model.CategoryScore
-import com.ssbmax.shared.domain.model.DifficultyScore
-import com.ssbmax.shared.domain.model.OIRQuestionType
 import com.ssbmax.shared.domain.model.OIRSubmission
-import com.ssbmax.shared.domain.model.OIRTestResult
-import com.ssbmax.shared.domain.model.QuestionDifficulty
 import com.ssbmax.shared.domain.model.SubmissionStatus
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
 /**
@@ -26,6 +22,7 @@ internal data class OIRDataDto(
     val gradingTimestamp: Long? = null
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 internal data class OIRSubmissionTestResultDto(
     val testId: String = "",
@@ -40,7 +37,10 @@ internal data class OIRSubmissionTestResultDto(
     val rawScore: Int = 0,
     val percentageScore: Float = 0f,
     val categoryScores: Map<String, CategoryScoreDto> = emptyMap(),
+    /** Legacy Firestore field; decoded for compatibility but omitted from new writes. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val difficultyBreakdown: Map<String, DifficultyScoreDto> = emptyMap(),
+    val answeredQuestions: List<OirAnsweredQuestionDto> = emptyList(),
     val completedAt: Long = 0L,
     val passed: Boolean = false,
     val grade: String = "C"
@@ -61,13 +61,7 @@ internal data class DifficultyScoreDto(
     val percentage: Float = 0f
 )
 
-/**
- * Same real limitation as the Android original's `OIRPersonalSubmissionDataSource.parseOIRSubmission`:
- * per-question `answeredQuestions` are never round-tripped through this write path (the Android
- * `toFirestoreMap()` writes them, but `parseOIRSubmission` never reads them back — always
- * `emptyList()`). Ported faithfully, not fixed, since fixing it is a real behavior change out of
- * this slice's scope.
- */
+/** Canonical submission mapper preserving all result fields used by scoring and answer review. */
 internal fun OIRSubmission.toDataDto() = OIRDataDto(
     id = id,
     userId = userId,
@@ -87,9 +81,7 @@ internal fun OIRSubmission.toDataDto() = OIRDataDto(
         categoryScores = testResult.categoryScores.entries.associate { (category, score) ->
             category.name to CategoryScoreDto(score.totalQuestions, score.correctAnswers, score.percentage, score.averageTimeSeconds)
         },
-        difficultyBreakdown = testResult.difficultyBreakdown.entries.associate { (difficulty, score) ->
-            difficulty.name to DifficultyScoreDto(score.totalQuestions, score.correctAnswers, score.percentage)
-        },
+        answeredQuestions = testResult.answeredQuestions.map { it.toDto() },
         completedAt = testResult.completedAt,
         passed = testResult.passed,
         grade = testResult.grade.name
@@ -100,11 +92,8 @@ internal fun OIRSubmission.toDataDto() = OIRDataDto(
     gradingTimestamp = gradingTimestamp
 )
 
-internal fun OIRDataDto.toDomain(): OIRSubmission = OIRSubmission(
-    id = id,
-    userId = userId,
-    testId = testId,
-    testResult = OIRTestResult(
+internal fun OIRDataDto.toDomain(): OIRSubmission {
+    val result = OirTestResultDto(
         testId = testResult.testId,
         sessionId = testResult.sessionId,
         userId = testResult.userId,
@@ -116,21 +105,23 @@ internal fun OIRDataDto.toDomain(): OIRSubmission = OIRSubmission(
         timeTakenSeconds = testResult.timeTakenSeconds,
         rawScore = testResult.rawScore,
         percentageScore = testResult.percentageScore,
-        categoryScores = testResult.categoryScores.mapNotNull { (key, score) ->
-            runCatching { OIRQuestionType.valueOf(key) }.getOrNull()?.let {
-                it to CategoryScore(it, score.totalQuestions, score.correctAnswers, score.percentage, score.averageTimeSeconds)
-            }
-        }.toMap(),
-        difficultyBreakdown = testResult.difficultyBreakdown.mapNotNull { (key, score) ->
-            runCatching { QuestionDifficulty.valueOf(key) }.getOrNull()?.let {
-                it to DifficultyScore(it, score.totalQuestions, score.correctAnswers, score.percentage)
-            }
-        }.toMap(),
-        answeredQuestions = emptyList(),
+        categoryScores = testResult.categoryScores.mapValues { (_, score) ->
+            OirCategoryScoreDto(score.totalQuestions, score.correctAnswers, score.percentage, score.averageTimeSeconds)
+        },
+        difficultyBreakdown = testResult.difficultyBreakdown.mapValues { (_, score) ->
+            OirDifficultyScoreDto(score.totalQuestions, score.correctAnswers, score.percentage)
+        },
+        answeredQuestions = testResult.answeredQuestions,
         completedAt = testResult.completedAt
-    ),
-    submittedAt = submittedAt,
-    status = runCatching { SubmissionStatus.valueOf(status) }.getOrDefault(SubmissionStatus.SUBMITTED_PENDING_REVIEW),
-    gradedByInstructorId = gradedByInstructorId,
-    gradingTimestamp = gradingTimestamp
-)
+    )
+    return OIRSubmission(
+        id = id,
+        userId = userId,
+        testId = testId,
+        testResult = result.toDomain(),
+        submittedAt = submittedAt,
+        status = runCatching { SubmissionStatus.valueOf(status) }.getOrDefault(SubmissionStatus.SUBMITTED_PENDING_REVIEW),
+        gradedByInstructorId = gradedByInstructorId,
+        gradingTimestamp = gradingTimestamp
+    )
+}

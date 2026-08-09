@@ -400,7 +400,6 @@ def run(target_batches, pdf_path):
                 "options": [{"id": oid, "text": txt} for oid, (_, txt) in zip(opt_ids, options)],
                 "correctAnswerId": correct,
                 "explanation": solution,
-                "difficulty": "MEDIUM",
                 "timeSeconds": 60,
             }
             if fname:

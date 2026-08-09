@@ -34,6 +34,8 @@ data class SubscriptionUsageDto(
     val sdTestsUsed: Int = 0,
     val gtoTestsUsed: Int = 0,
     val interviewTestsUsed: Int = 0,
+    /** Stable submission IDs already charged for this month. */
+    val recordedSubmissionIds: List<String> = emptyList(),
     val lastUpdated: Long = 0
 )
 

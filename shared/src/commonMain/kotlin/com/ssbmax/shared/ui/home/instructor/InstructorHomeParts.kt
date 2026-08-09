@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,11 +52,6 @@ import ssbmax.shared.generated.resources.empty_no_students
 import ssbmax.shared.generated.resources.student_avg_score
 import ssbmax.shared.generated.resources.student_tests_count
 
-/**
- * `InstructorHomeScreen`'s sub-composables — split into this file purely to
- * stay under this repo's 300-line Quality Limit, no behavior change from
- * the Android original (`app/.../ui/home/instructor/InstructorHomeScreen.kt`).
- */
 @Composable
 internal fun StatCard(
     title: String,
@@ -66,10 +63,15 @@ internal fun StatCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.height(100.dp),
+        modifier = modifier
+            .height(100.dp)
+            .then(
+                onClick?.let { action ->
+                    Modifier.clickable(role = Role.Button, onClick = action)
+                } ?: Modifier
+            ),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
-        onClick = onClick ?: {}
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
     ) {
         Column(
             modifier = Modifier

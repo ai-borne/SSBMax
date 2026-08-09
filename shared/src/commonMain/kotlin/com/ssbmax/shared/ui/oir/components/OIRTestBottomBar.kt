@@ -28,6 +28,7 @@ import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.oir_next
 import ssbmax.shared.generated.resources.oir_previous
 import ssbmax.shared.generated.resources.oir_progress_format
+import ssbmax.shared.generated.resources.oir_skip
 import ssbmax.shared.generated.resources.oir_submit_test
 
 /**
@@ -38,6 +39,7 @@ internal fun OIRTestBottomBar(
     currentIndex: Int,
     totalQuestions: Int,
     isAnswered: Boolean,
+    isSubmitting: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onSubmit: () -> Unit
@@ -52,7 +54,7 @@ internal fun OIRTestBottomBar(
         ) {
             OutlinedButton(
                 onClick = onPrevious,
-                enabled = currentIndex > 0
+                enabled = currentIndex > 0 && !isSubmitting
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -72,9 +74,13 @@ internal fun OIRTestBottomBar(
             if (currentIndex < totalQuestions - 1) {
                 Button(
                     onClick = onNext,
-                    enabled = isAnswered
+                    enabled = !isSubmitting
                 ) {
-                    Text(stringResource(Res.string.oir_next))
+                    Text(
+                        stringResource(
+                            if (isAnswered) Res.string.oir_next else Res.string.oir_skip
+                        )
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -85,6 +91,7 @@ internal fun OIRTestBottomBar(
             } else {
                 Button(
                     onClick = onSubmit,
+                    enabled = !isSubmitting,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.tertiary
                     )
