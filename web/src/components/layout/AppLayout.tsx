@@ -1,5 +1,5 @@
 import { FC, ReactNode, useState, useEffect } from 'react';
-import { ShieldCheck, Menu, X, Sun, Moon, Monitor, Wifi, WifiOff, LayoutDashboard, FileText, BookOpen, BarChart3, Award, User, Settings, Download } from 'lucide-react';
+import { ShieldCheck, Menu, X, Sun, Moon, Monitor, Wifi, WifiOff, FileText, BookOpen, Settings, Download } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { useTheme } from '../../hooks/useTheme';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
@@ -63,12 +63,8 @@ export const AppLayout: FC<AppLayoutProps> = ({
 
   const navItems = [
     { id: 'home', label: strings.nav.landing, icon: ShieldCheck },
-    { id: 'dashboard', label: strings.nav.dashboard, icon: LayoutDashboard },
-    { id: 'practice', label: strings.nav.practice, icon: FileText },
     { id: 'study', label: strings.nav.study, icon: BookOpen },
-    { id: 'reports', label: strings.nav.reports, icon: BarChart3 },
-    { id: 'pricing', label: strings.nav.pricing, icon: Award },
-    { id: 'account', label: strings.nav.account, icon: User },
+    { id: 'tests', label: strings.nav.tests, icon: FileText },
     { id: 'settings', label: strings.nav.settings, icon: Settings }
   ];
 

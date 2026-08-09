@@ -48,13 +48,19 @@ export const PublicHeader: FC<PublicHeaderProps> = ({
 
         {/* Public Streamlined Links */}
         <nav className="hidden md:flex items-center gap-6">
-          <button onClick={() => handleLinkClick('practice')} className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors" data-testid="public-nav-practice">
-            {strings.nav.practice}
+          <button onClick={() => handleLinkClick('home')} className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors" data-testid="public-nav-home">
+            {strings.nav.landing}
           </button>
-          <button onClick={() => handleLinkClick('pricing')} className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors" data-testid="public-nav-pricing">
-            {strings.nav.pricing}
+          <button onClick={() => handleLinkClick('study')} className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors" data-testid="public-nav-study">
+            {strings.nav.study}
           </button>
-          <button onClick={() => handleLinkClick('practice')} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-sky-600 text-white hover:bg-sky-500 shadow-sm transition-colors" data-testid="public-cta-start-free">
+          <button onClick={() => handleLinkClick('tests')} className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors" data-testid="public-nav-tests">
+            {strings.nav.tests}
+          </button>
+          <button onClick={() => handleLinkClick('settings')} className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors" data-testid="public-nav-settings">
+            {strings.nav.settings}
+          </button>
+          <button onClick={() => handleLinkClick('tests')} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-sky-600 text-white hover:bg-sky-500 shadow-sm transition-colors" data-testid="public-cta-start-free">
             <span>{strings.landing.startFree}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
@@ -84,9 +90,11 @@ export const PublicHeader: FC<PublicHeaderProps> = ({
 
       {mobileMenuOpen && (
         <div className="absolute top-16 left-0 w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex flex-col gap-3 shadow-lg md:hidden" data-testid="public-mobile-menu">
-          <button onClick={() => handleLinkClick('practice')} className="text-left text-sm font-bold text-slate-800 dark:text-slate-200 py-1">{strings.nav.practice}</button>
-          <button onClick={() => handleLinkClick('pricing')} className="text-left text-sm font-bold text-slate-800 dark:text-slate-200 py-1">{strings.nav.pricing}</button>
-          <button onClick={() => handleLinkClick('practice')} className="w-full py-2 bg-sky-600 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5">{strings.landing.startFree}</button>
+          <button onClick={() => handleLinkClick('home')} className="text-left text-sm font-bold text-slate-800 dark:text-slate-200 py-1" data-testid="public-mobile-home">{strings.nav.landing}</button>
+          <button onClick={() => handleLinkClick('study')} className="text-left text-sm font-bold text-slate-800 dark:text-slate-200 py-1" data-testid="public-mobile-study">{strings.nav.study}</button>
+          <button onClick={() => handleLinkClick('tests')} className="text-left text-sm font-bold text-slate-800 dark:text-slate-200 py-1" data-testid="public-mobile-tests">{strings.nav.tests}</button>
+          <button onClick={() => handleLinkClick('settings')} className="text-left text-sm font-bold text-slate-800 dark:text-slate-200 py-1" data-testid="public-mobile-settings">{strings.nav.settings}</button>
+          <button onClick={() => handleLinkClick('tests')} className="w-full py-2 bg-sky-600 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5" data-testid="public-mobile-start-free">{strings.landing.startFree}</button>
         </div>
       )}
     </header>

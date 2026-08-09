@@ -76,14 +76,15 @@ export const commonStrings = {
     offlineNotice: 'Viewing cached study material'
   },
   nav: {
-    dashboard: 'Command Center',
     landing: 'Home',
+    study: 'Study',
+    tests: 'SSB Tests',
+    settings: 'Settings',
+    dashboard: 'Command Center',
     practice: 'SSB Tests',
-    study: 'Study Material',
     reports: 'AI Reports',
     pricing: 'Officer Pass',
     account: 'Account',
-    settings: 'Settings',
     privacy: 'Privacy Policy',
     terms: 'Terms & Refunds'
   },

@@ -28,9 +28,9 @@ export const HeroSection: FC<HeroSectionProps> = ({
 
         {/* Main Headline */}
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight mb-6">
-          {strings.landing.heroTitle.split('Officer Precision')[0]}
+          {strings.landing.heroTitle.split('AI')[0]}
           <span className="bg-gradient-to-r from-sky-600 via-blue-600 to-amber-600 dark:from-sky-400 dark:via-sky-300 dark:to-amber-400 bg-clip-text text-transparent">
-            Officer Precision
+            AI
           </span>
         </h1>
 
@@ -39,13 +39,15 @@ export const HeroSection: FC<HeroSectionProps> = ({
           {strings.landing.heroSubtitle}
         </p>
 
-        {/* 3-Step Guided Journey Badge */}
+        {/* 4-Step Guided Journey Badge */}
         <div className="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 mb-8" data-testid="guided-journey-steps">
           <span className="text-sky-600 dark:text-sky-400">{strings.landing.step1}</span>
           <span className="text-slate-400">➔</span>
           <span className="text-amber-600 dark:text-amber-400">{strings.landing.step2}</span>
           <span className="text-slate-400">➔</span>
-          <span className="text-emerald-600 dark:text-emerald-400">{strings.landing.step3}</span>
+          <span className="text-purple-600 dark:text-purple-400">{strings.landing.step3}</span>
+          <span className="text-slate-400">➔</span>
+          <span className="text-emerald-600 dark:text-emerald-400">{strings.landing.step4}</span>
         </div>
 
         {/* Call-to-Action Buttons */}

@@ -39,35 +39,31 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
     expect(screen.getByTestId('public-brand-logo')).toBeInTheDocument();
   });
 
-  it('navigates to practice, dashboard, study, reports, and pricing tabs', () => {
+  it('navigates across the 4 core tabs (home, study, tests, settings)', () => {
     render(<App />);
 
-    // Click Practice link on PublicHeader
-    fireEvent.click(screen.getByTestId('public-nav-practice'));
+    // Click SSB Tests link on PublicHeader
+    fireEvent.click(screen.getByTestId('public-nav-tests'));
     expect(screen.getByTestId('practice-tests-page')).toBeInTheDocument();
-
-    // Click Dashboard nav on Command Header
-    fireEvent.click(screen.getByTestId('nav-item-dashboard'));
-    expect(screen.getByTestId('candidate-dashboard')).toBeInTheDocument();
 
     // Click Study nav
     fireEvent.click(screen.getByTestId('nav-item-study'));
     expect(screen.getByTestId('study-material-page')).toBeInTheDocument();
 
-    // Click Reports nav
-    fireEvent.click(screen.getByTestId('nav-item-reports'));
-    expect(screen.getAllByText(strings.reportsPage.title)[0]).toBeInTheDocument();
+    // Click Settings nav
+    fireEvent.click(screen.getByTestId('nav-item-settings'));
+    expect(screen.getByTestId('settings-page')).toBeInTheDocument();
 
-    // Click Pricing nav
-    fireEvent.click(screen.getByTestId('nav-item-pricing'));
-    expect(screen.getByTestId('subscription-page')).toBeInTheDocument();
+    // Click Home nav
+    fireEvent.click(screen.getByTestId('nav-item-home'));
+    expect(screen.getByTestId('hero-section')).toBeInTheDocument();
   });
 
   it('launches full-screen test runner and hides header/footer, then exits back to app layout', async () => {
     render(<App />);
 
-    // Go to practice page from PublicHeader
-    fireEvent.click(screen.getByTestId('public-nav-practice'));
+    // Go to tests page from PublicHeader
+    fireEvent.click(screen.getByTestId('public-nav-tests'));
 
     // Launch free OIR test
     const launchOIRBtn = screen.getByTestId('launch-test-oir');
@@ -75,7 +71,7 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
 
     // Header and navigation should be hidden in test mode
     expect(screen.queryByTestId('brand-logo')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('nav-item-dashboard')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-item-home')).not.toBeInTheDocument();
 
     // Wait for loading indicator to finish and exit button to render
     await waitFor(() => {

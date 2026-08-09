@@ -1,12 +1,8 @@
 import { useState, useMemo, FC } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
 import { LandingPage } from './components/landing/LandingPage';
-import { CandidateDashboard } from './components/dashboard/CandidateDashboard';
 import { PracticeTestsPage } from './components/practice/PracticeTestsPage';
 import { StudyMaterialPage } from './components/study/StudyMaterialPage';
-import { AIReportsPage } from './components/reports/AIReportsPage';
-import { SubscriptionPage } from './components/subscription/SubscriptionPage';
-import { AccountPage } from './components/account/AccountPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { TermsAndRefunds } from './components/legal/TermsAndRefunds';
@@ -15,12 +11,12 @@ import { PsychologyTestRunner } from './components/testRunners/PsychologyTestRun
 import { OIRTestViewModel } from './viewmodels/OIRTestViewModel';
 import { PsychologyTestViewModel } from './viewmodels/PsychologyTestViewModel';
 import { ContentRepository } from './repositories/ContentRepository';
+import { useTabRouting } from './hooks/useTabRouting';
 
 export const App: FC = () => {
-  const [activeTab, setActiveTab] = useState('home');
+  const { activeTab, setActiveTab } = useTabRouting('home');
   const [activeTest, setActiveTest] = useState<string | null>(null);
-  const [isPaidMember, setIsPaidMember] = useState(false);
-  const [isGuest] = useState(true);
+  const [isPaidMember] = useState(false);
 
   const repository = useMemo(() => new ContentRepository(), []);
   const oirViewModel = useMemo(() => new OIRTestViewModel(repository), [repository]);
@@ -65,38 +61,14 @@ export const App: FC = () => {
               onStartTestClick={handleStartTest}
             />
           )}
-          {activeTab === 'dashboard' && (
-            <CandidateDashboard
-              onLaunchTest={handleStartTest}
-              onViewReports={() => setActiveTab('reports')}
-            />
-          )}
-          {activeTab === 'practice' && (
+          {activeTab === 'tests' && (
             <PracticeTestsPage
               isPaidMember={isPaidMember}
               onStartTest={handleStartTest}
-              onUpgrade={() => setActiveTab('pricing')}
+              onUpgrade={() => setActiveTab('settings')}
             />
           )}
           {activeTab === 'study' && <StudyMaterialPage />}
-          {activeTab === 'reports' && (
-            <AIReportsPage
-              isGuest={isGuest}
-              onSignIn={() => setActiveTab('account')}
-              onStartTest={() => handleStartTest('oir')}
-            />
-          )}
-          {activeTab === 'pricing' && (
-            <SubscriptionPage
-              onPaymentSuccess={() => {
-                setIsPaidMember(true);
-                setActiveTab('dashboard');
-              }}
-            />
-          )}
-          {activeTab === 'account' && (
-            <AccountPage onUpgradeClick={() => setActiveTab('pricing')} />
-          )}
           {activeTab === 'settings' && <SettingsPage />}
           {activeTab === 'privacy' && (
             <PrivacyPolicy onBackClick={handleBackToHome} />

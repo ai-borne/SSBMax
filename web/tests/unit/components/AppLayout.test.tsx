@@ -35,18 +35,17 @@ describe('AppLayout Component', () => {
 
   it('renders title, brand logo, and command navigation items for authenticated user', () => {
     render(
-      <AppLayout activeTab="dashboard" user={mockUser}>
+      <AppLayout activeTab="home" user={mockUser}>
         <div>Content</div>
       </AppLayout>
     );
 
     expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
     expect(screen.getAllByText(strings.header.title)[0]).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-dashboard')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-practice')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-home')).toBeInTheDocument();
     expect(screen.getByTestId('nav-item-study')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-reports')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-pricing')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-tests')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-settings')).toBeInTheDocument();
   });
 
   it('renders PublicHeader for unauthenticated user on landing page', () => {
@@ -63,15 +62,15 @@ describe('AppLayout Component', () => {
   it('triggers onTabChange callback when navigation item is clicked', () => {
     const handleTabChange = vi.fn();
     render(
-      <AppLayout activeTab="dashboard" user={mockUser} onTabChange={handleTabChange}>
+      <AppLayout activeTab="home" user={mockUser} onTabChange={handleTabChange}>
         <div>Content</div>
       </AppLayout>
     );
 
-    const practiceNav = screen.getByTestId('nav-item-practice');
-    fireEvent.click(practiceNav);
+    const testsNav = screen.getByTestId('nav-item-tests');
+    fireEvent.click(testsNav);
 
-    expect(handleTabChange).toHaveBeenCalledWith('practice');
+    expect(handleTabChange).toHaveBeenCalledWith('tests');
   });
 
   it('toggles mobile menu drawer when mobile menu button is clicked', () => {

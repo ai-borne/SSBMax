@@ -23,8 +23,10 @@ describe('PublicHeader Component', () => {
 
     expect(screen.getByTestId('public-header')).toBeInTheDocument();
     expect(screen.getByTestId('public-brand-logo')).toBeInTheDocument();
-    expect(screen.getByTestId('public-nav-practice')).toHaveTextContent(strings.nav.practice);
-    expect(screen.getByTestId('public-nav-pricing')).toHaveTextContent(strings.nav.pricing);
+    expect(screen.getByTestId('public-nav-home')).toHaveTextContent(strings.nav.landing);
+    expect(screen.getByTestId('public-nav-study')).toHaveTextContent(strings.nav.study);
+    expect(screen.getByTestId('public-nav-tests')).toHaveTextContent(strings.nav.tests);
+    expect(screen.getByTestId('public-nav-settings')).toHaveTextContent(strings.nav.settings);
     expect(screen.getByTestId('public-cta-start-free')).toBeInTheDocument();
     expect(screen.getByTestId('public-sign-in-button')).toHaveTextContent(strings.header.signIn);
   });
@@ -45,8 +47,8 @@ describe('PublicHeader Component', () => {
       />
     );
 
-    fireEvent.click(screen.getByTestId('public-nav-practice'));
-    expect(handleNavClick).toHaveBeenCalledWith('practice');
+    fireEvent.click(screen.getByTestId('public-nav-tests'));
+    expect(handleNavClick).toHaveBeenCalledWith('tests');
 
     fireEvent.click(screen.getByTestId('public-sign-in-button'));
     expect(handleSignIn).toHaveBeenCalled();
