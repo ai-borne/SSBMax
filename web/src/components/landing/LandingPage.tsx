@@ -1,4 +1,5 @@
 import { FC } from 'react';
+// Centralized string resources: strings.landing
 import { HeroSection } from './HeroSection';
 import { InteractiveSandbox } from './InteractiveSandbox';
 import { SampleDossierPreview } from './SampleDossierPreview';

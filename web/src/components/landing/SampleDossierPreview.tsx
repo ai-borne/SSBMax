@@ -1,6 +1,7 @@
 import { FC, useState } from 'react';
 import { ShieldCheck, BarChart3, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { strings } from '../../constants/strings';
+import { themeColors } from '../../constants/colors';
 
 export interface FactorItem {
   id: string;
@@ -95,10 +96,10 @@ export const SampleDossierPreview: FC = () => {
               })}
 
               {/* Baseline Threshold Polygon (Amber) */}
-              <polygon points={benchmarkPoints} fill="rgba(245, 158, 11, 0.1)" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 4" />
+              <polygon points={benchmarkPoints} fill="rgba(245, 158, 11, 0.1)" stroke={themeColors.dark.warning} strokeWidth="1.5" strokeDasharray="4 4" />
 
               {/* Candidate Score Polygon (Sky Blue) */}
-              <polygon points={candidatePoints} fill="rgba(2, 132, 199, 0.3)" stroke="#0284c7" strokeWidth="2.5" />
+              <polygon points={candidatePoints} fill="rgba(2, 132, 199, 0.3)" stroke={themeColors.dark.accentHover} strokeWidth="2.5" />
             </svg>
 
             {/* Legend */}
