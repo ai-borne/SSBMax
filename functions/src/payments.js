@@ -24,16 +24,22 @@ exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
   if (!keyId || !keySecret) {
-    // Development fallback mock order ID for testing when Razorpay credentials are unset
-    const mockOrderId = `order_mock_${Date.now()}_${userId.slice(0, 6)}`;
-    return {
-      success: true,
-      orderId: mockOrderId,
-      amount: amount,
-      currency: currency,
-      keyId: keyId || 'rzp_test_mockKey123',
-      notes: { userId, planId }
-    };
+    if (process.env.FUNCTIONS_EMULATOR === 'true') {
+      // Development fallback mock order ID for testing when Razorpay credentials are unset in emulator
+      const mockOrderId = `order_mock_${Date.now()}_${userId.slice(0, 6)}`;
+      return {
+        success: true,
+        orderId: mockOrderId,
+        amount: amount,
+        currency: currency,
+        keyId: keyId || 'rzp_test_mockKey123',
+        notes: { userId, planId }
+      };
+    }
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Razorpay payment credentials are missing in production environment'
+    );
   }
 
   try {

@@ -37,7 +37,12 @@ function timingSafeCompare(a, b) {
 exports.handleRazorpayWebhook = functions.https.onRequest(async (req, res) => {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
-  if (secret) {
+  if (!secret) {
+    if (process.env.FUNCTIONS_EMULATOR !== 'true') {
+      console.error('RAZORPAY_WEBHOOK_SECRET missing in production');
+      return res.status(500).json({ status: 'error', message: 'Webhook secret misconfigured' });
+    }
+  } else {
     const signature = req.headers['x-razorpay-signature'];
     if (!signature) {
       console.error('Missing Razorpay signature header');
@@ -65,56 +70,103 @@ exports.handleRazorpayWebhook = functions.https.onRequest(async (req, res) => {
     const userId = notes.userId;
     const planId = notes.planId || 'pro_monthly';
     const amountPaid = payment?.amount || 0;
+    const currency = payment?.currency || 'INR';
 
     if (!userId) {
       console.warn('Webhook warning: payment.captured event missing userId in notes');
       return res.status(200).json({ status: 'ok', warning: 'missing_user_id' });
     }
 
-    // Idempotency check: prevent replay attacks
-    const logRef = db.collection('webhook_logs').doc(eventId);
-    const logDoc = await logRef.get();
-    if (logDoc.exists) {
-      console.log(`Duplicate webhook event ${eventId} ignored (idempotent entry found)`);
-      return res.status(200).json({ status: 'ok', idempotent: true });
+    if (currency !== 'INR') {
+      console.error(`Invalid currency ${currency} for user ${userId}`);
+      return res.status(400).json({ status: 'error', message: 'Invalid currency' });
     }
 
-    // Server-side tier price verification
-    const expectedAmount = TIER_PRICES[planId] || TIER_PRICES.pro_monthly;
-    if (amountPaid < expectedAmount) {
-      console.error(`Underpayment detected for user ${userId}: paid ${amountPaid}, expected ${expectedAmount}`);
-      await logRef.set({
-        eventId,
-        userId,
-        status: 'failed_underpayment',
-        amountPaid,
-        expectedAmount,
-        processedAt: admin.firestore.FieldValue.serverTimestamp()
+    if (!payment?.id) {
+      console.error('Webhook error: missing payment.id');
+      return res.status(400).json({ status: 'error', message: 'Missing payment id' });
+    }
+
+    try {
+      const logRef = db.collection('webhook_logs').doc(eventId);
+      const paymentRef = db.collection('payments').doc(payment.id);
+      const userRef = db.collection('users').doc(userId);
+
+      const result = await db.runTransaction(async (transaction) => {
+        const logDoc = await transaction.get(logRef);
+        if (logDoc.exists) {
+          return { idempotent: true };
+        }
+
+        const paymentDoc = await transaction.get(paymentRef);
+        if (paymentDoc.exists && paymentDoc.data().userId !== userId) {
+          return { replayDetected: true };
+        }
+
+        const expectedAmount = TIER_PRICES[planId] || TIER_PRICES.pro_monthly;
+        if (amountPaid < expectedAmount) {
+          transaction.set(logRef, {
+            eventId,
+            userId,
+            status: 'failed_underpayment',
+            amountPaid,
+            expectedAmount,
+            processedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          return { underpaid: true, expectedAmount };
+        }
+
+        transaction.set(paymentRef, {
+          paymentId: payment.id,
+          orderId: payment.order_id || null,
+          userId,
+          planId,
+          amountPaid,
+          currency,
+          processedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        transaction.set(userRef, {
+          isPaidMember: true,
+          membershipPlan: planId,
+          paymentId: payment.id,
+          orderId: payment.order_id || null,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        transaction.set(logRef, {
+          eventId,
+          userId,
+          planId,
+          paymentId: payment.id,
+          amountPaid,
+          status: 'processed',
+          processedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        return { success: true };
       });
-      return res.status(400).json({ status: 'error', message: 'Underpayment detected' });
+
+      if (result.idempotent) {
+        console.log(`Duplicate webhook event ${eventId} ignored (idempotent entry found)`);
+        return res.status(200).json({ status: 'ok', idempotent: true });
+      }
+
+      if (result.replayDetected) {
+        console.error(`Replay attack detected: payment ${payment.id} already claimed by another user`);
+        return res.status(400).json({ status: 'error', message: 'Payment ID already claimed by another user' });
+      }
+
+      if (result.underpaid) {
+        console.error(`Underpayment detected for user ${userId}: paid ${amountPaid}`);
+        return res.status(400).json({ status: 'error', message: 'Underpayment detected' });
+      }
+
+      console.log(`Successfully upgraded user ${userId} to Paid Member (Plan: ${planId})`);
+    } catch (txError) {
+      console.error('Transaction error during webhook processing:', txError);
+      return res.status(500).json({ status: 'error', message: 'Internal processing error' });
     }
-
-    // Activate paid membership
-    await db.collection('users').doc(userId).set({
-      isPaidMember: true,
-      membershipPlan: planId,
-      paymentId: payment.id,
-      orderId: payment.order_id,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    // Record idempotent webhook processing log
-    await logRef.set({
-      eventId,
-      userId,
-      planId,
-      paymentId: payment.id,
-      amountPaid,
-      status: 'processed',
-      processedAt: admin.firestore.FieldValue.serverTimestamp()
-    });
-
-    console.log(`Successfully upgraded user ${userId} to Paid Member (Plan: ${planId})`);
   }
 
   return res.status(200).json({ status: 'ok' });
