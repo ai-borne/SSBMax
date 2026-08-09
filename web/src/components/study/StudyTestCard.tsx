@@ -57,13 +57,13 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
   return (
     <div
       onClick={() => onCardClick(cardInfo.testTypeId)}
-      className="bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
+      className="bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 rounded-2xl p-5 shadow-sm hover:shadow-md dark:shadow-xl dark:shadow-slate-950/60 transition-all flex flex-col justify-between group cursor-pointer"
       data-testid={`study-test-card-${cardInfo.testTypeId}`}
     >
       <div>
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5">
-            <span className="px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <span className="px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50">
               {cardInfo.shortCode}
             </span>
             <span
@@ -114,7 +114,7 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
                       onSelectMaterial(mat);
                     }
                   }}
-                  className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 hover:border-sky-500/40 flex items-center justify-between gap-2 transition-all cursor-pointer min-h-[44px]"
+                  className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/60 dark:border-slate-800 hover:border-sky-500/40 flex items-center justify-between gap-2 transition-all cursor-pointer min-h-[44px]"
                   data-testid={`nested-material-item-${mat.id}`}
                 >
                   <div className="min-w-0 flex-1">

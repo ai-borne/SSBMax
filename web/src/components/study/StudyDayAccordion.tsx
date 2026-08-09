@@ -36,7 +36,7 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
 
   return (
     <div
-      className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-md overflow-hidden transition-all"
+      className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-all duration-200"
       data-testid={`study-day-accordion-${section.dayNumber}`}
     >
       {/* Header Button */}
@@ -44,7 +44,7 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
         onClick={() => onToggle(section.dayNumber)}
         aria-expanded={isOpen}
         aria-controls={contentId}
-        className="w-full text-left p-5 flex items-center justify-between gap-4 hover:bg-slate-50/80 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/50 min-h-[56px]"
+        className="w-full text-left p-5 flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/50 min-h-[56px]"
         data-testid={`toggle-accordion-btn-${section.dayNumber}`}
       >
         <div className="flex items-center gap-3">
@@ -77,7 +77,7 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
             {section.testCards.length} Modules
           </span>
           <div
-            className={`p-1.5 rounded-lg bg-slate-100 dark:bg-slate-900/60 text-slate-500 transition-transform duration-200 ${
+            className={`p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-slate-500 transition-transform duration-200 ${
               isOpen ? 'rotate-180 text-sky-600 dark:text-sky-400' : ''
             }`}
           >
@@ -90,7 +90,7 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
       {isOpen && (
         <div
           id={contentId}
-          className="p-5 pt-2 border-t border-slate-200/80 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-900/30 animate-in fade-in duration-200"
+          className="p-5 pt-2 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 animate-in fade-in duration-200"
           data-testid={`accordion-panel-${section.dayNumber}`}
         >
           <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4 sm:hidden">

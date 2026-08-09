@@ -143,4 +143,20 @@ describe('StudyMaterialPage Component', () => {
       expect(screen.getByTestId('tier-badge-ppdt')).toHaveTextContent('PRO DOSSIER');
     });
   });
+
+  it('applies Level 1 elevation to study accordion container and Level 2 elevation to study cards', async () => {
+    const vm = new StudyMaterialViewModel(new MockContentRepository());
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
+
+    await waitFor(() => {
+      const accordion = screen.getByTestId('study-day-accordion-1');
+      expect(accordion.className).toContain('dark:bg-slate-900');
+      expect(accordion.className).toContain('dark:border-slate-800');
+
+      const card = screen.getByTestId('study-test-card-oir');
+      expect(card.className).toContain('dark:bg-slate-800/90');
+      expect(card.className).toContain('dark:border-slate-700/80');
+      expect(card.className).toContain('dark:shadow-slate-950/60');
+    });
+  });
 });
