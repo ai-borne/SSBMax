@@ -63,6 +63,16 @@ This document provides an enterprise-grade architecture overview of **`ssbmax.in
 * **Auth-Aware Offline Queue (`OfflineQueueService`)**: Offline test submissions queue in `IndexedDB`. Upon reconnection, the queue engine validates `auth.currentUser` before syncing; if expired, it preserves queued data and prompts re-authentication.
 * **Status Badges**: Explicit UI indicators distinguishing *"Available Offline"* content from *"Requires Online Connection"* AI features.
 
+### D. Permanent Responsive & Behavioral UI/UX Principles (Mobile, Tablet, Desktop)
+* **Mobile-First Viewport Citizenship (320px–480px)**: Over 80% of 16–17 year old NDA/SSB aspirants access via mobile devices. Every component, test runner, header, modal, and interactive widget MUST be designed, layout-tested, and optimized for mobile viewports first before scaling to tablet (`md: 768px`) and desktop (`lg: 1024px+`).
+* **Low-Friction Mobile Interaction (Preset Action Chips)**: On mobile landing pages and interactive demo widgets, avoid requiring mandatory long-text typing. Always provide **1-tap preset action chips** alongside text inputs to eliminate mobile keyboard clutter, viewport jumping, and interaction fatigue.
+* **Touch Target & Accessibility Standards**: All interactive elements (buttons, chips, form inputs, navigation icons) MUST enforce a minimum **44×44px touch target** with visible focus indicators and accessible ARIA attributes.
+* **Cognitive Load & Data Density Control**: Complex multi-dimensional data (such as 15-OLQ candidate evaluations) MUST default to aggregated high-level summaries (e.g. 4 Core SSB Factors) on small screens, offering an interactive toggle to expand into micro-metrics on demand.
+* **Zero Cumulative Layout Shift (CLS)**: Layout containers and headers MUST reserve fixed layout heights (`h-16`, etc.) and utilize neutral skeleton pulsing loaders during async auth state resolution (`onAuthStateChanged`).
+* **Lightweight Custom SVG Visualizations**: High-impact charts and radar visual proof components MUST use lightweight inline SVG primitives (< 5KB footprint) rather than importing heavy third-party charting libraries, guaranteeing sub-1.2s LCP on 3G/4G networks.
+* **Zero-Cost Instant Feedback Engines**: Public landing page sandboxes and interactive demos MUST execute via local client-side heuristic evaluators (< 50ms latency) to guarantee instant gratification while protecting backend Cloud Functions from API cost inflation and rate-limiting attacks.
+* **Authentic Services Selection Board (SSB) Terminology**: UI copy strictly adheres to authentic SSB military nomenclature (*Services Selection Board Protocol*, *Assessor Benchmark*, *OIR*, *PPDT*, *TAT*, *WAT*, *SRT*, *SD*) with friendly bracketed explanations for beginners, eliminating non-standard research or vendor jargon (`DIPR`, `Gemini 2.5`).
+
 ---
 
 ## 3. What We Have Built (Current State)

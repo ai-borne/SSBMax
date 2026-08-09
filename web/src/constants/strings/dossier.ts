@@ -1,0 +1,51 @@
+export const dossierStrings = {
+  olq: {
+    scoreCardTitle: 'Officer-Like Qualities (OLQ) Assessment',
+    factor1: 'Factor I: Planning & Reasoning (Intellectual Qualities)',
+    factor2: 'Factor II: Social Adjustment (Social Qualities)',
+    factor3: 'Factor III: Social Effectiveness (Dynamic Qualities)',
+    factor4: 'Factor IV: Dynamic & Courage (Character & Physical Qualities)',
+    recommendations: 'Key Recommendations & Improvement Areas',
+    overallConfidence: 'Overall Assessment Confidence',
+    scoreFormat: 'Score: {score} / 10',
+    noScores: 'No OLQ scores available.'
+  },
+  radar: {
+    title: '4-Factor SSB Core & 15-OLQ Radar Profile',
+    subtitle: 'Interactive assessment polygon mapping candidate scores against baseline thresholds.',
+    candidateScore: 'Candidate Score',
+    benchmarkLabel: 'SSB Baseline Threshold (7.0)',
+    selectOlqHint: 'Click or hover over an OLQ point to view detailed assessment reasoning.',
+    noData: 'No OLQ radar dataset available.',
+    toggleDetailed: 'Expand 15-OLQ Micro Breakdown',
+    toggleCore: 'View 4 SSB Core Factors'
+  },
+  dossier: {
+    title: 'Military Psychologist AI Dossier',
+    classification: 'CONFIDENTIAL // FOR OFFICIAL ASSESSOR USE ONLY',
+    candidateIdLabel: 'Candidate ID',
+    assessedDateLabel: 'Assessment Date',
+    overallStatusLabel: 'Psychological Recommendation Status',
+    statusRecommended: 'RECOMMENDED FOR SELECTION BOARD',
+    statusBorderline: 'BORDERLINE / REQUIRES CONFERENCE PROBE',
+    statusNotRecommended: 'NOT RECOMMENDED AT PRESENT',
+    summaryTitle: 'Executive Psychological Overview',
+    strengthsTitle: 'Observed Key Strengths',
+    concernsTitle: 'Areas of Concern / Red Flags',
+    probesTitle: 'Suggested Interview & GTO Probes',
+    noData: 'No Psychologist Dossier available. Complete a psychology battery test to generate.'
+  },
+  reportsPage: {
+    title: 'AI Psychological Assessment Reports',
+    subtitle: 'Comprehensive 15 OLQ Radar Analytics and Military Psychologist Dossiers powered by SSB AI Evaluation Engine.',
+    sampleBanner: 'Sample AI Report — Complete a test battery to generate your personalized psychological dossier.',
+    sampleBadge: 'SAMPLE DEMO REPORT',
+    guestBanner: 'Sign in with Google to save your AI reports and synchronize dossiers across devices.',
+    signInAction: 'Sign In to Save',
+    startTest: 'Take Practice Test',
+    historyTitle: 'Recent Test Attempt History',
+    noHistory: 'No test attempts recorded yet.',
+    toggleSample: 'View Sample Report',
+    toggleUser: 'View My Dossier'
+  }
+} as const;
