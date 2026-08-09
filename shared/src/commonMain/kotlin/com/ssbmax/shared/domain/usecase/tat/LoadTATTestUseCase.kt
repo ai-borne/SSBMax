@@ -7,6 +7,7 @@ import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.TestContentRepository
 import com.ssbmax.shared.domain.repository.TestSessionRepository
 import com.ssbmax.shared.domain.repository.UserProfileRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 /** @param sessionId The durable `test_sessions` doc id, returned so the caller can later
@@ -36,7 +37,17 @@ class LoadTATTestUseCase constructor(
             }
         }
         val sessionId = testSessionRepository.createTestSession(userId, testId, TestType.TAT).getOrThrow()
-        val questions = testContentRepository.getTATQuestions(testId, genderTag).getOrThrow()
+        // Release the session again if the question fetch fails: otherwise the test_sessions doc
+        // is left ACTIVE for a test the candidate never entered, corrupting the audit trail and
+        // making hasActiveTestSession lie. Mirrors OIRTestViewModel.loadTest's cleanup.
+        val questions = try {
+            testContentRepository.getTATQuestions(testId, genderTag).getOrThrow()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            testSessionRepository.abandonTestSession(sessionId)
+            throw e
+        }
         LoadTATTestResult(sessionId, questions)
     }
 }

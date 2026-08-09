@@ -147,6 +147,7 @@ class WATTestViewModel(
                 .onSuccess { words ->
                     if (words.isEmpty()) {
                         observability.logger.e(tag, "No WAT words found for test: $testId", null)
+                        releaseSessionAfterFailedLoad()
                         _uiState.update { it.copy(isLoading = false, loadingMessage = null, error = TestError.LOAD_FAILED) }
                         return@onSuccess
                     }
@@ -161,9 +162,21 @@ class WATTestViewModel(
                 .onFailure { e ->
                     if (e is CancellationException) throw e
                     observability.logger.e(tag, "Failed to load WAT test: $testId", e)
+                    releaseSessionAfterFailedLoad()
                     _uiState.update { it.copy(isLoading = false, loadingMessage = null, error = TestError.CLOUD_REQUIRED) }
                 }
         }
+    }
+
+    /**
+     * Releases the session created moments ago when the *rest* of the load then failed. Without
+     * this the `test_sessions` doc is left ACTIVE for a test the candidate never entered, which
+     * both corrupts the audit trail and makes [hasActiveTestSession] lie. Mirrors the equivalent
+     * cleanup in `OIRTestViewModel.loadTest`.
+     */
+    private suspend fun releaseSessionAfterFailedLoad() {
+        capturedSessionId?.let { testSessionRepository.abandonTestSession(it) }
+        capturedSessionId = null
     }
 
     fun startTest() {

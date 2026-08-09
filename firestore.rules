@@ -210,10 +210,11 @@ service cloud.firestore {
       
       // Users can create only an active session owned by themselves.
       //
-      // No startTime/expiresAt-vs-request.time.toMillis() comparison here (deliberately
-      // dropped -- see the update rule's comment below for why): ownership + shape checks
-      // are the actual abuse guard; the timestamps are informational fields the client
-      // sets for its own 2-hour countdown UI, not a security boundary.
+      // startTime/expiresAt are deliberately NOT compared against request.time.toMillis():
+      // they are client-clock values, and a device clock running even slightly ahead of the
+      // server's would deny an otherwise-valid session. They are informational fields backing
+      // the 2-hour countdown UI, not a security boundary -- ownership plus the shape checks
+      // below are the actual guard.
       allow create: if isAuthenticated() &&
                        request.resource.id == request.auth.uid + '_' + request.resource.data.testId &&
                        request.resource.data.userId == request.auth.uid &&
@@ -221,19 +222,28 @@ service cloud.firestore {
                        request.resource.data.status == 'ACTIVE';
 
       // Identity and test configuration are immutable across any update. Two legal
-      // transitions on the shared userId_testId doc: an active session going terminal
-      // (submit/abandon/expire), or a terminal session starting a fresh attempt (the
-      // client reuses the same doc id every time a test is retaken -- see
-      // GitLiveTestSessionRepository's class doc).
+      // transitions on the shared userId_testId doc:
+      //   1. an active session going terminal (submit/abandon/expire);
+      //   2. the owner starting a fresh attempt over their own prior session -- the client
+      //      reuses the same doc id every time a test is retaken (see
+      //      GitLiveTestSessionRepository's class doc), so createTestSession() always lands
+      //      as a full-document replace on top of whatever is already there.
       //
-      // No comparison of request.resource.data.startTime/expiresAt against
-      // request.time.toMillis() here: empirically, that comparison silently evaluates to
-      // deny in this ruleset even when both operands are independently well-formed
-      // (verified via bisection against a live deployment -- request.time.toMillis() > 0
-      // passes, request.resource.data.startTime > 0 passes, but comparing the two
-      // together fails every time). Root cause not identified; avoiding the pattern
-      // entirely is the safe fix. userId/testId/testType immutability plus the
-      // status-transition whitelist below are what actually prevent abuse.
+      // (2) deliberately does NOT require the prior session to be terminal or past its
+      // expiresAt. Requiring that is exactly what caused the "Cloud connection required" /
+      // "Could not create a secure test session" incident: any exit path that misses
+      // abandonTestSession (process death, or a load that fails after the session write)
+      // leaves the doc stuck ACTIVE, and the owner is then locked out of their own test for
+      // the full two hours behind a misleading connectivity error. Blocking the owner here
+      // buys no security -- they already hold an ACTIVE session and can already read
+      // test_questions with it, and the identical reset is reachable in two writes (abandon,
+      // then re-create) which transition (1) permits unconditionally. Ownership,
+      // userId/testId/testType immutability and the status whitelist are the real guards.
+      //
+      // (Note for future editors: request.time.toMillis() comparisons are NOT broken here.
+      // An earlier fix removed them on that theory; a clause-by-clause emulator bisection
+      // disproved it. They are omitted because startTime/expiresAt are client-clock values,
+      // not because the operator misbehaves.)
       allow update: if isAuthenticated() &&
                        resource.data.userId == request.auth.uid &&
                        request.resource.data.userId == resource.data.userId &&
@@ -245,8 +255,7 @@ service cloud.firestore {
                           request.resource.data.status in ['ABANDONED', 'SUBMITTED', 'EXPIRED'] &&
                           request.resource.data.startTime == resource.data.startTime &&
                           request.resource.data.expiresAt == resource.data.expiresAt) ||
-                         (resource.data.status in ['ABANDONED', 'SUBMITTED', 'EXPIRED'] &&
-                          request.resource.data.isActive == true &&
+                         (request.resource.data.isActive == true &&
                           request.resource.data.status == 'ACTIVE')
                        );
       

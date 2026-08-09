@@ -25,7 +25,9 @@ let testEnv;
 
 before(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: 'demo-ssbmax-rules-test',
+    // Overridable so the suite can also run against an already-running emulator started
+    // in --single_project mode for a different project id.
+    projectId: process.env.RULES_TEST_PROJECT_ID || 'demo-ssbmax-rules-test',
     firestore: {
       rules: readFileSync('../firestore.rules', 'utf8'),
       host: '127.0.0.1',
@@ -109,20 +111,62 @@ test('an expired ACTIVE session may be reclaimed by a fresh attempt', async () =
   );
 });
 
-test('a non-expired ACTIVE session cannot be reactivated by another attempt', async () => {
-  // This is exactly the class of change that must stay denied: a live, in-progress session
-  // being silently clobbered by a second "fresh attempt" write would let two tabs/devices race.
+test('the owner may restart over their own still-live ACTIVE session', async () => {
+  // Second half of the incident, and the reason this is ALLOWED rather than denied: the doc
+  // gets stuck ACTIVE well before its expiresAt whenever a load fails after the session write
+  // or the process dies mid-test. Denying the owner here bought no security -- they already
+  // hold the ACTIVE session that grants test_questions read -- and instead locked them out of
+  // their own test for two hours behind a "check your internet connection" error.
   const docId = 'user-1_tat_standard';
   await seed(docId, activeSession());
   const db = testEnv.authenticatedContext('user-1').firestore();
   const now = Date.now();
 
-  await assertFails(
+  await assertSucceeds(
     db.collection('test_sessions').doc(docId).update({
       isActive: true,
       status: 'ACTIVE',
       startTime: now,
       expiresAt: now + 2 * HOUR_MS
+    })
+  );
+});
+
+test('createTestSession\'s full-document replace over a stuck ACTIVE doc is allowed', async () => {
+  // Exercises the real production write rather than a field-wise update(): GitLive's
+  // createTestSession() issues set() with the complete TestSessionDto (including `id`, and
+  // dropping any `endTime` a previous abandon wrote). This is the write that returned
+  // PERMISSION_DENIED on device for both PPDT and OIR.
+  const docId = 'user-1_tat_standard';
+  const now = Date.now();
+  await seed(docId, activeSession({ startTime: now - HOUR_MS, expiresAt: now + HOUR_MS }));
+  const db = testEnv.authenticatedContext('user-1').firestore();
+
+  await assertSucceeds(
+    db.collection('test_sessions').doc(docId).set({
+      id: docId,
+      userId: 'user-1',
+      testId: 'tat_standard',
+      testType: 'TAT',
+      startTime: now,
+      expiresAt: now + 2 * HOUR_MS,
+      isActive: true,
+      status: 'ACTIVE'
+    })
+  );
+});
+
+test('a restart cannot masquerade as a terminal session going terminal again', async () => {
+  // The transition whitelist still has to hold: a write that is neither "going terminal from
+  // ACTIVE" nor "coming back up as ACTIVE" is not a legal shape for this doc.
+  const docId = 'user-1_tat_standard';
+  await seed(docId, activeSession({ isActive: false, status: 'SUBMITTED' }));
+  const db = testEnv.authenticatedContext('user-1').firestore();
+
+  await assertFails(
+    db.collection('test_sessions').doc(docId).update({
+      isActive: false,
+      status: 'ABANDONED'
     })
   );
 });
