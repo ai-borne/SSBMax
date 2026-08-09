@@ -20,6 +20,7 @@ describe('Phase 1: Edge & Network Security Headers & RFC 9116 Security Policy', 
     expect(content).toContain('Permissions-Policy: camera=(), microphone=(), geolocation=()');
     expect(content).toContain('X-Permitted-Cross-Domain-Policies: none');
     expect(content).toContain('Cross-Origin-Opener-Policy: same-origin-allow-popups');
+    expect(content).toContain('Cross-Origin-Resource-Policy: cross-origin');
   });
 
   it('should enforce strict Content-Security-Policy rules without unsafe-inline script tags', () => {
@@ -27,6 +28,7 @@ describe('Phase 1: Edge & Network Security Headers & RFC 9116 Security Policy', 
     expect(content).toContain('Content-Security-Policy:');
     expect(content).toContain("frame-ancestors 'none'");
     expect(content).toContain("object-src 'none'");
+    expect(content).toContain("upgrade-insecure-requests");
     
     const cspMatch = content.match(/Content-Security-Policy:\s*(.*)/);
     expect(cspMatch).not.toBeNull();

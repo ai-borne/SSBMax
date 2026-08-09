@@ -31,11 +31,13 @@ describe('Phase 4: Database & Storage Rules Access Control Security', () => {
     expect(content).toContain('service firebase.storage');
     expect(content).toContain('match /user_uploads/{userId}/{allPaths=**}');
     
-    // Verify 10MB max upload size limit is enforced
+    // Verify 10MB max upload size limit and MIME-type filtering are enforced
     expect(content).toContain('request.resource.size < 10 * 1024 * 1024');
+    expect(content).toContain("request.resource.contentType.matches('image/(jpeg|png|webp)|application/pdf|audio/.*')");
     
     // Verify static test assets disallow client write
     expect(content).toContain('match /ppdt_images/{allPaths=**}');
     expect(content).toContain('match /tat_images/{allPaths=**}');
   });
 });
+
