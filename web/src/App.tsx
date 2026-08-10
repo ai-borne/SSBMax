@@ -16,6 +16,7 @@ import { useTabRouting } from './hooks/useTabRouting';
 export const App: FC = () => {
   const { activeTab, setActiveTab } = useTabRouting('home');
   const [activeTest, setActiveTest] = useState<string | null>(null);
+  const [activeBatchId, setActiveBatchId] = useState<string | undefined>(undefined);
   const [isPaidMember] = useState(false);
 
   const repository = useMemo(() => new ContentRepository(), []);
@@ -25,17 +26,25 @@ export const App: FC = () => {
     [repository, activeTest]
   );
 
-  const handleStartTest = (testType: string) => {
+  const handleStartTest = (testType: string, batchId?: string) => {
     setActiveTest(testType);
+    setActiveBatchId(batchId);
   };
 
   const handleExitTest = () => {
     setActiveTest(null);
+    setActiveBatchId(undefined);
   };
 
   const handleBackToHome = () => {
     setActiveTab('home');
   };
+
+  const oirBatchIndex = useMemo(() => {
+    if (!activeBatchId) return 0;
+    const match = activeBatchId.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+  }, [activeBatchId]);
 
   return (
     <AppLayout activeTab={activeTab} onTabChange={setActiveTab} isTestMode={Boolean(activeTest)}>
@@ -44,16 +53,19 @@ export const App: FC = () => {
           <OIRTestRunner
             viewModel={oirViewModel}
             userId="cadet-web-user"
+            batchIndex={oirBatchIndex}
             onExitTest={handleExitTest}
           />
         ) : (
           <PsychologyTestRunner
             viewModel={psychViewModel}
             userId="cadet-web-user"
+            batchId={activeBatchId}
             onExitTest={handleExitTest}
           />
         )
       ) : (
+
         <>
           {activeTab === 'home' && (
             <LandingPage

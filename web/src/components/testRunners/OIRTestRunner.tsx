@@ -10,6 +10,7 @@ export interface OIRTestRunnerProps {
   viewModel: OIRTestViewModel;
   userId: string;
   isOnline?: boolean;
+  batchIndex?: number;
   onExitTest?: () => void;
 }
 
@@ -17,6 +18,7 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
   viewModel,
   userId,
   isOnline = true,
+  batchIndex = 0,
   onExitTest
 }) => {
   const [state, setState] = useState<OIRTestState>(viewModel.getState());
@@ -26,9 +28,10 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
     const unsubscribe = viewModel.subscribe(() => {
       setState(viewModel.getState());
     });
-    viewModel.loadQuestions(0);
+    viewModel.loadQuestions(batchIndex);
     return () => unsubscribe();
-  }, [viewModel]);
+  }, [viewModel, batchIndex]);
+
 
   const { formattedTime, start } = useTestTimer({
     initialSeconds: 30 * 60,

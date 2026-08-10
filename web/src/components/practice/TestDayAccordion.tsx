@@ -9,13 +9,13 @@ export interface TestDayAccordionProps {
   userTier?: AccessTier;
   defaultExpanded?: boolean;
   searchQuery?: string;
-  onStartTest: (testId: string) => void;
+  selectedBatchName?: (testId: string) => string | undefined;
+  availableBatchesCount?: (testId: string) => number | undefined;
+  onStartTest: (testId: string, batchId?: string) => void;
   onUnlockTier?: (tier: AccessTier) => void;
+  onOpenBatchSelector?: (testId: string) => void;
 }
 
-// Pure day-accent colour mapper — returns Tailwind token classes per SSB day.
-// Intentionally co-located with the component that owns it (no shared utility).
-// Extract to src/utils/dayAccent.ts only if a 3rd accordion is added in future.
 function getDayAccentClasses(dayNumber: SSBDayNumber): {
   border: string;
   icon: string;
@@ -35,8 +35,11 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
   userTier = 'cadet',
   defaultExpanded = true,
   searchQuery,
+  selectedBatchName,
+  availableBatchesCount,
   onStartTest,
   onUnlockTier,
+  onOpenBatchSelector,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const allTests = getTestConfigsForDay(dayOverview.dayNumber);
@@ -69,7 +72,6 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
       data-testid={`test-day-accordion-${dayOverview.dayNumber}`}
       className={`bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-all duration-200 border-l-4 ${accent.border}`}
     >
-      {/* Accessible Accordion Header Button */}
       <button
         id={headerId}
         onClick={toggleAccordion}
@@ -109,7 +111,6 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
         </div>
       </button>
 
-      {/* Accordion Content Region */}
       {activeExpanded && (
         <div
           id={contentId}
@@ -128,8 +129,11 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
                 key={test.id}
                 test={test}
                 userTier={userTier}
-                onLaunch={onStartTest}
+                selectedBatchName={selectedBatchName?.(test.id)}
+                availableBatchesCount={availableBatchesCount?.(test.id)}
+                onLaunch={(id) => onStartTest(id)}
                 onUnlockTier={onUnlockTier}
+                onOpenBatchSelector={onOpenBatchSelector}
               />
             ))}
           </div>

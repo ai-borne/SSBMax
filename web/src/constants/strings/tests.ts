@@ -53,7 +53,12 @@ export const testStrings = {
     sdDesc: '5 structured paragraphs evaluating self-awareness and career clarity.',
     interviewTitle: 'Personal Interview Questionnaire (PIQ)',
     interviewDesc: 'Comprehensive PIQ form evaluation with targeted officer probes.',
-    searchPlaceholder: 'Search practice tests...'
+    searchPlaceholder: 'Search practice tests...',
+    selectBatchTitle: 'Select Practice Set Batch',
+    selectBatchSubtitle: 'Choose from available practice sets fetched from Services Selection Board protocol database.',
+    batchDefault: 'Batch 1 (Default)',
+    confirmSelect: 'Select & Launch'
+
   },
   anticheat: {
     contextMenuBlocked: 'Right-click context menu is disabled during active standardized test mode.',

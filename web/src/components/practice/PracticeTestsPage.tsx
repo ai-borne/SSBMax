@@ -1,4 +1,4 @@
-import { FC, useState } from 'react';
+import { FC, useState, useEffect, useMemo } from 'react';
 import { Target, Search, Calendar } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { SSB_5_DAY_TIMELINE, AccessTier } from '../../constants/ssbSelectionProcess';
@@ -7,39 +7,94 @@ import { PaymentRibbon } from './PaymentRibbon';
 import { TestDayAccordion } from './TestDayAccordion';
 import { PIQWizardContainer } from './piq/PIQWizardContainer';
 import { ProUpgradeGateModal } from './ProUpgradeGateModal';
-
+import { BatchSelectorModal } from './BatchSelectorModal';
 import { GridCardContainer } from '../common/GridCardContainer';
+import { IContentRepository } from '../../repositories/interfaces/IContentRepository';
+import { ContentRepository } from '../../repositories/ContentRepository';
+import { TestBatchInfo } from '../../types/testContent';
 
 export interface PracticeTestsPageProps {
   isPaidMember?: boolean;
   userTier?: AccessTier;
-  onStartTest?: (testType: string) => void;
+  contentRepository?: IContentRepository;
+  onStartTest?: (testType: string, batchId?: string) => void;
   onUpgrade?: (tier?: AccessTier) => void;
 }
 
 export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
   isPaidMember = false,
   userTier: propUserTier,
+  contentRepository,
   onStartTest,
   onUpgrade,
 }) => {
+  const repository = useMemo(() => contentRepository || new ContentRepository(), [contentRepository]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [piqOpen, setPiqOpen] = useState(false);
   const [proGateOpen, setProGateOpen] = useState(false);
+  const [batchModalTestId, setBatchModalTestId] = useState<string | null>(null);
+
+  const [availableBatchesMap, setAvailableBatchesMap] = useState<Record<string, TestBatchInfo[]>>({});
+  const [selectedBatchMap, setSelectedBatchMap] = useState<Record<string, string>>({});
 
   const effectiveTier: AccessTier = propUserTier || (isPaidMember ? 'officer' : 'cadet');
+
+  useEffect(() => {
+    let isMounted = true;
+    const testModules = ['oir', 'ppdt', 'tat', 'wat', 'srt'];
+
+    Promise.all(
+      testModules.map(async (mod) => {
+        const batches = await repository.getAvailableBatches(mod);
+        return { mod, batches };
+      })
+    ).then((results) => {
+      if (!isMounted) return;
+      const bMap: Record<string, TestBatchInfo[]> = {};
+      const sMap: Record<string, string> = {};
+
+      results.forEach(({ mod, batches }) => {
+        bMap[mod] = batches;
+        if (batches.length > 0) {
+          sMap[mod] = batches[0].id;
+        }
+      });
+
+      setAvailableBatchesMap(bMap);
+      setSelectedBatchMap((prev) => ({ ...sMap, ...prev }));
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [repository]);
 
   const handleLaunch = (testId: string) => {
     if (testId === 'piq') {
       setPiqOpen(true);
     } else {
-      onStartTest?.(testId);
+      const selectedBatchId = selectedBatchMap[testId];
+      if (selectedBatchId) {
+        onStartTest?.(testId, selectedBatchId);
+      } else {
+        onStartTest?.(testId);
+      }
     }
   };
+
 
   const handleUnlockTier = (_tier?: AccessTier) => {
     setProGateOpen(true);
   };
+
+  const activeBatchModalModule = batchModalTestId
+    ? availableBatchesMap[batchModalTestId] || []
+    : [];
+
+  const activeBatchModalSelectedId = batchModalTestId
+    ? selectedBatchMap[batchModalTestId] || ''
+    : '';
 
   return (
     <div className="max-w-7xl w-full mx-auto px-4 py-6 space-y-6 animate-in fade-in duration-300" data-testid="practice-tests-page">
@@ -102,8 +157,15 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
             dayOverview={day}
             userTier={effectiveTier}
             searchQuery={searchQuery}
+            selectedBatchName={(testId) => {
+              const bList = availableBatchesMap[testId];
+              const sId = selectedBatchMap[testId];
+              return bList?.find((b) => b.id === sId)?.name;
+            }}
+            availableBatchesCount={(testId) => availableBatchesMap[testId]?.length}
             onStartTest={handleLaunch}
             onUnlockTier={handleUnlockTier}
+            onOpenBatchSelector={(testId) => setBatchModalTestId(testId)}
           />
         ))}
       </div>
@@ -119,6 +181,20 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
         isOpen={proGateOpen}
         onClose={() => setProGateOpen(false)}
         onUpgrade={() => onUpgrade?.()}
+      />
+
+      {/* Dynamic Batch Selector Modal */}
+      <BatchSelectorModal
+        isOpen={Boolean(batchModalTestId)}
+        moduleTitle={batchModalTestId?.toUpperCase() || ''}
+        batches={activeBatchModalModule}
+        selectedBatchId={activeBatchModalSelectedId}
+        onSelectBatch={(batchId) => {
+          if (batchModalTestId) {
+            setSelectedBatchMap((prev) => ({ ...prev, [batchModalTestId]: batchId }));
+          }
+        }}
+        onClose={() => setBatchModalTestId(null)}
       />
     </div>
   );

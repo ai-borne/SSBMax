@@ -10,6 +10,7 @@ export interface PsychologyTestRunnerProps {
   viewModel: PsychologyTestViewModel;
   userId: string;
   isOnline?: boolean;
+  batchId?: string;
   onExitTest?: () => void;
 }
 
@@ -17,6 +18,7 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
   viewModel,
   userId,
   isOnline = true,
+  batchId,
   onExitTest
 }) => {
   const [state, setState] = useState<PsychologyTestState>(viewModel.getState());
@@ -26,9 +28,10 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
     const unsubscribe = viewModel.subscribe(() => {
       setState(viewModel.getState());
     });
-    viewModel.loadTestContent();
+    viewModel.loadTestContent(batchId);
     return () => unsubscribe();
-  }, [viewModel]);
+  }, [viewModel, batchId]);
+
 
   const currentSlide = state.slides[state.currentSlideIndex];
 
