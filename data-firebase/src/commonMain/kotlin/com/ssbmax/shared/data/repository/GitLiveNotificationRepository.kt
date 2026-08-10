@@ -4,6 +4,7 @@ import com.ssbmax.shared.domain.model.FCMToken
 import com.ssbmax.shared.domain.model.NotificationPreferences
 import com.ssbmax.shared.domain.model.SSBMaxNotification
 import com.ssbmax.shared.domain.repository.NotificationRepository
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
@@ -53,9 +54,9 @@ class GitLiveNotificationRepository(
     private val cache: GitLiveNotificationCacheManager
 ) : NotificationRepository {
 
-    private val tokensCollection = Firebase.firestore.collection(TOKENS_COLLECTION)
-    private val notificationsCollection = Firebase.firestore.collection(NOTIFICATIONS_COLLECTION)
-    private val preferencesCollection = Firebase.firestore.collection(PREFERENCES_COLLECTION)
+    private val tokensCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.FCM_TOKENS)
+    private val notificationsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.NOTIFICATIONS)
+    private val preferencesCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.NOTIFICATION_PREFERENCES)
 
     override suspend fun saveFCMToken(token: FCMToken): Result<Unit> = try {
         tokensCollection.document("${token.userId}_${token.deviceId}").set(token.toDto())
@@ -148,9 +149,6 @@ class GitLiveNotificationRepository(
         // Phase 7c (KMP-convergence plan): must match firestore.rules exactly -- the previous
         // snake_case names fell through to the rules file's default-deny catch-all, so every
         // save/read/delete here was silently PERMISSION_DENIED on this platform too.
-        const val TOKENS_COLLECTION = "fcmTokens"
-        const val NOTIFICATIONS_COLLECTION = "notifications"
-        const val PREFERENCES_COLLECTION = "notificationPreferences"
         const val FIELD_IS_READ = "isRead"
         const val FIELD_USER_ID = "userId"
     }

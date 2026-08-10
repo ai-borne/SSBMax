@@ -3,6 +3,7 @@ package com.ssbmax.shared.data.repository
 import com.ssbmax.shared.domain.model.StudyProgress
 import com.ssbmax.shared.domain.model.StudySession
 import com.ssbmax.shared.domain.repository.StudyProgressRepository
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
@@ -27,8 +28,8 @@ import kotlinx.serialization.Serializable
  */
 class GitLiveStudyProgressRepository : StudyProgressRepository {
 
-    private val progressCollection = Firebase.firestore.collection(PROGRESS_COLLECTION)
-    private val sessionsCollection = Firebase.firestore.collection(SESSIONS_COLLECTION)
+    private val progressCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.STUDY_PROGRESS)
+    private val sessionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.STUDY_SESSIONS)
 
     override fun observeProgress(userId: String, materialId: String): Flow<StudyProgress?> =
         progressCollection
@@ -139,10 +140,6 @@ class GitLiveStudyProgressRepository : StudyProgressRepository {
 
     private fun progressDocId(userId: String, materialId: String): String = "${userId}_$materialId"
 
-    private companion object {
-        const val PROGRESS_COLLECTION = "study_progress"
-        const val SESSIONS_COLLECTION = "study_sessions"
-    }
 }
 
 @Serializable

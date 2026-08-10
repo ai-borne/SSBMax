@@ -329,6 +329,26 @@ service cloud.firestore {
     }
     
     // ============================================
+    // ARCHIVED SUBMISSIONS
+    // ============================================
+
+    // Deny-all for clients. GitLiveSubmissionArchiveRepository (used by
+    // app's ArchivalWorker) writes here, but it runs as a per-device
+    // WorkManager job on the ordinary client SDK and collection-group-reads
+    // ALL users' `submissions`, which the owner-scoped rule above already
+    // blocks for anything but the current user's own docs -- so the
+    // cross-user archival this worker is meant to perform is already
+    // effectively broken today. Opening this collection to client writes
+    // would fix that access pattern but would also let a compromised client
+    // delete/archive other users' submissions -- a security regression, not
+    // a fix. Tracked follow-up: move archival to a scheduled Cloud Function
+    // (Tier 2, Admin SDK) instead of widening client rules. See docs/plans/
+    // CrossPlatform_SSOT Phase 2 handoff.
+    match /archived_submissions/{submissionId} {
+      allow read, write: if false;
+    }
+
+    // ============================================
     // GTO RESULTS (Split Architecture like Interview)
     // ============================================
     
@@ -414,31 +434,14 @@ service cloud.firestore {
     }
     
     // ============================================
-    // STUDY MATERIALS
-    // ============================================
-    
-    match /studyMaterials/{materialId} {
-      // All authenticated users can read study materials
-      allow read: if isAuthenticated();
-      
-      // No write access for clients
-      allow write: if false;
-    }
-    
-    // ============================================
     // USER PROGRESS
     // ============================================
-    
+
     match /user_progress/{userId} {
       // Users can read/write their own progress
       allow read, write: if isOwner(userId);
     }
-    
-    match /userProgress/{userId} {
-      // Alternative path (for compatibility)
-      allow read, write: if isOwner(userId);
-    }
-    
+
     // ============================================
     // BATCHES (SSB Marketplace)
     // ============================================
@@ -484,7 +487,24 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if false;
     }
-    
+
+    // ============================================
+    // STUDY PROGRESS (per-user, doc id `${userId}_${materialId}`)
+    // ============================================
+
+    match /study_progress/{progressId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /study_sessions/{sessionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+
     // ============================================
     // STUDY MATERIALS (Structured content)
     // ============================================
@@ -643,6 +663,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Payment records - written only by functions/src/webhooks.js via the
+    // Admin SDK (which bypasses these rules entirely). Explicit deny-all
+    // here for defense in depth, matching webhook_logs above.
+    match /payments/{paymentId} {
+      allow read, write: if false;
+    }
+
     // Interview results - users can read their own results
     match /interview_results/{resultId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
@@ -660,6 +687,16 @@ service cloud.firestore {
     match /generic_questions/{questionId} {
       allow read: if isAuthenticated();
       allow write: if false;  // Only admins can write via console
+    }
+
+    // Question usage log - append-only telemetry (questionId/sessionId, no
+    // userId field to scope ownership to). Clients record usage; nothing
+    // reads it back client-side (GitLiveQuestionCacheRepository.getCacheStats
+    // aggregates question_cache/generic_questions, not this collection).
+    match /question_usage/{usageId} {
+      allow read: if false;
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
     }
 
     // ============================================

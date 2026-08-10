@@ -5,6 +5,7 @@ import com.ssbmax.shared.domain.model.interview.OLQ
 import com.ssbmax.shared.domain.model.interview.OLQScore
 import com.ssbmax.shared.domain.repository.GTORepository
 import com.ssbmax.shared.domain.repository.TestContentRepository
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
@@ -110,7 +111,7 @@ class GitLiveGTORepository internal constructor(
         getRandomTest(GTOTestType.GROUP_DISCUSSION)
 
     override suspend fun getRandomGPEScenario(): Result<GTOTest.GPETest> = try {
-        val path = "$COLLECTION_TEST_CONTENT/$PATH_GTO/$PATH_SCENARIOS/gpe/$PATH_BATCHES/$DEFAULT_BATCH_ID"
+        val path = "${SsbContracts.FirestorePaths.TEST_CONTENT}/$PATH_GTO/$PATH_SCENARIOS/gpe/$PATH_BATCHES/$DEFAULT_BATCH_ID"
         val doc = Firebase.firestore.document(path).get()
         val batch = if (doc.exists) {
             runCatching { doc.data(GPEScenarioBatchDto.serializer()) }.getOrDefault(GPEScenarioBatchDto())
@@ -142,7 +143,7 @@ class GitLiveGTORepository internal constructor(
         if (testTypePath == null) {
             Result.failure(Exception("Test type does not have obstacles"))
         } else {
-            val path = "$COLLECTION_TEST_CONTENT/$PATH_GTO/$PATH_OBSTACLES/$testTypePath/obstacle_set_001"
+            val path = "${SsbContracts.FirestorePaths.TEST_CONTENT}/$PATH_GTO/$PATH_OBSTACLES/$testTypePath/obstacle_set_001"
             val doc = Firebase.firestore.document(path).get()
             val set = if (doc.exists) {
                 runCatching { doc.data(ObstacleSetDto.serializer()) }.getOrDefault(ObstacleSetDto())
@@ -258,8 +259,6 @@ class GitLiveGTORepository internal constructor(
     }
 
     private companion object {
-        const val COLLECTION_TEST_CONTENT = "test_content"
-
         const val PATH_GTO = "gto"
         const val PATH_SCENARIOS = "scenarios"
         const val PATH_OBSTACLES = "obstacles"

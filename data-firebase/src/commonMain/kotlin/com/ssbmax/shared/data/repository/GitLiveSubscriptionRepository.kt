@@ -3,6 +3,7 @@ package com.ssbmax.shared.data.repository
 import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.UsageInfo
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 
@@ -32,9 +33,9 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
     override suspend fun getMonthlyUsage(userId: String, month: String): Result<Map<String, UsageInfo>> {
         return try {
             val snapshot = Firebase.firestore
-                .collection(USERS_COLLECTION)
+                .collection(SsbContracts.FirestorePaths.USERS)
                 .document(userId)
-                .collection("subscription")
+                .collection(SsbContracts.FirestorePaths.USER_SUBSCRIPTION_SUBCOLLECTION)
                 .document("usage_$month")
                 .get()
 
@@ -76,12 +77,9 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
     }
 
     private fun tierDoc(userId: String) = Firebase.firestore
-        .collection(USERS_COLLECTION)
+        .collection(SsbContracts.FirestorePaths.USERS)
         .document(userId)
-        .collection("data")
-        .document("subscription")
+        .collection(SsbContracts.FirestorePaths.USER_DATA_SUBCOLLECTION)
+        .document(SsbContracts.FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
 
-    private companion object {
-        const val USERS_COLLECTION = "users"
-    }
 }

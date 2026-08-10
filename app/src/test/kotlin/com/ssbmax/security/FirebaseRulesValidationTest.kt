@@ -329,13 +329,23 @@ class FirebaseRulesValidationTest {
     @Test
     fun `study materials are read-only for authenticated users`() {
         val content = getRulesContent()
-        val studyMaterialsRules = content.substringAfter("match /studyMaterials/{materialId}")
-            .substringBefore("// USER PROGRESS")
+        val studyMaterialsRules = content.substringAfter("match /study_materials/{materialId}")
+            .substringBefore("// CONTENT VERSIONS")
 
         assertTrue("Authenticated users can read study materials",
             studyMaterialsRules.contains("allow read: if isAuthenticated()"))
         assertTrue("Clients cannot write study materials",
             studyMaterialsRules.contains("allow write: if false"))
+    }
+
+    @Test
+    fun `the orphaned camelCase studyMaterials and userProgress rule blocks were removed in Phase 2`() {
+        val content = getRulesContent()
+
+        assertFalse("studyMaterials (camelCase) was a dead alias of study_materials, removed in Phase 2 of docs/plans/CrossPlatform_SSOT",
+            content.contains("match /studyMaterials/"))
+        assertFalse("userProgress (camelCase) was a dead alias of user_progress, removed in Phase 2 of docs/plans/CrossPlatform_SSOT",
+            content.contains("match /userProgress/"))
     }
 
     // ==================== Security Best Practices Tests ====================

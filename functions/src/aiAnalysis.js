@@ -10,6 +10,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { OLQ_DEFINITIONS, PIQ_TO_OLQ_MAPPING } = require('./olqDefinitions');
+const { FirestorePaths } = require('./generated/contracts.cjs');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -111,7 +112,7 @@ exports.analyzeInterviewResponse = functions.runWith(runtimeOptions).https.onCal
     throw new functions.https.HttpsError('invalid-argument', 'responseId and sessionId are required');
   }
 
-  const responseRef = db.collection('interview_responses').doc(responseId);
+  const responseRef = db.collection(FirestorePaths.INTERVIEW_RESPONSES).doc(responseId);
 
   try {
     const responseDoc = await responseRef.get();
@@ -122,7 +123,7 @@ exports.analyzeInterviewResponse = functions.runWith(runtimeOptions).https.onCal
     const responseData = responseDoc.data();
 
     // Dual-Ownership Verification
-    const sessionDoc = await db.collection('interview_sessions').doc(sessionId).get();
+    const sessionDoc = await db.collection(FirestorePaths.INTERVIEW_SESSIONS).doc(sessionId).get();
     if (
       !sessionDoc.exists ||
       sessionDoc.data().userId !== userId ||

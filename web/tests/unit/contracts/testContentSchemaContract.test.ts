@@ -37,7 +37,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
 
     const result = await repository.getWATBatch('batch_0');
 
-    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content', 'wat', 'word_batches', 'batch_0');
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content/wat/word_batches', 'batch_0');
     expect(result.id).toBe('batch_0');
     expect(result.words).toHaveLength(60);
     expect(result.words[0]).toBe('WORD_1');
@@ -62,7 +62,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
 
     const result = await repository.getSRTBatch('batch_0');
 
-    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content', 'srt', 'situation_batches', 'batch_0');
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content/srt/situation_batches', 'batch_0');
     expect(result.id).toBe('batch_0');
     expect(result.situations).toHaveLength(60);
     expect(result.situations[0]).toBe('Situation prompt #1');
@@ -88,7 +88,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
 
     const result = await repository.getTATSet('tat_set_1');
 
-    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content', 'tat', 'image_batches', 'tat_set_1');
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content/tat/image_batches', 'tat_set_1');
     expect(result.setName).toBe('TAT Practice Set Alpha');
     expect(result.totalSlides).toBe(12);
     expect(result.imageUrls).toHaveLength(12);
@@ -126,7 +126,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
     const result = await repository.getOIRQuestions(0);
 
     // batchIndex 0 -> 1-indexed doc id batch_pdf_001, per GitLiveOIRQuestionCacheManager.batchId
-    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content', 'oir', 'batches', 'batch_pdf_001');
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content/oir/batches', 'batch_pdf_001');
     expect(result.items).toHaveLength(50);
     expect(result.items[0].questionText).toBe('OIR Question 1');
 
@@ -158,7 +158,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
 
     const result = await repository.getPPDTContext('ppdt_1');
 
-    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content', 'ppdt', 'image_batches', 'ppdt_1');
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content/ppdt/image_batches', 'ppdt_1');
     expect(result.title).toBe('PPDT Standard Image 1');
     expect(result.imageUrl).toBe('https://storage.googleapis.com/ssbmax-prod.appspot.com/ppdt/image_1.png');
     expect(result.viewingTimeSeconds).toBe(30);

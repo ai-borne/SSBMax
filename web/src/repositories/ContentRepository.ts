@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { FirestorePaths } from '../generated/contracts';
 import { IContentRepository } from './interfaces/IContentRepository';
 import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, TestBatchInfo } from '../types/testContent';
 import { ContentUnavailableError } from '../types/errors';
@@ -15,7 +16,7 @@ import {
 export class ContentRepository implements IContentRepository {
   async getStudyMaterials(): Promise<StudyMaterial[]> {
     try {
-      const querySnapshot = await getDocs(query(collection(db, 'study_materials'), limit(50)));
+      const querySnapshot = await getDocs(query(collection(db, FirestorePaths.STUDY_MATERIALS), limit(50)));
       const materials: StudyMaterial[] = [];
       querySnapshot.forEach((docSnap) => {
         materials.push(this.mapDocToStudyMaterial(docSnap.id, docSnap.data()));
@@ -29,7 +30,7 @@ export class ContentRepository implements IContentRepository {
 
   async getStudyMaterialById(id: string): Promise<StudyMaterial | null> {
     try {
-      const docSnap = await getDoc(doc(db, 'study_materials', id));
+      const docSnap = await getDoc(doc(db, FirestorePaths.STUDY_MATERIALS, id));
       if (!docSnap.exists()) {
         return getFallbackStudyMaterialById(id);
       }
@@ -87,7 +88,7 @@ export class ContentRepository implements IContentRepository {
    */
   async getOIRQuestions(batchIndex = 0): Promise<BatchDocument<OIRQuestion>> {
     const batchId = `batch_pdf_${String(batchIndex + 1).padStart(3, '0')}`;
-    const snap = await getDoc(doc(db, 'test_content', 'oir', 'batches', batchId));
+    const snap = await getDoc(doc(db, FirestorePaths.TestContent.OIR_BATCHES, batchId));
     if (!snap.exists()) {
       throw new ContentUnavailableError(`OIR batch ${batchId} is unavailable`);
     }
@@ -95,7 +96,7 @@ export class ContentRepository implements IContentRepository {
   }
 
   async getPPDTContext(id = 'ppdt_1'): Promise<PPDTContext> {
-    const snap = await getDoc(doc(db, 'test_content', 'ppdt', 'image_batches', id));
+    const snap = await getDoc(doc(db, FirestorePaths.TestContent.PPDT_BATCHES, id));
     if (!snap.exists()) {
       throw new ContentUnavailableError(`PPDT context ${id} is unavailable`);
     }
@@ -103,7 +104,7 @@ export class ContentRepository implements IContentRepository {
   }
 
   async getTATSet(id = 'tat_set_1'): Promise<TATSet> {
-    const snap = await getDoc(doc(db, 'test_content', 'tat', 'image_batches', id));
+    const snap = await getDoc(doc(db, FirestorePaths.TestContent.TAT_BATCHES, id));
     if (!snap.exists()) {
       throw new ContentUnavailableError(`TAT set ${id} is unavailable`);
     }
@@ -111,7 +112,7 @@ export class ContentRepository implements IContentRepository {
   }
 
   async getWATBatch(id = 'wat_batch_1'): Promise<WATBatch> {
-    const snap = await getDoc(doc(db, 'test_content', 'wat', 'word_batches', id));
+    const snap = await getDoc(doc(db, FirestorePaths.TestContent.WAT_BATCHES, id));
     if (!snap.exists()) {
       throw new ContentUnavailableError(`WAT batch ${id} is unavailable`);
     }
@@ -119,7 +120,7 @@ export class ContentRepository implements IContentRepository {
   }
 
   async getSRTBatch(id = 'srt_batch_1'): Promise<SRTBatch> {
-    const snap = await getDoc(doc(db, 'test_content', 'srt', 'situation_batches', id));
+    const snap = await getDoc(doc(db, FirestorePaths.TestContent.SRT_BATCHES, id));
     if (!snap.exists()) {
       throw new ContentUnavailableError(`SRT batch ${id} is unavailable`);
     }
@@ -142,7 +143,7 @@ export class ContentRepository implements IContentRepository {
     }
 
     try {
-      const snap = await getDocs(collection(db, 'test_content', normModule, subcoll));
+      const snap = await getDocs(collection(db, FirestorePaths.TEST_CONTENT, normModule, subcoll));
       if (snap.empty) {
         return [];
       }

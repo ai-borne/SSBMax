@@ -6,6 +6,7 @@ import com.ssbmax.shared.domain.model.TestProgress
 import com.ssbmax.shared.domain.model.TestStatus
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.TestProgressRepository
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.firestore
@@ -30,7 +31,7 @@ import kotlinx.serialization.Serializable
  */
 class GitLiveTestProgressRepository : TestProgressRepository {
 
-    private val submissionsCollection = Firebase.firestore.collection(SUBMISSIONS_COLLECTION)
+    private val submissionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
 
     override fun getPhase1Progress(userId: String): Flow<Phase1Progress> =
         submissionsCollection
@@ -101,7 +102,6 @@ class GitLiveTestProgressRepository : TestProgressRepository {
     }
 
     private companion object {
-        const val SUBMISSIONS_COLLECTION = "submissions"
         val ANALYSIS_PENDING_STATUSES = setOf("PENDING_ANALYSIS", "ANALYZING")
     }
 }

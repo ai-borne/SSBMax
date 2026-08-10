@@ -6,6 +6,7 @@ import com.ssbmax.shared.domain.model.TestResponse
 import com.ssbmax.shared.domain.model.TestSubmission
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.TestSubmissionRepository
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.firestore
@@ -34,7 +35,7 @@ import kotlinx.serialization.Serializable
  */
 class GitLiveTestSubmissionRepository : TestSubmissionRepository {
 
-    private val submissionsCollection = Firebase.firestore.collection(SUBMISSIONS_COLLECTION)
+    private val submissionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
 
     override suspend fun getSubmissionById(submissionId: String): Result<TestSubmission> = try {
         val snapshot = submissionsCollection.document(submissionId).get()
@@ -95,7 +96,6 @@ class GitLiveTestSubmissionRepository : TestSubmissionRepository {
     }
 
     private companion object {
-        const val SUBMISSIONS_COLLECTION = "submissions"
         const val FIELD_STUDENT_ID = "studentId"
         const val FIELD_GRADING_STATUS = "gradingStatus"
         const val FIELD_SUBMITTED_AT = "submittedAt"

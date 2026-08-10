@@ -1,12 +1,11 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.CollectionReference
 import dev.gitlive.firebase.firestore.firestore
 
-internal const val PSYCH_SUBMISSIONS_COLLECTION = "submissions"
-internal const val PSYCH_RESULTS_COLLECTION = "psych_results"
 internal const val PSYCH_FIELD_USER_ID = "userId"
 internal const val PSYCH_FIELD_TEST_TYPE = "testType"
 internal const val PSYCH_FIELD_SUBMITTED_AT = "submittedAt"
@@ -22,8 +21,8 @@ internal const val PSYCH_FIELD_DATA = "data"
  * Pure structural split — no behavior change from the original merged class.
  */
 internal class GitLiveOlqResultStore {
-    val submissionsCollection: CollectionReference = Firebase.firestore.collection(PSYCH_SUBMISSIONS_COLLECTION)
-    val psychResultsCollection: CollectionReference = Firebase.firestore.collection(PSYCH_RESULTS_COLLECTION)
+    val submissionsCollection: CollectionReference = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
+    val psychResultsCollection: CollectionReference = Firebase.firestore.collection(SsbContracts.FirestorePaths.PSYCH_RESULTS)
 
     /** WAT/SRT/SDT's older two-step OLQ write (unlike TAT's atomic `finalizeTATAnalysisResult`). */
     suspend fun updateOlqResultTwoStep(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> = try {

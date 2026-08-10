@@ -7,6 +7,7 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { FirestorePaths } = require('./generated/contracts.cjs');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -30,9 +31,7 @@ function calculateOIRRating(percentage) {
  */
 async function fetchOIRBatchQuestions(firestoreDb, batchId) {
   const doc = await firestoreDb
-    .collection('test_content')
-    .doc('oir')
-    .collection('batches')
+    .collection(FirestorePaths.TestContent.OIR_BATCHES)
     .doc(batchId)
     .get();
 

@@ -6,6 +6,7 @@ import com.ssbmax.shared.domain.model.PPDTSubmission
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.model.scoring.AnalysisStatus
 import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.Source
@@ -29,8 +30,8 @@ import kotlinx.coroutines.flow.transform
  */
 class GitLivePersonalTestSubmissionRepository {
 
-    private val submissionsCollection = Firebase.firestore.collection(SUBMISSIONS_COLLECTION)
-    private val ppdtResultsCollection = Firebase.firestore.collection(PPDT_RESULTS_COLLECTION)
+    private val submissionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
+    private val ppdtResultsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.PPDT_RESULTS)
 
     // ===========================
     // PPDT
@@ -247,8 +248,6 @@ class GitLivePersonalTestSubmissionRepository {
     private val ppdtRegressionFilters = mutableMapOf<String, OLQRegressionFilter>()
 
     private companion object {
-        const val SUBMISSIONS_COLLECTION = "submissions"
-        const val PPDT_RESULTS_COLLECTION = "ppdt_results"
         const val FIELD_USER_ID = "userId"
         const val FIELD_TEST_TYPE = "testType"
         const val FIELD_SUBMITTED_AT = "submittedAt"

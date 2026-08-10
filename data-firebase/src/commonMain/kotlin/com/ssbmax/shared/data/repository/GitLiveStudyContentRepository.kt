@@ -4,6 +4,7 @@ import com.ssbmax.shared.domain.config.ContentFeatureFlags
 import com.ssbmax.shared.domain.model.CloudStudyMaterial
 import com.ssbmax.shared.domain.model.TopicContent
 import com.ssbmax.shared.domain.repository.StudyContentRepository
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.storage.storage
@@ -24,9 +25,9 @@ import kotlinx.coroutines.flow.flow
  */
 class GitLiveStudyContentRepository : StudyContentRepository {
 
-    private val topicsCollection = Firebase.firestore.collection(COLLECTION_TOPICS)
-    private val materialsCollection = Firebase.firestore.collection(COLLECTION_MATERIALS)
-    private val versionsCollection = Firebase.firestore.collection(COLLECTION_VERSIONS)
+    private val topicsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.TOPIC_CONTENT)
+    private val materialsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.STUDY_MATERIALS)
+    private val versionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.CONTENT_VERSIONS)
 
     override fun getTopicContent(topicType: String): Flow<Result<TopicContentData>> = flow {
         val normalizedType = topicType.uppercase()
@@ -92,7 +93,7 @@ class GitLiveStudyContentRepository : StudyContentRepository {
 
     internal suspend fun getContentVersion(): Result<ContentVersionDto> {
         return runCatching {
-            val doc = versionsCollection.document("global").get()
+            val doc = versionsCollection.document(SsbContracts.FirestorePaths.CONTENT_VERSIONS_GLOBAL_DOC_ID).get()
             if (!doc.exists) {
                 ContentVersionDto()
             } else {
@@ -144,9 +145,4 @@ class GitLiveStudyContentRepository : StudyContentRepository {
         )
     }
 
-    companion object {
-        private const val COLLECTION_TOPICS = "topic_content"
-        private const val COLLECTION_MATERIALS = "study_materials"
-        private const val COLLECTION_VERSIONS = "content_versions"
-    }
 }

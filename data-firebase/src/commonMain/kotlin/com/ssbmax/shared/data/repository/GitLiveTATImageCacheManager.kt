@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.db.CachedTATImage as CachedTATImageRow
 import com.ssbmax.shared.db.SharedDatabase
 import com.ssbmax.shared.domain.model.GenderTag
@@ -33,7 +34,6 @@ class GitLiveTATImageCacheManager(
     private val json = Json { ignoreUnknownKeys = true }
 
     private companion object {
-        const val COLLECTION_PATH = "test_content/tat/image_batches"
         const val TARGET_CACHE_SIZE = 167
         const val MINIMUM_CACHE_SIZE = 33
         const val DEFAULT_BATCH_ID = "batch_001"
@@ -78,7 +78,7 @@ class GitLiveTATImageCacheManager(
             if (hoursSinceCheck < STALENESS_TTL_HOURS) {
                 false
             } else {
-                val doc = Firebase.firestore.document("$COLLECTION_PATH/$batchId").get()
+                val doc = Firebase.firestore.document("${SsbContracts.FirestorePaths.TestContent.TAT_BATCHES}/$batchId").get()
                 val remoteVersion = doc.get<String?>("version")
                 if (remoteVersion == null) {
                     false
@@ -100,7 +100,7 @@ class GitLiveTATImageCacheManager(
     }
 
     suspend fun downloadBatch(batchId: String): Result<Unit> = try {
-        val doc = Firebase.firestore.document("$COLLECTION_PATH/$batchId").get()
+        val doc = Firebase.firestore.document("${SsbContracts.FirestorePaths.TestContent.TAT_BATCHES}/$batchId").get()
 
         if (!doc.exists) {
             Result.failure(Exception("Batch $batchId not found in Firestore"))

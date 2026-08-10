@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.db.CachedSRTSituation as CachedSRTSituationRow
 import com.ssbmax.shared.db.SharedDatabase
 import com.ssbmax.shared.domain.model.SRTCategory
@@ -23,7 +24,6 @@ class GitLiveSRTSituationCacheManager(
     private val queries get() = database.sharedDatabaseQueries
 
     private companion object {
-        const val COLLECTION_PATH = "test_content/srt/situation_batches"
         const val TARGET_CACHE_SIZE = 60
         const val MIN_CACHE_SIZE = 20
         const val DEFAULT_BATCH_ID = "batch_001"
@@ -46,7 +46,7 @@ class GitLiveSRTSituationCacheManager(
     }
 
     suspend fun downloadBatch(batchId: String): Result<Unit> = try {
-        val doc = Firebase.firestore.document("$COLLECTION_PATH/$batchId").get()
+        val doc = Firebase.firestore.document("${SsbContracts.FirestorePaths.TestContent.SRT_BATCHES}/$batchId").get()
 
         if (!doc.exists) {
             Result.failure(Exception("Batch $batchId not found in Firestore"))

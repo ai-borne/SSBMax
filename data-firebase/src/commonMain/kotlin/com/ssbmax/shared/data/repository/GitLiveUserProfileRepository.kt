@@ -2,6 +2,7 @@ package com.ssbmax.shared.data.repository
 
 import com.ssbmax.shared.domain.model.UserProfile
 import com.ssbmax.shared.domain.repository.UserProfileRepository
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
@@ -23,10 +24,10 @@ import kotlinx.datetime.toLocalDateTime
 class GitLiveUserProfileRepository : UserProfileRepository {
 
     private fun profileDoc(userId: String) = Firebase.firestore
-        .collection(USERS_COLLECTION)
+        .collection(SsbContracts.FirestorePaths.USERS)
         .document(userId)
-        .collection("data")
-        .document(PROFILE_DOCUMENT)
+        .collection(SsbContracts.FirestorePaths.USER_DATA_SUBCOLLECTION)
+        .document(SsbContracts.FirestorePaths.USER_PROFILE_DOC_ID)
 
     override fun getUserProfile(userId: String): Flow<Result<UserProfile?>> =
         profileDoc(userId).snapshots
@@ -112,8 +113,6 @@ class GitLiveUserProfileRepository : UserProfileRepository {
     }
 
     private companion object {
-        const val USERS_COLLECTION = "users"
-        const val PROFILE_DOCUMENT = "profile"
         const val DAY_MILLIS = 24L * 60 * 60 * 1000
     }
 }

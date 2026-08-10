@@ -8,6 +8,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
+const { FirestorePaths } = require('./generated/contracts.cjs');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -88,9 +89,9 @@ exports.handleRazorpayWebhook = functions.https.onRequest(async (req, res) => {
     }
 
     try {
-      const logRef = db.collection('webhook_logs').doc(eventId);
-      const paymentRef = db.collection('payments').doc(payment.id);
-      const userRef = db.collection('users').doc(userId);
+      const logRef = db.collection(FirestorePaths.WEBHOOK_LOGS).doc(eventId);
+      const paymentRef = db.collection(FirestorePaths.PAYMENTS).doc(payment.id);
+      const userRef = db.collection(FirestorePaths.USERS).doc(userId);
 
       const result = await db.runTransaction(async (transaction) => {
         const logDoc = await transaction.get(logRef);

@@ -2,6 +2,7 @@ package com.ssbmax.shared.data.repository
 
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.firestore
@@ -27,9 +28,9 @@ class GitLiveTestUsageRecorder : TestUsageRecorder {
     override suspend fun recordTestUsage(testType: TestType, userId: String, submissionId: String?) {
         val month = currentYearMonth()
         val docRef = Firebase.firestore
-            .collection(USERS_COLLECTION)
+            .collection(SsbContracts.FirestorePaths.USERS)
             .document(userId)
-            .collection("subscription")
+            .collection(SsbContracts.FirestorePaths.USER_SUBSCRIPTION_SUBCOLLECTION)
             .document("usage_$month")
 
         val fieldName = fieldNameFor(testType)
@@ -104,9 +105,6 @@ class GitLiveTestUsageRecorder : TestUsageRecorder {
         return "${now.year}-${(now.month.ordinal + 1).toString().padStart(2, '0')}"
     }
 
-    private companion object {
-        const val USERS_COLLECTION = "users"
-    }
 }
 
 /**

@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.db.CachedGTOTask as CachedGTOTaskRow
 import com.ssbmax.shared.db.SharedDatabase
 import dev.gitlive.firebase.Firebase
@@ -31,7 +32,6 @@ class GitLiveGTOTaskCacheManager(
     private val queries get() = database.sharedDatabaseQueries
 
     private companion object {
-        const val COLLECTION_PATH = "test_content/gto/task_batches"
         const val TARGET_CACHE_SIZE = 40 // Multiple GTO tasks
         const val MIN_CACHE_SIZE = 10 // Minimum before resyncing
         const val DEFAULT_BATCH_ID = "batch_001"
@@ -56,7 +56,7 @@ class GitLiveGTOTaskCacheManager(
      * Download a specific batch from Firestore.
      */
     suspend fun downloadBatch(batchId: String): Result<Unit> = try {
-        val doc = Firebase.firestore.document("$COLLECTION_PATH/$batchId").get()
+        val doc = Firebase.firestore.document("${SsbContracts.FirestorePaths.TestContent.GTO_BATCHES}/$batchId").get()
 
         if (!doc.exists) {
             Result.failure(Exception("Batch $batchId not found in Firestore"))

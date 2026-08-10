@@ -72,6 +72,38 @@ one of these version-compatibility reasons, and must carry a comment naming
 the sunset condition. A fallback that exists because a path was never known
 is a bug, not a policy — those were removed in Phase 0b.
 
+## Reserved `firestore.rules` blocks (Phase 2, not in this contract)
+
+`firestore.rules` carries eight rule blocks with no matching code reference
+in `shared`/`data-firebase`/`web`/`functions` as of Phase 2: `tests`,
+`test_questions`, `test_configs`, `batches`, `batchEnrollments`,
+`ai_grading_results`, `test_content/interview/meta`,
+`test_content/interview/question_batches`. Unlike the camelCase duplicates
+removed in Phase 2 (`studyMaterials`, `userProgress` — dead aliases of paths
+that already exist under the correct snake_case name), these guard features
+that are modeled (`Batch`/`BatchEnrollment` types exist) or superseded
+(interview content now reads from the top-level `interview_questions`/
+`interview_sessions` collections instead of a `test_content/interview`
+namespace) but not wired to — or no longer used by — a repository. They are
+**not** added here as invented contract entries — this file "does not invent
+new values" (see Authority, above). They are instead named as an explicit
+`RESERVED_UNSHIPPED` exception list in the firestore.rules coverage test
+(`firestore-tests/firestoreRulesCoverage.rules.test.mjs`) so the test
+documents *why* they're unmatched instead of silently ignoring them. Wiring
+one of these to a real repository must add its path here in the same change.
+
+## Known gap: `archived_submissions` / client-side cross-user archival (Phase 2)
+
+`archived_submissions` has an explicit client deny-all rule, and its only
+writer — `GitLiveSubmissionArchiveRepository`, driven by `app`'s
+`ArchivalWorker` — is a per-device WorkManager job that collection-group
+queries **all** users' `submissions`, not just the current user's. The
+owner-scoped `submissions` rule already blocks that cross-user read, so this
+worker's archival is effectively a no-op today. Phase 2 deliberately did not
+widen client rules to unblock it — doing so would let a compromised client
+delete/archive other users' data. **Tracked follow-up:** move archival to a
+scheduled Cloud Function (Tier 2, Admin SDK) instead.
+
 ## Generated-file LOC exemption
 
 Generated files may exceed the project's 300-LOC limit (root `CLAUDE.md`

@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.domain.constants.InterviewConstants
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.model.interview.InterviewLimits
@@ -49,11 +50,11 @@ class GitLiveInterviewRepository(
     private val subscriptionRepository: SubscriptionRepository
 ) : InterviewRepository {
 
-    private val sessionsCollection = Firebase.firestore.collection(COLLECTION_SESSIONS)
-    private val responsesCollection = Firebase.firestore.collection(COLLECTION_RESPONSES)
-    private val resultsCollection = Firebase.firestore.collection(COLLECTION_RESULTS)
-    private val questionsCollection = Firebase.firestore.collection(COLLECTION_QUESTIONS)
-    private val submissionsCollection = Firebase.firestore.collection(COLLECTION_SUBMISSIONS)
+    private val sessionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_SESSIONS)
+    private val responsesCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_RESPONSES)
+    private val resultsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_RESULTS)
+    private val questionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_QUESTIONS)
+    private val submissionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
 
     override suspend fun checkPrerequisites(userId: String): Result<PrerequisiteCheckResult> =
         Result.failure(UnsupportedOperationException("Use CheckInterviewPrerequisitesUseCase"))
@@ -260,12 +261,6 @@ class GitLiveInterviewRepository(
     } catch (e: Exception) { Result.failure(e) }
 
     private companion object {
-        const val COLLECTION_SESSIONS = "interview_sessions"
-        const val COLLECTION_RESPONSES = "interview_responses"
-        const val COLLECTION_RESULTS = "interview_results"
-        const val COLLECTION_QUESTIONS = "interview_questions"
-        const val COLLECTION_SUBMISSIONS = "submissions"
-
         const val FIELD_USER_ID = "userId"
         const val FIELD_STATUS = "status"
         const val FIELD_STARTED_AT = "startedAt"

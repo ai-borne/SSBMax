@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 
@@ -15,10 +16,10 @@ import dev.gitlive.firebase.firestore.firestore
  */
 class GitLiveSubmissionArchiveRepository {
 
-    private val archivedCollection = Firebase.firestore.collection(ARCHIVED_SUBMISSIONS_COLLECTION)
+    private val archivedCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.ARCHIVED_SUBMISSIONS)
 
     suspend fun archiveOldSubmissions(beforeTimestamp: Long): Result<Int> = try {
-        val snapshot = Firebase.firestore.collectionGroup(SUBMISSIONS_COLLECTION_GROUP)
+        val snapshot = Firebase.firestore.collectionGroup(SsbContracts.FirestorePaths.SUBMISSIONS_ARCHIVE_GROUP)
             .where { FIELD_SUBMITTED_AT lessThan beforeTimestamp }
             .get()
 
@@ -38,8 +39,6 @@ class GitLiveSubmissionArchiveRepository {
     }
 
     private companion object {
-        const val ARCHIVED_SUBMISSIONS_COLLECTION = "archived_submissions"
-        const val SUBMISSIONS_COLLECTION_GROUP = "submissions"
         const val FIELD_SUBMITTED_AT = "submittedAt"
         const val FIELD_ID = "id"
     }

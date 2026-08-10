@@ -13,28 +13,25 @@ const {
 } = require('../src/oirScoring');
 
 /**
- * Fake Firestore client that asserts the exact collection/doc chain used,
- * so a regression back to a wrong or fallback path fails this test.
+ * Fake Firestore client that asserts the exact collection path used (read
+ * from the generated contract, not a literal), so a regression back to a
+ * wrong or fallback path fails this test.
  */
+const { FirestorePaths } = require('../src/generated/contracts.cjs');
+
 function makeFakeDb(batchExists, batchData) {
   return {
     collection(name) {
-      assert.equal(name, 'test_content', 'must read the test_content root collection');
+      assert.equal(
+        name,
+        FirestorePaths.TestContent.OIR_BATCHES,
+        'must read the KMP-authoritative OIR batches path, not question_batches/content_oir/oir_batches'
+      );
       return {
-        doc(id) {
-          assert.equal(id, 'oir', 'must read the oir document');
+        doc(batchId) {
           return {
-            collection(name2) {
-              assert.equal(name2, 'batches', 'must read the batches sub-collection, not question_batches/content_oir/oir_batches');
-              return {
-                doc(batchId) {
-                  return {
-                    async get() {
-                      return { exists: batchExists, data: () => batchData };
-                    }
-                  };
-                }
-              };
+            async get() {
+              return { exists: batchExists, data: () => batchData };
             }
           };
         }

@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.model.gto.GTOSubmission
 import dev.gitlive.firebase.Firebase
@@ -19,7 +20,7 @@ import kotlinx.serialization.Serializable
  */
 class GitLiveGTOSubmissionRepository {
 
-    private val submissionsCollection = Firebase.firestore.collection(SUBMISSIONS_COLLECTION)
+    private val submissionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
 
     suspend fun submitGPE(submission: GTOSubmission.GPESubmission, batchId: String?): Result<String> = try {
         val doc = SubmissionDocDto(
@@ -93,9 +94,6 @@ class GitLiveGTOSubmissionRepository {
         Result.failure(Exception("Failed to submit Lecturette: ${e.message}", e))
     }
 
-    private companion object {
-        const val SUBMISSIONS_COLLECTION = "submissions"
-    }
 }
 
 @Serializable

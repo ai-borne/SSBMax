@@ -27,6 +27,60 @@ collections:
     path: study_materials
   - name: TEST_CONTENT
     path: test_content
+  - name: INTERVIEW_RESULTS
+    path: interview_results
+  - name: INTERVIEW_QUESTIONS
+    path: interview_questions
+  - name: STUDY_PROGRESS
+    path: study_progress
+  - name: STUDY_SESSIONS
+    path: study_sessions
+  - name: QUESTION_CACHE
+    path: question_cache
+  - name: GENERIC_QUESTIONS
+    path: generic_questions
+  - name: QUESTION_USAGE
+    path: question_usage
+  - name: NOTIFICATIONS
+    path: notifications
+  - name: FCM_TOKENS
+    path: fcmTokens
+  - name: NOTIFICATION_PREFERENCES
+    path: notificationPreferences
+  - name: PSYCH_RESULTS
+    path: psych_results
+  - name: USER_PROGRESS
+    path: user_progress
+  - name: TEST_SESSIONS
+    path: test_sessions
+  - name: CONTENT_VERSIONS
+    path: content_versions
+  - name: TOPIC_CONTENT
+    path: topic_content
+  - name: HEALTH_CHECK
+    path: health_check
+    note: "Connectivity-check doc read by ops scripts (scripts/verify-indexes.js, scripts/setup-firestore.js), not by app code."
+  - name: PAYMENTS
+    path: payments
+    note: "Tier 2, functions-only (functions/src/webhooks.js). Never read/written by a client."
+  - name: WEBHOOK_LOGS
+    path: webhook_logs
+    note: "Tier 2, functions-only idempotency log (functions/src/webhooks.js). Never read/written by a client."
+  - name: USER_DATA_SUBCOLLECTION
+    path: data
+    note: "users/{userId}/data/{document} subcollection name (docs: profile, subscription tier)."
+  - name: USER_SUBSCRIPTION_SUBCOLLECTION
+    path: subscription
+    note: "users/{userId}/subscription/{document} subcollection name (docs: usage_{yyyy-MM}), sibling of USER_DATA_SUBCOLLECTION."
+  - name: USER_PROFILE_DOC_ID
+    path: profile
+    note: "Fixed doc id under USER_DATA_SUBCOLLECTION."
+  - name: USER_SUBSCRIPTION_TIER_DOC_ID
+    path: subscription
+    note: "Fixed doc id under USER_DATA_SUBCOLLECTION, holding the user's SubscriptionTier."
+  - name: CONTENT_VERSIONS_GLOBAL_DOC_ID
+    path: global
+    note: "Fixed doc id under CONTENT_VERSIONS."
 
 # test_content/{testType}/... sub-paths. Each entry is relative to
 # collections.TEST_CONTENT ("test_content").
@@ -38,22 +92,28 @@ testContent:
     docIdExample: batch_pdf_001
   - testType: PPDT
     batchesPath: test_content/ppdt/image_batches
+    metaConfigPath: test_content/ppdt/meta/config
     docIdPattern: "batch_{seq:03d}"
   - testType: TAT
     batchesPath: test_content/tat/image_batches
+    metaConfigPath: test_content/tat/meta/config
     docIdPattern: "batch_{seq:03d}"
   - testType: WAT
     batchesPath: test_content/wat/word_batches
+    metaConfigPath: test_content/wat/meta/config
     docIdPattern: "batch_{seq:03d}"
   - testType: SRT
     batchesPath: test_content/srt/situation_batches
+    metaConfigPath: test_content/srt/meta/config
     docIdPattern: "batch_{seq:03d}"
   - testType: GTO
     batchesPath: test_content/gto/task_batches
+    metaConfigPath: test_content/gto/meta/config
     docIdPattern: "batch_{seq:03d}"
     docIdExample: batch_001
   - testType: GPE
     batchesPath: test_content/gto/scenarios/gpe/batches
+    metaConfigPath: test_content/gto/scenarios/gpe/meta/config
     docIdPattern: "batch_{seq:03d}"
 
 # Legacy paths removed in Phase 0a — kept here ONLY as a record of what must
