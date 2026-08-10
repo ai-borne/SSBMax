@@ -12,12 +12,29 @@ import { OIRTestViewModel } from './viewmodels/OIRTestViewModel';
 import { PsychologyTestViewModel } from './viewmodels/PsychologyTestViewModel';
 import { ContentRepository } from './repositories/ContentRepository';
 import { useTabRouting } from './hooks/useTabRouting';
+import { authService } from './services/AuthService';
+import { AccessTier, DevTierOverride, getEffectiveTier } from './constants/ssbSelectionProcess';
+
+const DEV_TIER_OVERRIDE_KEY = 'ssbmax_dev_tier_override';
 
 export const App: FC = () => {
   const { activeTab, setActiveTab } = useTabRouting('home');
   const [activeTest, setActiveTest] = useState<string | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | undefined>(undefined);
   const [isPaidMember] = useState(false);
+  const [devTierOverride, setDevTierOverride] = useState<DevTierOverride>(
+    () => (localStorage.getItem(DEV_TIER_OVERRIDE_KEY) as DevTierOverride | null) || 'real'
+  );
+
+  const handleSelectDevTier = (override: DevTierOverride) => {
+    setDevTierOverride(override);
+    localStorage.setItem(DEV_TIER_OVERRIDE_KEY, override);
+  };
+
+  const realTier: AccessTier = authService.getCurrentUser()?.isPaidMember ? 'officer' : 'cadet';
+  const effectiveTier: AccessTier = import.meta.env.DEV
+    ? getEffectiveTier(devTierOverride, realTier)
+    : realTier;
 
   const repository = useMemo(() => new ContentRepository(), []);
   const oirViewModel = useMemo(() => new OIRTestViewModel(repository), [repository]);
@@ -76,12 +93,15 @@ export const App: FC = () => {
           {activeTab === 'tests' && (
             <PracticeTestsPage
               isPaidMember={isPaidMember}
+              userTier={effectiveTier}
               onStartTest={handleStartTest}
               onUpgrade={() => setActiveTab('settings')}
             />
           )}
           {activeTab === 'study' && <StudyMaterialPage />}
-          {activeTab === 'settings' && <SettingsPage />}
+          {activeTab === 'settings' && (
+            <SettingsPage devTierOverride={devTierOverride} onSelectDevTier={handleSelectDevTier} />
+          )}
           {activeTab === 'privacy' && (
             <PrivacyPolicy onBackClick={handleBackToHome} />
           )}

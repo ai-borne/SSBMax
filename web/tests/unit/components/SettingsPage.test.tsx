@@ -111,4 +111,14 @@ describe('SettingsPage Component', () => {
     expect(syncToggle).toBeInTheDocument();
     expect(practiceToggle).toBeInTheDocument();
   });
+
+  it('renders the developer settings card in dev builds and forwards tier selection', () => {
+    const onSelectDevTier = vi.fn();
+    render(<SettingsPage devTierOverride="real" onSelectDevTier={onSelectDevTier} />);
+
+    expect(screen.getByTestId('dev-settings-card')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('dev-tier-chip-command'));
+    expect(onSelectDevTier).toHaveBeenCalledWith('command');
+  });
 });

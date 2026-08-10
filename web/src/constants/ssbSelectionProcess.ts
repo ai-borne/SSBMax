@@ -2,6 +2,7 @@ import { strings } from './strings';
 
 export type SSBDayNumber = '1' | '2' | '3-4' | '5';
 export type AccessTier = 'cadet' | 'officer' | 'command';
+export type DevTierOverride = 'real' | 'cadet' | 'officer' | 'command';
 export type GTOTaskCategory = 'indoor' | 'outdoor' | 'individual' | 'group';
 
 export interface GTOTask {
@@ -246,4 +247,11 @@ export function getTierAccessLevel(tier: AccessTier): number {
 
 export function hasTierAccess(userTier: AccessTier, requiredTier: AccessTier): boolean {
   return getTierAccessLevel(userTier) >= getTierAccessLevel(requiredTier);
+}
+
+export function getEffectiveTier(override: DevTierOverride, realTier: AccessTier): AccessTier {
+  if (override === 'cadet') return 'cadet';
+  if (override === 'officer') return 'officer';
+  if (override === 'command') return 'command';
+  return realTier;
 }

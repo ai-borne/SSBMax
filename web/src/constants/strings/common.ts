@@ -257,6 +257,15 @@ export const commonStrings = {
     pwaStatus: 'PWA Connectivity',
     onlineStatus: 'Network Connection Status'
   },
+  devSettings: {
+    cardTitle: 'Developer Access Control Overrides',
+    cardSubtitle: 'Dev-build only. Override the subscription tier used by the SSB Tests page to test locked/unlocked test cards without a real payment.',
+    realLabel: 'Follow Real',
+    freeLabel: 'Force FREE Cadet Pass (Tier 0)',
+    proLabel: 'Force OFFICER PASS (Pro - Tier 1)',
+    commandLabel: 'Force COMMAND PASS (Premium - Tier 2)',
+    activeOverrideNotice: 'Active Access Control Override:',
+  },
   footer: {
     rights: 'Tactical Command Platform for Defence Officers.',
     privacy: 'Privacy Policy',

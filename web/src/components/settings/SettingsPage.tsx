@@ -6,6 +6,8 @@ import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { ThemeMode } from '../../constants/colors';
 import { AccountSection } from './AccountSection';
 import { FAQSection } from './FAQSection';
+import { DeveloperSettingsCard } from './DeveloperSettingsCard';
+import { DevTierOverride } from '../../constants/ssbSelectionProcess';
 
 import { GridCardContainer } from '../common/GridCardContainer';
 
@@ -25,6 +27,8 @@ export interface SettingsPageProps {
   targetBoard?: string;
   entryStream?: string;
   prepStatus?: string;
+  devTierOverride?: DevTierOverride;
+  onSelectDevTier?: (override: DevTierOverride) => void;
 }
 
 export const SettingsPage: FC<SettingsPageProps> = ({
@@ -43,6 +47,8 @@ export const SettingsPage: FC<SettingsPageProps> = ({
   targetBoard,
   entryStream,
   prepStatus,
+  devTierOverride = 'real',
+  onSelectDevTier,
 }) => {
   const { theme: hookTheme, toggleTheme: hookToggleTheme } = useTheme();
   const currentTheme = customTheme ?? hookTheme;
@@ -309,6 +315,14 @@ export const SettingsPage: FC<SettingsPageProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Section 8: Developer Settings (dev builds only) */}
+        {import.meta.env.DEV && (
+          <DeveloperSettingsCard
+            devTierOverride={devTierOverride}
+            onSelectOverride={(override) => onSelectDevTier?.(override)}
+          />
+        )}
       </div>
     </div>
   );
