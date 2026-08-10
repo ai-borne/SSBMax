@@ -54,7 +54,7 @@ class LecturetteTestViewModelTest {
         testContentRepository = FakeTestContentRepository()
         submissionRepository = FakeSubmissionRepository()
         analysisTrigger = FakeSubmissionAnalysisTrigger()
-        // "GTO Tests" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
+        // "GTO" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
         // tests are eligible unless a test explicitly overrides to exercise LimitReached.
         subscriptionRepository.tierResult = Result.success(com.ssbmax.shared.domain.model.SubscriptionTier.PRO)
     }
@@ -106,7 +106,7 @@ class LecturetteTestViewModelTest {
     fun `loadTest surfaces limit reached without loading topics`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(com.ssbmax.shared.domain.model.SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("GTO Tests" to com.ssbmax.shared.domain.repository.UsageInfo(used = 1, limit = 1))
+            mapOf("GTO" to com.ssbmax.shared.domain.repository.UsageInfo(used = 1, limit = 1))
         )
         val viewModel = buildViewModel()
 

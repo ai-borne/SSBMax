@@ -68,7 +68,7 @@ class WATTestViewModelTest {
         usageRecorder = FakeTestUsageRecorder()
         analysisTrigger = FakeSubmissionAnalysisTrigger()
         analyticsTracker = RecordingAnalyticsTracker()
-        // "WAT Tests" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
+        // "WAT" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
         // tests are eligible unless a test explicitly overrides to exercise LimitReached.
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
     }
@@ -111,7 +111,7 @@ class WATTestViewModelTest {
     fun `limit reached surfaces subscription details`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult =
-            Result.success(mapOf("WAT Tests" to UsageInfo(used = 1, limit = 1)))
+            Result.success(mapOf("WAT" to UsageInfo(used = 1, limit = 1)))
         val viewModel = buildViewModel()
 
         viewModel.loadTest()

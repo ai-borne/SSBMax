@@ -30,7 +30,7 @@ class DebugOverrideSubscriptionRepositoryTest {
 
     @Test
     fun `FOLLOW_REAL passes getMonthlyUsage through unchanged`() = runTest {
-        delegate.monthlyUsageResult = Result.success(mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1)))
+        delegate.monthlyUsageResult = Result.success(mapOf("OIR" to UsageInfo(used = 1, limit = 1)))
 
         assertEquals(delegate.monthlyUsageResult, repository.getMonthlyUsage("user-1", "2026-08"))
     }
@@ -70,18 +70,18 @@ class DebugOverrideSubscriptionRepositoryTest {
     fun `override remaps limit but preserves real used count`() = runTest {
         delegate.monthlyUsageResult = Result.success(
             mapOf(
-                "OIR Tests" to UsageInfo(used = 1, limit = 1),
-                "Interview" to UsageInfo(used = 2, limit = 1)
+                "OIR" to UsageInfo(used = 1, limit = 1),
+                "INTERVIEW" to UsageInfo(used = 2, limit = 1)
             )
         )
         developerSettings.setOverride(SubscriptionOverride.FORCE_PREMIUM)
 
         val usage = repository.getMonthlyUsage("user-1", "2026-08").getOrThrow()
 
-        assertEquals(1, usage.getValue("OIR Tests").used)
-        assertEquals(-1, usage.getValue("OIR Tests").limit)
-        assertEquals(2, usage.getValue("Interview").used)
-        assertEquals(3, usage.getValue("Interview").limit)
+        assertEquals(1, usage.getValue("OIR").used)
+        assertEquals(-1, usage.getValue("OIR").limit)
+        assertEquals(2, usage.getValue("INTERVIEW").used)
+        assertEquals(3, usage.getValue("INTERVIEW").limit)
     }
 
     @Test

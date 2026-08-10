@@ -30,7 +30,7 @@ class CheckTestEligibilityUseCaseTest {
     fun `eligible user fires no security event`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("TAT Tests" to UsageInfo(used = 0, limit = 3))
+            mapOf("TAT" to UsageInfo(used = 0, limit = 3))
         )
 
         val result = useCase(TestType.TAT, "user-1")
@@ -43,7 +43,7 @@ class CheckTestEligibilityUseCaseTest {
     fun `limit reached fires sec_limit_reached with test type and tier`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1))
+            mapOf("OIR" to UsageInfo(used = 1, limit = 1))
         )
 
         val result = useCase(TestType.OIR, "user-1")
@@ -75,7 +75,7 @@ class CheckTestEligibilityUseCaseTest {
     fun `limit reached while overridden does not fire security event`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1))
+            mapOf("OIR" to UsageInfo(used = 1, limit = 1))
         )
         val developerSettings = DeveloperSettings(FakeSettings())
         developerSettings.setOverride(SubscriptionOverride.FORCE_FREE)
@@ -96,7 +96,7 @@ class CheckTestEligibilityUseCaseTest {
     fun `limit reached with FOLLOW_REAL still fires security event`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1))
+            mapOf("OIR" to UsageInfo(used = 1, limit = 1))
         )
         val developerSettings = DeveloperSettings(FakeSettings())
         val followRealUseCase = CheckTestEligibilityUseCase(

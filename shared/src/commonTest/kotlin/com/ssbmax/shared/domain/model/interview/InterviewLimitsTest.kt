@@ -44,13 +44,13 @@ class InterviewLimitsTest {
     }
 
     // =========================================================================
-    // forSubscription must match SubscriptionLimits.limitFor("Interview", tier) exactly
+    // forSubscription must match SubscriptionLimits.limitFor("INTERVIEW", tier) exactly
     // =========================================================================
 
     @Test
     fun `forSubscription totalLimit matches SubscriptionLimits table for every tier`() {
         SubscriptionTier.entries.forEach { tier ->
-            val expected = SubscriptionLimits.limitFor("Interview", tier)
+            val expected = SubscriptionLimits.limitFor("INTERVIEW", tier)
             val actual = InterviewLimits.forSubscription(tier, used = 0).totalLimit
             assertEquals(expected, actual, "$tier totalLimit must match SubscriptionLimits table")
         }

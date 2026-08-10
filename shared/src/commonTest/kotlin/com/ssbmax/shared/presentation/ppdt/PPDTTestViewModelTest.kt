@@ -125,7 +125,7 @@ class PPDTTestViewModelTest {
     fun `limit reached surfaces subscription details without loading question`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult =
-            Result.success(mapOf("PPDT Tests" to UsageInfo(used = 1, limit = 1)))
+            Result.success(mapOf("PPDT" to UsageInfo(used = 1, limit = 1)))
         val viewModel = buildViewModel()
 
         viewModel.loadTest()

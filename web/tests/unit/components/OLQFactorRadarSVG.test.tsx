@@ -8,7 +8,7 @@ describe('OLQFactorRadarSVG Component', () => {
 
     expect(screen.getByTestId('olq-radar-svg')).toBeInTheDocument();
     expect(screen.getByTestId('svg-chart-element')).toBeInTheDocument();
-    expect(screen.getByTestId('radar-view-toggle')).toHaveTextContent('Expand 15 OLQs');
+    expect(screen.getByTestId('radar-view-toggle')).toHaveTextContent('Expand 15-OLQ Micro Breakdown');
   });
 
   it('toggles between 4 Core Factors view and 15 OLQ view', () => {
@@ -17,20 +17,23 @@ describe('OLQFactorRadarSVG Component', () => {
     const toggleBtn = screen.getByTestId('radar-view-toggle');
     fireEvent.click(toggleBtn);
 
-    expect(toggleBtn).toHaveTextContent('4 Core Factors');
+    expect(toggleBtn).toHaveTextContent('View 4 SSB Core Factors');
 
     fireEvent.click(toggleBtn);
-    expect(toggleBtn).toHaveTextContent('Expand 15 OLQs');
+    expect(toggleBtn).toHaveTextContent('Expand 15-OLQ Micro Breakdown');
   });
 
+  // Regression target for docs/plans/CrossPlatform_SSOT §3.4: scores must be keyed by the
+  // wire-format SCREAMING_SNAKE OLQ id (matches the AI evaluation function's output), not a
+  // camelCase local rendering key that silently drops all real data.
   it('computes factor averages correctly when custom scores are provided', () => {
     render(
       <OLQFactorRadarSVG
         scores={{
-          effectiveIntelligence: 90,
-          reasoningAbility: 90,
-          organizingAbility: 90,
-          powerOfExpression: 90
+          EFFECTIVE_INTELLIGENCE: 90,
+          REASONING_ABILITY: 90,
+          ORGANIZING_ABILITY: 90,
+          POWER_OF_EXPRESSION: 90
         }}
       />
     );

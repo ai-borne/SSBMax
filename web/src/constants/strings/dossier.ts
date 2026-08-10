@@ -12,6 +12,7 @@ export const dossierStrings = {
   },
   radar: {
     title: '4-Factor SSB Core & 15-OLQ Radar Profile',
+    factorTitle: '15 Officer-Like Qualities (OLQ) Radar',
     subtitle: 'Interactive assessment polygon mapping candidate scores against baseline thresholds.',
     candidateScore: 'Candidate Score',
     benchmarkLabel: 'SSB Baseline Threshold (7.0)',

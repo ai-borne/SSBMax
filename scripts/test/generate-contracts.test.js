@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { parseYaml, loadContract, generateAll, emitKotlin, emitTypeScript, emitCjs, emitRulesPaths, GENERATED_DIR } = require('../generate-contracts');
+const { parseYaml, loadContract, loadAllContracts, generateAll, emitKotlin, emitTypeScript, emitCjs, emitRulesPaths, GENERATED_DIR } = require('../generate-contracts');
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -229,6 +229,29 @@ test('real contracts: subscription.yaml has a bucket covering every TestType fro
   for (const t of testTypes) {
     assert.ok(covered.has(t), `TestType.${t} has no SubscriptionLimits bucket`);
   }
+});
+
+test('Phase 3: all 15 OLQ ids are identical across the generated Kotlin, TypeScript, and CommonJS artifacts', () => {
+  const bundle = loadAllContracts();
+  const canonicalIds = bundle.enums.enums.find((e) => e.name === 'OLQ').members.map((m) => m.id);
+  assert.equal(canonicalIds.length, 15);
+
+  const kt = emitKotlin(bundle);
+  const ktIds = [...kt.matchAll(/^\s{12}(\w+)\(".+?", ".+?", (?:true|false)\)/gm)].map((m) => m[1]);
+  assert.deepEqual(new Set(ktIds), new Set(canonicalIds), 'Kotlin OLQ enum members must match the contract exactly');
+
+  const ts = emitTypeScript(bundle);
+  const tsIds = [...ts.matchAll(/^\s{2}(\w+): \{ id: "(\w+)",/gm)].map((m) => m[1]);
+  assert.deepEqual(new Set(tsIds), new Set(canonicalIds), 'TypeScript OLQ record keys must match the contract exactly');
+
+  const cjs = emitCjs(bundle);
+  const mod = (() => {
+    const Module = require('module');
+    const m = new Module('fixture-olq-contracts.cjs', module);
+    m._compile(cjs, 'fixture-olq-contracts.cjs');
+    return m.exports;
+  })();
+  assert.deepEqual(new Set(Object.keys(mod.Enums.OLQ)), new Set(canonicalIds), 'CommonJS Enums.OLQ keys must match the contract exactly');
 });
 
 test('real contracts: rules-paths.json has no duplicate paths and stays sorted', () => {

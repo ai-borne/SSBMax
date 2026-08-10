@@ -48,7 +48,7 @@ data class InterviewLimits(
          * @return InterviewLimits with tier-specific values, sourced from [SubscriptionLimits]
          */
         fun forSubscription(subscriptionType: SubscriptionTier, used: Int): InterviewLimits {
-            val totalLimit = SubscriptionLimits.limitFor("Interview", subscriptionType)
+            val totalLimit = SubscriptionLimits.limitFor("INTERVIEW", subscriptionType)
             val remaining = if (totalLimit < 0) Int.MAX_VALUE else maxOf(0, totalLimit - used)
             return InterviewLimits(
                 subscriptionType = subscriptionType,

@@ -1,91 +1,68 @@
 import { FC, useState } from 'react';
 import { Shield, Layers, BarChart2 } from 'lucide-react';
+import { OLQ, OLQCategory, OLQCategoryValues } from '../../generated/contracts';
+import { strings } from '../../constants/strings';
 
-export interface OLQScores {
-  // Factor I
-  effectiveIntelligence?: number;
-  reasoningAbility?: number;
-  organizingAbility?: number;
-  powerOfExpression?: number;
-  // Factor II
-  socialAdaptability?: number;
-  cooperation?: number;
-  senseOfResponsibility?: number;
-  // Factor III
-  initiative?: number;
-  selfConfidence?: number;
-  speedOfDecision?: number;
-  abilityToInfluence?: number;
-  liveliness?: number;
-  // Factor IV
-  determination?: number;
-  courage?: number;
-  stamina?: number;
-}
+/**
+ * Keyed by the generated OLQ id (SCREAMING_SNAKE, matches the wire format the
+ * AI evaluation function writes) — see contracts/enums.yaml and
+ * docs/plans/CrossPlatform_SSOT §3.4. Do not reintroduce camelCase keys here.
+ */
+export type OLQScores = Partial<Record<keyof typeof OLQ, number>>;
 
 export interface OLQFactorRadarSVGProps {
   scores?: OLQScores;
   className?: string;
 }
 
+const FACTOR_LABELS: Record<OLQCategory, { name: string; code: string }> = {
+  INTELLECTUAL: { name: 'Factor I: Planning & Reasoning', code: 'F1' },
+  SOCIAL: { name: 'Factor II: Social Adjustment', code: 'F2' },
+  DYNAMIC: { name: 'Factor III: Social Effectiveness', code: 'F3' },
+  CHARACTER: { name: 'Factor IV: Dynamic & Courage', code: 'F4' },
+};
+
+// Sample values shown when no real score is supplied for an OLQ (demo/default state).
+const DEFAULT_SCORES: Record<keyof typeof OLQ, number> = {
+  EFFECTIVE_INTELLIGENCE: 85,
+  REASONING_ABILITY: 80,
+  ORGANIZING_ABILITY: 78,
+  POWER_OF_EXPRESSION: 82,
+  SOCIAL_ADJUSTMENT: 88,
+  COOPERATION: 90,
+  SENSE_OF_RESPONSIBILITY: 85,
+  INITIATIVE: 84,
+  SELF_CONFIDENCE: 86,
+  SPEED_OF_DECISION: 79,
+  INFLUENCE_GROUP: 81,
+  LIVELINESS: 83,
+  DETERMINATION: 88,
+  COURAGE: 87,
+  STAMINA: 85,
+};
+
 interface FactorGroup {
+  category: OLQCategory;
   name: string;
   code: string;
-  olqs: Array<{ key: keyof OLQScores; label: string; defaultVal: number }>;
+  olqIds: Array<keyof typeof OLQ>;
 }
 
-const factorGroups: FactorGroup[] = [
-  {
-    name: 'Factor I: Planning & Reasoning',
-    code: 'F1',
-    olqs: [
-      { key: 'effectiveIntelligence', label: 'Effective Intelligence', defaultVal: 85 },
-      { key: 'reasoningAbility', label: 'Reasoning Ability', defaultVal: 80 },
-      { key: 'organizingAbility', label: 'Organizing Ability', defaultVal: 78 },
-      { key: 'powerOfExpression', label: 'Power of Expression', defaultVal: 82 }
-    ]
-  },
-  {
-    name: 'Factor II: Social Adjustment',
-    code: 'F2',
-    olqs: [
-      { key: 'socialAdaptability', label: 'Social Adaptability', defaultVal: 88 },
-      { key: 'cooperation', label: 'Cooperation', defaultVal: 90 },
-      { key: 'senseOfResponsibility', label: 'Sense of Responsibility', defaultVal: 85 }
-    ]
-  },
-  {
-    name: 'Factor III: Social Effectiveness',
-    code: 'F3',
-    olqs: [
-      { key: 'initiative', label: 'Initiative', defaultVal: 84 },
-      { key: 'selfConfidence', label: 'Self Confidence', defaultVal: 86 },
-      { key: 'speedOfDecision', label: 'Speed of Decision', defaultVal: 79 },
-      { key: 'abilityToInfluence', label: 'Ability to Influence', defaultVal: 81 },
-      { key: 'liveliness', label: 'Liveliness', defaultVal: 83 }
-    ]
-  },
-  {
-    name: 'Factor IV: Dynamic & Courage',
-    code: 'F4',
-    olqs: [
-      { key: 'determination', label: 'Determination', defaultVal: 88 },
-      { key: 'courage', label: 'Courage', defaultVal: 87 },
-      { key: 'stamina', label: 'Stamina', defaultVal: 85 }
-    ]
-  }
-];
+const factorGroups: FactorGroup[] = OLQCategoryValues.map((category) => ({
+  category,
+  ...FACTOR_LABELS[category],
+  olqIds: Object.values(OLQ)
+    .filter((def) => def.category === category)
+    .map((def) => def.id as keyof typeof OLQ),
+}));
 
 export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, className = '' }) => {
   const [viewMode, setViewMode] = useState<'4factor' | '15olq'>('4factor');
 
   // Compute Factor Averages
   const factorAverages = factorGroups.map((group) => {
-    const total = group.olqs.reduce((acc, item) => {
-      const val = scores[item.key] ?? item.defaultVal;
-      return acc + val;
-    }, 0);
-    return Math.round(total / group.olqs.length);
+    const total = group.olqIds.reduce((acc, id) => acc + (scores[id] ?? DEFAULT_SCORES[id]), 0);
+    return Math.round(total / group.olqIds.length);
   });
 
   const getPoints = (values: number[], cx: number, cy: number, r: number) => {
@@ -104,12 +81,12 @@ export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, cla
   const valuesToRender =
     viewMode === '4factor'
       ? factorAverages
-      : factorGroups.flatMap((g) => g.olqs.map((o) => scores[o.key] ?? o.defaultVal));
+      : factorGroups.flatMap((g) => g.olqIds.map((id) => scores[id] ?? DEFAULT_SCORES[id]));
 
   const labelsToRender =
     viewMode === '4factor'
       ? factorGroups.map((g) => g.code)
-      : factorGroups.flatMap((g) => g.olqs.map((o) => o.label.substring(0, 10)));
+      : factorGroups.flatMap((g) => g.olqIds.map((id) => OLQ[id].displayName.substring(0, 10)));
 
   const size = 300;
   const cx = size / 2;
@@ -123,7 +100,7 @@ export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, cla
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5 text-sky-600 dark:text-sky-400" />
           <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-            15 Officer-Like Qualities (OLQ) Radar
+            {strings.radar.factorTitle}
           </h3>
         </div>
         <button
@@ -132,7 +109,7 @@ export const OLQFactorRadarSVG: FC<OLQFactorRadarSVGProps> = ({ scores = {}, cla
           data-testid="radar-view-toggle"
         >
           {viewMode === '4factor' ? <Layers className="w-4 h-4 text-sky-500" /> : <BarChart2 className="w-4 h-4 text-sky-500" />}
-          <span>{viewMode === '4factor' ? 'Expand 15 OLQs' : '4 Core Factors'}</span>
+          <span>{viewMode === '4factor' ? strings.radar.toggleDetailed : strings.radar.toggleCore}</span>
         </button>
       </div>
 

@@ -190,7 +190,7 @@ class OIRTestViewModelTest {
     fun `limit reached surfaces subscription details without loading questions`() = runViewModelTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult =
-            Result.success(mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1)))
+            Result.success(mapOf("OIR" to UsageInfo(used = 1, limit = 1)))
 
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()

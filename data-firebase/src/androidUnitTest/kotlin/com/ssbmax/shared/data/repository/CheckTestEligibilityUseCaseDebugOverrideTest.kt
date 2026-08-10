@@ -39,7 +39,7 @@ class CheckTestEligibilityUseCaseDebugOverrideTest {
         // underlying data, is what flips this to eligible.
         delegate.tierResult = Result.success(SubscriptionTier.FREE)
         delegate.monthlyUsageResult = Result.success(
-            mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1))
+            mapOf("OIR" to UsageInfo(used = 1, limit = 1))
         )
         developerSettings.setOverride(SubscriptionOverride.FORCE_PREMIUM)
 

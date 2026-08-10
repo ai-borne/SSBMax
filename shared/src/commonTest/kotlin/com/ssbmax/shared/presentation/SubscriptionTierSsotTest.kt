@@ -139,12 +139,12 @@ class SubscriptionTierSsotTest {
                 )
 
                 assertEquals(
-                    SubscriptionLimits.limitFor("Interview", tier),
+                    SubscriptionLimits.limitFor("INTERVIEW", tier),
                     managementTier.interviewTestLimit,
                     "SubscriptionTierModel's Interview limit disagreed with SubscriptionLimits SSOT for $tier"
                 )
                 assertEquals(
-                    SubscriptionLimits.limitFor("OIR Tests", tier),
+                    SubscriptionLimits.limitFor("OIR", tier),
                     managementTier.oirTestLimit,
                     "SubscriptionTierModel's OIR limit disagreed with SubscriptionLimits SSOT for $tier"
                 )

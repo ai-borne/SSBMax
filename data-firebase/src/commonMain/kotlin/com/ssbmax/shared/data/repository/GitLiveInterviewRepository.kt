@@ -39,7 +39,7 @@ import kotlinx.datetime.toLocalDateTime
  * (its would-be use-case was confirmed dead code and deleted in the Phase 5 exit sweep), so it
  * stayed unimplemented rather than silently wrong. It's now real, following the exact
  * tier + monthly-usage pattern [com.ssbmax.shared.domain.usecase.subscription.CheckTestEligibilityUseCase]
- * uses for every other test type, keyed on the same `"Interview"` [SubscriptionLimits] entry
+ * uses for every other test type, keyed on the same `"INTERVIEW"` [SubscriptionLimits] entry
  * [com.ssbmax.shared.domain.model.TestType.IO] already maps to. `mode` is accepted (interface
  * contract) but unused -- [SubscriptionLimits]/[dev.gitlive.firebase.firestore] usage tracking
  * doesn't differentiate by interview mode, same as [getRemainingInterviews] below.

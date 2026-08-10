@@ -142,7 +142,7 @@ test('Phase 6B Gemini AI: Prompt injection defense & resilient JSON extraction',
 Here is the psychological analysis:
 \`\`\`json
 {
-  "olqScores": [{ "olq": "Effective Intelligence", "score": 3.0, "reasoning": "Good logic", "evidence": [] }],
+  "olqScores": [{ "olq": "EFFECTIVE_INTELLIGENCE", "score": 3.0, "reasoning": "Good logic", "evidence": [] }],
   "overallConfidence": 80,
   "keyInsights": ["High analytical thinking"]
 }
@@ -152,7 +152,7 @@ Note: Candidate showed strong leadership.
 
   const parsed = parseAnalysisResponse(responseWithMarkdown);
   assert.equal(parsed.overallConfidence, 80, 'Must extract JSON cleanly despite markdown and trailing text');
-  assert.equal(parsed.olqScores[0].olq, 'Effective Intelligence', 'OLQ scores must be parsed correctly');
+  assert.equal(parsed.olqScores[0].olq, 'EFFECTIVE_INTELLIGENCE', 'OLQ scores must be parsed correctly, keyed by the contract wire id');
 });
 
 

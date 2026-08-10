@@ -68,7 +68,7 @@ class SRTTestViewModelTest {
         usageRecorder = FakeTestUsageRecorder()
         analysisTrigger = FakeSubmissionAnalysisTrigger()
         analyticsTracker = RecordingAnalyticsTracker()
-        // "SRT Tests" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
+        // "SRT" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
         // tests are eligible unless a test explicitly overrides to exercise LimitReached.
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
     }
@@ -111,7 +111,7 @@ class SRTTestViewModelTest {
     fun `limit reached surfaces subscription details`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult =
-            Result.success(mapOf("SRT Tests" to UsageInfo(used = 1, limit = 1)))
+            Result.success(mapOf("SRT" to UsageInfo(used = 1, limit = 1)))
         val viewModel = buildViewModel()
 
         viewModel.loadTest()

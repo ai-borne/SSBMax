@@ -47,15 +47,15 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
 
             val tier = getSubscriptionTier(userId).getOrDefault(SubscriptionTier.FREE)
             val usedByKey = mapOf(
-                "OIR Tests" to usage.oirTestsUsed,
-                "PPDT Tests" to usage.ppdtTestsUsed,
-                "PIQ Forms" to usage.piqTestsUsed,
-                "TAT Tests" to usage.tatTestsUsed,
-                "WAT Tests" to usage.watTestsUsed,
-                "SRT Tests" to usage.srtTestsUsed,
-                "Self Description" to usage.sdTestsUsed,
-                "GTO Tests" to usage.gtoTestsUsed,
-                "Interview" to usage.interviewTestsUsed
+                "OIR" to usage.oirTestsUsed,
+                "PPDT" to usage.ppdtTestsUsed,
+                "PIQ" to usage.piqTestsUsed,
+                "TAT" to usage.tatTestsUsed,
+                "WAT" to usage.watTestsUsed,
+                "SRT" to usage.srtTestsUsed,
+                "SD" to usage.sdTestsUsed,
+                "GTO" to usage.gtoTestsUsed,
+                "INTERVIEW" to usage.interviewTestsUsed
             )
 
             val usageMap = usedByKey.mapValues { (key, used) ->

@@ -68,7 +68,7 @@ class GTOEligibilityCheckerTest {
     fun `checkEligibility carries the real eligibility when the limit is reached`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("GTO Tests" to UsageInfo(used = 1, limit = 1))
+            mapOf("GTO" to UsageInfo(used = 1, limit = 1))
         )
         val checker = buildChecker()
 

@@ -10,7 +10,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { OLQ_DEFINITIONS, PIQ_TO_OLQ_MAPPING } = require('./olqDefinitions');
-const { FirestorePaths } = require('./generated/contracts.cjs');
+const { FirestorePaths, Enums } = require('./generated/contracts.cjs');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -92,6 +92,16 @@ function parseAnalysisResponse(responseText) {
   if (!parsed.olqScores || !Array.isArray(parsed.olqScores)) {
     throw new Error('Invalid response structure from Gemini: missing olqScores');
   }
+
+  // Regression target (docs/plans/CrossPlatform_SSOT §3.4): a Gemini response using a wire key
+  // outside the generated OLQ contract (e.g. a casing/name drift like 'socialAdaptability')
+  // must fail loudly here, not get written to Firestore for a client to silently misread as 0.
+  for (const item of parsed.olqScores) {
+    if (!item || !Object.prototype.hasOwnProperty.call(Enums.OLQ, item.olq)) {
+      throw new Error(`Invalid response structure from Gemini: unknown OLQ id '${item && item.olq}'`);
+    }
+  }
+
   return parsed;
 }
 

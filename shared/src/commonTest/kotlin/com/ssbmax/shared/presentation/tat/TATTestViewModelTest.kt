@@ -75,7 +75,7 @@ class TATTestViewModelTest {
         submissionRepository = FakeSubmissionRepository()
         usageRecorder = FakeTestUsageRecorder()
         analysisTrigger = FakeSubmissionAnalysisTrigger()
-        // "TAT Tests" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
+        // "TAT" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
         // tests are eligible unless a test explicitly overrides to exercise LimitReached.
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
     }
@@ -118,7 +118,7 @@ class TATTestViewModelTest {
     fun `limit reached surfaces subscription details without loading questions`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult =
-            Result.success(mapOf("TAT Tests" to UsageInfo(used = 1, limit = 1)))
+            Result.success(mapOf("TAT" to UsageInfo(used = 1, limit = 1)))
         val viewModel = buildViewModel()
 
         viewModel.loadTest()

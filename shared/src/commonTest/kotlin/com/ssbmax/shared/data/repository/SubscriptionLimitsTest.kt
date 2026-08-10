@@ -18,25 +18,25 @@ class SubscriptionLimitsTest {
 
     @Test
     fun `FREE tier matches the Android SubscriptionRepositoryImpl limits`() {
-        assertEquals(1, SubscriptionLimits.limitFor("OIR Tests", SubscriptionTier.FREE))
-        assertEquals(1, SubscriptionLimits.limitFor("PPDT Tests", SubscriptionTier.FREE))
-        assertEquals(1, SubscriptionLimits.limitFor("PIQ Forms", SubscriptionTier.FREE))
-        assertEquals(0, SubscriptionLimits.limitFor("TAT Tests", SubscriptionTier.FREE))
-        assertEquals(0, SubscriptionLimits.limitFor("Interview", SubscriptionTier.FREE))
+        assertEquals(1, SubscriptionLimits.limitFor("OIR", SubscriptionTier.FREE))
+        assertEquals(1, SubscriptionLimits.limitFor("PPDT", SubscriptionTier.FREE))
+        assertEquals(1, SubscriptionLimits.limitFor("PIQ", SubscriptionTier.FREE))
+        assertEquals(0, SubscriptionLimits.limitFor("TAT", SubscriptionTier.FREE))
+        assertEquals(0, SubscriptionLimits.limitFor("INTERVIEW", SubscriptionTier.FREE))
     }
 
     @Test
     fun `PRO tier matches the Android SubscriptionRepositoryImpl limits`() {
-        assertEquals(5, SubscriptionLimits.limitFor("OIR Tests", SubscriptionTier.PRO))
-        assertEquals(5, SubscriptionLimits.limitFor("PPDT Tests", SubscriptionTier.PRO))
-        assertEquals(-1, SubscriptionLimits.limitFor("PIQ Forms", SubscriptionTier.PRO))
-        assertEquals(3, SubscriptionLimits.limitFor("TAT Tests", SubscriptionTier.PRO))
-        assertEquals(1, SubscriptionLimits.limitFor("Interview", SubscriptionTier.PRO))
+        assertEquals(5, SubscriptionLimits.limitFor("OIR", SubscriptionTier.PRO))
+        assertEquals(5, SubscriptionLimits.limitFor("PPDT", SubscriptionTier.PRO))
+        assertEquals(-1, SubscriptionLimits.limitFor("PIQ", SubscriptionTier.PRO))
+        assertEquals(3, SubscriptionLimits.limitFor("TAT", SubscriptionTier.PRO))
+        assertEquals(1, SubscriptionLimits.limitFor("INTERVIEW", SubscriptionTier.PRO))
     }
 
     @Test
     fun `PREMIUM tier is unlimited for every test type except Interview`() {
-        SubscriptionLimits.testTypeKeys.filter { it != "Interview" }.forEach { key ->
+        SubscriptionLimits.testTypeKeys.filter { it != "INTERVIEW" }.forEach { key ->
             assertEquals(-1, SubscriptionLimits.limitFor(key, SubscriptionTier.PREMIUM), "expected $key unlimited for PREMIUM")
         }
     }
@@ -49,7 +49,7 @@ class SubscriptionLimitsTest {
      */
     @Test
     fun `PREMIUM tier caps Interview at 3`() {
-        assertEquals(3, SubscriptionLimits.limitFor("Interview", SubscriptionTier.PREMIUM))
+        assertEquals(3, SubscriptionLimits.limitFor("INTERVIEW", SubscriptionTier.PREMIUM))
     }
 
     @Test
@@ -79,6 +79,6 @@ class SubscriptionLimitsTest {
             TestType.GTO_GD, TestType.GTO_GPE, TestType.GTO_PGT, TestType.GTO_GOR,
             TestType.GTO_HGT, TestType.GTO_LECTURETTE, TestType.GTO_IO, TestType.GTO_CT
         )
-        gtoTypes.forEach { assertEquals("GTO Tests", SubscriptionLimits.keyFor(it)) }
+        gtoTypes.forEach { assertEquals("GTO", SubscriptionLimits.keyFor(it)) }
     }
 }
