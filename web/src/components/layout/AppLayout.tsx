@@ -202,7 +202,7 @@ export const AppLayout: FC<AppLayoutProps> = ({
         </div>
       )}
 
-      <main className={`flex-1 w-full max-w-7xl mx-auto px-4 py-6 ${isTestMode ? 'max-w-none p-0 flex flex-col justify-center' : ''}`}>
+      <main className={`flex-1 w-full ${isTestMode ? 'flex flex-col justify-center' : ''}`}>
         {children}
       </main>
 

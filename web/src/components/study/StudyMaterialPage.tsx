@@ -108,7 +108,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
   }));
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300" data-testid="study-material-page">
+    <div className="max-w-7xl w-full mx-auto px-4 py-6 space-y-6 animate-in fade-in duration-300" data-testid="study-material-page">
       {/* Header Banner (Hero Section without Online Pill) */}
       <div className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-6 shadow-md shadow-slate-200/50 dark:shadow-lg backdrop-blur-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

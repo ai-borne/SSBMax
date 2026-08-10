@@ -74,7 +74,7 @@ export const AIReportsPage: React.FC<AIReportsPageProps> = ({
   const dossierData = activeReports?.dossier || SAMPLE_DOSSIER;
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8" data-testid="ai-reports-page">
+    <div className="max-w-7xl w-full mx-auto px-4 py-6 space-y-8 animate-in fade-in duration-300" data-testid="ai-reports-page">
       {/* Header Banner */}
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider">

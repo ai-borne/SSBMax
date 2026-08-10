@@ -40,7 +40,7 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300" data-testid="practice-tests-page">
+    <div className="max-w-7xl w-full mx-auto px-4 py-6 space-y-6 animate-in fade-in duration-300" data-testid="practice-tests-page">
       {/* Header Banner */}
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

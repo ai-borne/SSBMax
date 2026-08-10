@@ -20,17 +20,19 @@ export const LandingPage: FC<LandingPageProps> = ({ onStartFreeClick, onStartTes
   };
 
   return (
-    <div className="w-full flex flex-col items-center space-y-4" data-testid="landing-page">
+    <div className="w-full flex flex-col items-center" data-testid="landing-page">
       <HeroSection
         onStartFreeClick={onStartFreeClick}
         onViewSampleDossierClick={scrollToDossier}
       />
-      <InteractiveSandbox />
-      <div id="sample-dossier-section" className="w-full">
-        <SampleDossierPreview />
+      <div className="max-w-7xl w-full mx-auto px-4 py-6 space-y-8 flex flex-col items-center">
+        <InteractiveSandbox />
+        <div id="sample-dossier-section" className="w-full">
+          <SampleDossierPreview />
+        </div>
+        <TestGridSection onStartTestClick={onStartTestClick} />
+        <SubscriptionPage />
       </div>
-      <TestGridSection onStartTestClick={onStartTestClick} />
-      <SubscriptionPage />
     </div>
   );
 };

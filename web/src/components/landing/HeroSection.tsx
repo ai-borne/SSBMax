@@ -18,7 +18,7 @@ export const HeroSection: FC<HeroSectionProps> = ({
     'flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 text-left shadow-md shadow-slate-200/50 dark:shadow-none backdrop-blur-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-200';
   return (
     <section
-      className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-hidden py-12 md:py-20 flex flex-col items-center text-center border-b border-slate-200/40 dark:border-slate-800/40"
+      className="relative w-full overflow-hidden py-12 md:py-20 flex flex-col items-center text-center border-b border-slate-200/40 dark:border-slate-800/40"
       data-testid="hero-section"
     >
       {/* ── Layer 1: Radial depth gradient (dark = navy bloom, light = subtle sky tint) ── */}

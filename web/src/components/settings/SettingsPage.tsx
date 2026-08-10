@@ -76,7 +76,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8" data-testid="settings-page">
+    <div className="max-w-4xl w-full mx-auto px-4 py-6 space-y-8" data-testid="settings-page">
       {/* Hero Header Banner Card */}
       <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-3" data-testid="settings-header-banner">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider">
