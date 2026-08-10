@@ -131,7 +131,10 @@ export const commonStrings = {
     day1Title: 'Day 1: Stage I Screening Test',
     day2Title: 'Day 2: Stage II Psychology Battery & PIQ',
     day3Title: 'Day 3 & 4: Stage II GTO Outdoor Tasks',
-    day5Title: 'Day 5: Stage II Interview & Board Conference'
+    day5Title: 'Day 5: Stage II Interview & Board Conference',
+    skeletonLoading: 'Loading authentic SSB study materials...',
+    postAuthResuming: 'Resuming your session to open study guide...',
+    offlineFallbackBanner: 'Operating in offline mode. Showing cached study materials.'
   },
   nav: {
     landing: 'Home',

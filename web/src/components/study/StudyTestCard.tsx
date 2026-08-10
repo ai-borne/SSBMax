@@ -6,6 +6,7 @@ import { AccessTier } from '../../constants/ssbSelectionProcess';
 export interface SSBTestCardInfo {
   id: string;
   testTypeId: string;
+  compositeTestTypeIds?: StudyMaterial['testTypeId'][];
   title: string;
   shortCode: string;
   description: string;

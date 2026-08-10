@@ -7,7 +7,12 @@ export interface DaySectionConfig {
   stageBadge: string;
   title: string;
   subtitle: string;
-  getTestCards: (getMaterialsForTest: (testTypeId: string) => StudyMaterial[]) => SSBTestCardInfo[];
+  getTestCards: (
+    getMaterialsForTest: (
+      testTypeId: string,
+      compositeTestTypeIds?: StudyMaterial['testTypeId'][]
+    ) => StudyMaterial[]
+  ) => SSBTestCardInfo[];
 }
 
 const day1Overview = getDayOverview('1')!;
@@ -29,7 +34,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: 'Officer Intelligence Rating (OIR)',
         description: 'Verbal and Non-Verbal reasoning test batteries to achieve OIR Rating 1.',
         requiredTier: 'cadet',
-        materials: getMaterials('oir'),
+        materials: getMaterials('oir')
       },
       {
         id: 'ppdt',
@@ -38,9 +43,9 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: 'Picture Perception & Discussion Test',
         description: 'Hazy image perception, story writing, narration, and group discussion tactics.',
         requiredTier: 'officer',
-        materials: getMaterials('ppdt'),
-      },
-    ],
+        materials: getMaterials('ppdt')
+      }
+    ]
   },
   {
     dayNumber: '2',
@@ -55,23 +60,19 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: 'Filling PIQ Form',
         description: 'Guidelines to fill the Personal Information Questionnaire without discrepancies.',
         requiredTier: 'cadet',
-        materials: getMaterials('piq'),
+        materials: getMaterials('piq')
       },
       {
         id: 'psych',
         testTypeId: 'tat',
+        compositeTestTypeIds: ['tat', 'wat', 'srt', 'sd'],
         shortCode: 'PSYCH',
         title: 'Psychology Test Battery (TAT, WAT, SRT, SD)',
         description: 'Thematic Apperception (12 slides), Word Association (60 words), Situation Reaction (60 scenarios), and SD.',
         requiredTier: 'officer',
-        materials: [
-          ...getMaterials('tat'),
-          ...getMaterials('wat'),
-          ...getMaterials('srt'),
-          ...getMaterials('sd'),
-        ],
-      },
-    ],
+        materials: getMaterials('tat', ['tat', 'wat', 'srt', 'sd'])
+      }
+    ]
   },
   {
     dayNumber: '3-4',
@@ -86,7 +87,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: '1. Group Discussion',
         description: 'Current affairs and defense topics group discussion techniques.',
         requiredTier: 'cadet',
-        materials: getMaterials('gd'),
+        materials: getMaterials('gd')
       },
       {
         id: 'gpe',
@@ -95,7 +96,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: '2. Group Planning Exercise',
         description: 'Military map problem solving and group consensus planning.',
         requiredTier: 'officer',
-        materials: getMaterials('gpe'),
+        materials: getMaterials('gpe')
       },
       {
         id: 'pgt',
@@ -104,7 +105,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: '3. Progressive Group Task',
         description: 'Structures, plank, rope, and load crossing methods across 4 obstacles.',
         requiredTier: 'officer',
-        materials: getMaterials('pgt'),
+        materials: getMaterials('pgt')
       },
       {
         id: 'hgt',
@@ -113,7 +114,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: '4. Half Group Task',
         description: 'Group half-division outdoor structure assessment.',
         requiredTier: 'officer',
-        materials: getMaterials('hgt'),
+        materials: getMaterials('hgt')
       },
       {
         id: 'iot',
@@ -122,7 +123,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: '5. Individual Obstacles Test',
         description: '10 individual outdoor physical obstacles and scoring strategy.',
         requiredTier: 'cadet',
-        materials: getMaterials('iot'),
+        materials: getMaterials('iot')
       },
       {
         id: 'command_task',
@@ -131,7 +132,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: '6. Command Task',
         description: 'Subordinate selection and leader obstacle execution.',
         requiredTier: 'officer',
-        materials: getMaterials('command_task'),
+        materials: getMaterials('command_task')
       },
       {
         id: 'snake_race',
@@ -140,7 +141,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: '7. Snake Race / Group Obstacle Race',
         description: 'Group obstacle race carrying continuous load (snake).',
         requiredTier: 'cadet',
-        materials: getMaterials('snake_race'),
+        materials: getMaterials('snake_race')
       },
       {
         id: 'fgt',
@@ -149,9 +150,9 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: '8. Final Group Task',
         description: 'Final single outdoor structure group task execution.',
         requiredTier: 'officer',
-        materials: getMaterials('fgt'),
-      },
-    ],
+        materials: getMaterials('fgt')
+      }
+    ]
   },
   {
     dayNumber: '5',
@@ -166,17 +167,18 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         title: 'Personal Interview',
         description: 'Interviewing Officer (IO/President) questioning dossier preparation.',
         requiredTier: 'officer',
-        materials: getMaterials('interview'),
+        materials: getMaterials('interview')
       },
       {
         id: 'conference',
         testTypeId: 'conference',
+        compositeTestTypeIds: ['conference', 'interview'],
         shortCode: 'CONF',
         title: 'Board Conference & Medicals',
         description: 'Final Assessor Board Conference protocol and Special Medical Board standards.',
         requiredTier: 'cadet',
-        materials: getMaterials('conference'),
-      },
-    ],
-  },
+        materials: getMaterials('conference', ['conference', 'interview'])
+      }
+    ]
+  }
 ];
