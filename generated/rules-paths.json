@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "node scripts/generate-contracts.js",
+  "paths": [
+    "archived_submissions",
+    "gto_results",
+    "interview_responses",
+    "interview_sessions",
+    "ppdt_results",
+    "study_materials",
+    "submissions",
+    "test_content",
+    "test_content/gto/scenarios/gpe/batches",
+    "test_content/gto/task_batches",
+    "test_content/oir/batches",
+    "test_content/oir/meta/config",
+    "test_content/ppdt/image_batches",
+    "test_content/srt/situation_batches",
+    "test_content/tat/image_batches",
+    "test_content/wat/word_batches",
+    "users"
+  ]
+}

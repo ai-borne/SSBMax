@@ -1,0 +1,120 @@
+# Enums shared across all four consumers. KMP-authoritative — wire casing is
+# SCREAMING_SNAKE_CASE everywhere; a platform's idiomatic casing (e.g. web
+# camelCase for local variables) is a rendering choice, never a wire choice.
+# See contracts/README.md for the compatibility policy before editing.
+schemaVersion: "1.0.0"
+
+enums:
+  - name: TestType
+    source: shared/.../domain/model/SSBPhase.kt
+    members:
+      - OIR
+      - PPDT
+      - PIQ
+      - TAT
+      - WAT
+      - SRT
+      - SD
+      - GTO_GD
+      - GTO_GPE
+      - GTO_PGT
+      - GTO_GOR
+      - GTO_HGT
+      - GTO_LECTURETTE
+      - GTO_IO
+      - GTO_CT
+      - IO
+
+  - name: TestPhase
+    source: shared/.../domain/model/SSBPhase.kt
+    members:
+      - PHASE_1
+      - PHASE_2
+
+  - name: TestStatus
+    source: shared/.../domain/model/SSBPhase.kt
+    members:
+      - NOT_ATTEMPTED
+      - IN_PROGRESS
+      - SUBMITTED_PENDING_REVIEW
+      - GRADED
+      - COMPLETED
+
+  - name: SubscriptionTier
+    source: shared/.../domain/model/SubscriptionTier.kt
+    members:
+      - FREE
+      - PRO
+      - PREMIUM
+
+  - name: OIRQuestionType
+    source: shared/.../domain/model/OIRTest.kt
+    members:
+      - VERBAL_REASONING
+      - NON_VERBAL_REASONING
+      - NUMERICAL_ABILITY
+      - SPATIAL_REASONING
+
+  - name: OLQ
+    source: shared/.../domain/model/interview/OLQ.kt
+    note: "The 15 Officer-Like Qualities. Web's OLQFactorRadarSVG.tsx currently uses camelCase keys and diverges on the 5th entry (socialAdaptability vs SOCIAL_ADJUSTMENT) - that migration is Phase 3, not this phase. This contract captures the KMP-true id/displayName/category pairs so Phase 3 has a single place to migrate web onto."
+    members:
+      - id: EFFECTIVE_INTELLIGENCE
+        displayName: Effective Intelligence
+        category: INTELLECTUAL
+      - id: REASONING_ABILITY
+        displayName: Reasoning Ability
+        category: INTELLECTUAL
+        critical: true
+      - id: ORGANIZING_ABILITY
+        displayName: Organizing Ability
+        category: INTELLECTUAL
+      - id: POWER_OF_EXPRESSION
+        displayName: Power of Expression
+        category: INTELLECTUAL
+      - id: SOCIAL_ADJUSTMENT
+        displayName: Social Adjustment
+        category: SOCIAL
+        critical: true
+      - id: COOPERATION
+        displayName: Cooperation
+        category: SOCIAL
+        critical: true
+      - id: SENSE_OF_RESPONSIBILITY
+        displayName: Sense of Responsibility
+        category: SOCIAL
+        critical: true
+      - id: INITIATIVE
+        displayName: Initiative
+        category: DYNAMIC
+      - id: SELF_CONFIDENCE
+        displayName: Self Confidence
+        category: DYNAMIC
+      - id: SPEED_OF_DECISION
+        displayName: Speed of Decision
+        category: DYNAMIC
+      - id: INFLUENCE_GROUP
+        displayName: Ability to Influence Group
+        category: DYNAMIC
+      - id: LIVELINESS
+        displayName: Liveliness
+        category: DYNAMIC
+        critical: true
+      - id: DETERMINATION
+        displayName: Determination
+        category: CHARACTER
+      - id: COURAGE
+        displayName: Courage
+        category: CHARACTER
+        critical: true
+      - id: STAMINA
+        displayName: Stamina
+        category: CHARACTER
+
+  - name: OLQCategory
+    source: shared/.../domain/model/interview/OLQ.kt
+    members:
+      - INTELLECTUAL
+      - SOCIAL
+      - DYNAMIC
+      - CHARACTER

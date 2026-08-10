@@ -1,0 +1,13 @@
+# Analytics + security event names. KMP-authoritative
+# (shared/.../domain/util/AnalyticsTracker.kt, object SecurityEvents).
+# Only events that exist as real const vals today are listed — planned but
+# not-yet-implemented events belong in a future revision of this file once
+# a real call site exists, not here (Rule 12 — don't assert what isn't true).
+# See contracts/README.md for the compatibility policy before editing.
+schemaVersion: "1.0.0"
+
+securityEvents:
+  - name: UNAUTHENTICATED_ACCESS
+    value: sec_unauth_test_access
+  - name: LIMIT_REACHED
+    value: sec_limit_reached

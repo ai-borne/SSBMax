@@ -388,6 +388,31 @@ jobs:
           path: '**/build/reports/detekt/detekt.html'
           retention-days: 7
 
+  # ── Contracts (Tier-1 SSOT generator — docs/plans/CrossPlatform_SSOT Phase 1) ──
+  # Fails if generated/* or any of its shared/web/functions mirrors
+  # are stale relative to contracts/*.yaml, or if the generator's own tests
+  # (parser golden-file / malformed-input / regen-diff) regress.
+  contracts:
+    name: Contracts Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Run generator tests
+        run: npm run contracts:test
+
+      - name: Verify generated output matches contracts/*.yaml (no drift)
+        run: npm run contracts:check
+
   # ── Web Platform CI (ssbmax-web) ────────────────────────────────────
   web-ci:
     name: Web Platform CI (ssbmax-web)
@@ -432,7 +457,7 @@ jobs:
     name: CI Success
     runs-on: ubuntu-latest
     if: always()
-    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, build, firestore-rules, web-ci]
+    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, build, firestore-rules, contracts, web-ci]
     steps:
       - name: Verify all jobs succeeded
         run: |
@@ -443,6 +468,7 @@ jobs:
           echo "unit-tests:         ${{ needs.unit-tests.result }}"
           echo "build:              ${{ needs.build.result }}"
           echo "firestore-rules:    ${{ needs.firestore-rules.result }}"
+          echo "contracts:          ${{ needs.contracts.result }}"
           echo "web-ci:             ${{ needs.web-ci.result }}"
           if [ "${{ needs.wrapper-validation.result }}" != "success" ] || \
              [ "${{ needs.security-scan.result }}" != "success" ] || \
@@ -451,6 +477,7 @@ jobs:
              [ "${{ needs.unit-tests.result }}" != "success" ] || \
              [ "${{ needs.build.result }}" != "success" ] || \
              [ "${{ needs.firestore-rules.result }}" != "success" ] || \
+             [ "${{ needs.contracts.result }}" != "success" ] || \
              [ "${{ needs.web-ci.result }}" != "success" ]; then
             echo "❌ One or more CI jobs failed."
             exit 1

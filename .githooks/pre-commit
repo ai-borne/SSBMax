@@ -187,6 +187,18 @@ if [ -n "$UI_OR_RULE_FILES" ]; then
 fi
 
 # ============================================
+# 7d. Contracts SSOT check (docs/plans/CrossPlatform_SSOT Phase 1)
+# ============================================
+CONTRACTS_FILES=$(echo "$STAGED_FILES" | grep -E '^(contracts/|generated/|scripts/generate-contracts\.js|shared/src/commonMain/kotlin/com/ssbmax/shared/contracts/|web/src/generated/|functions/src/generated/)' || true)
+if [ -n "$CONTRACTS_FILES" ]; then
+    echo "🔍 Checking contracts/ generated output is up to date..."
+    if ! npm run --silent contracts:check; then
+        echo -e "${RED}❌ ERROR: generated/* is stale — run 'npm run contracts:generate' and commit the result${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+
+# ============================================
 # 8b. Run Web Platform Build & TypeScript Checks
 # ============================================
 WEB_FILES=$(echo "$STAGED_FILES" | grep -E '^web/' || true)

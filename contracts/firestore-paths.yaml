@@ -1,0 +1,71 @@
+# Firestore collection paths and doc-id conventions. KMP-authoritative.
+# See contracts/README.md for the compatibility policy before editing.
+schemaVersion: "1.0.0"
+
+# Fixed, non-parameterized collection paths.
+collections:
+  - name: SUBMISSIONS
+    path: submissions
+    note: "Declared 9 separate times in data-firebase (SUBMISSIONS_COLLECTION / COLLECTION_SUBMISSIONS / GTO_COLLECTION_SUBMISSIONS / PSYCH_SUBMISSIONS_COLLECTION, all = submissions). Phase 2 collapses these onto this single generated constant."
+  - name: SUBMISSIONS_ARCHIVE_GROUP
+    path: submissions
+    note: collectionGroup query target (GitLiveSubmissionArchiveRepository.kt:42)
+  - name: ARCHIVED_SUBMISSIONS
+    path: archived_submissions
+  - name: GTO_RESULTS
+    path: gto_results
+  - name: PPDT_RESULTS
+    path: ppdt_results
+  - name: INTERVIEW_SESSIONS
+    path: interview_sessions
+  - name: INTERVIEW_RESPONSES
+    path: interview_responses
+  - name: USERS
+    path: users
+    note: Declared 4 times in data-firebase; Phase 2 collapses onto this constant.
+  - name: STUDY_MATERIALS
+    path: study_materials
+  - name: TEST_CONTENT
+    path: test_content
+
+# test_content/{testType}/... sub-paths. Each entry is relative to
+# collections.TEST_CONTENT ("test_content").
+testContent:
+  - testType: OIR
+    batchesPath: test_content/oir/batches
+    metaConfigPath: test_content/oir/meta/config
+    docIdPattern: "batch_pdf_{seq:03d}"
+    docIdExample: batch_pdf_001
+  - testType: PPDT
+    batchesPath: test_content/ppdt/image_batches
+    docIdPattern: "batch_{seq:03d}"
+  - testType: TAT
+    batchesPath: test_content/tat/image_batches
+    docIdPattern: "batch_{seq:03d}"
+  - testType: WAT
+    batchesPath: test_content/wat/word_batches
+    docIdPattern: "batch_{seq:03d}"
+  - testType: SRT
+    batchesPath: test_content/srt/situation_batches
+    docIdPattern: "batch_{seq:03d}"
+  - testType: GTO
+    batchesPath: test_content/gto/task_batches
+    docIdPattern: "batch_{seq:03d}"
+    docIdExample: batch_001
+  - testType: GPE
+    batchesPath: test_content/gto/scenarios/gpe/batches
+    docIdPattern: "batch_{seq:03d}"
+
+# Legacy paths removed in Phase 0a — kept here ONLY as a record of what must
+# never be reintroduced, per contracts/README §3 (sunset already complete;
+# both were confirmed empty in production on 2026-08-10).
+removedLegacyPaths:
+  - path: content_oir
+    removedIn: Phase 0a
+    reason: dead OIR scoring fallback, 0 docs in production
+  - path: oir_batches
+    removedIn: Phase 0a
+    reason: dead OIR scoring fallback, 0 docs in production
+  - path: test_content/oir/question_batches
+    removedIn: Phase 0b
+    reason: web-only path-ignorance guess, never matched KMP
