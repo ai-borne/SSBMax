@@ -187,6 +187,19 @@ if [ -n "$UI_OR_RULE_FILES" ]; then
 fi
 
 # ============================================
+# 8b. Run Web Platform Build & TypeScript Checks
+# ============================================
+WEB_FILES=$(echo "$STAGED_FILES" | grep -E '^web/' || true)
+if [ -n "$WEB_FILES" ]; then
+    echo "🔍 Running Web platform build & TypeScript checks..."
+    if ! (cd web && npm run build && npm test -- --run); then
+        echo -e "${RED}❌ ERROR: Web platform build or TypeScript check failed!${NC}"
+        echo "   → Run locally: cd web && npm run build && npm test"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+
+# ============================================
 # 9. Validate commit message doesn't contain secrets
 # ============================================
 echo "🔍 Checking commit message (if available)..."

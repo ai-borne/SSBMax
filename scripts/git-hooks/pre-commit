@@ -48,7 +48,17 @@ if git diff --cached --name-only | grep -E "firestore\.rules"; then
   fi
 fi
 
-# 4. Run lint and UI enforcement checks (all modules)
+# 4. Run web platform build & TypeScript checks if web files are staged
+if git diff --cached --name-only | grep -E "^web/" > /dev/null; then
+  echo "Running Web platform build & TypeScript checks..."
+  if ! (cd web && npm run build && npm test -- --run); then
+    echo "❌ ERROR: Web platform build or TypeScript check failed"
+    echo "   → Run: cd web && npm run build && npm test"
+    exit 1
+  fi
+fi
+
+# 5. Run lint and UI enforcement checks (all modules)
 echo "Running lint and UI enforcement checks..."
 if ! ./gradlew lintDebug :lint:test :detekt-rules:test :shared:detekt --no-daemon --quiet 2>&1; then
   echo "❌ ERROR: Lint or UI enforcement checks failed"

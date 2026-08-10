@@ -35,7 +35,7 @@ describe('GridCardContainer Component', () => {
   });
 
   it('applies tier variant background styles correctly', () => {
-    const { container } = render(
+    render(
       <GridCardContainer variant="officer" testId="officer-card">
         <div>Officer Content</div>
       </GridCardContainer>
