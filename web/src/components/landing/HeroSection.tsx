@@ -42,10 +42,10 @@ export const HeroSection: FC<HeroSectionProps> = ({
           <span>{strings.landing.heroBadge}</span>
         </div>
 
-        {/* ── Main Headline — "AI" span carries shimmer animation ── */}
+        {/* ── Main Headline — "AI" span carries text shimmer animation ── */}
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight mb-6">
           {strings.landing.heroTitle.split('AI')[0]}
-          <span className="animate-shimmer animate-text-shimmer inline-block font-black relative">
+          <span className="animate-text-shimmer">
             AI
           </span>
         </h1>

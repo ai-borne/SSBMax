@@ -48,10 +48,10 @@ describe('HeroSection Component', () => {
     expect(heading?.className).toContain('text-slate-900');
   });
 
-  it('should apply animate-shimmer class to the AI gradient text span', () => {
+  it('should apply animate-text-shimmer class to the AI gradient text span', () => {
     const { container } = render(<HeroSection />);
-    // The <span> wrapping "AI" must carry the shimmer animation class
-    const shimmerSpan = container.querySelector('span.animate-shimmer');
+    // The <span> wrapping "AI" must carry the text shimmer animation class
+    const shimmerSpan = container.querySelector('span.animate-text-shimmer');
     expect(shimmerSpan).toBeInTheDocument();
     expect(shimmerSpan?.textContent?.trim()).toBe('AI');
   });
