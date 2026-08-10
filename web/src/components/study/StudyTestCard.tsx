@@ -33,12 +33,12 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
   const getTierBadgeStyle = () => {
     switch (cardInfo.requiredTier) {
       case 'command':
-        return 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30';
+        return 'bg-violetSubtle text-violetToken border-violetToken/40 font-black';
       case 'officer':
-        return 'bg-sky-500/10 dark:bg-sky-500/20 text-sky-700 dark:text-sky-400 border-sky-500/30';
+        return 'bg-goldSubtle text-gold border-gold/40 font-black';
       case 'cadet':
       default:
-        return 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30';
+        return 'bg-emeraldSubtle text-emeraldToken border-emeraldToken/40 font-black';
     }
   };
 
@@ -57,7 +57,7 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
   return (
     <div
       onClick={() => onCardClick(cardInfo.testTypeId)}
-      className="bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 rounded-2xl p-5 shadow-sm hover:shadow-md dark:shadow-xl dark:shadow-slate-950/60 transition-all flex flex-col justify-between group cursor-pointer"
+      className="bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 rounded-2xl p-5 shadow-[var(--card-shadow)] hover:-translate-y-1 hover:shadow-[var(--card-shadow-hover)] transition-all flex flex-col justify-between group cursor-pointer"
       data-testid={`study-test-card-${cardInfo.testTypeId}`}
     >
       <div>

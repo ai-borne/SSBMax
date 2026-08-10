@@ -12,6 +12,7 @@ export interface TestSimulatorConfig {
   requiredTier: AccessTier;
   stageBadge: string;
   olqsEvaluated?: string[];
+  isMostPopular?: boolean;
 }
 
 export const DAY_1_TESTS: TestSimulatorConfig[] = [
@@ -38,6 +39,7 @@ export const DAY_1_TESTS: TestSimulatorConfig[] = [
     requiredTier: 'officer',
     stageBadge: 'Stage I Screening',
     olqsEvaluated: ['Power of Expression', 'Social Adaptability', 'Group Influencing Ability'],
+    isMostPopular: true,
   },
 ];
 
@@ -65,6 +67,7 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
     requiredTier: 'officer',
     stageBadge: 'Stage II Psychology',
     olqsEvaluated: ['All 15 Officer-Like Qualities'],
+    isMostPopular: true,
   },
   {
     id: 'tat',
@@ -77,6 +80,7 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
     requiredTier: 'officer',
     stageBadge: 'Stage II Psychology',
     olqsEvaluated: ['Effective Intelligence', 'Emotional Stability', 'Liveliness'],
+    isMostPopular: true,
   },
   {
     id: 'wat',

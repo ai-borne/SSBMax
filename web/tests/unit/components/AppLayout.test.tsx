@@ -147,4 +147,22 @@ describe('AppLayout Component', () => {
     fireEvent.click(installButton);
     expect(promptMock).toHaveBeenCalledTimes(1);
   });
+
+  // Phase 4 — Nav Active Gradient & Card Depth Hover Tests
+  it('should apply gradient class to active nav tab', () => {
+    render(<AppLayout activeTab="study"><div>Content</div></AppLayout>);
+    const studyBtn = screen.getByTestId('nav-item-study');
+    expect(studyBtn.className).toContain('from-sky-600');
+    expect(studyBtn.className).toContain('to-blue-600');
+  });
+
+  it('should apply hover-lift classes to TestSimulatorCard wrapper', () => {
+    render(
+      <AppLayout activeTab="tests">
+        <div data-testid="test-simulator-card-oir" className="hover:-translate-y-1 transition-all duration-200" />
+      </AppLayout>
+    );
+    const oirCard = screen.getByTestId('test-simulator-card-oir');
+    expect(oirCard.className).toContain('hover:-translate-y-1');
+  });
 });

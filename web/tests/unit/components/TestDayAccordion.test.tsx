@@ -114,7 +114,7 @@ describe('TestDayAccordion Component', () => {
     const card = screen.getByTestId('test-simulator-card-gd');
     expect(card.className).toContain('dark:bg-slate-800/90');
     expect(card.className).toContain('dark:border-slate-700/80');
-    expect(card.className).toContain('dark:shadow-slate-950/60');
+    expect(card.className).toContain('shadow-[var(--card-shadow)]');
   });
 
   // Phase 3 — Day colour-coded accordion border tests
@@ -153,5 +153,28 @@ describe('TestDayAccordion Component', () => {
     );
     const accordion = getByTestId('test-day-accordion-5');
     expect(accordion.className).toContain('border-l-day5');
+  });
+
+  // Phase 4 — Badge Colour Coding & Most Popular Badge Tests
+  it('should apply emerald badge style to CADET FREE tier test card', () => {
+    const day1 = getDayOverview('1')!;
+    render(<TestDayAccordion dayOverview={day1} userTier="cadet" onStartTest={vi.fn()} />);
+    const oirCard = screen.getByTestId('test-simulator-card-oir');
+    const badge = oirCard.querySelector('[data-testid="tier-badge"]');
+    expect(badge?.className).toContain('text-emeraldToken');
+  });
+
+  it('should apply gold badge style to OFFICER tier test card', () => {
+    const day1 = getDayOverview('1')!;
+    render(<TestDayAccordion dayOverview={day1} userTier="officer" onStartTest={vi.fn()} />);
+    const ppdtCard = screen.getByTestId('test-simulator-card-ppdt');
+    const badge = ppdtCard.querySelector('[data-testid="tier-badge"]');
+    expect(badge?.className).toContain('text-gold');
+  });
+
+  it('should render Most Popular badge on PPDT card', () => {
+    const day1 = getDayOverview('1')!;
+    render(<TestDayAccordion dayOverview={day1} userTier="officer" onStartTest={vi.fn()} />);
+    expect(screen.getByTestId('most-popular-badge-ppdt')).toBeInTheDocument();
   });
 });

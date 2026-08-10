@@ -156,7 +156,7 @@ describe('StudyMaterialPage Component', () => {
       const card = screen.getByTestId('study-test-card-oir');
       expect(card.className).toContain('dark:bg-slate-800/90');
       expect(card.className).toContain('dark:border-slate-700/80');
-      expect(card.className).toContain('dark:shadow-slate-950/60');
+      expect(card.className).toContain('shadow-[var(--card-shadow)]');
     });
   });
 

@@ -118,7 +118,7 @@ export const AppLayout: FC<AppLayoutProps> = ({
                         onClick={() => handleNavClick(item.id)}
                         className={`min-h-[44px] flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                           isActive
-                            ? 'bg-sky-600 text-white shadow-sm font-bold'
+                            ? 'bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-md shadow-sky-600/25 font-bold'
                             : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
                         }`}
                         data-testid={`nav-item-${item.id}`}
