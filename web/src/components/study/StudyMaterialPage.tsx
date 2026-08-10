@@ -8,6 +8,8 @@ import { StudyReaderModal } from './StudyReaderModal';
 import { StudyDayAccordion, StudyDayAccordionSection } from './StudyDayAccordion';
 import { authService, UserProfile } from '../../services/AuthService';
 import { ssbDayConfigs } from './ssbDayData';
+import { filterMaterialsForTestCard } from '../../utils/materialMatcher';
+import { usePostAuthResume, savePostAuthResume } from '../../hooks/usePostAuthResume';
 
 export interface StudyMaterialPageProps {
   viewModel?: StudyMaterialViewModel;
@@ -26,6 +28,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMaterial, setSelectedMaterial] = useState<StudyMaterial | null>(null);
   const [, setRefreshState] = useState(0);
+  const [materialsLoaded, setMaterialsLoaded] = useState(false);
   const [authUser, setAuthUser] = useState<UserProfile | null>(
     propUser !== undefined ? propUser : authService.getCurrentUser()
   );
@@ -43,8 +46,24 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
   }, [propUser]);
 
   useEffect(() => {
-    vm.loadMaterials().then(() => setRefreshState((prev) => prev + 1));
+    vm.loadMaterials().then(() => {
+      setMaterialsLoaded(true);
+      setRefreshState((prev) => prev + 1);
+    });
   }, [vm]);
+
+  usePostAuthResume({
+    user: authUser,
+    materialsLoaded,
+    onOpenMaterial: (targetId: string) => {
+      const all = vm.getMaterials();
+      const matched = all.find((m) => m.id === targetId || m.testTypeId === targetId);
+      if (matched) {
+        setSelectedMaterial(matched);
+        onSelectMaterial?.(matched);
+      }
+    },
+  });
 
   const rawMaterials = vm.getMaterials();
   const isUnlocked = Boolean(authUser);
@@ -57,7 +76,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
 
   const handleAuthTrigger = async (targetId?: string) => {
     if (targetId) {
-      sessionStorage.setItem('ssb_pending_material_id', targetId);
+      savePostAuthResume(targetId);
     }
     try {
       await authService.signInWithGoogle();
@@ -85,17 +104,14 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
     setExpandedDay((prev) => (prev === dayNum ? null : dayNum));
   };
 
-  const getMaterialsForTest = (testTypeId: string): StudyMaterial[] => {
-    return rawMaterials.filter((m) => {
-      const matchesTest =
-        m.testTypeId === testTypeId ||
-        m.category.toLowerCase().includes(testTypeId.toLowerCase()) ||
-        m.tags?.some((t) => t.toLowerCase().includes(testTypeId.toLowerCase()));
-      const matchesSearch =
-        !searchQuery ||
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.summary.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTest && matchesSearch;
+  const getMaterialsForTest = (
+    testTypeId: string,
+    compositeTestTypeIds?: StudyMaterial['testTypeId'][]
+  ): StudyMaterial[] => {
+    return filterMaterialsForTestCard(rawMaterials, {
+      testTypeId: testTypeId as StudyMaterial['testTypeId'],
+      compositeTestTypeIds,
+      searchQuery,
     });
   };
 
@@ -109,7 +125,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
 
   return (
     <div className="max-w-7xl w-full mx-auto px-4 py-6 space-y-6 animate-in fade-in duration-300" data-testid="study-material-page">
-      {/* Header Banner (Hero Section without Online Pill) */}
+      {/* Header Banner */}
       <div className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-6 shadow-md shadow-slate-200/50 dark:shadow-lg backdrop-blur-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -176,19 +192,30 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
           <span>5-Day SSB Selection Process Modules</span>
         </h2>
 
-        {daySections.map((section) => (
-          <StudyDayAccordion
-            key={section.dayNumber}
-            section={section}
-            isOpen={expandedDay === section.dayNumber}
-            isUnlocked={isUnlocked}
-            onToggle={handleToggleAccordion}
-            onCardClick={handleCardClick}
-            onSelectMaterial={openMaterial}
-            isMaterialCompleted={(id) => vm.isCompleted(id)}
-            onToggleCompleted={handleToggleComplete}
-          />
-        ))}
+        {!materialsLoaded ? (
+          <div className="space-y-4" data-testid="study-materials-skeleton">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-28 w-full rounded-2xl bg-slate-200 dark:bg-slate-800/60 animate-pulse border border-slate-200/60 dark:border-slate-700/50"
+              />
+            ))}
+          </div>
+        ) : (
+          daySections.map((section) => (
+            <StudyDayAccordion
+              key={section.dayNumber}
+              section={section}
+              isOpen={expandedDay === section.dayNumber}
+              isUnlocked={isUnlocked}
+              onToggle={handleToggleAccordion}
+              onCardClick={handleCardClick}
+              onSelectMaterial={openMaterial}
+              isMaterialCompleted={(id) => vm.isCompleted(id)}
+              onToggleCompleted={handleToggleComplete}
+            />
+          ))
+        )}
       </div>
 
       {/* Study Reader Modal */}

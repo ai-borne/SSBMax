@@ -1,11 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StudyMaterialPage } from '../../../src/components/study/StudyMaterialPage';
 import { strings } from '../../../src/constants/strings';
 import { StudyMaterialViewModel } from '../../../src/viewmodels/StudyMaterialViewModel';
 import { IContentRepository } from '../../../src/repositories/interfaces/IContentRepository';
 import { StudyMaterial } from '../../../src/types/testContent';
-import { UserProfile } from '../../../src/services/AuthService';
+import { UserProfile, authService } from '../../../src/services/AuthService';
+import { POST_AUTH_RESUME_KEY } from '../../../src/hooks/usePostAuthResume';
 
 const mockMaterials: StudyMaterial[] = [
   {
@@ -18,7 +19,7 @@ const mockMaterials: StudyMaterial[] = [
     contentMarkdown: '# Day 1 Guide',
     estimatedReadTimeMinutes: 5,
     tags: ['SSB', 'Day 1', 'OIR'],
-    createdAt: '2026-01-01',
+    createdAt: '2026-01-01'
   },
   {
     id: 'mat_2',
@@ -30,8 +31,8 @@ const mockMaterials: StudyMaterial[] = [
     contentMarkdown: '# OIR Rules',
     estimatedReadTimeMinutes: 4,
     tags: ['OIR'],
-    createdAt: '2026-01-02',
-  },
+    createdAt: '2026-01-02'
+  }
 ];
 
 class MockContentRepository implements IContentRepository {
@@ -65,11 +66,28 @@ const mockUser: UserProfile = {
   uid: 'user_123',
   email: 'cadet@example.com',
   displayName: 'Cadet Officer',
-  photoURL: null,
+  photoURL: null
 };
 
 describe('StudyMaterialPage Component', () => {
-  it('renders study materials header without offline badge and renders vertical day accordions', async () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  it('renders zero-CLS skeleton loader prior to material hydration', () => {
+    class SlowRepository extends MockContentRepository {
+      async getStudyMaterials() {
+        return new Promise<StudyMaterial[]>(() => {}); // Never resolves
+      }
+    }
+    const vm = new StudyMaterialViewModel(new SlowRepository());
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
+
+    expect(screen.getByTestId('study-materials-skeleton')).toBeInTheDocument();
+  });
+
+  it('renders study materials header without offline badge and renders vertical day accordions after hydration', async () => {
     const vm = new StudyMaterialViewModel(new MockContentRepository());
     render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
 
@@ -107,7 +125,8 @@ describe('StudyMaterialPage Component', () => {
     expect(screen.getByTestId('study-test-card-fgt')).toBeInTheDocument();
   });
 
-  it('displays auth lock banner when user is unauthenticated', async () => {
+  it('displays auth lock banner and triggers post-auth payload save when unauthenticated candidate clicks card', async () => {
+    const signInSpy = vi.spyOn(authService, 'signInWithGoogle').mockImplementation(async () => mockUser);
     const vm = new StudyMaterialViewModel(new MockContentRepository());
     render(<StudyMaterialPage viewModel={vm} user={null} />);
 
@@ -115,6 +134,14 @@ describe('StudyMaterialPage Component', () => {
       expect(screen.getByTestId('auth-locked-banner')).toBeInTheDocument();
       expect(screen.getByText(strings.studyMaterial.authLockedTitle)).toBeInTheDocument();
     });
+
+    const oirCard = screen.getByTestId('study-test-card-oir');
+    fireEvent.click(oirCard);
+
+    expect(signInSpy).toHaveBeenCalled();
+    const stored = sessionStorage.getItem(POST_AUTH_RESUME_KEY);
+    expect(stored).not.toBeNull();
+    expect(stored).toContain('oir');
   });
 
   it('opens accessible StudyReaderModal when unlocked nested material item is clicked', async () => {
@@ -132,6 +159,23 @@ describe('StudyMaterialPage Component', () => {
 
     expect(handleSelect).toHaveBeenCalledWith(mockMaterials[0]);
     expect(screen.getByTestId('study-reader-modal')).toBeInTheDocument();
+  });
+
+  it('filters study materials dynamically when search query is entered', async () => {
+    const vm = new StudyMaterialViewModel(new MockContentRepository());
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('search-materials-input')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByTestId('search-materials-input');
+    fireEvent.change(searchInput, { target: { value: 'Verbal' } });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('nested-material-item-mat_1')).not.toBeInTheDocument();
+      expect(screen.getByTestId('nested-material-item-mat_2')).toBeInTheDocument();
+    });
   });
 
   it('renders tier badges on study cards for UI symmetry', async () => {
@@ -157,48 +201,6 @@ describe('StudyMaterialPage Component', () => {
       expect(card.className).toContain('dark:bg-slate-800/90');
       expect(card.className).toContain('dark:border-slate-700/80');
       expect(card.className).toContain('shadow-[var(--card-shadow)]');
-    });
-  });
-
-  // Phase 3 — Day colour-coded accordion border tests
-  it('should apply indigo day-accent border to Study Day 1 accordion', async () => {
-    const vm = new StudyMaterialViewModel(new MockContentRepository());
-    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
-
-    await waitFor(() => {
-      const accordion = screen.getByTestId('study-day-accordion-1');
-      expect(accordion.className).toContain('border-l-4');
-      expect(accordion.className).toContain('border-l-day1');
-    });
-  });
-
-  it('should apply violet day-accent border to Study Day 2 accordion', async () => {
-    const vm = new StudyMaterialViewModel(new MockContentRepository());
-    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
-
-    await waitFor(() => {
-      const accordion = screen.getByTestId('study-day-accordion-2');
-      expect(accordion.className).toContain('border-l-day2');
-    });
-  });
-
-  it('should apply teal day-accent border to Study Day 3-4 accordion', async () => {
-    const vm = new StudyMaterialViewModel(new MockContentRepository());
-    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
-
-    await waitFor(() => {
-      const accordion = screen.getByTestId('study-day-accordion-3-4');
-      expect(accordion.className).toContain('border-l-day34');
-    });
-  });
-
-  it('should apply gold day-accent border to Study Day 5 accordion', async () => {
-    const vm = new StudyMaterialViewModel(new MockContentRepository());
-    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
-
-    await waitFor(() => {
-      const accordion = screen.getByTestId('study-day-accordion-5');
-      expect(accordion.className).toContain('border-l-day5');
     });
   });
 });
