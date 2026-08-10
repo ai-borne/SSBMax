@@ -36,7 +36,6 @@ describe('PsychologyTestViewModel TDD Unit Tests', () => {
         situations: ['He lost his way in a jungle. He...'],
         totalTimeMinutes: 30
       }),
-      getCappedBatch: vi.fn(),
       getAvailableBatches: vi.fn().mockResolvedValue([])
     };
 

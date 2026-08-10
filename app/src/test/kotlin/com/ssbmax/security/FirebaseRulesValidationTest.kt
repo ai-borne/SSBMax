@@ -212,8 +212,11 @@ class FirebaseRulesValidationTest {
 
     @Test
     fun `OIR question batches are read-only for authenticated users`() {
+        // Phase 0b (CrossPlatform_SSOT): "question_batches" was a web-only path-drift
+        // collection nobody wrote to; the KMP/web-authoritative path is "batches"
+        // (GitLiveOIRQuestionCacheManager.FIRESTORE_BATCHES).
         val content = getRulesContent()
-        val oirBatchRules = content.substringAfter("match /test_content/oir/question_batches/{batchId}")
+        val oirBatchRules = content.substringAfter("match /test_content/oir/batches/{batchId}")
             .substringBefore("}")
 
         assertTrue("Authenticated users can read question batches",

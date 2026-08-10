@@ -110,28 +110,19 @@ describe('ContentRepository Unit Tests', () => {
     expect(material).toBeNull();
   });
 
-  it('should return capped batch of maximum 50 OIR items', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({
-      exists: () => false,
-      data: () => null
-    } as any);
-
-    const batch = await repository.getCappedBatch('oirQuestions', 0, 50);
-    expect(batch.items.length).toBeLessThanOrEqual(50);
-    expect(batch.batchIndex).toBe(0);
-  });
-
-  it('should return available batch metadata list for a module from fallback when empty', async () => {
+  it('should return an empty list (not fictional fallback batches) when a module has no batches in Firestore', async () => {
     vi.mocked(getDocs).mockResolvedValueOnce({
       empty: true,
       forEach: vi.fn()
     } as any);
 
     const batches = await repository.getAvailableBatches('wat');
-    expect(batches).toBeDefined();
-    expect(batches.length).toBeGreaterThanOrEqual(2);
-    expect(batches[0]).toHaveProperty('id');
-    expect(batches[0]).toHaveProperty('name');
+    expect(batches).toEqual([]);
+  });
+
+  it('should return an empty list for an unmapped module rather than guessing a path', async () => {
+    const batches = await repository.getAvailableBatches('unknown_module');
+    expect(batches).toEqual([]);
   });
 
   it('should return WAT batch and map polymorphic words payload', async () => {

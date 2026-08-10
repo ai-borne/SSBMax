@@ -1,0 +1,661 @@
+# Cross-Platform SSOT — Execution Plan (Android + iOS + Web + Functions)
+
+**Status:** Ready to execute — Phase 0 not started
+**Created:** 2026-08-10
+**Owner:** sunilpawar (indie — optimise for low token/time cost per phase)
+**Scope:** Establishing and mechanically enforcing a single source of truth across
+the KMP apps (`shared` / `data-firebase`), the React web app (`web/`), the Cloud
+Functions backend (`functions/`), and `firestore.rules`.
+
+---
+
+## 0. Decisions Already Settled
+
+| Decision | Choice | Consequence |
+|---|---|---|
+| **Code-sharing strategy** | **Generated contracts only** | No Kotlin/JS target on `shared`. Web stays idiomatic React/TS. A language-neutral `contracts/` source generates Kotlin + TypeScript + JS. Behaviour is hand-written per platform, mirrored by convention. |
+| **Reconciliation authority** | **KMP is authoritative** | Where consumers disagree on a path, field, or enum, the others move to match KMP. Production data already matches KMP; no data migration in Phase 0. |
+
+**Why not Kotlin/JS:** `shared` would need a hand-written interop layer for React 19,
+large bundles, and constant friction with the Firebase JS SDK (`data-firebase` is
+GitLive-backed and cannot cross to JS). Our fragmentation is *data-contract* drift,
+not logic drift — fully solvable with codegen at a fraction of the cost.
+
+**Why not backend-first:** would break the offline-first behaviour both platforms
+already have (SQLDelight caches; web's `OfflineQueueService`) and is a rewrite of
+working code. We move *correctness-bearing* logic server-side (Phase 5) and no more.
+
+---
+
+## 1. Correction to the Original Framing: There Are FOUR Consumers
+
+The first draft of this plan treated web/Android/iOS as the three platforms. That
+was wrong, and the audit proves it. **`functions/` and `firestore.rules` are
+contract consumers too** — they read and write the same collections, and they have
+already drifted worse than the clients have.
+
+Any SSOT effort that generates only Kotlin + TypeScript leaves half the surface
+unprotected. **The generator must emit four outputs: Kotlin, TypeScript, JS
+(CommonJS for Functions), and a rules-path manifest to lint `firestore.rules`
+against.**
+
+---
+
+## 2. The Three SSOT Tiers
+
+Do not try to share everything. Classify each concern, then apply the matching
+enforcement. This is what keeps the effort affordable.
+
+### Tier 1 — MUST be one artifact, mechanically enforced
+
+Pure data. Shares perfectly across Kotlin/TS/JS. ~90% of the fragmentation risk.
+
+- Firestore collection paths and sub-collection names
+- Document-ID conventions (`batch_001`, `usage_{yyyy-MM}`, …)
+- Wire field names
+- Enums: `TestType`/`SSBPhase`, `SubscriptionTier`, submission `status`, **the 15 OLQs**
+- Subscription limit table (`SubscriptionLimits`)
+- Test config numbers (question counts, timers, TAT's 12-slide blank-card rule)
+- **Analytics + security event names** (`SecurityEvents` exists in KMP only)
+- **Route / deep-link identifiers** (`SSBMaxDestinations` vs web URLs)
+- **Design tokens and shared UI strings** (Phase 7 — directly serves the "never
+  hardcode strings or colors" rule)
+
+**Enforcement:** codegen + CI diff check + a lint rule banning raw literals.
+Divergence becomes *impossible*, not merely discouraged.
+
+### Tier 2 — MUST live server-side, in `functions/`
+
+Correctness- or trust-bearing. Three client implementations is three chances to be wrong.
+
+- Scoring (OIR ✅ done) · AI evaluation (✅ done) · Payment verification (✅ done)
+- **Eligibility / quota enforcement (❌ not done — Phase 5)**
+
+**Enforcement:** Firestore rules deny the write. Clients may keep an optimistic copy
+for UX responsiveness, never as the authority.
+
+### Tier 3 — SHOULD mirror by convention, never by shared code
+
+ViewModel shapes, screen decomposition, layout, animation. Web already mirrors the
+KMP structure well. **Enforcement:** code review + the per-platform CLAUDE.md files.
+Forcing code sharing here buys little and costs a lot.
+
+---
+
+## 3. Drift Audit (measured 2026-08-10)
+
+### 3.1 CRITICAL — OIR content has FOUR different paths across four consumers
+
+| Consumer | Path | Source |
+|---|---|---|
+| KMP (authoritative) | `test_content/oir/batches` | `GitLiveOIRQuestionCacheManager.kt:52-54` |
+| Web | `test_content/oir/question_batches` | `ContentRepository.ts:98` |
+| Functions (primary) | `content_oir` | `functions/src/oirScoring.js:41` |
+| Functions (fallback) | `oir_batches` | `functions/src/oirScoring.js:43` |
+
+**This is a live correctness risk, not just untidiness.** `oirScoring.js` is the
+server-side authority for OIR marks (Tier 2). It reads a collection that *no client
+writes and no ingestion script targets*. Scoring is silently dependent on a fallback
+chain into a legacy collection. **Fix this first, before any refactor** — Phase 0a.
+
+### 3.2 Firestore path drift, all consumers
+
+| Concern | KMP (authoritative) | Web | Functions |
+|---|---|---|---|
+| OIR batches | `test_content/oir/batches` | ❌ `…/question_batches` | ❌ `content_oir` → `oir_batches` |
+| PPDT | `test_content/ppdt/image_batches` | ✅ same | — |
+| TAT | `test_content/tat/image_batches` | ✅ same | — |
+| WAT | `test_content/wat/word_batches` | ✅ same | — |
+| SRT | `test_content/srt/situation_batches` | ✅ same | — |
+| Study materials | `study_materials` | ⚠️ + `studyMaterials` fallback | — |
+| GTO tasks | `test_content/gto/task_batches` | ⚠️ absent | — |
+| GPE scenarios | `test_content/gto/scenarios/gpe/batches` | ⚠️ absent | — |
+| OIR content version | `test_content/oir/meta/config` | ⚠️ absent (no cache invalidation) | — |
+| Interview | `interview_sessions` / `_responses` | — | ✅ match |
+| Users | `users` | — | ✅ match |
+
+**Orphaned web-only collections** to delete: `studyMaterials`, `ppdtContexts`,
+`tatSets`, `watBatches`, `srtBatches`, `oirQuestions`.
+**Legitimately server-only** (leave alone): `payments`, `webhook_logs`.
+
+**Duplication inside KMP itself:** `"submissions"` is declared as a `const val` in
+three separate files (`COLLECTION_SUBMISSIONS`, `GTO_COLLECTION_SUBMISSIONS`,
+`PSYCH_SUBMISSIONS_COLLECTION`, `SUBMISSIONS_COLLECTION`). Even the authoritative
+platform has no internal SSOT for paths.
+
+### 3.3 Guess-and-fallback chains (all get deleted)
+
+- OIR (web): `batch_001` → `batch_0` → `batch_pdf_001`
+- PPDT (web): caller id → `batch_001` → `ppdt_1`
+- Study materials (web): `study_materials` → `studyMaterials`
+- `getAvailableBatches` (web): falls back to a hardcoded `defaultsMap` of **fictional
+  batches that do not exist in Firestore**
+- OIR scoring (functions): `content_oir` → `oir_batches`
+
+Every fallback makes the true contract less knowable and converts a loud failure
+into a silent wrong answer. They are the symptom of the missing Tier-1 artifact.
+
+### 3.4 CRITICAL — The OLQ taxonomy has forked on the wire
+
+The 15 Officer-Like Qualities are defined independently in three places:
+
+| Consumer | Location | Casing | 5th OLQ |
+|---|---|---|---|
+| KMP | `shared/…/domain/model/interview/OLQ.kt` | `SCREAMING_SNAKE` | `SOCIAL_ADJUSTMENT` |
+| Functions (Gemini prompt) | `functions/src/olqDefinitions.js` | `SCREAMING_SNAKE` | `SOCIAL_ADJUSTMENT` |
+| Web | `components/practice/OLQFactorRadarSVG.tsx` | `camelCase` | ❌ `socialAdaptability` |
+
+Web uses a **different name and a different casing convention** for wire data
+produced by the AI evaluation function. Any OLQ the web dossier reads by key is at
+risk of rendering as zero/undefined rather than failing loudly. The OLQ set is also
+the product's core scoring vocabulary — it is exactly the thing that must never fork.
+
+### 3.5 The subscription model has already forked (highest business severity)
+
+| | KMP | Web |
+|---|---|---|
+| Tier vocabulary | `FREE`/`PRO`/`PREMIUM` (`SubscriptionTier`) | `'cadet'`/`'officer'`/`'command'` (`AccessTier`) |
+| Access model | **monthly quota per test type** (`SubscriptionLimits`, `-1` = unlimited) | **binary gate per test** (`requiredTier`) |
+| Real tier source | Firestore `users/{uid}/data/subscription` | `authService.getCurrentUser()?.isPaidMember` — a **boolean**, collapsing 3 tiers to 2 |
+| Dev override | Developer Settings, four-way, both platforms | `localStorage` `ssbmax_dev_tier_override`, three-way |
+| Usage counters | `SubscriptionUsageDto`, 9 per-test counters | none |
+
+These are two different products, not two spellings. A `PRO` user with 3 of 5 OIR
+tests consumed is a state web cannot express. This gates revenue — Phase 4.
+
+**Secondary smell:** `SubscriptionLimits` keys its map on display strings
+(`"OIR Tests"`, `"Self Description"`). A typo is a silent miss and it cannot be
+generated cleanly. Phase 3 rekeys it on the `TestType` enum.
+
+### 3.6 Contract tests cannot currently catch drift
+
+`web/tests/unit/contracts/firestoreSchemaContract.test.ts` mocks
+`firebase/firestore` and asserts **web's own** paths — so it *locks in* the wrong
+OIR path rather than detecting it. A per-platform contract test can never detect
+cross-platform drift. Structural gap, not a missing assertion. Phase 6.
+
+---
+
+## 4. Two Policies the First Draft Missed
+
+### 4.1 Schema Compatibility Policy (mobile release lag)
+
+**This is the single most important addition, and it is what makes the codebase
+scalable rather than merely tidy.**
+
+Web deploys in minutes. iOS and Android builds sit in users' hands for *months* —
+an indie developer cannot force-update. Therefore **a contract change is a
+distributed-systems change, not a refactor.** Without a policy, Phase 2+ will break
+users on old app versions.
+
+**Rules, to be encoded in `contracts/README.md` and enforced in review:**
+
+1. **Additive-only by default.** New fields and new collections are always safe.
+2. **Renames are forbidden as a single step.** A rename is always three deploys:
+   *(a)* servers/clients dual-**read** old + new; *(b)* writers switch to new;
+   *(c)* old path removed only after the oldest supported app version is below the
+   analytics floor.
+3. **Deletions require a sunset date** recorded in the contract file itself.
+4. **Every contract file carries `schemaVersion`.** Clients log it; a client that
+   sees a *major* version above its own shows an "update required" state rather
+   than silently misreading data.
+5. **Minimum supported app version** is itself a contract value, so the kill-switch
+   (Phase 8) can enforce it remotely.
+
+The dual-read windows this mandates are **the reason Phase 0 does not simply delete
+every fallback**: fallbacks that exist for *version compatibility* are legitimate
+and must be labelled as such; fallbacks that exist because *nobody knew the path*
+are the bug. Phase 0 distinguishes them explicitly.
+
+### 4.2 The 300-LOC Rule vs Generated Files
+
+Generated files will exceed 300 lines and **must not be split** — a generated
+artifact has exactly one responsibility (mirror its contract source) and splitting
+it would break the generator's 1:1 mapping.
+
+**Carve-out:** every generated file begins with a header comment stating
+(a) DO NOT EDIT, (b) its source contract file, (c) the regeneration command, and
+(d) an explicit SRP justification for exceeding 300 LOC, in the form required by
+the project's hard limit. The lint/Detekt LOC rule gets a path exclusion for
+`**/generated/**` and `**/contracts/generated/**` only.
+
+---
+
+## 5. Standing Rules for Every Phase
+
+Applies to all phases below. A phase is **not complete** until every line is true.
+
+1. **Green build, always.** No phase ends with a failing build on any of the four
+   consumers. Never start phase N+1 on a red phase N.
+2. **TDD.** Tests are written before or alongside implementation. 100% pass — a
+   skipped or `.only`'d test counts as a failure (root Rule 12).
+3. **Architecture.** MVVM, SOLID, DRY, SSOT upheld. No file over 300 LOC unless SRP
+   demands it *and* a comment states why it must not be split (see §4.2).
+4. **Resources.** Zero hardcoded strings or colors. KMP → `Res.string` / `MaterialTheme`;
+   web → `constants/strings/` + `constants/colors.ts`.
+5. **Security.** Every phase re-runs `scripts/validate-security.sh`. No secret ever
+   leaves `functions/`. Anti-cheat invariants (web CLAUDE.md §Anti-Cheating) are
+   never weakened. Firestore rules are tightened, never loosened.
+6. **Tech-debt sweep.** The phase is done only when the task is DONE *and* debt
+   incurred during it is REMOVED. Non-negotiable.
+
+### Per-phase verification commands
+
+```bash
+./gradlew check                      # KMP: lint + detekt + unit tests (Android + iOS + JVM)
+cd web && npm run build && npm test  # Web: tsc strict build + vitest
+cd functions && npm test             # Functions
+firebase emulators:exec --only firestore "npm --prefix firestore-tests test"
+./scripts/validate-security.sh       # 10-point security audit
+```
+
+### Phase Handoff Protocol (mandatory, verbatim template)
+
+At the end of every phase, pause and produce:
+
+```
+## Phase N Handoff
+
+### 1. Tech debt incurred
+- <item> — <where> — <why it arose>
+
+### 2. How it was resolved (immediately, not deferred)
+- <item> → <exact steps taken>
+
+### 3. Build & test confirmation
+- ./gradlew check .................. PASS/FAIL
+- web: npm run build && npm test ... PASS/FAIL  (N tests)
+- functions: npm test ............... PASS/FAIL  (N tests)
+- emulator rules suite .............. PASS/FAIL  (N tests)
+- scripts/validate-security.sh ...... PASS/FAIL  (10/10)
+
+### 4. Contract changes shipped this phase
+- <contract file> : <old> → <new> : <compat strategy per §4.1>
+
+### 5. Accepted divergences (if any)
+- <platform> differs because <reason>
+```
+
+Only after all debt is resolved and every line reads PASS do we start the next phase.
+
+---
+
+## 6. Execution Phases
+
+Each phase is sized to fit **one working session** — deliberate, given the indie
+token/time budget. Phases 0–4 carry nearly all the value; 5–8 harden it.
+
+| # | Phase | Value | Risk | Must-do |
+|---|---|---|---|---|
+| 0a | OIR scoring hotfix | 🔴 Critical | Low | ✅ |
+| 0b | Path truth reconciliation | 🔴 Critical | Low | ✅ |
+| 1 | `contracts/` + generator | 🔴 Critical | Med | ✅ |
+| 2 | Migrate consumers + ban literals | 🔴 Critical | Med | ✅ |
+| 3 | Enum & taxonomy SSOT (incl. OLQ) | 🔴 Critical | Med | ✅ |
+| 4 | Subscription model reconciliation | 🔴 Critical | High | ✅ |
+| 5 | Server-side eligibility + rules | 🟠 High | High | ✅ |
+| 6 | Shared-corpus emulator tests | 🟠 High | Low | ✅ |
+| 7 | Design tokens + strings codegen | 🟡 Medium | Med | Optional |
+| 8 | Kill-switch + CI hardening | 🟡 Medium | Low | Optional |
+
+---
+
+### Phase 0a — OIR Scoring Hotfix 🔴 SEVERITY RAISED
+
+**Goal:** restore real server-side OIR scoring. The read-only audit (§9) turned this
+from "reads the wrong collection" into "does not score at all".
+
+**Confirmed state (production, 2026-08-10):**
+- `content_oir` — **0 documents**
+- `oir_batches` — **0 documents**
+- `test_content/oir/batches` — **28 documents**, ids `batch_pdf_001`…`batch_pdf_028`
+
+So in `oirScoring.js` both lookups always miss, `questions.length` is always `0`,
+and control always reaches the `else` branch — which **counts every non-null answer
+as correct**. The deployed scorer awards ~100% and the top OIR rating to everyone.
+
+Three further defects in the same function:
+- Default `batchId = 'batch_001'`; the real convention is **`batch_pdf_NNN`**. Even
+  after repointing, the default would miss.
+- `total` falls back to a hardcoded `50` when answers are empty.
+- The `else` branch must not exist at all — a missing batch is `not-found`, never a score.
+
+**Mitigating context (do not skip the fix):** no client currently calls
+`evaluateOIRAnswers` (only `functions/src/index.js` exports it), so no user has been
+mis-scored by it *yet*. But web's CLAUDE.md documents server-side OIR scoring as a
+live anti-cheat control, and web meanwhile scores with a **hardcoded mock** —
+`Math.floor(formattedAnswers.length * 0.8)` in `OIRTestViewModel.ts:203`, giving
+every candidate exactly 80%. The documented control is currently fiction on both
+ends. Phase 0a makes it real.
+
+**TDD:**
+1. Test asserting the function reads `test_content/oir/batches/{batchId}`.
+2. Test asserting a missing batch **throws** `not-found` rather than scoring — the
+   `else` branch is deleted, and this test is what keeps it deleted.
+3. Test asserting `batch_pdf_001` + a known answer sheet produces a known score.
+4. Test asserting a wholly-unanswered submission scores `0`, not `total`.
+
+**Implementation:**
+1. Repoint to `test_content/oir/batches`; delete the `content_oir` → `oir_batches`
+   fallback. Both are empty, so **no data migration and nothing to preserve**.
+2. Make `batchId` required — no `batch_001` default.
+3. Delete the count-everything-correct `else` branch.
+4. Replace web's mock scorer with a real call to the function, and delete the
+   comment claiming the mock is a backend evaluation.
+5. Drop the two empty legacy collections once the deploy is verified.
+
+**Success:** OIR scoring verified end-to-end against `batch_pdf_001` in the emulator;
+a missing batch fails loudly; `functions/` and web suites green.
+
+### Phase 0b — Path Truth Reconciliation
+
+**Goal:** every consumer reads the same paths, and no consumer guesses.
+
+**TDD:** rewrite `web/tests/unit/contracts/firestoreSchemaContract.test.ts` to
+assert the **KMP-authoritative** path strings (temporarily as literals; Phase 2
+repoints them at the generated contract). Watch it fail on OIR, then fix.
+
+**Implementation:**
+1. Web OIR → `test_content/oir/batches`.
+2. **Classify every fallback chain** per §4.1: version-compat (keep, add a comment
+   naming the sunset condition) vs path-ignorance (delete). Expect all five in §3.3
+   to be path-ignorance.
+3. Delete the `defaultsMap` fictional batches; `getAvailableBatches` returns an
+   empty result and the UI shows an explicit empty state.
+4. Delete the six orphaned web-only collection reads (§3.2).
+5. Add web reads for GTO tasks, GPE scenarios, and OIR `meta/config` — **or** record
+   them in the Accepted Divergences section with a dated reason (see Open Question 1).
+6. Replace silent `console.warn` + fallback with a typed `ContentUnavailableError`
+   surfaced as a real UI error state.
+
+**Success:** zero fallback chains in `web/src/repositories/`; every web path appears
+verbatim in the KMP constant list; `npm run build && npm test` green.
+
+**Tech-debt watch:** step 6 adds an error state to every consuming ViewModel —
+finish all of them this phase, not just OIR.
+
+---
+
+### Phase 1 — The `contracts/` Package and Generator
+
+**Goal:** make Tier-1 divergence mechanically impossible, for **all four consumers**.
+
+**Design constraints (indie budget):** no protobuf, no quicktype, no new build
+infra. A single dependency-free Node script (~200 LOC) reading YAML/JSON and
+emitting four files. It must be readable and debuggable in one sitting.
+
+```
+contracts/
+  README.md              # §4.1 compatibility policy — the rules of engagement
+  firestore-paths.yaml   # collections, sub-collections, doc-id conventions
+  enums.yaml             # TestType, SubscriptionTier, OLQ, statuses
+  subscription.yaml      # limits table, keyed on TestType
+  test-config.yaml       # counts, timers, TAT 12-slide rule
+  events.yaml            # analytics + security event names
+  routes.yaml            # route ids / deep links
+generated/               # committed, CI-verified, never hand-edited
+  SsbContracts.kt        → shared/src/commonMain/.../contracts/
+  contracts.ts           → web/src/generated/
+  contracts.cjs          → functions/src/generated/
+  rules-paths.json       → consumed by the firestore.rules linter
+```
+
+**TDD:** the generator is tested before it is used —
+1. Golden-file test: fixture contract → expected Kotlin/TS/JS output.
+2. Test that a malformed contract (duplicate key, missing `schemaVersion`) fails the
+   build loudly.
+3. Test that `regenerate && git diff --exit-code` is clean on the real contracts.
+
+**Implementation:**
+1. Write `contracts/README.md` (§4.1) **first** — the policy is a design input.
+2. Author the contract files from the audit tables in §3, KMP values winning.
+3. Write `scripts/generate-contracts.js`.
+4. Emit with the §4.2 DO-NOT-EDIT + SRP header on every generated file.
+5. Add LOC-rule path exclusions for `**/generated/**`.
+6. Wire `npm run contracts:check` into `.github/workflows/main-ci.yml` and
+   `.githooks/pre-commit`.
+
+**Success:** changing a path in `contracts/` and regenerating updates Kotlin, TS,
+JS, and the rules manifest in one commit. **No consumer code changes yet** — this
+phase only adds the artifact, so the build stays trivially green.
+
+---
+
+### Phase 2 — Migrate Consumers, Ban Raw Literals
+
+**Goal:** the generated contract becomes the only way to name a path.
+
+**TDD:** a guard test per consumer that greps its own source for raw Firestore
+collection-name literals outside the generated file and fails on any hit. Cheap
+(no ESLint infra needed on web — a Vitest test reading `src/**` is ~30 LOC).
+
+**Implementation:**
+1. KMP: replace the ~20 scattered `const val COLLECTION_*` with references to the
+   generated object. **This also collapses the four duplicate `"submissions"`
+   declarations** (§3.2) — a real DRY win inside the authoritative platform.
+2. Web: `ContentRepository` uses generated paths only.
+3. Functions: same.
+4. `firestore.rules`: add a test asserting every path in `rules-paths.json` has a
+   matching rule block, and that no rule block references an unknown path.
+5. Add the KMP lint/Detekt rule banning raw path literals, matching the existing
+   custom-rule pattern in `lint/` and `detekt-rules/`.
+
+**Success:** `grep` for a collection-name literal outside `contracts/` and
+`generated/` returns nothing across all four consumers.
+
+**Tech-debt watch:** this phase touches many files. Do **not** opportunistically
+refactor logic while migrating — path substitution only, so review stays reviewable.
+
+---
+
+### Phase 3 — Enum and Taxonomy SSOT
+
+**Goal:** close the OLQ wire fork (§3.4) and stop keying data structures on display
+strings (§3.5).
+
+**Why before Phase 4:** the subscription work depends on `TestType` being a real
+generated enum rather than a map key of English prose.
+
+**TDD:**
+1. Test asserting all 15 OLQ ids are identical across the generated Kotlin, TS, and
+   JS artifacts (one test, run per platform).
+2. Test asserting the AI evaluation function's output keys parse into the generated
+   OLQ enum with **no unknown and no missing** keys — this is the test that would
+   have caught `socialAdaptability`.
+3. Test asserting `SubscriptionLimits` has an entry for every `TestType` value —
+   exhaustive by construction, so a new test type cannot be forgotten.
+
+**Implementation:**
+1. Generate the OLQ enum from `contracts/enums.yaml`. **Wire format is
+   `SCREAMING_SNAKE`** (KMP + Functions already agree; web is the outlier).
+2. Web migrates `OLQFactorRadarSVG` and the dossier components off `camelCase` keys.
+   Display labels move to `constants/strings/dossier.ts` — the enum is an id, the
+   label is a string resource. Fixes `socialAdaptability` → `SOCIAL_ADJUSTMENT`.
+3. `functions/src/olqDefinitions.js` generates its prompt list from the contract, so
+   the Gemini prompt and the parser can never disagree.
+4. Rekey `SubscriptionLimits` on `TestType`, not `"OIR Tests"`.
+5. Generate `SecurityEvents` + analytics event names for all consumers; web gains
+   the security events it currently lacks entirely.
+
+**Success:** one OLQ list, one casing, three languages, proven equal by test.
+
+**Migration note:** if any *stored* documents contain `camelCase` OLQ keys, §4.1
+applies — dual-read window, not a hard cutover.
+
+---
+
+### Phase 4 — Subscription Model Reconciliation
+
+**Goal:** one access model, three renderings. Highest business value; highest risk.
+
+**Why risky:** it changes who can access what. A regression either blocks paying
+users or gives the product away. Test coverage here is not optional.
+
+**TDD (write the matrix first):**
+1. A table-driven test over {3 tiers} × {9 test types} × {quota consumed: 0, mid,
+   at-limit, over} asserting the same allow/deny decision — run in **both** the KMP
+   and web suites off the same generated limits table.
+2. Test that the dev override changes only *reads*, never *writes*, and does not
+   increment usage counters (the existing KMP fail-safe — see `claude.local.md`).
+3. Test that an unknown/missing tier document fails **closed** to `FREE`.
+
+**Implementation:**
+1. Adopt KMP's model: `FREE`/`PRO`/`PREMIUM` + per-test monthly quotas, generated.
+2. Web: replace `AccessTier` with the generated `SubscriptionTier`. If
+   `cadet`/`officer`/`command` have marketing value, keep them as **display labels
+   only** in `strings/` — never in logic (Open Question 2).
+3. Web: replace `isPaidMember: boolean` with a real tier read from
+   `users/{uid}/data/subscription`, matching `SubscriptionTierDto`.
+4. Web: port `CheckTestEligibilityUseCase`'s decision shape — remaining quota, not a
+   binary gate — reading `SubscriptionUsageDto` counters.
+5. Align the dev override to the same four states as KMP Developer Settings
+   (`Follow Real` / `Force Free` / `Force Pro` / `Force Premium`).
+
+**Success:** a `PRO` user sees identical availability **and identical remaining
+quota** on Android, iOS, and web for all nine test types.
+
+---
+
+### Phase 5 — Server-Side Eligibility Enforcement
+
+**Goal:** the quota becomes unforgeable. Completes Tier 2.
+
+**TDD:**
+1. Emulator rules test: a client **cannot** write `users/{uid}/subscription/usage_*`.
+2. Function test: exceeding quota returns `resource-exhausted`.
+3. Function test: the same submission id charged twice increments the counter **once**
+   (`recordedSubmissionIds` already exists in `SubscriptionUsageDto` — idempotency
+   is a real requirement on flaky mobile networks, not a nicety).
+
+**Implementation:**
+1. Callable function is the authority on "may this user start test X" and on
+   incrementing counters.
+2. Tighten `firestore.rules` — the KMP client currently writes usage directly.
+3. All clients keep the local check as a **UX optimisation** (instant, offline); the
+   function is the gate at submission.
+
+**Rollback plan:** ship the function first and log-only for one release before
+enforcing, so a bug in the quota logic cannot lock out real users.
+
+---
+
+### Phase 6 — Shared-Corpus Contract Tests
+
+**Goal:** drift is caught by CI, not by a user. Closes §3.6.
+
+**Token-budget note:** this phase *reduces* long-run cost — it replaces triplicated
+per-platform schema tests with one corpus asserted by every reader.
+
+**Implementation:**
+1. One fixture corpus in `firestore-tests/` covering every `test_content`
+   sub-collection, `study_materials`, and a subscription/usage document.
+2. Seed it into the Firestore emulator.
+3. Exercise it from **both** readers against the same emulator instance:
+   `data-firebase`'s `androidUnitTest` suite and web's Vitest suite. Delete the
+   mocked `firebase/firestore` schema tests they replace.
+4. Assert both produce equivalent domain objects from identical documents.
+
+**Success:** renaming a field in the fixture fails both suites; renaming it in only
+one client's mapper fails only that client's suite. **Note the constraint:**
+`data-firebase` must never gain an `iosTest` source set (root CLAUDE.md) — these run
+under `androidUnitTest` only.
+
+---
+
+### Phase 7 — Design Tokens and Shared Strings Codegen *(optional)*
+
+**Goal:** extend Tier 1 to the resource layer, directly serving the "never hardcode
+strings or colors" rule and preventing UI/UX tech debt at the source.
+
+**Honest cost/benefit:** higher effort than Phases 1–3 and lower urgency, because
+Tier-3 divergence is cosmetic, not correctness-bearing. Do it once Phases 0–6 are
+stable — not before.
+
+**Implementation:**
+1. `contracts/tokens.yaml` → Compose `Color`/dimension objects + `tailwind.config.js`
+   theme extension. One palette, two renderings.
+2. `contracts/strings/*.yaml` → Compose Resources XML + `web/src/constants/strings/`.
+3. **Shared core + platform overrides:** web marketing copy legitimately differs from
+   in-app copy. The contract holds the shared core; each platform may override a key
+   locally, and an override is an explicit, reviewable act rather than a silent fork.
+
+**Success:** a brand color change is one commit touching one file.
+
+---
+
+### Phase 8 — Remote Kill-Switch and CI Hardening *(optional)*
+
+**Goal:** an indie developer must be able to disable a broken feature **without an
+app-store release**. Web ships in minutes; mobile takes days-to-weeks plus user
+update lag. Without this, a Phase 4/5 regression is unfixable on mobile for a week.
+
+**Implementation:**
+1. Firestore-backed feature flags + `minimumSupportedAppVersion` (from §4.1 rule 5),
+   read at launch by all clients, cached with a safe default.
+2. A client below the minimum shows a blocking "update required" state.
+3. CI matrix in `main-ci.yml`: KMP · web · functions · rules · `contracts:check` ·
+   `validate-security.sh`, each a required check.
+4. Extend `.githooks/pre-commit` to run `contracts:check` (fast, no network).
+
+---
+
+## 7. Sequencing Rationale
+
+- **0a is a hotfix**, independently shippable, and should go out today.
+- **1 before 2** — build the artifact, adopt it separately, so a generator bug never
+  mixes with a migration bug in the same red build.
+- **3 before 4** — subscriptions need a real `TestType` enum first.
+- **4 before 5** — reconcile the model before enforcing it; enforcing a forked model
+  would harden the wrong behaviour into the server.
+- **6 after 2–4** — contract tests are only meaningful once there is a contract.
+- **7 and 8 last** — genuinely valuable, but neither is correctness-bearing.
+
+Per the established sprint approach, **Phase 0 is not batched with anything else** —
+it is a pure correction and wants verification to 100% before Phase 1 begins.
+
+---
+
+## 8. Resolved Decisions (2026-08-10)
+
+All three blocking questions are answered. No open questions remain.
+
+| # | Question | Answer | Affects |
+|---|---|---|---|
+| 1 | Should web reach GTO/GPE content parity? | **Full parity** — Phase 0b adds web reads for `test_content/gto/task_batches` and `test_content/gto/scenarios/gpe/batches`. No divergence recorded. | Phase 0b step 5 |
+| 2 | What tier names do users see? | **Free / Pro / Premium in the UI on all platforms.** Web drops `cadet`/`officer`/`command` entirely — UI text matches the enum, so support and analytics share one vocabulary. | Phase 4 step 2 |
+| 3 | Do the legacy OIR collections hold unique data? | **No — both are empty.** Phase 0a is a simple path fix, not a data migration. See §9. | Phase 0a |
+
+---
+
+## 9. Appendix — Read-Only Production Audit (2026-08-10)
+
+Script: read-only, zero writes. Reproduced by counting documents and diffing ids
+across the three candidate OIR collections.
+
+```
+### test_content/oir/batches
+  docs: 28   batch_pdf_001 … batch_pdf_028
+             (50 items each, except 021:40 023:40 024:25 025:45 026:20 027:15 028:20)
+### content_oir      docs: 0
+### oir_batches      docs: 0
+
+VERDICT: both legacy collections EMPTY -> Phase 0a is A SIMPLE PATH FIX
+```
+
+**Two contract facts this establishes, both of which the plan previously guessed wrong:**
+
+1. **Doc-id convention is `batch_pdf_NNN`, not `batch_001`.** Web's third fallback
+   guess was the correct one all along; KMP's `TASK_BATCH_PATH = "…/batch_001"` and
+   the Functions default are the outliers. `contracts/firestore-paths.yaml` must
+   encode `batch_pdf_{NNN:03}` for OIR. Re-verify the id convention **per test type**
+   before authoring the contract — do not assume TAT/WAT/SRT/PPDT match OIR.
+2. **OIR question `type` values are** `VERBAL_REASONING`, `NON_VERBAL_REASONING`,
+   `NUMERICAL_ABILITY`, `SPATIAL_REASONING` (per `scripts/check-oir-content-health.js`).
+   Web's `mapDocToOIRBatch` maps to a two-value `'VERBAL' | 'NON_VERBAL'` union, so
+   **every question currently collapses to `VERBAL`**. Add this enum to
+   `contracts/enums.yaml` in Phase 3 and fix the web mapper.
+
+**Process note:** `scripts/check-oir-content-health.js` already encoded the canonical
+path and id convention. The drift in §3.1 existed despite a correct, committed
+health check — evidence that a script nobody runs in CI is not a contract. Phase 8's
+CI matrix should run the content health check on a schedule.

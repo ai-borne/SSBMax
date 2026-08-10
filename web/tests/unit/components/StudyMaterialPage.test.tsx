@@ -57,9 +57,6 @@ class MockContentRepository implements IContentRepository {
   async getSRTBatch() {
     return { id: 's1', situations: [], totalTimeMinutes: 30 };
   }
-  async getCappedBatch<T>(_collectionName: string, batchIndex = 0, _maxItems = 50) {
-    return { id: `batch_${batchIndex}`, batchIndex, totalItems: 0, items: [] as T[] };
-  }
   async getAvailableBatches() {
     return [];
   }

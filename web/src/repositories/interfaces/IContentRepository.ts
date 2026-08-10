@@ -8,7 +8,6 @@ export interface IContentRepository {
   getTATSet(id?: string): Promise<TATSet>;
   getWATBatch(id?: string): Promise<WATBatch>;
   getSRTBatch(id?: string): Promise<SRTBatch>;
-  getCappedBatch<T>(collectionName: string, batchIndex?: number, maxItems?: number): Promise<BatchDocument<T>>;
   getAvailableBatches(moduleName: string): Promise<TestBatchInfo[]>;
 }
 

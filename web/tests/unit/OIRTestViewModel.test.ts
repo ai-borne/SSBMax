@@ -7,6 +7,7 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
   let viewModel: OIRTestViewModel;
   let mockRepo: IContentRepository;
   let mockOfflineQueue: any;
+  let mockScoringService: any;
 
   const sampleQuestions: OIRQuestion[] = [
     {
@@ -41,7 +42,6 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
       getTATSet: vi.fn(),
       getWATBatch: vi.fn(),
       getSRTBatch: vi.fn(),
-      getCappedBatch: vi.fn(),
       getAvailableBatches: vi.fn().mockResolvedValue([])
     };
 
@@ -50,7 +50,17 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
       enqueueSubmission: vi.fn().mockResolvedValue(undefined)
     };
 
-    viewModel = new OIRTestViewModel(mockRepo, mockOfflineQueue);
+    mockScoringService = {
+      evaluateOIRAnswers: vi.fn().mockResolvedValue({
+        success: true,
+        score: 1,
+        total: 2,
+        percentage: 50,
+        oirRating: 3
+      })
+    };
+
+    viewModel = new OIRTestViewModel(mockRepo, mockOfflineQueue, mockScoringService);
   });
 
   it('should load questions and initialize state correctly', async () => {
@@ -79,7 +89,7 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     expect(state.currentIndex).toBe(0);
   });
 
-  it('should submit test online and return evaluation result', async () => {
+  it('should submit test online via the server-side evaluateOIRAnswers function and return its result', async () => {
     await viewModel.loadQuestions(0);
     viewModel.selectOption('q1', 2);
     viewModel.selectOption('q2', 0);
@@ -87,9 +97,23 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     await viewModel.submitTest('user-123', true);
     const state = viewModel.getState();
 
+    expect(mockScoringService.evaluateOIRAnswers).toHaveBeenCalledWith('oir-batch-0', {
+      q1: 2,
+      q2: 0
+    });
     expect(state.isCompleted).toBe(true);
     expect(state.result).not.toBeNull();
     expect(state.result?.totalQuestions).toBe(2);
+    expect(state.result?.score).toBe(1);
+  });
+
+  it('should surface an error and never fabricate a score when no batch is loaded before submit', async () => {
+    await viewModel.submitTest('user-123', true);
+    const state = viewModel.getState();
+
+    expect(mockScoringService.evaluateOIRAnswers).not.toHaveBeenCalled();
+    expect(state.isCompleted).toBe(false);
+    expect(state.error).toBeTruthy();
   });
 
   it('should enqueue submission offline when network is unavailable', async () => {

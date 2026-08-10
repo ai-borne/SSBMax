@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContentRepository } from '../../../src/repositories/ContentRepository';
+import { ContentUnavailableError } from '../../../src/types/errors';
 import { getDocs, getDoc, doc, collection } from 'firebase/firestore';
 
 vi.mock('firebase/firestore', () => ({
@@ -15,7 +16,7 @@ vi.mock('../../../src/config/firebase', () => ({
   db: {}
 }));
 
-describe('Firestore Test Content Schema SSOT Contract Tests', () => {
+describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
   let repository: ContentRepository;
 
   beforeEach(() => {
@@ -43,6 +44,11 @@ describe('Firestore Test Content Schema SSOT Contract Tests', () => {
     expect(result.displayDurationSeconds).toBe(15);
   });
 
+  it('CONTRACT: a missing WAT batch fails loudly with ContentUnavailableError, not a fabricated word list', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    await expect(repository.getWATBatch('batch_missing')).rejects.toBeInstanceOf(ContentUnavailableError);
+  });
+
   it('CONTRACT: MUST query primary SSOT path "test_content/srt/situation_batches/{batchId}" and map polymorphic 60-situation SRT batch', async () => {
     const mock60Situations = Array.from({ length: 60 }, (_, i) => ({ situation: `Situation prompt #${i + 1}` }));
     vi.mocked(getDoc).mockResolvedValueOnce({
@@ -61,6 +67,11 @@ describe('Firestore Test Content Schema SSOT Contract Tests', () => {
     expect(result.situations).toHaveLength(60);
     expect(result.situations[0]).toBe('Situation prompt #1');
     expect(result.totalTimeMinutes).toBe(30);
+  });
+
+  it('CONTRACT: a missing SRT batch fails loudly with ContentUnavailableError', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    await expect(repository.getSRTBatch('batch_missing')).rejects.toBeInstanceOf(ContentUnavailableError);
   });
 
   it('CONTRACT: MUST query primary SSOT path "test_content/tat/image_batches/{batchId}" and append 12th blank card per SSB protocol', async () => {
@@ -86,7 +97,12 @@ describe('Firestore Test Content Schema SSOT Contract Tests', () => {
     expect(result.imageUrls[11]).toBe('blank');
   });
 
-  it('CONTRACT: MUST query primary SSOT path "test_content/oir/question_batches/{batchId}" and perform anti-cheating answer key sanitization', async () => {
+  it('CONTRACT: a missing TAT set fails loudly with ContentUnavailableError', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    await expect(repository.getTATSet('tat_set_missing')).rejects.toBeInstanceOf(ContentUnavailableError);
+  });
+
+  it('CONTRACT: MUST query the KMP-authoritative path "test_content/oir/batches/{batch_pdf_NNN}" (not question_batches/content_oir/oir_batches) and perform anti-cheating answer key sanitization', async () => {
     const mock50Questions = Array.from({ length: 50 }, (_, i) => ({
       id: `q_${i + 1}`,
       questionNumber: i + 1,
@@ -100,25 +116,31 @@ describe('Firestore Test Content Schema SSOT Contract Tests', () => {
 
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => true,
-      id: 'batch_001',
+      id: 'batch_pdf_001',
       data: () => ({
         batchIndex: 0,
-        items: mock50Questions
+        questions: mock50Questions
       })
     } as any);
 
     const result = await repository.getOIRQuestions(0);
 
-    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content', 'oir', 'question_batches', 'batch_001');
+    // batchIndex 0 -> 1-indexed doc id batch_pdf_001, per GitLiveOIRQuestionCacheManager.batchId
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content', 'oir', 'batches', 'batch_pdf_001');
     expect(result.items).toHaveLength(50);
     expect(result.items[0].questionText).toBe('OIR Question 1');
-    
+
     // Anti-cheating verification: answer key & explanation MUST NOT leak to client
     result.items.forEach((item) => {
       expect((item as any).correctAnswerIndex).toBeUndefined();
       expect((item as any).answerKey).toBeUndefined();
       expect((item as any).explanation).toBeUndefined();
     });
+  });
+
+  it('CONTRACT: a missing OIR batch fails loudly with ContentUnavailableError, never scores/renders a fabricated question set', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    await expect(repository.getOIRQuestions(0)).rejects.toBeInstanceOf(ContentUnavailableError);
   });
 
   it('CONTRACT: MUST query primary SSOT path "test_content/ppdt/image_batches/{id}" for PPDT context with storage URL normalization', async () => {
@@ -143,16 +165,15 @@ describe('Firestore Test Content Schema SSOT Contract Tests', () => {
     expect(result.writingTimeSeconds).toBe(240);
   });
 
-  it('CONTRACT: MUST query subcollections for getAvailableBatches(moduleName) metadata', async () => {
+  it('CONTRACT: a missing PPDT context fails loudly with ContentUnavailableError', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    await expect(repository.getPPDTContext('ppdt_missing')).rejects.toBeInstanceOf(ContentUnavailableError);
+  });
+
+  it('CONTRACT: MUST query the KMP-authoritative "test_content/oir/batches" subcollection for getAvailableBatches("oir")', async () => {
     const mockBatchDocs = [
-      {
-        id: 'batch_0',
-        data: () => ({ name: 'OIR Batch 1', totalItems: 50 })
-      },
-      {
-        id: 'batch_1',
-        data: () => ({ name: 'OIR Batch 2', totalItems: 50 })
-      }
+      { id: 'batch_pdf_001', data: () => ({ name: 'OIR Batch 1', totalItems: 50 }) },
+      { id: 'batch_pdf_002', data: () => ({ name: 'OIR Batch 2', totalItems: 50 }) }
     ];
 
     vi.mocked(getDocs).mockResolvedValueOnce({
@@ -162,9 +183,15 @@ describe('Firestore Test Content Schema SSOT Contract Tests', () => {
 
     const batches = await repository.getAvailableBatches('oir');
 
-    expect(collection).toHaveBeenCalledWith(expect.anything(), 'test_content', 'oir', 'question_batches');
+    expect(collection).toHaveBeenCalledWith(expect.anything(), 'test_content', 'oir', 'batches');
     expect(batches).toHaveLength(2);
-    expect(batches[0]).toEqual({ id: 'batch_0', name: 'OIR Batch 1', itemCount: 50 });
-    expect(batches[1]).toEqual({ id: 'batch_1', name: 'OIR Batch 2', itemCount: 50 });
+    expect(batches[0]).toEqual({ id: 'batch_pdf_001', name: 'OIR Batch 1', itemCount: 50 });
+    expect(batches[1]).toEqual({ id: 'batch_pdf_002', name: 'OIR Batch 2', itemCount: 50 });
+  });
+
+  it('CONTRACT: getAvailableBatches returns [] for an unmapped module rather than a hardcoded defaultsMap of fictional batches', async () => {
+    const batches = await repository.getAvailableBatches('not_a_real_module');
+    expect(batches).toEqual([]);
+    expect(getDocs).not.toHaveBeenCalled();
   });
 });

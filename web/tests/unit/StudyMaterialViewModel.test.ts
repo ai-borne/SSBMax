@@ -61,10 +61,6 @@ class MockContentRepository implements IContentRepository {
     return { id: 'srt-1', situations: [], totalTimeMinutes: 30 };
   }
 
-  async getCappedBatch<T>(_collectionName: string): Promise<BatchDocument<T>> {
-    return { id: 'batch_0', batchIndex: 0, totalItems: 0, items: [] };
-  }
-
   async getAvailableBatches(): Promise<any[]> {
     return [];
   }

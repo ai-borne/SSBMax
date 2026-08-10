@@ -1,6 +1,7 @@
 import { OIRQuestion } from '../types/testContent';
 import { IContentRepository } from '../repositories/interfaces/IContentRepository';
 import { OfflineQueueService } from '../services/OfflineQueueService';
+import { OIRScoringService } from '../services/OIRScoringService';
 
 export interface OIRAnswerPayload {
   questionId: string;
@@ -32,21 +33,25 @@ export interface OIRTestState {
   error: string | null;
   result: OIREvaluationResult | null;
   timeRemainingSeconds: number;
+  batchId: string | null;
 }
 
 export class OIRTestViewModel {
   private repository: IContentRepository;
   private offlineQueueService: OfflineQueueService;
+  private scoringService: OIRScoringService;
   private state: OIRTestState;
   private listeners: Set<() => void> = new Set();
   private totalDurationSeconds: number = 30 * 60; // 30 minutes for 50 questions
 
   constructor(
     repository: IContentRepository,
-    offlineQueueService: OfflineQueueService = new OfflineQueueService()
+    offlineQueueService: OfflineQueueService = new OfflineQueueService(),
+    scoringService: OIRScoringService = new OIRScoringService()
   ) {
     this.repository = repository;
     this.offlineQueueService = offlineQueueService;
+    this.scoringService = scoringService;
     this.state = {
       questions: [],
       currentIndex: 0,
@@ -56,7 +61,8 @@ export class OIRTestViewModel {
       isCompleted: false,
       error: null,
       result: null,
-      timeRemainingSeconds: this.totalDurationSeconds
+      timeRemainingSeconds: this.totalDurationSeconds,
+      batchId: null
     };
   }
 
@@ -96,7 +102,8 @@ export class OIRTestViewModel {
         ...this.state,
         questions: sanitizedQuestions,
         currentIndex: 0,
-        isLoading: false
+        isLoading: false,
+        batchId: batch.id
       };
     } catch (err: any) {
       this.state = {
@@ -166,7 +173,7 @@ export class OIRTestViewModel {
 
     const submission: OIRTestSubmission = {
       userId,
-      testId: 'oir-batch-1',
+      testId: this.state.batchId || 'oir-batch-1',
       answers: formattedAnswers,
       timeTakenSeconds: this.totalDurationSeconds - this.state.timeRemainingSeconds,
       submittedAt: new Date().toISOString()
@@ -197,16 +204,22 @@ export class OIRTestViewModel {
     }
 
     try {
-      // Anti-cheating evaluation: answers sent to backend without correct answer keys
-      // Mock evaluation calculation or API response for demonstration
-      const simulatedScore = Math.floor(formattedAnswers.length * 0.8);
-      const rating = simulatedScore >= 40 ? 1 : simulatedScore >= 30 ? 2 : 3;
+      if (!this.state.batchId) {
+        throw new Error('Cannot submit: no batch loaded');
+      }
+
+      // Anti-cheating evaluation: answers sent to the server-side evaluateOIRAnswers
+      // Cloud Function, which holds the answer keys the client never receives.
+      const evaluation = await this.scoringService.evaluateOIRAnswers(
+        this.state.batchId,
+        this.state.answers
+      );
 
       const evalResult: OIREvaluationResult = {
-        score: simulatedScore,
-        totalQuestions: this.state.questions.length,
-        oirRating: rating,
-        percentage: Math.round((simulatedScore / Math.max(1, this.state.questions.length)) * 100)
+        score: evaluation.score,
+        totalQuestions: evaluation.total,
+        oirRating: evaluation.oirRating,
+        percentage: evaluation.percentage
       };
 
       this.state = {

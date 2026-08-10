@@ -47,33 +47,17 @@ describe('Firestore Schema SSOT Contract Tests', () => {
     expect(materials[0].contentMarkdown).toBe('# Full OIR Guide Content');
   });
 
-  it('CONTRACT: MUST fallback to "studyMaterials" if "study_materials" returns zero documents', async () => {
-    // 1st call ('study_materials') returns empty snapshot
+  it('CONTRACT: MUST NOT query the orphaned "studyMaterials" collection -- "study_materials" is the only SSOT path; zero docs falls back to offline content, not a second Firestore guess', async () => {
     vi.mocked(getDocs).mockResolvedValueOnce({
       empty: true,
       forEach: vi.fn()
     } as any);
 
-    // 2nd call ('studyMaterials') returns snapshot
-    vi.mocked(getDocs).mockResolvedValueOnce({
-      empty: false,
-      forEach: (cb: any) =>
-        cb({
-          id: 'legacy_doc_1',
-          data: () => ({
-            title: 'Legacy Guide',
-            testTypeId: 'ppdt',
-            contentMarkdown: '# Legacy PPDT Content'
-          })
-        })
-    } as any);
-
     const materials = await repository.getStudyMaterials();
 
-    expect(collection).toHaveBeenNthCalledWith(1, expect.anything(), 'study_materials');
-    expect(collection).toHaveBeenNthCalledWith(2, expect.anything(), 'studyMaterials');
-    expect(materials).toHaveLength(1);
-    expect(materials[0].title).toBe('Legacy Guide');
+    expect(collection).toHaveBeenCalledTimes(1);
+    expect(collection).toHaveBeenCalledWith(expect.anything(), 'study_materials');
+    expect(materials.length).toBeGreaterThan(0); // offline fallback content, not a Firestore guess
   });
 
   it('CONTRACT: MUST map "introduction" field from topic_content to contentMarkdown when contentMarkdown is absent', async () => {
