@@ -79,33 +79,27 @@ export class ContentRepository implements IContentRepository {
       'oir', 'ppdt', 'piq', 'tat', 'wat', 'srt', 'sd', 'gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt', 'interview', 'conference'
     ];
     if (valid.includes(norm as StudyMaterial['testTypeId'])) return norm as StudyMaterial['testTypeId'];
-    if (norm.includes('oir')) return 'oir';
-    if (norm.includes('ppdt')) return 'ppdt';
-    if (norm.includes('piq')) return 'piq';
-    if (norm.includes('tat') || norm.includes('psychology')) return 'tat';
-    if (norm.includes('wat')) return 'wat';
-    if (norm.includes('srt')) return 'srt';
-    if (norm.includes('sd') || norm.includes('self')) return 'sd';
-    if (norm.includes('gd') || norm.includes('discussion')) return 'gd';
-    if (norm.includes('gpe') || norm.includes('planning')) return 'gpe';
-    if (norm.includes('pgt')) return 'pgt';
-    if (norm.includes('hgt')) return 'hgt';
-    if (norm.includes('iot') || norm.includes('obstacle')) return 'iot';
-    if (norm.includes('command')) return 'command_task';
-    if (norm.includes('snake') || norm.includes('gor')) return 'snake_race';
-    if (norm.includes('fgt')) return 'fgt';
-    if (norm.includes('interview')) return 'interview';
-    if (norm.includes('conference') || norm.includes('medicals')) return 'conference';
-    return undefined;
+    const keywordMap: Array<[string, StudyMaterial['testTypeId']]> = [
+      ['oir', 'oir'], ['ppdt', 'ppdt'], ['piq', 'piq'], ['tat', 'tat'], ['psychology', 'tat'],
+      ['wat', 'wat'], ['srt', 'srt'], ['sd', 'sd'], ['self', 'sd'], ['gd', 'gd'], ['discussion', 'gd'],
+      ['gpe', 'gpe'], ['planning', 'gpe'], ['pgt', 'pgt'], ['hgt', 'hgt'], ['iot', 'iot'], ['obstacle', 'iot'],
+      ['command', 'command_task'], ['snake', 'snake_race'], ['gor', 'snake_race'], ['fgt', 'fgt'],
+      ['interview', 'interview'], ['conference', 'conference'], ['medicals', 'conference']
+    ];
+    const match = keywordMap.find(([kw]) => norm.includes(kw));
+    return match ? match[1] : undefined;
   }
 
   async getOIRQuestions(batchIndex = 0): Promise<BatchDocument<OIRQuestion>> {
     try {
-      const docId = `batch_${batchIndex}`;
-      const ssotRef = doc(db, 'test_content', 'oir', 'question_batches', docId);
-      const ssotSnap = await getDoc(ssotRef);
-      if (ssotSnap.exists()) {
-        return mapDocToOIRBatch(ssotSnap.id, ssotSnap.data(), batchIndex);
+      const padNum = String(batchIndex + 1).padStart(3, '0');
+      const docIdsToTry = [`batch_${padNum}`, `batch_${batchIndex}`, `batch_pdf_${padNum}`];
+      for (const docId of docIdsToTry) {
+        const ssotRef = doc(db, 'test_content', 'oir', 'question_batches', docId);
+        const ssotSnap = await getDoc(ssotRef);
+        if (ssotSnap.exists()) {
+          return mapDocToOIRBatch(ssotSnap.id, ssotSnap.data(), batchIndex);
+        }
       }
     } catch (err) {
       console.warn(`SSOT OIR fetch failed for batch_${batchIndex}, trying legacy fallback`, err);
@@ -115,15 +109,18 @@ export class ContentRepository implements IContentRepository {
 
   async getPPDTContext(id = 'ppdt_1'): Promise<PPDTContext> {
     try {
-      const ssotRef = doc(db, 'test_content', 'ppdt', 'image_batches', id);
-      const ssotSnap = await getDoc(ssotRef);
-      if (ssotSnap.exists()) {
-        return mapDocToPPDTContext(ssotSnap.id, ssotSnap.data());
+      const idsToTry = [id, 'batch_001', 'ppdt_1'];
+      for (const docId of idsToTry) {
+        const ssotRef = doc(db, 'test_content', 'ppdt', 'image_batches', docId);
+        const ssotSnap = await getDoc(ssotRef);
+        if (ssotSnap.exists()) {
+          return mapDocToPPDTContext(id, ssotSnap.data());
+        }
       }
       const docRef = doc(db, 'ppdtContexts', id);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        return mapDocToPPDTContext(docSnap.id, docSnap.data());
+        return mapDocToPPDTContext(id, docSnap.data());
       }
     } catch (error) {
       console.warn('Using offline fallback for PPDT context', error);
@@ -135,14 +132,9 @@ export class ContentRepository implements IContentRepository {
     try {
       const ssotRef = doc(db, 'test_content', 'tat', 'image_batches', id);
       const ssotSnap = await getDoc(ssotRef);
-      if (ssotSnap.exists()) {
-        return mapDocToTATSet(ssotSnap.id, ssotSnap.data());
-      }
-      const docRef = doc(db, 'tatSets', id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        return mapDocToTATSet(docSnap.id, docSnap.data());
-      }
+      if (ssotSnap.exists()) return mapDocToTATSet(ssotSnap.id, ssotSnap.data());
+      const docSnap = await getDoc(doc(db, 'tatSets', id));
+      if (docSnap.exists()) return mapDocToTATSet(docSnap.id, docSnap.data());
     } catch (error) {
       console.warn('Using offline fallback for TAT set', error);
     }
@@ -151,16 +143,17 @@ export class ContentRepository implements IContentRepository {
 
   async getWATBatch(id = 'wat_batch_1'): Promise<WATBatch> {
     try {
-      const ssotRef = doc(db, 'test_content', 'wat', 'word_batches', id);
-      const ssotSnap = await getDoc(ssotRef);
-      if (ssotSnap.exists()) {
-        return mapDocToWATBatch(ssotSnap.id, ssotSnap.data());
+      const idsToTry = [id, 'batch_001', 'wat_batch_1'];
+      for (const docId of idsToTry) {
+        const ssotRef = doc(db, 'test_content', 'wat', 'word_batches', docId);
+        const ssotSnap = await getDoc(ssotRef);
+        if (ssotSnap.exists()) {
+          return mapDocToWATBatch(id, ssotSnap.data());
+        }
       }
       const docRef = doc(db, 'watBatches', id);
       const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        return mapDocToWATBatch(docSnap.id, docSnap.data());
-      }
+      if (docSnap.exists()) return mapDocToWATBatch(id, docSnap.data());
     } catch (error) {
       console.warn('Using offline fallback for WAT batch', error);
     }
@@ -169,16 +162,17 @@ export class ContentRepository implements IContentRepository {
 
   async getSRTBatch(id = 'srt_batch_1'): Promise<SRTBatch> {
     try {
-      const ssotRef = doc(db, 'test_content', 'srt', 'situation_batches', id);
-      const ssotSnap = await getDoc(ssotRef);
-      if (ssotSnap.exists()) {
-        return mapDocToSRTBatch(ssotSnap.id, ssotSnap.data());
+      const idsToTry = [id, 'batch_001', 'srt_batch_1'];
+      for (const docId of idsToTry) {
+        const ssotRef = doc(db, 'test_content', 'srt', 'situation_batches', docId);
+        const ssotSnap = await getDoc(ssotRef);
+        if (ssotSnap.exists()) {
+          return mapDocToSRTBatch(id, ssotSnap.data());
+        }
       }
       const docRef = doc(db, 'srtBatches', id);
       const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        return mapDocToSRTBatch(docSnap.id, docSnap.data());
-      }
+      if (docSnap.exists()) return mapDocToSRTBatch(id, docSnap.data());
     } catch (error) {
       console.warn('Using offline fallback for SRT batch', error);
     }
@@ -248,39 +242,31 @@ export class ContentRepository implements IContentRepository {
       console.warn(`Failed to query SSOT batches for module ${normModule}`, err);
     }
 
-    if (normModule === 'oir') {
-      return [
-        { id: 'batch_0', name: 'OIR Batch 1 (50 Qs)', itemCount: 50 },
-        { id: 'batch_1', name: 'OIR Batch 2 (50 Qs)', itemCount: 50 },
-        { id: 'batch_2', name: 'OIR Batch 3 (50 Qs)', itemCount: 50 }
-      ];
-    }
-    if (normModule === 'ppdt') {
-      return [
-        { id: 'ppdt_1', name: 'PPDT Image 1 (Standard)', itemCount: 1 },
-        { id: 'ppdt_2', name: 'PPDT Image 2 (Group Task)', itemCount: 1 }
-      ];
-    }
-    if (normModule === 'tat') {
-      return [
+    const defaultsMap: Record<string, TestBatchInfo[]> = {
+      oir: [
+        { id: 'batch_001', name: 'OIR Batch 1 (50 Qs)', itemCount: 50 },
+        { id: 'batch_002', name: 'OIR Batch 2 (50 Qs)', itemCount: 50 },
+        { id: 'batch_003', name: 'OIR Batch 3 (50 Qs)', itemCount: 50 }
+      ],
+      ppdt: [
+        { id: 'batch_001', name: 'PPDT Image Batch 1 (30 Images)', itemCount: 30 },
+        { id: 'batch_002', name: 'PPDT Image Batch 2 (30 Images)', itemCount: 30 }
+      ],
+      tat: [
         { id: 'tat_set_1', name: 'TAT Set 1 (12 Slides)', itemCount: 12 },
         { id: 'tat_set_2', name: 'TAT Set 2 (12 Slides)', itemCount: 12 }
-      ];
-    }
-    if (normModule === 'wat') {
-      return [
+      ],
+      wat: [
         { id: 'wat_batch_1', name: 'WAT Batch 1 (60 Words)', itemCount: 60 },
         { id: 'wat_batch_2', name: 'WAT Batch 2 (60 Words)', itemCount: 60 }
-      ];
-    }
-    if (normModule === 'srt') {
-      return [
+      ],
+      srt: [
         { id: 'srt_batch_1', name: 'SRT Batch 1 (60 Situations)', itemCount: 60 },
         { id: 'srt_batch_2', name: 'SRT Batch 2 (60 Situations)', itemCount: 60 }
-      ];
-    }
+      ]
+    };
 
-    return [
+    return defaultsMap[normModule] || [
       { id: `${normModule}_batch_1`, name: `${normModule.toUpperCase()} Batch 1` },
       { id: `${normModule}_batch_2`, name: `${normModule.toUpperCase()} Batch 2` }
     ];

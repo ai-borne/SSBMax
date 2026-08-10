@@ -100,7 +100,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests', () => {
 
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => true,
-      id: 'batch_0',
+      id: 'batch_001',
       data: () => ({
         batchIndex: 0,
         items: mock50Questions
@@ -109,7 +109,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests', () => {
 
     const result = await repository.getOIRQuestions(0);
 
-    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content', 'oir', 'question_batches', 'batch_0');
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content', 'oir', 'question_batches', 'batch_001');
     expect(result.items).toHaveLength(50);
     expect(result.items[0].questionText).toBe('OIR Question 1');
     

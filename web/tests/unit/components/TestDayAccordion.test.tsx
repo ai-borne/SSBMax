@@ -172,9 +172,9 @@ describe('TestDayAccordion Component', () => {
     expect(badge?.className).toContain('text-gold');
   });
 
-  it('should render Most Popular badge on PPDT card', () => {
+  it('should render clean tier badge on PPDT card without redundant badges', () => {
     const day1 = getDayOverview('1')!;
     render(<TestDayAccordion dayOverview={day1} userTier="officer" onStartTest={vi.fn()} />);
-    expect(screen.getByTestId('most-popular-badge-ppdt')).toBeInTheDocument();
+    expect(screen.getByTestId('test-simulator-card-ppdt')).toHaveTextContent('OFFICER (PRO)');
   });
 });

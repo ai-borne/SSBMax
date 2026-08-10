@@ -79,23 +79,18 @@ describe('BatchSelectorModal & Dynamic Batch Selector Unit Tests', () => {
     };
 
 
-    const onOpenBatchSelector = vi.fn();
+    const onLaunch = vi.fn();
 
     render(
       <TestSimulatorCard
         test={mockTest}
         userTier="cadet"
-        selectedBatchName="WAT Batch 1 (60 Words)"
-        availableBatchesCount={3}
-        onLaunch={vi.fn()}
-        onOpenBatchSelector={onOpenBatchSelector}
+        onLaunch={onLaunch}
       />
     );
 
-    expect(screen.getByTestId('live-batch-count-pill-wat')).toHaveTextContent('3 Batches');
-    expect(screen.getByTestId('batch-selector-trigger-wat')).toHaveTextContent('WAT Batch 1 (60 Words)');
-
-    fireEvent.click(screen.getByTestId('batch-selector-trigger-wat'));
-    expect(onOpenBatchSelector).toHaveBeenCalledWith('wat');
+    expect(screen.getByTestId('launch-button-wat')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('launch-button-wat'));
+    expect(onLaunch).toHaveBeenCalledWith('wat');
   });
 });

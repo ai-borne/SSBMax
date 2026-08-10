@@ -9,11 +9,8 @@ export interface TestDayAccordionProps {
   userTier?: AccessTier;
   defaultExpanded?: boolean;
   searchQuery?: string;
-  selectedBatchName?: (testId: string) => string | undefined;
-  availableBatchesCount?: (testId: string) => number | undefined;
   onStartTest: (testId: string, batchId?: string) => void;
   onUnlockTier?: (tier: AccessTier) => void;
-  onOpenBatchSelector?: (testId: string) => void;
 }
 
 function getDayAccentClasses(dayNumber: SSBDayNumber): {
@@ -35,11 +32,8 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
   userTier = 'cadet',
   defaultExpanded = true,
   searchQuery,
-  selectedBatchName,
-  availableBatchesCount,
   onStartTest,
   onUnlockTier,
-  onOpenBatchSelector,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const allTests = getTestConfigsForDay(dayOverview.dayNumber);
@@ -129,11 +123,8 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
                 key={test.id}
                 test={test}
                 userTier={userTier}
-                selectedBatchName={selectedBatchName?.(test.id)}
-                availableBatchesCount={availableBatchesCount?.(test.id)}
                 onLaunch={(id) => onStartTest(id)}
                 onUnlockTier={onUnlockTier}
-                onOpenBatchSelector={onOpenBatchSelector}
               />
             ))}
           </div>

@@ -160,16 +160,30 @@ export function mapDocToPPDTContext(id: string, data?: Record<string, any>): PPD
     };
   }
 
-  const rawUrl = data.imageUrl || data.image || data.url || '';
+  let item: any = data;
+  if (Array.isArray(data.images) && data.images.length > 0) {
+    const found = data.images.find((img: any) => img.id === id || img.imageUrl === id);
+    item = found || data.images[0];
+  }
+
+  const rawUrl = item.imageUrl || item.image || item.url || data.imageUrl || data.image || '';
   const imageUrl = normalizeStorageUrl(rawUrl) || 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80';
 
+  const writingTimeSeconds = typeof item.writingTimeSeconds === 'number'
+    ? item.writingTimeSeconds
+    : typeof item.writingTimeMinutes === 'number'
+    ? item.writingTimeMinutes * 60
+    : 240;
+
   return {
-    id: data.id || id,
-    title: data.title || data.setName || 'PPDT Image Test',
+    id: item.id || data.id || id,
+    title: item.title || item.imageDescription || data.title || data.setName || 'PPDT Image Test',
     imageUrl,
-    viewingTimeSeconds: typeof data.viewingTimeSeconds === 'number' ? data.viewingTimeSeconds : 30,
-    writingTimeSeconds: typeof data.writingTimeSeconds === 'number' ? data.writingTimeSeconds : 240,
-    instructions: Array.isArray(data.instructions) ? data.instructions : ['Observe the picture for 30 seconds.', 'Identify characters and write a constructive story in 4 minutes.']
+    viewingTimeSeconds: typeof item.viewingTimeSeconds === 'number' ? item.viewingTimeSeconds : 30,
+    writingTimeSeconds,
+    instructions: Array.isArray(data.instructions)
+      ? data.instructions
+      : ['Observe the picture for 30 seconds.', 'Identify characters and write a constructive story in 4 minutes.']
   };
 }
 
@@ -181,7 +195,7 @@ export function mapDocToOIRBatch(id: string, data?: Record<string, any>, batchIn
     return { id: `batch_${batchIndex}`, batchIndex, totalItems: 0, items: [] };
   }
 
-  const rawItems = data.items || data.questions || data.questionList || [];
+  const rawItems = data.questions || data.items || data.questionList || [];
   const items: OIRQuestion[] = Array.isArray(rawItems)
     ? rawItems.map((q: any, index: number) => {
         const questionNumber = typeof q.questionNumber === 'number' ? q.questionNumber : index + 1;
@@ -189,12 +203,20 @@ export function mapDocToOIRBatch(id: string, data?: Record<string, any>, batchIn
         const rawImg = q.imageUrl || q.image || '';
         const imageUrl = normalizeStorageUrl(rawImg) || undefined;
 
+        const options: string[] = Array.isArray(q.options)
+          ? q.options.map((opt: any) => {
+              if (typeof opt === 'string') return opt.trim();
+              if (opt && typeof opt === 'object') return (opt.text || opt.label || opt.value || opt.id || '').trim();
+              return String(opt || '');
+            }).filter(Boolean)
+          : [];
+
         // Anti-cheating: explicitly pick only safe client fields
         return {
           id: String(q.id || `oir_${batchIndex}_${questionNumber}`),
           questionNumber,
           questionText: String(q.questionText || q.text || q.question || ''),
-          options: Array.isArray(q.options) ? q.options.map(String) : [],
+          options: options.length > 0 ? options : ['Option A', 'Option B', 'Option C', 'Option D'],
           imageUrl,
           type
         };

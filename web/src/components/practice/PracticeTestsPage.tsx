@@ -157,15 +157,8 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
             dayOverview={day}
             userTier={effectiveTier}
             searchQuery={searchQuery}
-            selectedBatchName={(testId) => {
-              const bList = availableBatchesMap[testId];
-              const sId = selectedBatchMap[testId];
-              return bList?.find((b) => b.id === sId)?.name;
-            }}
-            availableBatchesCount={(testId) => availableBatchesMap[testId]?.length}
             onStartTest={handleLaunch}
             onUnlockTier={handleUnlockTier}
-            onOpenBatchSelector={(testId) => setBatchModalTestId(testId)}
           />
         ))}
       </div>

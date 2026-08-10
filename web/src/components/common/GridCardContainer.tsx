@@ -37,7 +37,7 @@ export const GridCardContainer: FC<GridCardContainerProps> = ({
       )}
 
       {/* Layer 3: Interactive Card Content */}
-      <div className="relative z-10">{children}</div>
+      <div className="relative z-10 h-full flex flex-col justify-between">{children}</div>
     </div>
   );
 };
