@@ -200,6 +200,32 @@ class TATTestViewModelTest {
         viewModel.clearForTest()
     }
 
+    // TAT_Impr_3 Phase 4: submitTest must persist the exact questions the user saw so the
+    // analysis paths can recover the questionId -> imageUrl mapping instead of re-fetching a
+    // fresh random 12 (the "0 bytes" image bug).
+    @Test
+    fun `submitTest persists the questions the user saw in the submission`() = runTest(testDispatcher) {
+        val fakeWithTAT = object : com.ssbmax.shared.domain.repository.TestContentRepository by testContentRepository {
+            override suspend fun getTATQuestions(testId: String, genderTag: com.ssbmax.shared.domain.model.GenderTag?) =
+                Result.success(questions())
+        }
+        val viewModel = TATTestViewModel(
+            LoadTATTestUseCase(fakeWithTAT, testSessionRepository, userProfileRepository),
+            SubmitTATTestUseCase(submissionRepository), ObserveCurrentUserUseCase(authRepository),
+            CheckTestEligibilityUseCase(subscriptionRepository, RecordingAnalyticsTracker()), GetSubscriptionTierUseCase(subscriptionRepository), usageRecorder,
+            analysisTrigger, testSessionRepository, NoOpLogger(), RecordingAnalyticsTracker()
+        )
+        viewModel.loadTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.submitTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val submitted = submissionRepository.lastTATSubmission
+        assertNotNull(submitted)
+        assertEquals(questions(), submitted.questions)
+    }
+
     @Test
     fun `submitTest builds a submission and records usage and triggers analysis`() = runTest(testDispatcher) {
         val fakeWithTAT = object : com.ssbmax.shared.domain.repository.TestContentRepository by testContentRepository {

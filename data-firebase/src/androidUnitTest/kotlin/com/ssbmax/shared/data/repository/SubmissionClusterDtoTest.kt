@@ -79,6 +79,105 @@ class SubmissionClusterDtoTest {
     }
 
     @Test
+    fun `TATQuestionDto round-trips every field through toDto and toDomain`() {
+        val question = com.ssbmax.shared.domain.model.TATQuestion(
+            id = "tat_046_male",
+            imageUrl = "https://storage.googleapis.com/ssbmax.app/tat_046_male.jpg",
+            cardPosition = 4,
+            imageContextJson = "{\"setting\":\"village\"}",
+            genderTag = "MALE",
+            viewingTimeSeconds = 45,
+            writingTimeMinutes = 5,
+            minCharacters = 200,
+            maxCharacters = 2000
+        )
+
+        val dto = question.toDto()
+        assertEquals("tat_046_male", dto.id)
+        assertEquals("https://storage.googleapis.com/ssbmax.app/tat_046_male.jpg", dto.imageUrl)
+        assertEquals(4, dto.cardPosition)
+        assertEquals("{\"setting\":\"village\"}", dto.imageContextJson)
+        assertEquals("MALE", dto.genderTag)
+        assertEquals(45, dto.viewingTimeSeconds)
+        assertEquals(5, dto.writingTimeMinutes)
+        assertEquals(200, dto.minCharacters)
+        assertEquals(2000, dto.maxCharacters)
+
+        val roundTripped = dto.toDomain()
+        assertEquals(question, roundTripped)
+    }
+
+    @Test
+    fun `TATSubmission toDto round-trips questions preserving id imageUrl context genderTag and cardPosition`() {
+        val submission = com.ssbmax.shared.domain.model.TATSubmission(
+            id = "sub-1",
+            userId = "u1",
+            testId = "tat_standard",
+            stories = listOf(
+                com.ssbmax.shared.domain.model.TATStoryResponse(
+                    questionId = "q1", story = "Story", charactersCount = 5,
+                    viewingTimeTakenSeconds = 10, writingTimeTakenSeconds = 120, submittedAt = 1L
+                )
+            ),
+            questions = listOf(
+                com.ssbmax.shared.domain.model.TATQuestion(
+                    id = "q1", imageUrl = "https://example.com/1.png", cardPosition = 1,
+                    imageContextJson = "{\"setting\":\"river\"}", genderTag = "MIXED"
+                ),
+                com.ssbmax.shared.domain.model.TATQuestion(
+                    id = "q2", imageUrl = "https://example.com/2.png", cardPosition = 2,
+                    imageContextJson = "{}", genderTag = "FEMALE"
+                )
+            ),
+            totalTimeTakenMinutes = 45,
+            submittedAt = 2L
+        )
+
+        val dto = TATDataDto(
+            id = submission.id,
+            userId = submission.userId,
+            testId = submission.testId,
+            stories = submission.stories.map { it.toDto() },
+            questions = submission.questions.map { it.toDto() },
+            totalTimeTakenMinutes = submission.totalTimeTakenMinutes,
+            submittedAt = submission.submittedAt,
+            status = submission.status.name
+        )
+
+        val roundTripped = dto.toDomain()
+        assertEquals(2, roundTripped.questions.size)
+        assertEquals("q1", roundTripped.questions[0].id)
+        assertEquals("https://example.com/1.png", roundTripped.questions[0].imageUrl)
+        assertEquals("{\"setting\":\"river\"}", roundTripped.questions[0].imageContextJson)
+        assertEquals("MIXED", roundTripped.questions[0].genderTag)
+        assertEquals(1, roundTripped.questions[0].cardPosition)
+        assertEquals("q2", roundTripped.questions[1].id)
+        assertEquals("FEMALE", roundTripped.questions[1].genderTag)
+    }
+
+    @Test
+    fun `legacy TATDataDto without questions field decodes to empty questions list`() {
+        // Backward compatibility: docs written before TAT_Impr_3 have no `questions`
+        // field. The defaulted DTO field must decode to emptyList() so the analysis
+        // paths fall back to a repo fetch instead of crashing.
+        val legacyJson = """
+            {
+              "id": "s1",
+              "userId": "u1",
+              "testId": "t1",
+              "stories": [],
+              "totalTimeTakenMinutes": 45,
+              "submittedAt": 1,
+              "status": "SUBMITTED_PENDING_REVIEW"
+            }
+        """.trimIndent()
+
+        val dto = Json.decodeFromString(TATDataDto.serializer(), legacyJson)
+        assertTrue(dto.questions.isEmpty())
+        assertEquals(emptyList(), dto.toDomain().questions)
+    }
+
+    @Test
     fun `SRTInstructorScoreDto drops unparseable category keys same defensive behavior as Android`() {
         val dto = SRTInstructorScoreDto(
             gradedByInstructorId = "i1",

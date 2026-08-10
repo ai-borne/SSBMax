@@ -212,10 +212,14 @@ class FakeSubmissionRepository : SubmissionRepository {
     var observeSubmissionFlow: Flow<Map<String, Any>?> = flowOf(null)
     var observeUserSubmissionsFlow: Flow<List<Map<String, Any>>> = flowOf(emptyList())
     var updateStatusResult: Result<Unit> = Result.success(Unit)
+    var lastTATSubmission: TATSubmission? = null
 
     private fun unused(name: String): Nothing = error("FakeSubmissionRepository.$name not stubbed for this test")
 
-    override suspend fun submitTAT(submission: TATSubmission, batchId: String?) = submitResult
+    override suspend fun submitTAT(submission: TATSubmission, batchId: String?): Result<String> {
+        lastTATSubmission = submission
+        return submitResult
+    }
     override suspend fun submitWAT(submission: WATSubmission, batchId: String?) = submitResult
     override suspend fun submitSRT(submission: SRTSubmission, batchId: String?) = submitResult
     override suspend fun submitSDT(submission: SDTSubmission, batchId: String?) = submitResult
@@ -799,7 +803,7 @@ class FakeOirResultRepository : com.ssbmax.shared.domain.repository.OirResultRep
  * orchestrators under test don't care which Gemini endpoint answered -- override the specific
  * `var` a test needs to fail one call while others succeed.
  */
-class FakeAIService : com.ssbmax.shared.domain.service.AIService {
+open class FakeAIService : com.ssbmax.shared.domain.service.AIService {
     var responseAnalysisResult: Result<com.ssbmax.shared.domain.service.ResponseAnalysis> =
         Result.failure(UnsupportedOperationException("not stubbed"))
     var piqQuestionsResult: Result<List<com.ssbmax.shared.domain.model.interview.InterviewQuestion>> =

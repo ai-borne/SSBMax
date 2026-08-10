@@ -48,6 +48,12 @@ data class TATSubmission(
     val userId: String,
     val testId: String,
     val stories: List<TATStoryResponse>,
+    // The exact set of questions the user saw. Persisted on the submission so both
+    // analysis paths (Android WorkManager + iOS/shared) can recover the questionId →
+    // imageUrl/imageContextJson/genderTag mapping instead of re-fetching a fresh random
+    // set (TAT_Impr_3). Defaulted to emptyList() so existing construction sites compile
+    // unchanged; legacy docs decode to emptyList() and fall back to a repo fetch.
+    val questions: List<TATQuestion> = emptyList(),
     val totalTimeTakenMinutes: Int,
     val submittedAt: Long,
     val status: SubmissionStatus = SubmissionStatus.SUBMITTED_PENDING_REVIEW,

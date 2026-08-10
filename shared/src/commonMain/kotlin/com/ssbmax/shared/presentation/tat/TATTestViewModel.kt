@@ -230,6 +230,10 @@ class TATTestViewModel(
                 userId = userId,
                 testId = state.testId,
                 stories = state.responses,
+                // Persist the exact questions the user saw so both analysis paths (Android
+                // WorkManager + iOS/shared) can recover the questionId -> imageUrl mapping
+                // instead of re-fetching a fresh random set (TAT_Impr_3).
+                questions = state.questions,
                 totalTimeTakenMinutes = totalTimeTakenMinutes,
                 submittedAt = Clock.System.now().toEpochMilliseconds(),
                 analysisStatus = AnalysisStatus.PENDING_ANALYSIS,

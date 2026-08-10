@@ -2,6 +2,7 @@ package com.ssbmax.shared.data.repository
 
 import com.ssbmax.shared.domain.model.SubmissionStatus
 import com.ssbmax.shared.domain.model.TATInstructorScore
+import com.ssbmax.shared.domain.model.TATQuestion
 import com.ssbmax.shared.domain.model.TATStoryResponse
 import com.ssbmax.shared.domain.model.TATSubmission
 import com.ssbmax.shared.domain.model.TestType
@@ -74,6 +75,7 @@ class GitLivePsychTestSubmissionRepository internal constructor(
                 userId = submission.userId,
                 testId = submission.testId,
                 stories = submission.stories.map { it.toDto() },
+                questions = submission.questions.map { it.toDto() },
                 totalTimeTakenMinutes = submission.totalTimeTakenMinutes,
                 submittedAt = submission.submittedAt,
                 status = submission.status.name,
@@ -217,6 +219,7 @@ internal data class TATDataDto(
     val userId: String = "",
     val testId: String = "",
     val stories: List<TATStoryDto> = emptyList(),
+    val questions: List<TATQuestionDto> = emptyList(),
     val totalTimeTakenMinutes: Int = 0,
     val submittedAt: Long = 0L,
     val status: String = "",
@@ -238,6 +241,19 @@ internal data class TATStoryDto(
 )
 
 @Serializable
+internal data class TATQuestionDto(
+    val id: String = "",
+    val imageUrl: String = "",
+    val cardPosition: Int = 0,
+    val imageContextJson: String = "{}",
+    val genderTag: String = "MIXED",
+    val viewingTimeSeconds: Int = 30,
+    val writingTimeMinutes: Int = 4,
+    val minCharacters: Int = 150,
+    val maxCharacters: Int = 1500
+)
+
+@Serializable
 internal data class TATInstructorScoreDto(
     val overallScore: Float = 0f,
     val thematicPerceptionScore: Float = 0f,
@@ -256,6 +272,30 @@ internal data class TATInstructorScoreDto(
 internal fun TATStoryResponse.toDto() = TATStoryDto(questionId, story, charactersCount, viewingTimeTakenSeconds, writingTimeTakenSeconds, submittedAt)
 internal fun TATStoryDto.toDomain() = TATStoryResponse(questionId, story, charactersCount, viewingTimeTakenSeconds, writingTimeTakenSeconds, submittedAt)
 
+internal fun TATQuestion.toDto() = TATQuestionDto(
+    id = id,
+    imageUrl = imageUrl,
+    cardPosition = cardPosition,
+    imageContextJson = imageContextJson,
+    genderTag = genderTag,
+    viewingTimeSeconds = viewingTimeSeconds,
+    writingTimeMinutes = writingTimeMinutes,
+    minCharacters = minCharacters,
+    maxCharacters = maxCharacters
+)
+
+internal fun TATQuestionDto.toDomain() = TATQuestion(
+    id = id,
+    imageUrl = imageUrl,
+    cardPosition = cardPosition,
+    imageContextJson = imageContextJson,
+    genderTag = genderTag,
+    viewingTimeSeconds = viewingTimeSeconds,
+    writingTimeMinutes = writingTimeMinutes,
+    minCharacters = minCharacters,
+    maxCharacters = maxCharacters
+)
+
 internal fun TATInstructorScore.toDto() = TATInstructorScoreDto(
     overallScore, thematicPerceptionScore, imaginationScore, characterDepictionScore,
     emotionalToneScore, narrativeStructureScore, feedback, storyWiseComments,
@@ -273,6 +313,7 @@ internal fun TATDataDto.toDomain(): TATSubmission = TATSubmission(
     userId = userId,
     testId = testId,
     stories = stories.map { it.toDomain() },
+    questions = questions.map { it.toDomain() },
     totalTimeTakenMinutes = totalTimeTakenMinutes,
     submittedAt = submittedAt,
     status = runCatching { SubmissionStatus.valueOf(status) }.getOrDefault(SubmissionStatus.SUBMITTED_PENDING_REVIEW),

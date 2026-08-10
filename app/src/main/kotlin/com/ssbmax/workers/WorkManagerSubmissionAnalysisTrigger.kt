@@ -91,7 +91,13 @@ class WorkManagerSubmissionAnalysisTrigger(
             logger.e(TAG, "TAT submission not found for analysis trigger: $submissionId")
             return
         }
-        val questions = testContentRepository.getTATQuestions(submission.testId).getOrNull().orEmpty()
+        // Prefer the exact questions the user saw, persisted on the submission (TAT_Impr_3).
+        // Only fall back to a fresh repo fetch for legacy docs written before the `questions`
+        // field existed -- getTATQuestions(testId) ignores testId and returns a random 12 that
+        // won't match the user's questionIds, which is the root cause of the "0 bytes" bug.
+        val questions = submission.questions.ifEmpty {
+            testContentRepository.getTATQuestions(submission.testId).getOrNull().orEmpty()
+        }
         tatPipelineOrchestrator.startPipeline(submissionId, submission.stories, questions)
             .onFailure { logger.e(TAG, "Failed to start TAT analysis pipeline for $submissionId", it) }
     }
