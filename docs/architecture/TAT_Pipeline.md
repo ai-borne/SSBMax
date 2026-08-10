@@ -21,6 +21,21 @@ Thematic Apperception Test (TAT) is a Phase 1 psychology test in SSBMax. The can
 
 ---
 
+## Architecture Principles
+
+These invariants govern every TAT change. New contributors should internalize them before touching the pipeline.
+
+1. **SSOT — the submission owns the test.** `TATSubmission.questions` persists the *exact* set of questions the user saw (id, imageUrl, imageContextJson, genderTag). Both analysis paths read it back — they never re-derive the question set. `getTATQuestions()` is a fallback for legacy docs only.
+2. **No re-fetch of user content.** Analysis must never call `getTATQuestions()` to recover what the user saw — it returns a *fresh random 12* with different IDs, which silently drops the image (`0 bytes`). The persisted `questions` is the only correct source.
+3. **SSOT — one shared analysis core.** Per-story + synthesis logic, retry/backoff, and prompts live once in `shared` (`AnalysisRetry`, `RetryBackoffPolicy`, `TATStoryAnalysisPrompts`, `TATSynthesisPrompts`, `KtorTATStoryAnalyzer`). Android (WorkManager chain) and iOS/shared (`TATAnalysisOrchestrator`) both call it — no per-platform business logic.
+4. **Platform-neutral trigger seam.** `TATTestViewModel` calls `SubmissionAnalysisTrigger.trigger(testType, submissionId)`; the platform-specific impl (WorkManager on Android, in-foreground on iOS) does the dispatch. `shared` never depends on `app`'s Worker classes.
+5. **Atomic finalization.** `finalizeTATAnalysisResult()` writes `psych_results` *before* marking `COMPLETED` — `COMPLETED` is never observable without a fetchable result.
+6. **Bounded concurrency.** Story workers run in batches of 3 (`TATAnalysisWorkPlanner.BATCH_SIZE`), never all 12 at once, to keep Gemini load bounded.
+7. **Failures don't break the chain.** Story workers always return `Result.success()`; failures become `overallRating="FAILED"` placeholders that synthesis filters out.
+8. **`analysisStatus` lifecycle.** `PENDING_ANALYSIS` → `ANALYZING` (set by the orchestrator before any worker) → `COMPLETED`/`FAILED` (set only by finalization).
+
+---
+
 ## 1. User Journey Overview
 
 ```
@@ -304,7 +319,7 @@ Debug override: Settings → Developer Settings → **Subscription Override** (`
 1. Stop timer (`isTimerActive = false`)
 2. Get current user (3 s timeout)
 3. Get user profile → resolve `subscriptionType` via `GetSubscriptionTierUseCase`
-4. Build `TATSubmission` with `stories = state.responses`, `analysisStatus = PENDING_ANALYSIS`
+4. Build `TATSubmission` with `stories = state.responses`, `questions = state.questions` (the exact set the user saw — SSOT for the analysis paths, §Architecture Principles), `analysisStatus = PENDING_ANALYSIS`
 5. Write to Firestore: `submissions/{submissionId}` via `SubmitTATTestUseCase` (thin pass-through, `invoke(submission, batchId = null)`)
 6. `SubmissionAnalysisTrigger.trigger(TestType.TAT, submissionId)` — kicks off background analysis (see below)
 7. `TestUsageRecorder.recordTestUsage(TestType.TAT, userId, submissionId)` — records usage
