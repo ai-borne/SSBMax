@@ -60,7 +60,11 @@ class MockContentRepository implements IContentRepository {
   async getCappedBatch<T>(_collectionName: string, batchIndex = 0, _maxItems = 50) {
     return { id: `batch_${batchIndex}`, batchIndex, totalItems: 0, items: [] as T[] };
   }
+  async getAvailableBatches() {
+    return [];
+  }
 }
+
 
 const mockUser: UserProfile = {
   uid: 'user_123',

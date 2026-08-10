@@ -120,4 +120,33 @@ describe('ContentRepository Unit Tests', () => {
     expect(batch.items.length).toBeLessThanOrEqual(50);
     expect(batch.batchIndex).toBe(0);
   });
+
+  it('should return available batch metadata list for a module from fallback when empty', async () => {
+    vi.mocked(getDocs).mockResolvedValueOnce({
+      empty: true,
+      forEach: vi.fn()
+    } as any);
+
+    const batches = await repository.getAvailableBatches('wat');
+    expect(batches).toBeDefined();
+    expect(batches.length).toBeGreaterThanOrEqual(2);
+    expect(batches[0]).toHaveProperty('id');
+    expect(batches[0]).toHaveProperty('name');
+  });
+
+  it('should return WAT batch and map polymorphic words payload', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({
+      exists: () => true,
+      id: 'wat_batch_1',
+      data: () => ({
+        words: ['COURAGE', 'HONESTY'],
+        displayDurationSeconds: 15
+      })
+    } as any);
+
+    const wat = await repository.getWATBatch('wat_batch_1');
+    expect(wat.id).toBe('wat_batch_1');
+    expect(wat.words).toEqual(['COURAGE', 'HONESTY']);
+  });
 });
+

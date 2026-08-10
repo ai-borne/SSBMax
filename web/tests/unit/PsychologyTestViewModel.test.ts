@@ -36,8 +36,10 @@ describe('PsychologyTestViewModel TDD Unit Tests', () => {
         situations: ['He lost his way in a jungle. He...'],
         totalTimeMinutes: 30
       }),
-      getCappedBatch: vi.fn()
+      getCappedBatch: vi.fn(),
+      getAvailableBatches: vi.fn().mockResolvedValue([])
     };
+
 
     mockOfflineQueue = {
       enqueueSubmission: vi.fn().mockResolvedValue(undefined)

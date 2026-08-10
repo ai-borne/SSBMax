@@ -64,7 +64,12 @@ class MockContentRepository implements IContentRepository {
   async getCappedBatch<T>(_collectionName: string): Promise<BatchDocument<T>> {
     return { id: 'batch_0', batchIndex: 0, totalItems: 0, items: [] };
   }
+
+  async getAvailableBatches(): Promise<any[]> {
+    return [];
+  }
 }
+
 
 describe('StudyMaterialViewModel Unit Tests', () => {
   it('should load study materials and populate categories', async () => {

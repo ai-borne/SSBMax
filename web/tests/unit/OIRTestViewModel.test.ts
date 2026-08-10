@@ -41,8 +41,10 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
       getTATSet: vi.fn(),
       getWATBatch: vi.fn(),
       getSRTBatch: vi.fn(),
-      getCappedBatch: vi.fn()
+      getCappedBatch: vi.fn(),
+      getAvailableBatches: vi.fn().mockResolvedValue([])
     };
+
 
     mockOfflineQueue = {
       enqueueSubmission: vi.fn().mockResolvedValue(undefined)

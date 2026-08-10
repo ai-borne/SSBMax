@@ -85,3 +85,10 @@ export interface BatchDocument<T> {
   totalItems: number;
   items: T[];
 }
+
+export interface TestBatchInfo {
+  id: string;
+  name: string;
+  itemCount?: number;
+}
+
