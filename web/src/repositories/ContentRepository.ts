@@ -2,6 +2,7 @@ import { collection, doc, getDoc, getDocs, query, limit } from 'firebase/firesto
 import { db } from '../config/firebase';
 import { IContentRepository } from './interfaces/IContentRepository';
 import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument } from '../types/testContent';
+import { getFallbackStudyMaterials, getFallbackStudyMaterialById } from '../constants/fallbackStudyMaterials';
 
 export class ContentRepository implements IContentRepository {
   private static readonly MAX_BATCH_ITEMS = 50;
@@ -15,26 +16,17 @@ export class ContentRepository implements IContentRepository {
       const materials: StudyMaterial[] = [];
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        materials.push({
-          id: docSnap.id,
-          title: data.title || '',
-          category: data.category || 'General',
-          summary: data.summary || '',
-          contentMarkdown: data.contentMarkdown || '',
-          estimatedReadTimeMinutes: data.estimatedReadTimeMinutes || 5,
-          tags: data.tags || [],
-          createdAt: data.createdAt || new Date().toISOString()
-        });
+        materials.push(this.mapDocToStudyMaterial(docSnap.id, data));
       });
 
       if (materials.length === 0) {
-        return this.getFallbackStudyMaterials();
+        return getFallbackStudyMaterials();
       }
 
       return materials;
     } catch (error) {
       console.warn('Failed to fetch study materials from Firestore, using offline fallback', error);
-      return this.getFallbackStudyMaterials();
+      return getFallbackStudyMaterials();
     }
   }
 
@@ -44,26 +36,57 @@ export class ContentRepository implements IContentRepository {
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
-        const fallback = this.getFallbackStudyMaterials().find((m) => m.id === id);
-        return fallback || null;
+        return getFallbackStudyMaterialById(id);
       }
 
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        title: data.title || '',
-        category: data.category || 'General',
-        summary: data.summary || '',
-        contentMarkdown: data.contentMarkdown || '',
-        estimatedReadTimeMinutes: data.estimatedReadTimeMinutes || 5,
-        tags: data.tags || [],
-        createdAt: data.createdAt || new Date().toISOString()
-      };
+      return this.mapDocToStudyMaterial(docSnap.id, docSnap.data());
     } catch (error) {
       console.warn(`Failed to fetch study material ${id}, checking offline fallback`, error);
-      const fallback = this.getFallbackStudyMaterials().find((m) => m.id === id);
-      return fallback || null;
+      return getFallbackStudyMaterialById(id);
     }
+  }
+
+  private mapDocToStudyMaterial(id: string, data: Record<string, any>): StudyMaterial {
+    const rawTestType = data.testTypeId || data.topicType || data.category;
+    return {
+      id,
+      title: data.title || '',
+      category: data.category || 'General',
+      summary: data.summary || '',
+      contentMarkdown: data.contentMarkdown || '',
+      estimatedReadTimeMinutes: data.estimatedReadTimeMinutes || 5,
+      tags: data.tags || [],
+      createdAt: data.createdAt || new Date().toISOString(),
+      dayNumber: data.dayNumber ? (String(data.dayNumber) as StudyMaterial['dayNumber']) : undefined,
+      testTypeId: this.parseTestTypeId(rawTestType)
+    };
+  }
+
+  private parseTestTypeId(val: unknown): StudyMaterial['testTypeId'] {
+    if (typeof val !== 'string') return undefined;
+    const norm = val.trim().toLowerCase().replace(/[\s-]+/g, '_');
+    const valid: StudyMaterial['testTypeId'][] = [
+      'oir', 'ppdt', 'piq', 'tat', 'wat', 'srt', 'sd', 'gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt', 'interview', 'conference'
+    ];
+    if (valid.includes(norm as StudyMaterial['testTypeId'])) return norm as StudyMaterial['testTypeId'];
+    if (norm.includes('oir')) return 'oir';
+    if (norm.includes('ppdt')) return 'ppdt';
+    if (norm.includes('piq')) return 'piq';
+    if (norm.includes('tat')) return 'tat';
+    if (norm.includes('wat')) return 'wat';
+    if (norm.includes('srt')) return 'srt';
+    if (norm.includes('sd') || norm.includes('self')) return 'sd';
+    if (norm.includes('gd') || norm.includes('discussion')) return 'gd';
+    if (norm.includes('gpe') || norm.includes('planning')) return 'gpe';
+    if (norm.includes('pgt')) return 'pgt';
+    if (norm.includes('hgt')) return 'hgt';
+    if (norm.includes('iot') || norm.includes('obstacle')) return 'iot';
+    if (norm.includes('command')) return 'command_task';
+    if (norm.includes('snake') || norm.includes('gor')) return 'snake_race';
+    if (norm.includes('fgt')) return 'fgt';
+    if (norm.includes('interview')) return 'interview';
+    if (norm.includes('conference')) return 'conference';
+    return undefined;
   }
 
   async getOIRQuestions(batchIndex = 0): Promise<BatchDocument<OIRQuestion>> {
@@ -88,7 +111,6 @@ export class ContentRepository implements IContentRepository {
     } catch (error) {
       console.warn('Using offline fallback for PPDT context', error);
     }
-
     return {
       id,
       title: 'PPDT Practice Image',
@@ -116,7 +138,6 @@ export class ContentRepository implements IContentRepository {
     } catch (error) {
       console.warn('Using offline fallback for TAT set', error);
     }
-
     return {
       id,
       setName: 'TAT Practice Set 1',
@@ -144,7 +165,6 @@ export class ContentRepository implements IContentRepository {
     } catch (error) {
       console.warn('Using offline fallback for WAT batch', error);
     }
-
     return {
       id,
       words: ['LEADERSHIP', 'COURAGE', 'HONESTY', 'CHALLENGE', 'TEAMWORK', 'SUCCESS'],
@@ -167,7 +187,6 @@ export class ContentRepository implements IContentRepository {
     } catch (error) {
       console.warn('Using offline fallback for SRT batch', error);
     }
-
     return {
       id,
       situations: [
@@ -207,31 +226,6 @@ export class ContentRepository implements IContentRepository {
       console.warn(`Failed to fetch batch ${batchIndex} for ${collectionName}, using fallback`, error);
       return this.getFallbackBatch<T>(collectionName, batchIndex, maxItems);
     }
-  }
-
-  private getFallbackStudyMaterials(): StudyMaterial[] {
-    return [
-      {
-        id: 'ssb-overview-01',
-        title: 'SSB Interview 5-Day Selection Process Overview',
-        category: 'SSB Basics',
-        summary: 'A complete breakdown of Day 1 to Day 5 at Services Selection Board.',
-        contentMarkdown: '# SSB 5-Day Process\n\n- **Day 1**: Screening (OIR & PPDT)\n- **Day 2**: Psychology Tests (TAT, WAT, SRT, SD)\n- **Day 3 & 4**: GTO Tasks & Personal Interview\n- **Day 5**: Conference',
-        estimatedReadTimeMinutes: 6,
-        tags: ['SSB', 'Screening', 'Overview'],
-        createdAt: '2026-01-01T00:00:00Z'
-      },
-      {
-        id: 'oir-tips-02',
-        title: 'Mastering OIR: Verbal & Non-Verbal Reasoning',
-        category: 'OIR',
-        summary: 'Essential strategies for achieving OIR Rating 1 in Stage-1 screening.',
-        contentMarkdown: '# OIR Preparation Strategies\n\nSpeed and accuracy are crucial for OIR Rating 1.',
-        estimatedReadTimeMinutes: 4,
-        tags: ['OIR', 'Reasoning', 'Screening'],
-        createdAt: '2026-01-02T00:00:00Z'
-      }
-    ];
   }
 
   private getFallbackBatch<T>(collectionName: string, batchIndex: number, maxItems: number): BatchDocument<T> {
