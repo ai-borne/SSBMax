@@ -101,10 +101,16 @@ h1, h2, h3 {
    permitted in component files.
    ============================================================ */
 
-/* Shimmer sweep — used on CTA buttons and "AI" text (Phase 2) */
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
+/* Shimmer sweep keyframes for button overlays */
+@keyframes shimmerSweep {
+  0%   { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* Metallic text shimmer keyframes for gradient text */
+@keyframes textShimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
 }
 
 /* Accordion content reveal (Phase 3) */
@@ -117,16 +123,64 @@ h1, h2, h3 {
    UTILITY CLASSES
    ============================================================ */
 
-/* Shimmer animation — applied to CTA buttons and AI gradient text */
+/* Shimmer animation overlay — non-destructive sweep for buttons & cards */
 .animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.animate-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
   background: linear-gradient(
     90deg,
-    transparent 25%,
-    rgba(255, 255, 255, 0.15) 50%,
-    transparent 75%
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  animation: shimmerSweep 3s linear infinite;
+  pointer-events: none;
+}
+
+/* Text shimmer — vibrant multi-color gradient sweep with bright highlight */
+.animate-text-shimmer {
+  background: linear-gradient(
+    90deg,
+    #0284c7 0%,
+    #2563eb 25%,
+    #38bdf8 45%,
+    #ffffff 50%,
+    #38bdf8 55%,
+    #f59e0b 75%,
+    #0284c7 100%
   );
   background-size: 200% auto;
-  animation: shimmer 2.5s linear infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: textShimmer 3s linear infinite;
+}
+
+.dark .animate-text-shimmer {
+  background: linear-gradient(
+    90deg,
+    #38bdf8 0%,
+    #60a5fa 25%,
+    #bae6fd 45%,
+    #ffffff 50%,
+    #bae6fd 55%,
+    #fbbf24 75%,
+    #38bdf8 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: textShimmer 3s linear infinite;
 }
 
 /* Accordion content reveal animation */

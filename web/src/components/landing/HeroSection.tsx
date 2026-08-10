@@ -18,18 +18,18 @@ export const HeroSection: FC<HeroSectionProps> = ({
     'flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 text-left shadow-md shadow-slate-200/50 dark:shadow-none backdrop-blur-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-200';
   return (
     <section
-      className="relative overflow-hidden py-12 md:py-20 flex flex-col items-center text-center"
+      className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-hidden py-12 md:py-20 flex flex-col items-center text-center border-b border-slate-200/40 dark:border-slate-800/40"
       data-testid="hero-section"
     >
       {/* ── Layer 1: Radial depth gradient (dark = navy bloom, light = subtle sky tint) ── */}
-      <div className="absolute inset-0 bg-gradient-to-b from-sky-950/25 via-transparent to-transparent dark:from-sky-900/20 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-950/40 via-sky-900/10 to-transparent dark:from-sky-900/30 pointer-events-none" />
 
-      {/* ── Layer 2: Subtle grid pattern overlay ── */}
-      <div className="absolute inset-0 hero-grid-pattern pointer-events-none opacity-60 dark:opacity-100" />
+      {/* ── Layer 2: Subtle grid pattern overlay — spans full screen edge-to-edge ── */}
+      <div className="absolute inset-0 hero-grid-pattern pointer-events-none opacity-70 dark:opacity-100" />
 
       {/* ── Layer 3: Legacy glow orbs (preserved) ── */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-sky-500/10 dark:bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/3 right-10 w-72 h-72 bg-amber-500/10 dark:bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-sky-500/15 dark:bg-sky-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 right-10 w-80 h-80 bg-amber-500/10 dark:bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 flex flex-col items-center">
 
@@ -45,7 +45,7 @@ export const HeroSection: FC<HeroSectionProps> = ({
         {/* ── Main Headline — "AI" span carries shimmer animation ── */}
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight mb-6">
           {strings.landing.heroTitle.split('AI')[0]}
-          <span className="animate-shimmer bg-gradient-to-r from-sky-600 via-blue-600 to-amber-600 dark:from-sky-400 dark:via-sky-300 dark:to-amber-400 bg-clip-text text-transparent relative overflow-hidden inline-block">
+          <span className="animate-shimmer animate-text-shimmer inline-block font-black relative">
             AI
           </span>
         </h1>

@@ -77,7 +77,7 @@ export const AppLayout: FC<AppLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white transition-colors duration-200 overflow-x-hidden">
       {!isTestMode && (
         <div className="sticky top-0 z-50 w-full h-16 min-h-[64px]" data-testid="header-container">
           {authInitializing ? (
