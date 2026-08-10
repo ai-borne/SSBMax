@@ -116,4 +116,42 @@ describe('TestDayAccordion Component', () => {
     expect(card.className).toContain('dark:border-slate-700/80');
     expect(card.className).toContain('dark:shadow-slate-950/60');
   });
+
+  // Phase 3 — Day colour-coded accordion border tests
+  it('should apply indigo day-accent border to Day 1 accordion', () => {
+    const day1 = getDayOverview('1')!;
+    const { getByTestId } = render(
+      <TestDayAccordion dayOverview={day1} onStartTest={vi.fn()} />
+    );
+    const accordion = getByTestId('test-day-accordion-1');
+    expect(accordion.className).toContain('border-l-4');
+    expect(accordion.className).toContain('border-l-day1');
+  });
+
+  it('should apply violet day-accent border to Day 2 accordion', () => {
+    const day2 = getDayOverview('2')!;
+    const { getByTestId } = render(
+      <TestDayAccordion dayOverview={day2} onStartTest={vi.fn()} />
+    );
+    const accordion = getByTestId('test-day-accordion-2');
+    expect(accordion.className).toContain('border-l-day2');
+  });
+
+  it('should apply teal day-accent border to Day 3-4 accordion', () => {
+    const day34 = getDayOverview('3-4')!;
+    const { getByTestId } = render(
+      <TestDayAccordion dayOverview={day34} onStartTest={vi.fn()} />
+    );
+    const accordion = getByTestId('test-day-accordion-3-4');
+    expect(accordion.className).toContain('border-l-day34');
+  });
+
+  it('should apply gold day-accent border to Day 5 accordion', () => {
+    const day5 = getDayOverview('5')!;
+    const { getByTestId } = render(
+      <TestDayAccordion dayOverview={day5} onStartTest={vi.fn()} />
+    );
+    const accordion = getByTestId('test-day-accordion-5');
+    expect(accordion.className).toContain('border-l-day5');
+  });
 });

@@ -159,4 +159,46 @@ describe('StudyMaterialPage Component', () => {
       expect(card.className).toContain('dark:shadow-slate-950/60');
     });
   });
+
+  // Phase 3 — Day colour-coded accordion border tests
+  it('should apply indigo day-accent border to Study Day 1 accordion', async () => {
+    const vm = new StudyMaterialViewModel(new MockContentRepository());
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
+
+    await waitFor(() => {
+      const accordion = screen.getByTestId('study-day-accordion-1');
+      expect(accordion.className).toContain('border-l-4');
+      expect(accordion.className).toContain('border-l-day1');
+    });
+  });
+
+  it('should apply violet day-accent border to Study Day 2 accordion', async () => {
+    const vm = new StudyMaterialViewModel(new MockContentRepository());
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
+
+    await waitFor(() => {
+      const accordion = screen.getByTestId('study-day-accordion-2');
+      expect(accordion.className).toContain('border-l-day2');
+    });
+  });
+
+  it('should apply teal day-accent border to Study Day 3-4 accordion', async () => {
+    const vm = new StudyMaterialViewModel(new MockContentRepository());
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
+
+    await waitFor(() => {
+      const accordion = screen.getByTestId('study-day-accordion-3-4');
+      expect(accordion.className).toContain('border-l-day34');
+    });
+  });
+
+  it('should apply gold day-accent border to Study Day 5 accordion', async () => {
+    const vm = new StudyMaterialViewModel(new MockContentRepository());
+    render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
+
+    await waitFor(() => {
+      const accordion = screen.getByTestId('study-day-accordion-5');
+      expect(accordion.className).toContain('border-l-day5');
+    });
+  });
 });

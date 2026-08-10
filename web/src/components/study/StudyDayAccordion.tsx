@@ -2,9 +2,10 @@ import { FC } from 'react';
 import { Calendar, ChevronDown, Lock } from 'lucide-react';
 import { StudyTestCard, SSBTestCardInfo } from './StudyTestCard';
 import { StudyMaterial } from '../../types/testContent';
+import { SSBDayNumber } from '../../constants/ssbSelectionProcess';
 
 export interface StudyDayAccordionSection {
-  dayNumber: '1' | '2' | '3-4' | '5';
+  dayNumber: SSBDayNumber;
   stageBadge: string;
   title: string;
   subtitle: string;
@@ -22,6 +23,23 @@ export interface StudyDayAccordionProps {
   onToggleCompleted: (materialId: string, e: React.MouseEvent) => void;
 }
 
+// Pure day-accent colour mapper — returns Tailwind token classes per SSB day.
+// Intentionally co-located with the component that owns it (no shared utility).
+// Extract to src/utils/dayAccent.ts only if a 3rd accordion is added in future.
+function getDayAccentClasses(dayNumber: SSBDayNumber): {
+  border: string;
+  icon: string;
+  badge: string;
+} {
+  const map: Record<SSBDayNumber, { border: string; icon: string; badge: string }> = {
+    '1':   { border: 'border-l-day1',  icon: 'bg-day1/10 text-day1 border-day1/20',   badge: 'bg-day1/10 text-day1 border-day1/30'   },
+    '2':   { border: 'border-l-day2',  icon: 'bg-day2/10 text-day2 border-day2/20',   badge: 'bg-day2/10 text-day2 border-day2/30'   },
+    '3-4': { border: 'border-l-day34', icon: 'bg-day34/10 text-day34 border-day34/20', badge: 'bg-day34/10 text-day34 border-day34/30' },
+    '5':   { border: 'border-l-day5',  icon: 'bg-day5/10 text-day5 border-day5/20',   badge: 'bg-day5/10 text-day5 border-day5/30'   },
+  };
+  return map[dayNumber] ?? map['1'];
+}
+
 export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
   section,
   isOpen,
@@ -33,10 +51,11 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
   onToggleCompleted,
 }) => {
   const contentId = `day-accordion-content-${section.dayNumber}`;
+  const accent = getDayAccentClasses(section.dayNumber);
 
   return (
     <div
-      className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-all duration-200"
+      className={`bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-all duration-200 border-l-4 ${accent.border}`}
       data-testid={`study-day-accordion-${section.dayNumber}`}
     >
       {/* Header Button */}
@@ -48,12 +67,12 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
         data-testid={`toggle-accordion-btn-${section.dayNumber}`}
       >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex-shrink-0">
+          <div className={`p-2.5 rounded-xl border flex-shrink-0 ${accent.icon}`}>
             <Calendar className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/30">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${accent.badge}`}>
                 {section.stageBadge}
               </span>
               {!isUnlocked && (
@@ -90,7 +109,7 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
       {isOpen && (
         <div
           id={contentId}
-          className="p-5 pt-2 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 animate-in fade-in duration-200"
+          className="p-5 pt-2 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 animate-fade-slide-in"
           data-testid={`accordion-panel-${section.dayNumber}`}
         >
           <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4 sm:hidden">
