@@ -9,9 +9,13 @@ export class ContentRepository implements IContentRepository {
 
   async getStudyMaterials(): Promise<StudyMaterial[]> {
     try {
-      const materialsRef = collection(db, 'studyMaterials');
-      const q = query(materialsRef, limit(50));
-      const querySnapshot = await getDocs(q);
+      // 1. Primary SSOT collection 'study_materials' (used by Android, iOS & Firestore setup scripts)
+      let querySnapshot = await getDocs(query(collection(db, 'study_materials'), limit(50)));
+
+      // 2. Fallback to 'studyMaterials' if 'study_materials' is empty
+      if (querySnapshot.empty) {
+        querySnapshot = await getDocs(query(collection(db, 'studyMaterials'), limit(50)));
+      }
 
       const materials: StudyMaterial[] = [];
       querySnapshot.forEach((docSnap) => {
@@ -32,8 +36,15 @@ export class ContentRepository implements IContentRepository {
 
   async getStudyMaterialById(id: string): Promise<StudyMaterial | null> {
     try {
-      const docRef = doc(db, 'studyMaterials', id);
-      const docSnap = await getDoc(docRef);
+      // Primary SSOT collection 'study_materials'
+      let docRef = doc(db, 'study_materials', id);
+      let docSnap = await getDoc(docRef);
+
+      // Fallback to 'studyMaterials' collection
+      if (!docSnap.exists()) {
+        docRef = doc(db, 'studyMaterials', id);
+        docSnap = await getDoc(docRef);
+      }
 
       if (!docSnap.exists()) {
         return getFallbackStudyMaterialById(id);
@@ -48,15 +59,22 @@ export class ContentRepository implements IContentRepository {
 
   private mapDocToStudyMaterial(id: string, data: Record<string, any>): StudyMaterial {
     const rawTestType = data.testTypeId || data.topicType || data.category;
+    const content = data.contentMarkdown || data.introduction || data.content || '';
+    const readTime = typeof data.readTime === 'number'
+      ? data.readTime
+      : typeof data.estimatedReadTimeMinutes === 'number'
+      ? data.estimatedReadTimeMinutes
+      : parseInt(String(data.readTime || '5'), 10) || 5;
+
     return {
       id,
       title: data.title || '',
-      category: data.category || 'General',
-      summary: data.summary || '',
-      contentMarkdown: data.contentMarkdown || '',
-      estimatedReadTimeMinutes: data.estimatedReadTimeMinutes || 5,
+      category: data.category || data.topicType || 'General',
+      summary: data.summary || (content ? content.slice(0, 150) + '...' : ''),
+      contentMarkdown: content,
+      estimatedReadTimeMinutes: readTime,
       tags: data.tags || [],
-      createdAt: data.createdAt || new Date().toISOString(),
+      createdAt: typeof data.lastUpdated === 'number' ? new Date(data.lastUpdated).toISOString() : data.createdAt || new Date().toISOString(),
       dayNumber: data.dayNumber ? (String(data.dayNumber) as StudyMaterial['dayNumber']) : undefined,
       testTypeId: this.parseTestTypeId(rawTestType)
     };
@@ -72,7 +90,7 @@ export class ContentRepository implements IContentRepository {
     if (norm.includes('oir')) return 'oir';
     if (norm.includes('ppdt')) return 'ppdt';
     if (norm.includes('piq')) return 'piq';
-    if (norm.includes('tat')) return 'tat';
+    if (norm.includes('tat') || norm.includes('psychology')) return 'tat';
     if (norm.includes('wat')) return 'wat';
     if (norm.includes('srt')) return 'srt';
     if (norm.includes('sd') || norm.includes('self')) return 'sd';
@@ -85,7 +103,7 @@ export class ContentRepository implements IContentRepository {
     if (norm.includes('snake') || norm.includes('gor')) return 'snake_race';
     if (norm.includes('fgt')) return 'fgt';
     if (norm.includes('interview')) return 'interview';
-    if (norm.includes('conference')) return 'conference';
+    if (norm.includes('conference') || norm.includes('medicals')) return 'conference';
     return undefined;
   }
 
