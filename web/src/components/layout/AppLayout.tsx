@@ -77,7 +77,13 @@ export const AppLayout: FC<AppLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white transition-colors duration-200 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white transition-colors duration-200 overflow-x-hidden relative">
+      {/* ── Full-Page Ambient Radial Depth Gradient ── */}
+      <div className="fixed inset-0 bg-gradient-to-b from-sky-950/20 via-sky-900/5 to-transparent dark:from-sky-900/30 pointer-events-none z-0" />
+
+      {/* ── Full-Page Subtle Chequered Grid Pattern Overlay (Edge-to-Edge) ── */}
+      <div className="fixed inset-0 ssb-grid-pattern pointer-events-none opacity-50 dark:opacity-75 z-0" />
+
       {!isTestMode && (
         <div className="sticky top-0 z-50 w-full h-16 min-h-[64px]" data-testid="header-container">
           {authInitializing ? (
@@ -202,11 +208,11 @@ export const AppLayout: FC<AppLayoutProps> = ({
         </div>
       )}
 
-      <main className={`flex-1 w-full ${isTestMode ? 'flex flex-col justify-center' : ''}`}>
+      <main className={`flex-1 w-full relative z-10 ${isTestMode ? 'flex flex-col justify-center' : ''}`}>
         {children}
       </main>
 
-      {!isTestMode && <Footer onNavClick={handleNavClick} />}
+      {!isTestMode && <div className="relative z-10"><Footer onNavClick={handleNavClick} /></div>}
     </div>
   );
 };

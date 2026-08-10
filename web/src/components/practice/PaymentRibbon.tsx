@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { Check, ShieldCheck, Zap, Crown, Award } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { SUBSCRIPTION_TIERS, AccessTier } from '../../constants/ssbSelectionProcess';
+import { GridCardContainer } from '../common/GridCardContainer';
 
 export interface PaymentRibbonProps {
   currentTier?: AccessTier;
@@ -44,19 +45,17 @@ export const PaymentRibbon: FC<PaymentRibbonProps> = ({
           const isActive = currentTier === tier.id;
           const isOfficer = tier.id === 'officer';
           const isCommand = tier.id === 'command';
+          const variant = isCommand ? 'command' : isOfficer ? 'officer' : 'cadet';
 
           return (
-            <div
+            <GridCardContainer
               key={tier.id}
-              data-testid={`tier-card-${tier.id}`}
-              className={`snap-center shrink-0 w-[280px] sm:w-[300px] md:w-auto p-5 rounded-2xl flex flex-col justify-between transition-all duration-200 ${
-                isCommand
-                  ? 'bg-gradient-to-b from-amber-500/10 via-amber-50/40 to-white dark:from-amber-500/10 dark:via-slate-900/90 dark:to-slate-900 border-2 border-amber-500/50 dark:border-amber-400/60 shadow-lg shadow-amber-500/10'
-                  : isOfficer
-                  ? 'bg-gradient-to-b from-sky-500/10 via-sky-50/40 to-white dark:from-sky-500/10 dark:via-slate-900/90 dark:to-slate-900 border-2 border-sky-500 dark:border-sky-400 shadow-xl shadow-sky-500/10'
-                  : 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-sm'
-              }`}
+              variant={variant}
+              dense
+              testId={`tier-card-${tier.id}`}
+              className="snap-center shrink-0 w-[280px] sm:w-[300px] md:w-auto p-5 flex flex-col justify-between"
             >
+
               <div>
                 {/* Header & Badge */}
                 <div className="flex items-center justify-between mb-3">
@@ -122,7 +121,7 @@ export const PaymentRibbon: FC<PaymentRibbonProps> = ({
                   <span>{tier.buttonText}</span>
                 )}
               </button>
-            </div>
+            </GridCardContainer>
           );
         })}
       </div>

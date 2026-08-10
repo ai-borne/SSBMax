@@ -8,6 +8,8 @@ import { TestDayAccordion } from './TestDayAccordion';
 import { PIQWizardContainer } from './piq/PIQWizardContainer';
 import { ProUpgradeGateModal } from './ProUpgradeGateModal';
 
+import { GridCardContainer } from '../common/GridCardContainer';
+
 export interface PracticeTestsPageProps {
   isPaidMember?: boolean;
   userTier?: AccessTier;
@@ -42,7 +44,7 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
   return (
     <div className="max-w-7xl w-full mx-auto px-4 py-6 space-y-6 animate-in fade-in duration-300" data-testid="practice-tests-page">
       {/* Header Banner */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+      <GridCardContainer variant="glass" className="p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">
@@ -69,7 +71,7 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
             />
           </div>
         </div>
-      </div>
+      </GridCardContainer>
 
       {/* 15 OLQ Radar Graph Primitive */}
       <OLQFactorRadarSVG />

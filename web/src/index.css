@@ -188,8 +188,9 @@ h1, h2, h3 {
   animation: fadeSlideIn 200ms ease-out forwards;
 }
 
-/* Hero section grid pattern overlay (Phase 2) */
-.hero-grid-pattern {
+/* Hero section & site-wide grid pattern overlay (Phase 2 & Phase 3) */
+.hero-grid-pattern,
+.ssb-grid-pattern {
   background-image:
     repeating-linear-gradient(
       0deg,
@@ -206,3 +207,23 @@ h1, h2, h3 {
       rgba(148, 163, 184, 0.04) 40px
     );
 }
+
+/* Dense 24px grid pattern overlay for compact cards & ribbons */
+.ssb-grid-pattern-dense {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 23px,
+      rgba(148, 163, 184, 0.04) 23px,
+      rgba(148, 163, 184, 0.04) 24px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 23px,
+      rgba(148, 163, 184, 0.04) 23px,
+      rgba(148, 163, 184, 0.04) 24px
+    );
+}
+

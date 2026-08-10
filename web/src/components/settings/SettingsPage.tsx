@@ -7,6 +7,8 @@ import { ThemeMode } from '../../constants/colors';
 import { AccountSection } from './AccountSection';
 import { FAQSection } from './FAQSection';
 
+import { GridCardContainer } from '../common/GridCardContainer';
+
 export interface SettingsPageProps {
   theme?: ThemeMode;
   onToggleTheme?: () => void;
@@ -77,8 +79,8 @@ export const SettingsPage: FC<SettingsPageProps> = ({
 
   return (
     <div className="max-w-4xl w-full mx-auto px-4 py-6 space-y-8" data-testid="settings-page">
-      {/* Hero Header Banner Card */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-3" data-testid="settings-header-banner">
+      {/* Hero Header Banner Card - Clean Card Elevation */}
+      <GridCardContainer variant="cadet" testId="settings-header-banner" className="p-6 space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider">
           <Settings className="w-4 h-4" />
           <span>{strings.settings.title}</span>
@@ -89,7 +91,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
         <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm max-w-2xl">
           {strings.settings.subtitle}
         </p>
-      </div>
+      </GridCardContainer>
 
       <div className="space-y-6">
         {/* Section 1: Candidate Account Credentials & Profile */}
@@ -107,7 +109,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
         />
 
         {/* Section 2: Appearance & Display Theme */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-4">
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -154,7 +156,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
         </div>
 
         {/* Section 3: Notifications & Intelligence Sync */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-4">
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-4">
           <div className="space-y-1 pb-2 border-b border-slate-200 dark:border-slate-800">
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -221,7 +223,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
         </div>
 
         {/* Section 4: Data & Offline Cache Controls */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-4">
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -251,7 +253,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
         <FAQSection />
 
         {/* Section 6: Legal Policies & Compliance */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-4" data-testid="legal-section">
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-4" data-testid="legal-section">
           <div className="space-y-1 pb-3 border-b border-slate-200 dark:border-slate-800">
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Lock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />

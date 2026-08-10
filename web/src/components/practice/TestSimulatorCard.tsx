@@ -3,6 +3,7 @@ import { Play, Lock, Clock, ShieldAlert } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { AccessTier, hasTierAccess } from '../../constants/ssbSelectionProcess';
 import { TestSimulatorConfig } from './ssbTestConfigs';
+import { GridCardContainer } from '../common/GridCardContainer';
 
 export interface TestSimulatorCardProps {
   test: TestSimulatorConfig;
@@ -51,10 +52,14 @@ export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
     }
   };
 
+  const variant = test.requiredTier === 'command' ? 'command' : test.requiredTier === 'officer' ? 'officer' : 'cadet';
+
   return (
-    <div
-      data-testid={`test-simulator-card-${test.id}`}
-      className="bg-white dark:bg-slate-800/90 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 rounded-2xl p-5 shadow-[var(--card-shadow)] hover:-translate-y-1 hover:shadow-[var(--card-shadow-hover)] transition-all duration-200 flex flex-col justify-between"
+    <GridCardContainer
+      variant={variant}
+      dense
+      testId={`test-simulator-card-${test.id}`}
+      className="p-5 hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between"
     >
       <div>
         {/* Header & Badges */}
@@ -137,7 +142,7 @@ export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
           )}
         </button>
       </div>
-    </div>
+    </GridCardContainer>
   );
 };
 

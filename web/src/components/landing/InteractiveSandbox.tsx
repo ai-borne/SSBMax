@@ -72,7 +72,7 @@ export const InteractiveSandbox: FC = () => {
   };
 
   return (
-    <section className="w-full py-12 px-4 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-8" data-testid="interactive-sandbox">
+    <section className="w-full py-12 px-4 bg-white dark:bg-slate-800/90 dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 overflow-hidden my-8" data-testid="interactive-sandbox">
       <div className="max-w-4xl mx-auto flex flex-col items-center text-center">
         {/* Header Badges */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-700 dark:text-sky-400 text-xs font-bold uppercase tracking-wider mb-4">

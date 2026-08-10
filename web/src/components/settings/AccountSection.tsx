@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import { User, ShieldAlert, Sparkles, LogOut, Edit3, Award, Target } from 'lucide-react';
 import { strings } from '../../constants/strings';
+import { GridCardContainer } from '../common/GridCardContainer';
 
 export interface AccountSectionProps {
   userEmail?: string | null;
@@ -28,7 +29,11 @@ export const AccountSection: FC<AccountSectionProps> = ({
   onSignOut,
 }) => {
   return (
-    <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-5" data-testid="account-section">
+    <GridCardContainer
+      variant={isPro ? 'officer' : 'cadet'}
+      testId="account-section"
+      className="p-6 space-y-5"
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div className="space-y-1">
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -126,7 +131,7 @@ export const AccountSection: FC<AccountSectionProps> = ({
           </button>
         )}
       </div>
-    </div>
+    </GridCardContainer>
   );
 };
 

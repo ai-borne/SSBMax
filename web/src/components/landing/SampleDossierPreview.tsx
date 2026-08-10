@@ -61,7 +61,7 @@ export const SampleDossierPreview: FC = () => {
     .join(' ');
 
   return (
-    <section className="w-full py-12 px-4 my-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl" data-testid="sample-dossier-preview">
+    <section className="w-full py-12 px-4 my-8 bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-3xl shadow-md dark:shadow-xl dark:shadow-slate-950/60" data-testid="sample-dossier-preview">
       <div className="max-w-5xl mx-auto flex flex-col items-center">
         {/* Header Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider mb-4">

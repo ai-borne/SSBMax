@@ -3,6 +3,8 @@ import { Calendar, ChevronDown, Lock } from 'lucide-react';
 import { StudyTestCard, SSBTestCardInfo } from './StudyTestCard';
 import { StudyMaterial } from '../../types/testContent';
 import { SSBDayNumber } from '../../constants/ssbSelectionProcess';
+import { GridCardContainer } from '../common/GridCardContainer';
+import { CardGridVariant } from '../../constants/cardTokens';
 
 export interface StudyDayAccordionSection {
   dayNumber: SSBDayNumber;
@@ -53,10 +55,20 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
   const contentId = `day-accordion-content-${section.dayNumber}`;
   const accent = getDayAccentClasses(section.dayNumber);
 
+  const dayVariantMap: Record<SSBDayNumber, CardGridVariant> = {
+    '1': 'day1',
+    '2': 'day2',
+    '3-4': 'day34',
+    '5': 'day5',
+  };
+  const variant = dayVariantMap[section.dayNumber] ?? 'day1';
+
   return (
-    <div
-      className={`bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-all duration-200 border-l-4 ${accent.border}`}
-      data-testid={`study-day-accordion-${section.dayNumber}`}
+    <GridCardContainer
+      variant={variant}
+      dense
+      testId={`study-day-accordion-${section.dayNumber}`}
+      className={`border-l-4 ${accent.border}`}
     >
       {/* Header Button */}
       <button
@@ -131,7 +143,7 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </GridCardContainer>
   );
 };
 
