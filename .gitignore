@@ -32,6 +32,7 @@ local.properties
 
 # Local Gradle configuration overrides
 gradle.properties.local
+gradle.local.properties
 
 # Environment variables (contains API keys and secrets)
 .env
