@@ -94,12 +94,15 @@ class GitLiveTestProgressRepository : TestProgressRepository {
             status = submissionStatusToTestStatus(submission.status),
             lastAttemptDate = submission.submittedAt,
             latestScore = submission.score,
-            isPendingReview = submission.status == "SUBMITTED_PENDING_REVIEW"
+            isPendingReview = submission.status == "SUBMITTED_PENDING_REVIEW",
+            isAnalysisPending = submission.analysisStatus in ANALYSIS_PENDING_STATUSES ||
+                submission.status in ANALYSIS_PENDING_STATUSES
         )
     }
 
     private companion object {
         const val SUBMISSIONS_COLLECTION = "submissions"
+        val ANALYSIS_PENDING_STATUSES = setOf("PENDING_ANALYSIS", "ANALYZING")
     }
 }
 
@@ -108,7 +111,17 @@ internal data class SubmissionProgressDto(
     val testType: String = "",
     val status: String = "",
     val submittedAt: Long = 0L,
-    val score: Float? = null
+    val score: Float? = null,
+    // TAT/psychology analysis state is stored inside the shared `data` envelope.
+    val data: SubmissionProgressDataDto = SubmissionProgressDataDto()
+) {
+    val analysisStatus: String?
+        get() = data.analysisStatus
+}
+
+@Serializable
+internal data class SubmissionProgressDataDto(
+    val analysisStatus: String? = null
 )
 
 /**
@@ -116,7 +129,7 @@ internal data class SubmissionProgressDto(
  * same defensive behavior as the Android original's `when` fallback.
  */
 internal fun submissionStatusToTestStatus(status: String): TestStatus = when (status) {
-    "SUBMITTED_PENDING_REVIEW" -> TestStatus.SUBMITTED_PENDING_REVIEW
+    "SUBMITTED_PENDING_REVIEW", "PENDING_ANALYSIS", "ANALYZING" -> TestStatus.SUBMITTED_PENDING_REVIEW
     "GRADED" -> TestStatus.GRADED
     "COMPLETED" -> TestStatus.COMPLETED
     else -> TestStatus.NOT_ATTEMPTED

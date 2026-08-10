@@ -66,6 +66,7 @@
     <string name="cd_test_status_not_attempted">Test not attempted</string>
     <string name="progress_completed_on">Completed on %1$s</string>
     <string name="progress_not_attempted">Not Attempted</string>
+    <string name="progress_result_compiling">Result is being compiled</string>
     <string name="dashboard_your_progress">Your SSB Progress</string>
     <string name="cd_refresh_dashboard">Refresh dashboard</string>
     <string name="dashboard_tests">Tests</string>

@@ -45,6 +45,8 @@ data class TestProgress(
     val status: TestStatus = TestStatus.NOT_ATTEMPTED,
     val lastAttemptDate: Long? = null,
     val latestScore: Float? = null,
-    val isPendingReview: Boolean = false
+    val isPendingReview: Boolean = false,
+    /** True only while an AI result is being generated, not while awaiting instructor review. */
+    val isAnalysisPending: Boolean = false
 )
 

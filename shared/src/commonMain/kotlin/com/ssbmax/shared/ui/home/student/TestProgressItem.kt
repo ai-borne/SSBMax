@@ -33,6 +33,7 @@ import ssbmax.shared.generated.resources.cd_test_status_in_progress
 import ssbmax.shared.generated.resources.cd_test_status_not_attempted
 import ssbmax.shared.generated.resources.progress_completed_on
 import ssbmax.shared.generated.resources.progress_not_attempted
+import ssbmax.shared.generated.resources.progress_result_compiling
 
 /**
  * A single test's progress row inside a [Phase1Card]/[Phase2Card] — split
@@ -90,13 +91,14 @@ internal fun TestProgressItem(
 
             // Simplified status text - just show "Completed on {date}" or "Not Attempted"
             Text(
-                text = if (testProgress.lastAttemptDate != null) {
-                    stringResource(
+                text = when {
+                    testProgress.isAnalysisPending ->
+                        stringResource(Res.string.progress_result_compiling)
+                    testProgress.lastAttemptDate != null -> stringResource(
                         Res.string.progress_completed_on,
                         formatFullDate(testProgress.lastAttemptDate!!)
                     )
-                } else {
-                    stringResource(Res.string.progress_not_attempted)
+                    else -> stringResource(Res.string.progress_not_attempted)
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = if (testProgress.lastAttemptDate != null) {

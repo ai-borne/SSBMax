@@ -197,7 +197,7 @@ fun TATTestScreen(
 
     if (showSubmitDialog) {
         TATSubmitDialog(
-            completedStories = uiState.completedStories,
+            completedStories = uiState.storiesReadyToSubmit,
             totalStories = uiState.questions.size,
             onDismiss = { showSubmitDialog = false },
             onSubmit = { showSubmitDialog = false; viewModel.submitTest() }

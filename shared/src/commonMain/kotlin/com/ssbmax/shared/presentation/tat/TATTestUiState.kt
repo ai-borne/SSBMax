@@ -48,6 +48,16 @@ data class TATTestUiState(
     val completedStories: Int
         get() = responses.size
 
+    /** Number shown in the submit confirmation, including a valid unsaved draft. */
+    val storiesReadyToSubmit: Int
+        get() {
+            val currentQuestionId = currentQuestion?.id ?: return completedStories
+            val currentStoryIsNew = responses.none { it.questionId == currentQuestionId }
+            val currentStoryIsValid = currentStory.length >= (currentQuestion?.minCharacters ?: 150) &&
+                currentStory.length <= (currentQuestion?.maxCharacters ?: 1500)
+            return completedStories + if (currentStoryIsNew && currentStoryIsValid) 1 else 0
+        }
+
     val progress: Float
         get() = if (questions.isEmpty()) 0f else (completedStories.toFloat() / questions.size)
 
