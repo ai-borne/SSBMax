@@ -14,20 +14,20 @@ const OVERRIDE_CHIPS: {
   labelKey: keyof typeof strings.devSettings;
   icon: FC<{ className?: string }>;
 }[] = [
-  { value: 'real', labelKey: 'realLabel', icon: RotateCcw },
-  { value: 'cadet', labelKey: 'freeLabel', icon: ShieldOff },
-  { value: 'officer', labelKey: 'proLabel', icon: Award },
-  { value: 'command', labelKey: 'commandLabel', icon: Crown },
+  { value: 'FOLLOW_REAL', labelKey: 'realLabel', icon: RotateCcw },
+  { value: 'FORCE_FREE', labelKey: 'freeLabel', icon: ShieldOff },
+  { value: 'FORCE_PRO', labelKey: 'proLabel', icon: Award },
+  { value: 'FORCE_PREMIUM', labelKey: 'premiumLabel', icon: Crown },
 ];
 
 export const DeveloperSettingsCard: FC<DeveloperSettingsCardProps> = ({
   devTierOverride,
   onSelectOverride,
 }) => {
-  const isOverrideActive = devTierOverride !== 'real';
+  const isOverrideActive = devTierOverride !== 'FOLLOW_REAL';
 
   return (
-    <GridCardContainer variant="cadet" testId="dev-settings-card" className="p-6 space-y-4">
+    <GridCardContainer variant="free" testId="dev-settings-card" className="p-6 space-y-4">
       <div className="space-y-1 pb-2 border-b border-slate-200 dark:border-slate-800">
         <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <Wrench className="w-5 h-5 text-amber-600 dark:text-amber-400" />

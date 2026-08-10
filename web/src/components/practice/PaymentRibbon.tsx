@@ -11,7 +11,7 @@ export interface PaymentRibbonProps {
 }
 
 export const PaymentRibbon: FC<PaymentRibbonProps> = ({
-  currentTier = 'cadet',
+  currentTier = 'FREE',
   onSelectTier,
   onUpgradeClick,
 }) => {
@@ -43,9 +43,9 @@ export const PaymentRibbon: FC<PaymentRibbonProps> = ({
       <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 md:grid md:grid-cols-3 md:gap-4 md:overflow-visible no-scrollbar">
         {SUBSCRIPTION_TIERS.map((tier) => {
           const isActive = currentTier === tier.id;
-          const isOfficer = tier.id === 'officer';
-          const isCommand = tier.id === 'command';
-          const variant = isCommand ? 'command' : isOfficer ? 'officer' : 'cadet';
+          const isOfficer = tier.id === 'PRO';
+          const isCommand = tier.id === 'PREMIUM';
+          const variant = isCommand ? 'premium' : isOfficer ? 'pro' : 'free';
 
           return (
             <GridCardContainer

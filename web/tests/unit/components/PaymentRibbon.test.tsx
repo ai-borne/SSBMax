@@ -9,42 +9,42 @@ describe('PaymentRibbon Component', () => {
 
     expect(screen.getByTestId('payment-ribbon')).toBeInTheDocument();
     expect(screen.getByText(strings.subscription.ribbonTitle)).toBeInTheDocument();
-    expect(screen.getByTestId('tier-card-cadet')).toBeInTheDocument();
-    expect(screen.getByTestId('tier-card-officer')).toBeInTheDocument();
-    expect(screen.getByTestId('tier-card-command')).toBeInTheDocument();
+    expect(screen.getByTestId('tier-card-FREE')).toBeInTheDocument();
+    expect(screen.getByTestId('tier-card-PRO')).toBeInTheDocument();
+    expect(screen.getByTestId('tier-card-PREMIUM')).toBeInTheDocument();
   });
 
   it('should display correct titles, badges, and prices for all 3 tiers', () => {
     render(<PaymentRibbon />);
 
-    expect(screen.getByText(strings.subscription.cadetTitle)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.officerTitle)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.commandTitle)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonFreeTitle)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonProTitle)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonPremiumTitle)).toBeInTheDocument();
 
-    expect(screen.getByText(strings.subscription.cadetBadge)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.officerBadge)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.commandBadge)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonFreeBadge)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonProBadge)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonPremiumBadge)).toBeInTheDocument();
 
-    expect(screen.getByText(strings.subscription.cadetPrice)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.officerPrice)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.commandPrice)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonFreePrice)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonProPrice)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonPremiumPrice)).toBeInTheDocument();
   });
 
-  it('should mark Cadet tier as active by default and reflect active status button', () => {
-    render(<PaymentRibbon currentTier="cadet" />);
+  it('should mark Free tier as active by default and reflect active status button', () => {
+    render(<PaymentRibbon currentTier="FREE" />);
 
-    const cadetBtn = screen.getByTestId('upgrade-button-cadet');
-    expect(cadetBtn).toHaveTextContent(strings.subscription.currentPlan);
+    const freeBtn = screen.getByTestId('upgrade-button-FREE');
+    expect(freeBtn).toHaveTextContent(strings.subscription.currentPlan);
 
-    const officerBtn = screen.getByTestId('upgrade-button-officer');
-    expect(officerBtn).toHaveTextContent(strings.subscription.officerButton);
+    const proBtn = screen.getByTestId('upgrade-button-PRO');
+    expect(proBtn).toHaveTextContent(strings.subscription.ribbonProButton);
   });
 
-  it('should reflect active status when Officer Pass is current tier', () => {
-    render(<PaymentRibbon currentTier="officer" />);
+  it('should reflect active status when Pro is current tier', () => {
+    render(<PaymentRibbon currentTier="PRO" />);
 
-    const officerBtn = screen.getByTestId('upgrade-button-officer');
-    expect(officerBtn).toHaveTextContent(strings.subscription.currentPlan);
+    const proBtn = screen.getByTestId('upgrade-button-PRO');
+    expect(proBtn).toHaveTextContent(strings.subscription.currentPlan);
   });
 
   it('should trigger onSelectTier and onUpgradeClick when an inactive tier is clicked', () => {
@@ -53,38 +53,38 @@ describe('PaymentRibbon Component', () => {
 
     render(
       <PaymentRibbon
-        currentTier="cadet"
+        currentTier="FREE"
         onSelectTier={onSelectTier}
         onUpgradeClick={onUpgradeClick}
       />
     );
 
-    const officerBtn = screen.getByTestId('upgrade-button-officer');
-    fireEvent.click(officerBtn);
+    const proBtn = screen.getByTestId('upgrade-button-PRO');
+    fireEvent.click(proBtn);
 
-    expect(onSelectTier).toHaveBeenCalledWith('officer');
-    expect(onUpgradeClick).toHaveBeenCalledWith('officer');
+    expect(onSelectTier).toHaveBeenCalledWith('PRO');
+    expect(onUpgradeClick).toHaveBeenCalledWith('PRO');
   });
 
   it('should enforce min-h-[44px] touch target class on action buttons', () => {
     render(<PaymentRibbon />);
 
-    const cadetBtn = screen.getByTestId('upgrade-button-cadet');
-    const officerBtn = screen.getByTestId('upgrade-button-officer');
-    const commandBtn = screen.getByTestId('upgrade-button-command');
+    const freeBtn = screen.getByTestId('upgrade-button-FREE');
+    const proBtn = screen.getByTestId('upgrade-button-PRO');
+    const premiumBtn = screen.getByTestId('upgrade-button-PREMIUM');
 
-    expect(cadetBtn.className).toContain('min-h-[44px]');
-    expect(officerBtn.className).toContain('min-h-[44px]');
-    expect(commandBtn.className).toContain('min-h-[44px]');
+    expect(freeBtn.className).toContain('min-h-[44px]');
+    expect(proBtn.className).toContain('min-h-[44px]');
+    expect(premiumBtn.className).toContain('min-h-[44px]');
   });
 
-  it('should use adaptive background classes for Officer and Command tier cards in light and dark mode', () => {
+  it('should use adaptive background classes for Pro and Premium tier cards in light and dark mode', () => {
     render(<PaymentRibbon />);
 
-    const officerCard = screen.getByTestId('tier-card-officer');
-    const commandCard = screen.getByTestId('tier-card-command');
+    const proCard = screen.getByTestId('tier-card-PRO');
+    const premiumCard = screen.getByTestId('tier-card-PREMIUM');
 
-    expect(officerCard.className).toContain('dark:via-slate-900');
-    expect(commandCard.className).toContain('dark:via-slate-900');
+    expect(proCard.className).toContain('dark:via-slate-900');
+    expect(premiumCard.className).toContain('dark:via-slate-900');
   });
 });

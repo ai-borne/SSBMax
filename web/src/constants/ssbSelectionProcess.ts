@@ -1,8 +1,14 @@
 import { strings } from './strings';
+import { SubscriptionTier } from '../generated/contracts';
 
 export type SSBDayNumber = '1' | '2' | '3-4' | '5';
-export type AccessTier = 'cadet' | 'officer' | 'command';
-export type DevTierOverride = 'real' | 'cadet' | 'officer' | 'command';
+/** Re-export of the KMP-authoritative generated enum — the only tier vocabulary web uses (docs/plans/CrossPlatform_SSOT Phase 4). */
+export type AccessTier = SubscriptionTier;
+/**
+ * Mirrors `com.ssbmax.shared.domain.model.SubscriptionOverride` (both platforms use the same
+ * four states, per docs/plans/CrossPlatform_SSOT Phase 4 §"Align the dev override").
+ */
+export type DevTierOverride = 'FOLLOW_REAL' | 'FORCE_FREE' | 'FORCE_PRO' | 'FORCE_PREMIUM';
 export type GTOTaskCategory = 'indoor' | 'outdoor' | 'individual' | 'group';
 
 export interface GTOTask {
@@ -48,7 +54,7 @@ export const GTO_TASKS: GTOTask[] = [
     descriptionKey: strings.gto.gdDesc,
     category: 'indoor',
     timeLimitMinutes: 30,
-    accessTier: 'cadet',
+    accessTier: 'PRO',
     olqsEvaluated: ['Effective Intelligence', 'Reasoning Ability', 'Power of Expression', 'Social Adaptability'],
   },
   {
@@ -60,7 +66,7 @@ export const GTO_TASKS: GTOTask[] = [
     descriptionKey: strings.gto.gpeDesc,
     category: 'indoor',
     timeLimitMinutes: 45,
-    accessTier: 'officer',
+    accessTier: 'PRO',
     olqsEvaluated: ['Organising Ability', 'Reasoning Ability', 'Cooperation', 'Sense of Responsibility'],
   },
   {
@@ -72,7 +78,7 @@ export const GTO_TASKS: GTOTask[] = [
     descriptionKey: strings.gto.pgtDesc,
     category: 'outdoor',
     timeLimitMinutes: 45,
-    accessTier: 'officer',
+    accessTier: 'PRO',
     olqsEvaluated: ['Group Influencing Ability', 'Initiative', 'Cooperation', 'Practical Intelligence'],
   },
   {
@@ -84,7 +90,7 @@ export const GTO_TASKS: GTOTask[] = [
     descriptionKey: strings.gto.hgtDesc,
     category: 'outdoor',
     timeLimitMinutes: 15,
-    accessTier: 'officer',
+    accessTier: 'PRO',
     olqsEvaluated: ['Leadership', 'Resourcefulness', 'Determination', 'Stamina'],
   },
   {
@@ -96,7 +102,7 @@ export const GTO_TASKS: GTOTask[] = [
     descriptionKey: strings.gto.iotDesc,
     category: 'individual',
     timeLimitMinutes: 3,
-    accessTier: 'cadet',
+    accessTier: 'PRO',
     olqsEvaluated: ['Courage', 'Physical Stamina', 'Determination', 'Self Confidence'],
   },
   {
@@ -108,7 +114,7 @@ export const GTO_TASKS: GTOTask[] = [
     descriptionKey: strings.gto.ctDesc,
     category: 'outdoor',
     timeLimitMinutes: 15,
-    accessTier: 'officer',
+    accessTier: 'PRO',
     olqsEvaluated: ['Command & Control', 'Decision Making', 'Resource Allocation', 'Ability to Influence Group'],
   },
   {
@@ -120,7 +126,7 @@ export const GTO_TASKS: GTOTask[] = [
     descriptionKey: strings.gto.gorDesc,
     category: 'group',
     timeLimitMinutes: 30,
-    accessTier: 'cadet',
+    accessTier: 'PRO',
     olqsEvaluated: ['Liveliness', 'Group Dynamics', 'Cooperation', 'Physical Stamina'],
   },
   {
@@ -132,7 +138,7 @@ export const GTO_TASKS: GTOTask[] = [
     descriptionKey: strings.gto.fgtDesc,
     category: 'outdoor',
     timeLimitMinutes: 20,
-    accessTier: 'officer',
+    accessTier: 'PRO',
     olqsEvaluated: ['Teamwork', 'Final Execution', 'Sense of Responsibility', 'Consistency'],
   },
 ];
@@ -174,48 +180,48 @@ export const SSB_5_DAY_TIMELINE: SSBDayOverview[] = [
 
 export const SUBSCRIPTION_TIERS: SubscriptionTierInfo[] = [
   {
-    id: 'cadet',
-    title: strings.subscription.cadetTitle,
-    price: strings.subscription.cadetPrice,
-    badge: strings.subscription.cadetBadge,
+    id: 'FREE',
+    title: strings.subscription.ribbonFreeTitle,
+    price: strings.subscription.ribbonFreePrice,
+    badge: strings.subscription.ribbonFreeBadge,
     isPopular: false,
     features: [
-      strings.subscription.cadetFeature1,
-      strings.subscription.cadetFeature2,
-      strings.subscription.cadetFeature3,
-      strings.subscription.cadetFeature4,
+      strings.subscription.ribbonFreeFeature1,
+      strings.subscription.ribbonFreeFeature2,
+      strings.subscription.ribbonFreeFeature3,
+      strings.subscription.ribbonFreeFeature4,
     ],
-    buttonText: strings.subscription.cadetButton,
+    buttonText: strings.subscription.ribbonFreeButton,
     accessLevel: 0,
   },
   {
-    id: 'officer',
-    title: strings.subscription.officerTitle,
-    price: strings.subscription.officerPrice,
-    badge: strings.subscription.officerBadge,
+    id: 'PRO',
+    title: strings.subscription.ribbonProTitle,
+    price: strings.subscription.ribbonProPrice,
+    badge: strings.subscription.ribbonProBadge,
     isPopular: true,
     features: [
-      strings.subscription.officerFeature1,
-      strings.subscription.officerFeature2,
-      strings.subscription.officerFeature3,
-      strings.subscription.officerFeature4,
+      strings.subscription.ribbonProFeature1,
+      strings.subscription.ribbonProFeature2,
+      strings.subscription.ribbonProFeature3,
+      strings.subscription.ribbonProFeature4,
     ],
-    buttonText: strings.subscription.officerButton,
+    buttonText: strings.subscription.ribbonProButton,
     accessLevel: 1,
   },
   {
-    id: 'command',
-    title: strings.subscription.commandTitle,
-    price: strings.subscription.commandPrice,
-    badge: strings.subscription.commandBadge,
+    id: 'PREMIUM',
+    title: strings.subscription.ribbonPremiumTitle,
+    price: strings.subscription.ribbonPremiumPrice,
+    badge: strings.subscription.ribbonPremiumBadge,
     isPopular: false,
     features: [
-      strings.subscription.commandFeature1,
-      strings.subscription.commandFeature2,
-      strings.subscription.commandFeature3,
-      strings.subscription.commandFeature4,
+      strings.subscription.ribbonPremiumFeature1,
+      strings.subscription.ribbonPremiumFeature2,
+      strings.subscription.ribbonPremiumFeature3,
+      strings.subscription.ribbonPremiumFeature4,
     ],
-    buttonText: strings.subscription.commandButton,
+    buttonText: strings.subscription.ribbonPremiumButton,
     accessLevel: 2,
   },
 ];
@@ -235,11 +241,11 @@ export function getDayOverview(dayNumber: SSBDayNumber): SSBDayOverview | undefi
 
 export function getTierAccessLevel(tier: AccessTier): number {
   switch (tier) {
-    case 'command':
+    case 'PREMIUM':
       return 2;
-    case 'officer':
+    case 'PRO':
       return 1;
-    case 'cadet':
+    case 'FREE':
     default:
       return 0;
   }
@@ -250,8 +256,8 @@ export function hasTierAccess(userTier: AccessTier, requiredTier: AccessTier): b
 }
 
 export function getEffectiveTier(override: DevTierOverride, realTier: AccessTier): AccessTier {
-  if (override === 'cadet') return 'cadet';
-  if (override === 'officer') return 'officer';
-  if (override === 'command') return 'command';
+  if (override === 'FORCE_FREE') return 'FREE';
+  if (override === 'FORCE_PRO') return 'PRO';
+  if (override === 'FORCE_PREMIUM') return 'PREMIUM';
   return realTier;
 }

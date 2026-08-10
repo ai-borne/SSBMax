@@ -36,12 +36,12 @@ describe('GridCardContainer Component', () => {
 
   it('applies tier variant background styles correctly', () => {
     render(
-      <GridCardContainer variant="officer" testId="officer-card">
+      <GridCardContainer variant="pro" testId="pro-card">
         <div>Officer Content</div>
       </GridCardContainer>
     );
 
-    const card = screen.getByTestId('officer-card');
+    const card = screen.getByTestId('pro-card');
     expect(card.className).toContain('from-sky-500/10');
     expect(card.className).toContain('border-sky-500');
   });

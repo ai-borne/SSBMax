@@ -34,7 +34,7 @@ describe('SSB Selection Process SSOT', () => {
         expect(task.descriptionKey).toBeTruthy();
         expect(task.timeLimitMinutes).toBeGreaterThan(0);
         expect(['indoor', 'outdoor', 'individual', 'group']).toContain(task.category);
-        expect(['cadet', 'officer', 'command']).toContain(task.accessTier);
+        expect(['FREE', 'PRO', 'PREMIUM']).toContain(task.accessTier);
         expect(task.olqsEvaluated.length).toBeGreaterThanOrEqual(2);
       });
     });
@@ -59,13 +59,13 @@ describe('SSB Selection Process SSOT', () => {
   describe('Subscription Tiers', () => {
     it('should define 3 subscription tiers in ascending access levels', () => {
       expect(SUBSCRIPTION_TIERS).toHaveLength(3);
-      expect(SUBSCRIPTION_TIERS.map((t) => t.id)).toEqual(['cadet', 'officer', 'command']);
+      expect(SUBSCRIPTION_TIERS.map((t) => t.id)).toEqual(['FREE', 'PRO', 'PREMIUM']);
       expect(SUBSCRIPTION_TIERS.map((t) => t.accessLevel)).toEqual([0, 1, 2]);
     });
 
-    it('should mark Officer Pass as the most popular tier', () => {
-      const officerTier = SUBSCRIPTION_TIERS.find((t) => t.id === 'officer');
-      expect(officerTier?.isPopular).toBe(true);
+    it('should mark Pro as the most popular tier', () => {
+      const proTier = SUBSCRIPTION_TIERS.find((t) => t.id === 'PRO');
+      expect(proTier?.isPopular).toBe(true);
     });
 
     it('should populate non-empty strings and features for all tiers', () => {
@@ -87,13 +87,13 @@ describe('SSB Selection Process SSOT', () => {
     });
 
     it('should filter GTO tasks by subscription tier level', () => {
-      const cadetTasks = getGTOTasksByTier('cadet');
-      const officerTasks = getGTOTasksByTier('officer');
-      const commandTasks = getGTOTasksByTier('command');
+      const freeTasks = getGTOTasksByTier('FREE');
+      const proTasks = getGTOTasksByTier('PRO');
+      const premiumTasks = getGTOTasksByTier('PREMIUM');
 
-      expect(cadetTasks.every((t) => t.accessTier === 'cadet')).toBe(true);
-      expect(officerTasks.length).toBeGreaterThan(cadetTasks.length);
-      expect(commandTasks).toHaveLength(8);
+      expect(freeTasks).toHaveLength(0);
+      expect(proTasks).toHaveLength(8);
+      expect(premiumTasks).toHaveLength(8);
     });
 
     it('should retrieve day overview by day number', () => {
@@ -104,16 +104,16 @@ describe('SSB Selection Process SSOT', () => {
     });
 
     it('should correctly evaluate tier access permissions', () => {
-      expect(getTierAccessLevel('cadet')).toBe(0);
-      expect(getTierAccessLevel('officer')).toBe(1);
-      expect(getTierAccessLevel('command')).toBe(2);
+      expect(getTierAccessLevel('FREE')).toBe(0);
+      expect(getTierAccessLevel('PRO')).toBe(1);
+      expect(getTierAccessLevel('PREMIUM')).toBe(2);
 
-      expect(hasTierAccess('cadet', 'cadet')).toBe(true);
-      expect(hasTierAccess('cadet', 'officer')).toBe(false);
-      expect(hasTierAccess('officer', 'cadet')).toBe(true);
-      expect(hasTierAccess('officer', 'officer')).toBe(true);
-      expect(hasTierAccess('officer', 'command')).toBe(false);
-      expect(hasTierAccess('command', 'officer')).toBe(true);
+      expect(hasTierAccess('FREE', 'FREE')).toBe(true);
+      expect(hasTierAccess('FREE', 'PRO')).toBe(false);
+      expect(hasTierAccess('PRO', 'FREE')).toBe(true);
+      expect(hasTierAccess('PRO', 'PRO')).toBe(true);
+      expect(hasTierAccess('PRO', 'PREMIUM')).toBe(false);
+      expect(hasTierAccess('PREMIUM', 'PRO')).toBe(true);
     });
   });
 });

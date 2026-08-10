@@ -20,7 +20,7 @@ describe('PracticeTestsPage Component', () => {
   });
 
   it('renders test simulator cards including Stage I, Stage II, and GTO tasks', () => {
-    render(<PracticeTestsPage userTier="officer" />);
+    render(<PracticeTestsPage userTier="PRO" />);
 
     expect(screen.getByTestId('test-simulator-card-oir')).toBeInTheDocument();
     expect(screen.getByTestId('test-simulator-card-piq')).toBeInTheDocument();
@@ -42,7 +42,7 @@ describe('PracticeTestsPage Component', () => {
 
   it('triggers onStartTest for free OIR test when clicked', () => {
     const handleStartTest = vi.fn();
-    render(<PracticeTestsPage userTier="cadet" onStartTest={handleStartTest} />);
+    render(<PracticeTestsPage userTier="FREE" onStartTest={handleStartTest} />);
 
     const launchOirBtn = screen.getByTestId('launch-button-oir');
     fireEvent.click(launchOirBtn);
@@ -51,7 +51,7 @@ describe('PracticeTestsPage Component', () => {
   });
 
   it('opens digital PIQ form wizard when PIQ card is clicked', () => {
-    render(<PracticeTestsPage userTier="cadet" />);
+    render(<PracticeTestsPage userTier="FREE" />);
 
     const launchPiqBtn = screen.getByTestId('launch-button-piq');
     fireEvent.click(launchPiqBtn);
@@ -60,9 +60,9 @@ describe('PracticeTestsPage Component', () => {
     expect(screen.getByTestId('piq-pii-warning')).toBeInTheDocument();
   });
 
-  it('opens ProUpgradeGateModal for locked test when clicked by cadet user', () => {
+  it('opens ProUpgradeGateModal for locked test when clicked by FREE-tier user', () => {
     const handleUpgrade = vi.fn();
-    render(<PracticeTestsPage userTier="cadet" onUpgrade={handleUpgrade} />);
+    render(<PracticeTestsPage userTier="FREE" onUpgrade={handleUpgrade} />);
 
     const launchTatBtn = screen.getByTestId('launch-button-tat');
     fireEvent.click(launchTatBtn);
@@ -77,12 +77,27 @@ describe('PracticeTestsPage Component', () => {
 
   it('triggers onUpgrade callback when upgrading via Payment Ribbon', () => {
     const handleUpgrade = vi.fn();
-    render(<PracticeTestsPage userTier="cadet" onUpgrade={handleUpgrade} />);
+    render(<PracticeTestsPage userTier="FREE" onUpgrade={handleUpgrade} />);
 
-    const upgradeOfficerBtn = screen.getByTestId('upgrade-button-officer');
+    const upgradeOfficerBtn = screen.getByTestId('upgrade-button-PRO');
     fireEvent.click(upgradeOfficerBtn);
 
-    expect(handleUpgrade).toHaveBeenCalledWith('officer');
+    expect(handleUpgrade).toHaveBeenCalledWith('PRO');
+  });
+
+  it('locks a test whose monthly quota is exhausted even though the tier otherwise qualifies (real usage, not just a tier gate)', () => {
+    render(<PracticeTestsPage userTier="PRO" usage={{ oirTestsUsed: 5, ppdtTestsUsed: 0, piqTestsUsed: 0, tatTestsUsed: 0, watTestsUsed: 0, srtTestsUsed: 0, sdTestsUsed: 0, gtoTestsUsed: 0, interviewTestsUsed: 0 }} />);
+
+    // PRO's OIR bucket limit is 5 (contracts/subscription.yaml) — fully consumed.
+    const launchOirBtn = screen.getByTestId('launch-button-oir');
+    expect(launchOirBtn).toHaveTextContent(strings.gto.limitReached);
+  });
+
+  it('shows remaining monthly attempts on an unlocked card once usage is partially consumed', () => {
+    render(<PracticeTestsPage userTier="PRO" usage={{ oirTestsUsed: 2, ppdtTestsUsed: 0, piqTestsUsed: 0, tatTestsUsed: 0, watTestsUsed: 0, srtTestsUsed: 0, sdTestsUsed: 0, gtoTestsUsed: 0, interviewTestsUsed: 0 }} />);
+
+    const oirCard = screen.getByTestId('test-simulator-card-oir');
+    expect(oirCard).toHaveTextContent('3 left');
   });
 });
 

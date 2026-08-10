@@ -12,7 +12,7 @@ export interface GridCardContainerProps {
 }
 
 export const GridCardContainer: FC<GridCardContainerProps> = ({
-  variant = 'cadet',
+  variant = 'free',
   dense = false,
   showGridPattern = false,
   className = '',
@@ -20,7 +20,7 @@ export const GridCardContainer: FC<GridCardContainerProps> = ({
   testId,
   onClick,
 }) => {
-  const config = CARD_GRID_VARIANTS[variant] ?? CARD_GRID_VARIANTS.cadet;
+  const config = CARD_GRID_VARIANTS[variant] ?? CARD_GRID_VARIANTS.free;
   const gridPatternClass = dense ? 'ssb-grid-pattern-dense' : 'ssb-grid-pattern';
 
   return (

@@ -54,7 +54,7 @@ describe('ssbDayData Unit Tests', () => {
         expect(card.title).toBeTruthy();
         expect(card.shortCode).toBeTruthy();
         expect(card.description).toBeTruthy();
-        expect(['cadet', 'officer', 'command']).toContain(card.requiredTier || 'cadet');
+        expect(['FREE', 'PRO', 'PREMIUM']).toContain(card.requiredTier || 'FREE');
       });
     });
   });

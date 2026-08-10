@@ -30,7 +30,7 @@ export const AccountSection: FC<AccountSectionProps> = ({
 }) => {
   return (
     <GridCardContainer
-      variant={isPro ? 'officer' : 'cadet'}
+      variant={isPro ? 'pro' : 'free'}
       testId="account-section"
       className="p-6 space-y-5"
     >

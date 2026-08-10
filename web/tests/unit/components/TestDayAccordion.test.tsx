@@ -42,7 +42,7 @@ describe('TestDayAccordion Component', () => {
     render(
       <TestDayAccordion
         dayOverview={day34Overview}
-        userTier="officer"
+        userTier="PRO"
         onStartTest={vi.fn()}
       />
     );
@@ -58,7 +58,7 @@ describe('TestDayAccordion Component', () => {
     render(
       <TestDayAccordion
         dayOverview={day34Overview}
-        userTier="officer"
+        userTier="PRO"
         onStartTest={onStartTest}
       />
     );
@@ -69,12 +69,12 @@ describe('TestDayAccordion Component', () => {
     expect(onStartTest).toHaveBeenCalledWith('gd');
   });
 
-  it('should trigger onUnlockTier when a locked test button is clicked by a cadet tier user', () => {
+  it('should trigger onUnlockTier when a locked test button is clicked by a FREE tier user', () => {
     const onUnlockTier = vi.fn();
     render(
       <TestDayAccordion
         dayOverview={day34Overview}
-        userTier="cadet"
+        userTier="FREE"
         onStartTest={vi.fn()}
         onUnlockTier={onUnlockTier}
       />
@@ -83,7 +83,7 @@ describe('TestDayAccordion Component', () => {
     const pgtLaunchBtn = screen.getByTestId('launch-button-pgt');
     fireEvent.click(pgtLaunchBtn);
 
-    expect(onUnlockTier).toHaveBeenCalledWith('officer');
+    expect(onUnlockTier).toHaveBeenCalledWith('PRO');
   });
 
   it('should enforce touch target min-height on accordion header button', () => {
@@ -102,7 +102,7 @@ describe('TestDayAccordion Component', () => {
     render(
       <TestDayAccordion
         dayOverview={day34Overview}
-        userTier="officer"
+        userTier="PRO"
         onStartTest={vi.fn()}
       />
     );
@@ -111,9 +111,11 @@ describe('TestDayAccordion Component', () => {
     expect(accordion.className).toContain('dark:bg-slate-900');
     expect(accordion.className).toContain('dark:border-slate-800');
 
+    // GD requires PRO per the GTO subscription bucket (contracts/subscription.yaml) — renders
+    // with the 'pro' card variant, not the free/default border styling.
     const card = screen.getByTestId('test-simulator-card-gd');
     expect(card.className).toContain('dark:bg-slate-800/90');
-    expect(card.className).toContain('dark:border-slate-700/80');
+    expect(card.className).toContain('dark:border-sky-400');
     expect(card.className).toContain('shadow-[var(--card-shadow)]');
   });
 
@@ -156,17 +158,17 @@ describe('TestDayAccordion Component', () => {
   });
 
   // Phase 4 — Badge Colour Coding & Most Popular Badge Tests
-  it('should apply emerald badge style to CADET FREE tier test card', () => {
+  it('should apply emerald badge style to FREE tier test card', () => {
     const day1 = getDayOverview('1')!;
-    render(<TestDayAccordion dayOverview={day1} userTier="cadet" onStartTest={vi.fn()} />);
+    render(<TestDayAccordion dayOverview={day1} userTier="FREE" onStartTest={vi.fn()} />);
     const oirCard = screen.getByTestId('test-simulator-card-oir');
     const badge = oirCard.querySelector('[data-testid="tier-badge"]');
     expect(badge?.className).toContain('text-emeraldToken');
   });
 
-  it('should apply gold badge style to OFFICER tier test card', () => {
+  it('should apply gold badge style to PRO tier test card', () => {
     const day1 = getDayOverview('1')!;
-    render(<TestDayAccordion dayOverview={day1} userTier="officer" onStartTest={vi.fn()} />);
+    render(<TestDayAccordion dayOverview={day1} userTier="PRO" onStartTest={vi.fn()} />);
     const ppdtCard = screen.getByTestId('test-simulator-card-ppdt');
     const badge = ppdtCard.querySelector('[data-testid="tier-badge"]');
     expect(badge?.className).toContain('text-gold');
@@ -174,7 +176,7 @@ describe('TestDayAccordion Component', () => {
 
   it('should render clean tier badge on PPDT card without redundant badges', () => {
     const day1 = getDayOverview('1')!;
-    render(<TestDayAccordion dayOverview={day1} userTier="officer" onStartTest={vi.fn()} />);
-    expect(screen.getByTestId('test-simulator-card-ppdt')).toHaveTextContent('OFFICER (PRO)');
+    render(<TestDayAccordion dayOverview={day1} userTier="PRO" onStartTest={vi.fn()} />);
+    expect(screen.getByTestId('test-simulator-card-ppdt')).toHaveTextContent('PRO');
   });
 });

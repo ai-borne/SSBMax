@@ -74,7 +74,7 @@ describe('BatchSelectorModal & Dynamic Batch Selector Unit Tests', () => {
       title: 'WAT Test',
       shortCode: 'WAT',
       description: 'Word association test',
-      requiredTier: 'cadet',
+      requiredTier: 'FREE',
       timeLimit: '15m'
     };
 
@@ -84,7 +84,7 @@ describe('BatchSelectorModal & Dynamic Batch Selector Unit Tests', () => {
     render(
       <TestSimulatorCard
         test={mockTest}
-        userTier="cadet"
+        userTier="FREE"
         onLaunch={onLaunch}
       />
     );

@@ -114,11 +114,11 @@ describe('SettingsPage Component', () => {
 
   it('renders the developer settings card in dev builds and forwards tier selection', () => {
     const onSelectDevTier = vi.fn();
-    render(<SettingsPage devTierOverride="real" onSelectDevTier={onSelectDevTier} />);
+    render(<SettingsPage devTierOverride="FOLLOW_REAL" onSelectDevTier={onSelectDevTier} />);
 
     expect(screen.getByTestId('dev-settings-card')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('dev-tier-chip-command'));
-    expect(onSelectDevTier).toHaveBeenCalledWith('command');
+    fireEvent.click(screen.getByTestId('dev-tier-chip-FORCE_PREMIUM'));
+    expect(onSelectDevTier).toHaveBeenCalledWith('FORCE_PREMIUM');
   });
 });

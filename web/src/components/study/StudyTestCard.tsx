@@ -33,11 +33,11 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
 }) => {
   const getTierBadgeStyle = () => {
     switch (cardInfo.requiredTier) {
-      case 'command':
+      case 'PREMIUM':
         return 'bg-violetSubtle text-violetToken border-violetToken/40 font-black';
-      case 'officer':
+      case 'PRO':
         return 'bg-goldSubtle text-gold border-gold/40 font-black';
-      case 'cadet':
+      case 'FREE':
       default:
         return 'bg-emeraldSubtle text-emeraldToken border-emeraldToken/40 font-black';
     }
@@ -45,11 +45,11 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
 
   const getTierBadgeLabel = () => {
     switch (cardInfo.requiredTier) {
-      case 'command':
-        return 'COMMAND DOSSIER';
-      case 'officer':
+      case 'PREMIUM':
+        return 'PREMIUM DOSSIER';
+      case 'PRO':
         return 'PRO DOSSIER';
-      case 'cadet':
+      case 'FREE':
       default:
         return 'FREE GUIDE';
     }

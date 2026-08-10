@@ -47,7 +47,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
   targetBoard,
   entryStream,
   prepStatus,
-  devTierOverride = 'real',
+  devTierOverride = 'FOLLOW_REAL',
   onSelectDevTier,
 }) => {
   const { theme: hookTheme, toggleTheme: hookToggleTheme } = useTheme();
@@ -86,7 +86,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
   return (
     <div className="max-w-4xl w-full mx-auto px-4 py-6 space-y-8" data-testid="settings-page">
       {/* Hero Header Banner Card - Clean Card Elevation */}
-      <GridCardContainer variant="cadet" testId="settings-header-banner" className="p-6 space-y-3">
+      <GridCardContainer variant="free" testId="settings-header-banner" className="p-6 space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider">
           <Settings className="w-4 h-4" />
           <span>{strings.settings.title}</span>

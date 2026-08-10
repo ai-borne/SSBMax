@@ -8,17 +8,27 @@ import { GridCardContainer } from '../common/GridCardContainer';
 export interface TestSimulatorCardProps {
   test: TestSimulatorConfig;
   userTier?: AccessTier;
+  /**
+   * Remaining monthly attempts from `checkTestEligibility` (undefined when the caller hasn't
+   * computed real usage — falls back to the tier-only gate, which is exactly what the eligibility
+   * engine would also return at zero usage). `0` locks the card even when `userTier` clears the
+   * bucket's minimum tier — the "remaining quota, not a binary gate" requirement from
+   * docs/plans/CrossPlatform_SSOT Phase 4.
+   */
+  remainingTests?: number;
   onLaunch: (testId: string) => void;
   onUnlockTier?: (tier: AccessTier) => void;
 }
 
 export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
   test,
-  userTier = 'cadet',
+  userTier = 'FREE',
+  remainingTests,
   onLaunch,
   onUnlockTier,
 }) => {
-  const isUnlocked = hasTierAccess(userTier, test.requiredTier);
+  const isUnlocked = hasTierAccess(userTier, test.requiredTier) && remainingTests !== 0;
+  const showRemainingBadge = isUnlocked && typeof remainingTests === 'number' && remainingTests < 99;
 
   const handleClick = () => {
     if (isUnlocked) {
@@ -30,11 +40,11 @@ export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
 
   const getTierBadgeStyle = () => {
     switch (test.requiredTier) {
-      case 'command':
+      case 'PREMIUM':
         return 'bg-violetSubtle text-violetToken border-violetToken/40 font-black';
-      case 'officer':
+      case 'PRO':
         return 'bg-goldSubtle text-gold border-gold/40 font-black';
-      case 'cadet':
+      case 'FREE':
       default:
         return 'bg-emeraldSubtle text-emeraldToken border-emeraldToken/40 font-black';
     }
@@ -42,17 +52,17 @@ export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
 
   const getTierBadgeLabel = () => {
     switch (test.requiredTier) {
-      case 'command':
-        return strings.subscription.commandBadge;
-      case 'officer':
-        return strings.subscription.officerBadge;
-      case 'cadet':
+      case 'PREMIUM':
+        return strings.subscription.tierBadgePremium;
+      case 'PRO':
+        return strings.subscription.tierBadgePro;
+      case 'FREE':
       default:
-        return strings.subscription.cadetBadge;
+        return strings.subscription.tierBadgeFree;
     }
   };
 
-  const variant = test.requiredTier === 'command' ? 'command' : test.requiredTier === 'officer' ? 'officer' : 'cadet';
+  const variant = test.requiredTier === 'PREMIUM' ? 'premium' : test.requiredTier === 'PRO' ? 'pro' : 'free';
 
   return (
     <GridCardContainer
@@ -86,9 +96,16 @@ export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
 
       {/* Footer & Action Button */}
       <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1 text-[11px] font-mono text-slate-500 dark:text-slate-400">
-          <Clock className="w-3.5 h-3.5" />
-          {test.timeLimit}
+        <span className="flex items-center gap-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+          <span className="flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5" />
+            {test.timeLimit}
+          </span>
+          {showRemainingBadge && (
+            <span data-testid="remaining-quota-badge" className="text-emerald-600 dark:text-emerald-400 font-bold">
+              {remainingTests} left
+            </span>
+          )}
         </span>
 
         <button
@@ -105,10 +122,15 @@ export const TestSimulatorCard: FC<TestSimulatorCardProps> = ({
               <Play className="w-3.5 h-3.5 shrink-0" />
               <span>{strings.gto.launchSimulator}</span>
             </>
-          ) : test.requiredTier === 'command' ? (
+          ) : remainingTests === 0 && hasTierAccess(userTier, test.requiredTier) ? (
+            <>
+              <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>{strings.gto.limitReached}</span>
+            </>
+          ) : test.requiredTier === 'PREMIUM' ? (
             <>
               <ShieldAlert className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span>{strings.gto.commandRequired}</span>
+              <span>{strings.gto.premiumRequired}</span>
             </>
           ) : (
             <>

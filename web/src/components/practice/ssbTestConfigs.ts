@@ -1,9 +1,18 @@
 import { strings } from '../../constants/strings';
 import { GTO_TASKS, AccessTier, SSBDayNumber } from '../../constants/ssbSelectionProcess';
+import { TestType } from '../../generated/contracts';
 
 export interface TestSimulatorConfig {
   id: string;
   testTypeId: string;
+  /**
+   * Bucket lookup key for `checkTestEligibility` (contracts/subscription.yaml). All 8 GTO
+   * sub-tests resolve to the same "GTO" bucket regardless of which member they're mapped to, so
+   * `iot`/`fgt` (which have no 1:1 contract enum member — the contract's GTO_IO/GTO_LECTURETTE
+   * don't name-match web's Individual Obstacles/Final Group Task) use a same-bucket placeholder;
+   * see docs/plans/CrossPlatform_SSOT Phase 4 handoff for this accepted divergence.
+   */
+  contractTestType?: TestType;
   shortCode: string;
   dayNumber: SSBDayNumber;
   title: string;
@@ -15,6 +24,17 @@ export interface TestSimulatorConfig {
   isMostPopular?: boolean;
 }
 
+const GTO_CONTRACT_TYPE_BY_ID: Record<string, TestType> = {
+  gd: 'GTO_GD',
+  gpe: 'GTO_GPE',
+  pgt: 'GTO_PGT',
+  hgt: 'GTO_HGT',
+  iot: 'GTO_IO',
+  command_task: 'GTO_CT',
+  snake_race: 'GTO_GOR',
+  fgt: 'GTO_LECTURETTE',
+};
+
 export const DAY_1_TESTS: TestSimulatorConfig[] = [
   {
     id: 'oir',
@@ -24,7 +44,8 @@ export const DAY_1_TESTS: TestSimulatorConfig[] = [
     title: strings.practice.oirTitle,
     description: strings.practice.oirDesc,
     timeLimit: '50 Qs / 30m',
-    requiredTier: 'cadet',
+    contractTestType: 'OIR',
+    requiredTier: 'FREE',
     stageBadge: 'Stage I Screening',
     olqsEvaluated: ['Effective Intelligence', 'Reasoning Ability'],
   },
@@ -36,7 +57,8 @@ export const DAY_1_TESTS: TestSimulatorConfig[] = [
     title: strings.practice.ppdtTitle,
     description: strings.practice.ppdtDesc,
     timeLimit: '30s view / 4m write',
-    requiredTier: 'officer',
+    contractTestType: 'PPDT',
+    requiredTier: 'PRO',
     stageBadge: 'Stage I Screening',
     olqsEvaluated: ['Power of Expression', 'Social Adaptability', 'Group Influencing Ability'],
     isMostPopular: true,
@@ -52,7 +74,8 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
     title: 'Personal Information Questionnaire (PIQ)',
     description: 'Step-by-step Personal Information Questionnaire wizard with 1-tap preset chips.',
     timeLimit: '15m Profile Build',
-    requiredTier: 'cadet',
+    contractTestType: 'PIQ',
+    requiredTier: 'FREE',
     stageBadge: 'Stage II Psychology',
     olqsEvaluated: ['Organising Ability', 'Sense of Responsibility'],
   },
@@ -64,7 +87,8 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
     title: 'Full Psychology Test Battery',
     description: 'Complete TAT, WAT, SRT, and SD in one continuous timed assessment.',
     timeLimit: 'Full 4-Test Battery',
-    requiredTier: 'officer',
+    contractTestType: 'TAT',
+    requiredTier: 'PRO',
     stageBadge: 'Stage II Psychology',
     olqsEvaluated: ['All 15 Officer-Like Qualities'],
     isMostPopular: true,
@@ -77,7 +101,8 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
     title: strings.practice.tatTitle,
     description: strings.practice.tatDesc,
     timeLimit: '12 Slides / 48m',
-    requiredTier: 'officer',
+    contractTestType: 'TAT',
+    requiredTier: 'PRO',
     stageBadge: 'Stage II Psychology',
     olqsEvaluated: ['Effective Intelligence', 'Emotional Stability', 'Liveliness'],
     isMostPopular: true,
@@ -90,7 +115,8 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
     title: strings.practice.watTitle,
     description: strings.practice.watDesc,
     timeLimit: '60 Words / 15m',
-    requiredTier: 'officer',
+    contractTestType: 'WAT',
+    requiredTier: 'PRO',
     stageBadge: 'Stage II Psychology',
     olqsEvaluated: ['Speed of Decision', 'Self Confidence', 'Initiative'],
   },
@@ -102,7 +128,8 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
     title: strings.practice.srtTitle,
     description: strings.practice.srtDesc,
     timeLimit: '60 Situations / 30m',
-    requiredTier: 'officer',
+    contractTestType: 'SRT',
+    requiredTier: 'PRO',
     stageBadge: 'Stage II Psychology',
     olqsEvaluated: ['Practical Intelligence', 'Resourcefulness', 'Cooperation'],
   },
@@ -114,7 +141,8 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
     title: strings.practice.sdTitle,
     description: strings.practice.sdDesc,
     timeLimit: '5 Paragraphs / 15m',
-    requiredTier: 'officer',
+    contractTestType: 'SD',
+    requiredTier: 'PRO',
     stageBadge: 'Stage II Psychology',
     olqsEvaluated: ['Self Awareness', 'Determination', 'Integrity'],
   },
@@ -123,6 +151,7 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
 export const DAY_3_4_TESTS: TestSimulatorConfig[] = GTO_TASKS.map((gto) => ({
   id: gto.id,
   testTypeId: gto.testTypeId,
+  contractTestType: GTO_CONTRACT_TYPE_BY_ID[gto.id],
   shortCode: gto.shortCode,
   dayNumber: '3-4',
   title: gto.titleKey,
@@ -142,7 +171,8 @@ export const DAY_5_TESTS: TestSimulatorConfig[] = [
     title: strings.practice.interviewTitle,
     description: strings.practice.interviewDesc,
     timeLimit: '45m IO Session',
-    requiredTier: 'officer',
+    contractTestType: 'IO',
+    requiredTier: 'PRO',
     stageBadge: 'Stage II Board',
     olqsEvaluated: ['Power of Expression', 'General Awareness', 'Moral Courage'],
   },
@@ -154,7 +184,7 @@ export const DAY_5_TESTS: TestSimulatorConfig[] = [
     title: 'Board Conference & SMB Standards',
     description: 'Final Assessor Board Conference simulation and Special Medical Board guidelines.',
     timeLimit: 'Protocol Guide',
-    requiredTier: 'cadet',
+    requiredTier: 'FREE',
     stageBadge: 'Stage II Board',
     olqsEvaluated: ['Overall Officer Suitability'],
   },

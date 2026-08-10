@@ -33,7 +33,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'OIR',
         title: 'Officer Intelligence Rating (OIR)',
         description: 'Verbal and Non-Verbal reasoning test batteries to achieve OIR Rating 1.',
-        requiredTier: 'cadet',
+        requiredTier: 'FREE',
         materials: getMaterials('oir')
       },
       {
@@ -42,7 +42,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'PPDT',
         title: 'Picture Perception & Discussion Test',
         description: 'Hazy image perception, story writing, narration, and group discussion tactics.',
-        requiredTier: 'officer',
+        requiredTier: 'PRO',
         materials: getMaterials('ppdt')
       }
     ]
@@ -59,7 +59,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'PIQ',
         title: 'Filling PIQ Form',
         description: 'Guidelines to fill the Personal Information Questionnaire without discrepancies.',
-        requiredTier: 'cadet',
+        requiredTier: 'FREE',
         materials: getMaterials('piq')
       },
       {
@@ -69,7 +69,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'PSYCH',
         title: 'Psychology Test Battery (TAT, WAT, SRT, SD)',
         description: 'Thematic Apperception (12 slides), Word Association (60 words), Situation Reaction (60 scenarios), and SD.',
-        requiredTier: 'officer',
+        requiredTier: 'PRO',
         materials: getMaterials('tat', ['tat', 'wat', 'srt', 'sd'])
       }
     ]
@@ -86,7 +86,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'GD',
         title: '1. Group Discussion',
         description: 'Current affairs and defense topics group discussion techniques.',
-        requiredTier: 'cadet',
+        requiredTier: 'PRO',
         materials: getMaterials('gd')
       },
       {
@@ -95,7 +95,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'GPE',
         title: '2. Group Planning Exercise',
         description: 'Military map problem solving and group consensus planning.',
-        requiredTier: 'officer',
+        requiredTier: 'PRO',
         materials: getMaterials('gpe')
       },
       {
@@ -104,7 +104,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'PGT',
         title: '3. Progressive Group Task',
         description: 'Structures, plank, rope, and load crossing methods across 4 obstacles.',
-        requiredTier: 'officer',
+        requiredTier: 'PRO',
         materials: getMaterials('pgt')
       },
       {
@@ -113,7 +113,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'HGT',
         title: '4. Half Group Task',
         description: 'Group half-division outdoor structure assessment.',
-        requiredTier: 'officer',
+        requiredTier: 'PRO',
         materials: getMaterials('hgt')
       },
       {
@@ -122,7 +122,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'IOT',
         title: '5. Individual Obstacles Test',
         description: '10 individual outdoor physical obstacles and scoring strategy.',
-        requiredTier: 'cadet',
+        requiredTier: 'PRO',
         materials: getMaterials('iot')
       },
       {
@@ -131,7 +131,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'CT',
         title: '6. Command Task',
         description: 'Subordinate selection and leader obstacle execution.',
-        requiredTier: 'officer',
+        requiredTier: 'PRO',
         materials: getMaterials('command_task')
       },
       {
@@ -140,7 +140,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'GOR',
         title: '7. Snake Race / Group Obstacle Race',
         description: 'Group obstacle race carrying continuous load (snake).',
-        requiredTier: 'cadet',
+        requiredTier: 'PRO',
         materials: getMaterials('snake_race')
       },
       {
@@ -149,7 +149,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'FGT',
         title: '8. Final Group Task',
         description: 'Final single outdoor structure group task execution.',
-        requiredTier: 'officer',
+        requiredTier: 'PRO',
         materials: getMaterials('fgt')
       }
     ]
@@ -166,7 +166,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'IO',
         title: 'Personal Interview',
         description: 'Interviewing Officer (IO/President) questioning dossier preparation.',
-        requiredTier: 'officer',
+        requiredTier: 'PRO',
         materials: getMaterials('interview')
       },
       {
@@ -176,7 +176,7 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         shortCode: 'CONF',
         title: 'Board Conference & Medicals',
         description: 'Final Assessor Board Conference protocol and Special Medical Board standards.',
-        requiredTier: 'cadet',
+        requiredTier: 'FREE',
         materials: getMaterials('conference', ['conference', 'interview'])
       }
     ]

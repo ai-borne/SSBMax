@@ -12,10 +12,14 @@ import { GridCardContainer } from '../common/GridCardContainer';
 import { IContentRepository } from '../../repositories/interfaces/IContentRepository';
 import { ContentRepository } from '../../repositories/ContentRepository';
 import { TestBatchInfo } from '../../types/testContent';
+import { checkTestEligibility, EMPTY_USAGE, SubscriptionUsage } from '../../domain/subscriptionEligibility';
+import { TestType } from '../../generated/contracts';
 
 export interface PracticeTestsPageProps {
   isPaidMember?: boolean;
   userTier?: AccessTier;
+  /** Real monthly usage counters (docs/plans/CrossPlatform_SSOT Phase 4). Omit for zero usage — reduces to the tier-only gate. */
+  usage?: SubscriptionUsage;
   contentRepository?: IContentRepository;
   onStartTest?: (testType: string, batchId?: string) => void;
   onUpgrade?: (tier?: AccessTier) => void;
@@ -24,6 +28,7 @@ export interface PracticeTestsPageProps {
 export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
   isPaidMember = false,
   userTier: propUserTier,
+  usage = EMPTY_USAGE,
   contentRepository,
   onStartTest,
   onUpgrade,
@@ -38,7 +43,12 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
   const [availableBatchesMap, setAvailableBatchesMap] = useState<Record<string, TestBatchInfo[]>>({});
   const [selectedBatchMap, setSelectedBatchMap] = useState<Record<string, string>>({});
 
-  const effectiveTier: AccessTier = propUserTier || (isPaidMember ? 'officer' : 'cadet');
+  const effectiveTier: AccessTier = propUserTier || (isPaidMember ? 'PRO' : 'FREE');
+
+  const checkRemainingTests = (testType: TestType): number | undefined => {
+    const eligibility = checkTestEligibility(testType, effectiveTier, usage);
+    return eligibility.status === 'ELIGIBLE' ? eligibility.remainingTests : 0;
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -156,6 +166,7 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
             key={day.dayNumber}
             dayOverview={day}
             userTier={effectiveTier}
+            checkRemainingTests={checkRemainingTests}
             searchQuery={searchQuery}
             onStartTest={handleLaunch}
             onUnlockTier={handleUnlockTier}

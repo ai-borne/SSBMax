@@ -3,10 +3,13 @@ import { ChevronDown, Calendar, Layers } from 'lucide-react';
 import { SSBDayOverview, AccessTier, SSBDayNumber } from '../../constants/ssbSelectionProcess';
 import { getTestConfigsForDay } from './ssbTestConfigs';
 import { TestSimulatorCard } from './TestSimulatorCard';
+import { TestType } from '../../generated/contracts';
 
 export interface TestDayAccordionProps {
   dayOverview: SSBDayOverview;
   userTier?: AccessTier;
+  /** Optional: computes remaining monthly attempts from real usage (docs/plans/CrossPlatform_SSOT Phase 4). Omit to fall back to the tier-only gate. */
+  checkRemainingTests?: (testType: TestType) => number | undefined;
   defaultExpanded?: boolean;
   searchQuery?: string;
   onStartTest: (testId: string, batchId?: string) => void;
@@ -29,7 +32,8 @@ function getDayAccentClasses(dayNumber: SSBDayNumber): {
 
 export const TestDayAccordion: FC<TestDayAccordionProps> = ({
   dayOverview,
-  userTier = 'cadet',
+  userTier = 'FREE',
+  checkRemainingTests,
   defaultExpanded = true,
   searchQuery,
   onStartTest,
@@ -123,6 +127,7 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
                 key={test.id}
                 test={test}
                 userTier={userTier}
+                remainingTests={test.contractTestType ? checkRemainingTests?.(test.contractTestType) : undefined}
                 onLaunch={(id) => onStartTest(id)}
                 onUnlockTier={onUnlockTier}
               />
