@@ -106,4 +106,11 @@ describe('useTheme hook - Advanced System & Mode Tests', () => {
     expect(hookA.current.theme).toBe('dark');
     expect(hookB.current.theme).toBe('dark');
   });
+
+  it('should default to dark mode when no localStorage preference is saved', () => {
+    // localStorage is cleared in beforeEach — simulates a first-time visitor
+    const { result } = renderHook(() => useTheme());
+    expect(result.current.theme).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
 });

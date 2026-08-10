@@ -18,7 +18,8 @@ export function useTheme(): UseThemeReturn {
     if (saved === 'dark' || saved === 'light' || saved === 'system') {
       return saved as ThemeMode;
     }
-    return 'system';
+    // Default new visitors to dark — the platform's premium tactical theme
+    return 'dark';
   });
 
   const getSystemTheme = useCallback((): 'dark' | 'light' => {
