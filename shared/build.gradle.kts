@@ -207,6 +207,14 @@ android {
 
     defaultConfig {
         minSdk = 26
+        // Phase 8 (Cross-Platform SSOT plan): read by currentAppVersion()'s
+        // Android actual for the remote-kill-switch version gate. Must be
+        // bumped alongside app/build.gradle.kts's `versionName` and iOS's
+        // Info.plist `CFBundleShortVersionString` at release time -- there is
+        // no single build-time SSOT across Gradle and Xcode, so this is a
+        // release-checklist item, not a contract value (only the *minimum
+        // supported* version is a contracts/ value; see routes.yaml).
+        buildConfigField("String", "APP_VERSION_NAME", "\"1.0.0\"")
     }
 
     // Robolectric-only launcher Activity for SSBMaxThemeUiTest's

@@ -433,6 +433,54 @@ jobs:
       - name: Verify generated output matches contracts/*.yaml (no drift)
         run: npm run contracts:check
 
+  # ── Cloud Functions unit tests ────────────────────────────────────────
+  # Phase 8 (docs/plans/CrossPlatform_SSOT): functions/ is a Tier-1/Tier-2
+  # contract consumer (§1 of the plan) but had no dedicated CI job of its own
+  # -- `npm test` only ran locally. Runs standalone (no emulator needed;
+  # functions/test/*.test.js mock Firestore/Admin SDK directly).
+  functions:
+    name: Cloud Functions Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: functions
+        run: npm ci
+
+      - name: Run Cloud Functions unit tests
+        working-directory: functions
+        run: npm test
+
+  # ── 10-point security audit (scripts/validate-security.sh) ───────────
+  # Phase 8: this script existed and was documented (root CLAUDE.md's
+  # "Security Principles") but was never actually invoked in CI -- only the
+  # narrower security-scan job above ran automatically. fetch-depth: 0
+  # matches security-scan's own checkout (the script's git-tracked-file scans
+  # need full history, not a shallow clone).
+  validate-security-script:
+    name: Security & Compliance Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run 10-point security & compliance audit
+        run: ./scripts/validate-security.sh
+
   # ── Web Platform CI (ssbmax-web) ────────────────────────────────────
   web-ci:
     name: Web Platform CI (ssbmax-web)
@@ -477,19 +525,21 @@ jobs:
     name: CI Success
     runs-on: ubuntu-latest
     if: always()
-    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, build, firestore-rules, contracts, web-ci]
+    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, build, firestore-rules, contracts, functions, validate-security-script, web-ci]
     steps:
       - name: Verify all jobs succeeded
         run: |
-          echo "wrapper-validation: ${{ needs.wrapper-validation.result }}"
-          echo "security-scan:      ${{ needs.security-scan.result }}"
-          echo "lint:               ${{ needs.lint.result }}"
-          echo "detekt:             ${{ needs.detekt.result }}"
-          echo "unit-tests:         ${{ needs.unit-tests.result }}"
-          echo "build:              ${{ needs.build.result }}"
-          echo "firestore-rules:    ${{ needs.firestore-rules.result }}"
-          echo "contracts:          ${{ needs.contracts.result }}"
-          echo "web-ci:             ${{ needs.web-ci.result }}"
+          echo "wrapper-validation:      ${{ needs.wrapper-validation.result }}"
+          echo "security-scan:           ${{ needs.security-scan.result }}"
+          echo "lint:                    ${{ needs.lint.result }}"
+          echo "detekt:                  ${{ needs.detekt.result }}"
+          echo "unit-tests:              ${{ needs.unit-tests.result }}"
+          echo "build:                   ${{ needs.build.result }}"
+          echo "firestore-rules:         ${{ needs.firestore-rules.result }}"
+          echo "contracts:               ${{ needs.contracts.result }}"
+          echo "functions:               ${{ needs.functions.result }}"
+          echo "validate-security-script: ${{ needs.validate-security-script.result }}"
+          echo "web-ci:                  ${{ needs.web-ci.result }}"
           if [ "${{ needs.wrapper-validation.result }}" != "success" ] || \
              [ "${{ needs.security-scan.result }}" != "success" ] || \
              [ "${{ needs.lint.result }}" != "success" ] || \
@@ -498,6 +548,8 @@ jobs:
              [ "${{ needs.build.result }}" != "success" ] || \
              [ "${{ needs.firestore-rules.result }}" != "success" ] || \
              [ "${{ needs.contracts.result }}" != "success" ] || \
+             [ "${{ needs.functions.result }}" != "success" ] || \
+             [ "${{ needs.validate-security-script.result }}" != "success" ] || \
              [ "${{ needs.web-ci.result }}" != "success" ]; then
             echo "❌ One or more CI jobs failed."
             exit 1

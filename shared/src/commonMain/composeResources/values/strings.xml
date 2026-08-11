@@ -1206,4 +1206,6 @@
     <string name="notifications_screen_title">Notifications</string>
     <string name="notifications_empty_title">No notifications yet</string>
     <string name="notifications_empty_subtitle">You\'ll see updates here when they arrive</string>
+    <string name="update_required_title">Update Required</string>
+    <string name="update_required_body">This version of SSBMax is no longer supported. Please update to the latest version from your app store to continue.</string>
 </resources>

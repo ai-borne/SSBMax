@@ -58,7 +58,10 @@ const NAMESPACE_ONLY = new Set(['test_content']);
 // not top-level collections -- the 4-space top-level-match extraction above
 // can't see them. Verified present as nested blocks in firestore.rules by
 // manual read at the time this list was written; not re-verified here.
-const NESTED_OR_DOC_ID_ONLY = new Set(['data', 'subscription', 'profile', 'global']);
+// 'config' is FEATURE_FLAGS_CONFIG_DOC_ID (Phase 8) -- a fixed doc id under
+// the top-level `feature_flags` collection (checked separately below), not
+// its own collection.
+const NESTED_OR_DOC_ID_ONLY = new Set(['data', 'subscription', 'profile', 'global', 'config']);
 
 test('every contract collection/testContent path has a matching firestore.rules block', () => {
   const missing = [];

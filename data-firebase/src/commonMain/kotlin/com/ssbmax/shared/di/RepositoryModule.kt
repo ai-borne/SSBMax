@@ -5,6 +5,7 @@ import com.ssbmax.shared.data.repository.DebugOverrideTestUsageRecorder
 import com.ssbmax.shared.data.repository.GitLiveAnalyticsRepository
 import com.ssbmax.shared.data.repository.GitLiveAuthRepository
 import com.ssbmax.shared.data.repository.GitLiveDifficultyProgressionManager
+import com.ssbmax.shared.data.repository.GitLiveFeatureFlagRepository
 import com.ssbmax.shared.data.repository.GitLiveGPEImageCacheManager
 import com.ssbmax.shared.data.repository.GitLiveGradingQueueRepository
 import com.ssbmax.shared.data.repository.GitLiveGTOCollections
@@ -42,6 +43,7 @@ import com.ssbmax.shared.domain.model.interview.QuestionCacheRepository
 import com.ssbmax.shared.domain.repository.AnalyticsRepository
 import com.ssbmax.shared.domain.repository.AuthRepository
 import com.ssbmax.shared.domain.repository.DifficultyProgressionRepository
+import com.ssbmax.shared.domain.repository.FeatureFlagRepository
 import com.ssbmax.shared.domain.repository.GradingQueueRepository
 import com.ssbmax.shared.domain.repository.GTORepository
 import com.ssbmax.shared.domain.repository.InterviewRepository
@@ -108,6 +110,7 @@ val repositoryModule = module {
         val plain = GitLiveSubscriptionRepository()
         if (isDebugBuild()) DebugOverrideSubscriptionRepository(plain, get()) else plain
     }
+    singleOf(::GitLiveFeatureFlagRepository) bind FeatureFlagRepository::class
     singleOf(::GitLiveTestProgressRepository) bind TestProgressRepository::class
     singleOf(::GitLiveStudyProgressRepository) bind StudyProgressRepository::class
     singleOf(::GitLiveGradingQueueRepository) bind GradingQueueRepository::class

@@ -68,7 +68,12 @@ allSrcFiles.forEach((filePath) => {
 // 2. Raw Hex Color Audit in JSX/TSX
 const HEX_COLOR_REGEX = /#(?:[0-9a-fA-F]{3}){1,2}\b/g;
 
-allSrcFiles.filter(f => (f.endsWith('.tsx') || f.endsWith('.ts')) && !f.includes('constants/colors.ts')).forEach((filePath) => {
+// generated/contracts.ts carries contracts/tokens.yaml's DesignTokens palette
+// (Phase 7) verbatim by design -- it's the one generated output with no
+// Kotlin/CJS equivalent besides tokens.css, and hand-editing it is already
+// forbidden by its own DO-NOT-EDIT header. Excluded here the same way
+// contracts/README.md carves generated/** out of the 300-LOC rule.
+allSrcFiles.filter(f => (f.endsWith('.tsx') || f.endsWith('.ts')) && !f.includes('constants/colors.ts') && !f.includes('/generated/')).forEach((filePath) => {
   const relPath = path.relative(WEB_SRC, filePath);
   const content = fs.readFileSync(filePath, 'utf8');
   

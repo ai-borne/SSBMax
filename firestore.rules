@@ -555,6 +555,20 @@ service cloud.firestore {
     }
     
     // ============================================
+    // REMOTE KILL-SWITCH (Phase 8, Cross-Platform SSOT plan)
+    // ============================================
+
+    match /feature_flags/{document} {
+      // Public read, unlike every other collection in this file: the version
+      // gate this doc drives runs at app launch, before a user has signed
+      // in (splash/login screens are themselves gated by it), so requiring
+      // auth here would make the kill-switch unusable for exactly the users
+      // who most need to see "update required."
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ============================================
     // INTERVIEW SYSTEM (AI-Powered Interview Module)
     // ============================================
 

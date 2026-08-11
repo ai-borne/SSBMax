@@ -3,11 +3,16 @@ package com.ssbmax.shared.presentation.root
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ssbmax.shared.domain.model.AppTheme
+import com.ssbmax.shared.domain.model.isAppVersionBelowMinimum
 import com.ssbmax.shared.domain.repository.AuthRepository
+import com.ssbmax.shared.domain.repository.FeatureFlagRepository
 import com.ssbmax.shared.domain.repository.UserProfileRepository
 import com.ssbmax.shared.domain.util.DomainLogger
+import com.ssbmax.shared.platform.currentAppVersion
 import com.ssbmax.shared.platform.settings.AppThemeSettings
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -28,13 +33,30 @@ class AppRootViewModel(
     appThemeSettings: AppThemeSettings,
     private val authRepository: AuthRepository,
     private val userProfileRepository: UserProfileRepository,
+    private val featureFlagRepository: FeatureFlagRepository,
     private val logger: DomainLogger
 ) : ViewModel() {
 
     val themeFlow: StateFlow<AppTheme> = appThemeSettings.themeFlow
 
+    private val _updateRequired = MutableStateFlow(false)
+
+    /** Phase 8 remote kill-switch: true once this build's version is confirmed below the live floor. */
+    val updateRequired: StateFlow<Boolean> = _updateRequired.asStateFlow()
+
     init {
         updateLoginStreak()
+        checkAppVersionGate()
+    }
+
+    private fun checkAppVersionGate() {
+        viewModelScope.launch {
+            val flags = featureFlagRepository.getFeatureFlags()
+            _updateRequired.value = isAppVersionBelowMinimum(
+                current = currentAppVersion(),
+                minimum = flags.minimumSupportedAppVersion
+            )
+        }
     }
 
     private fun updateLoginStreak() {

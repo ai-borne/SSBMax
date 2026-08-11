@@ -81,6 +81,12 @@ collections:
   - name: CONTENT_VERSIONS_GLOBAL_DOC_ID
     path: global
     note: "Fixed doc id under CONTENT_VERSIONS."
+  - name: FEATURE_FLAGS
+    path: feature_flags
+    note: "Phase 8 remote kill-switch. Single doc (FEATURE_FLAGS_CONFIG_DOC_ID) holds a live `minimumSupportedAppVersion` override and a `flags` boolean map. Public read, deny-all client write -- functions/ops-scripts are the only writer."
+  - name: FEATURE_FLAGS_CONFIG_DOC_ID
+    path: config
+    note: "Fixed doc id under FEATURE_FLAGS."
 
 # test_content/{testType}/... sub-paths. Each entry is relative to
 # collections.TEST_CONTENT ("test_content").

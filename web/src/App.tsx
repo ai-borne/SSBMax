@@ -14,11 +14,14 @@ import { ContentRepository } from './repositories/ContentRepository';
 import { useTabRouting } from './hooks/useTabRouting';
 import { authService } from './services/AuthService';
 import { useSubscriptionViewModel } from './viewmodels/SubscriptionViewModel';
+import { useAppVersionGateViewModel } from './viewmodels/useAppVersionGateViewModel';
+import { UpdateRequiredScreen } from './components/common/UpdateRequiredScreen';
 import { AccessTier, DevTierOverride, getEffectiveTier } from './constants/ssbSelectionProcess';
 
 const DEV_TIER_OVERRIDE_KEY = 'ssbmax_dev_tier_override';
 
 export const App: FC = () => {
+  const updateRequired = useAppVersionGateViewModel();
   const { activeTab, setActiveTab } = useTabRouting('home');
   const [activeTest, setActiveTest] = useState<string | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | undefined>(undefined);
@@ -63,6 +66,10 @@ export const App: FC = () => {
     const match = activeBatchId.match(/\d+/);
     return match ? parseInt(match[0], 10) : 0;
   }, [activeBatchId]);
+
+  if (updateRequired) {
+    return <UpdateRequiredScreen />;
+  }
 
   return (
     <AppLayout activeTab={activeTab} onTabChange={setActiveTab} isTestMode={Boolean(activeTest)}>

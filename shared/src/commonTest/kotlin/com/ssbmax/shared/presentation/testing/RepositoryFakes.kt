@@ -22,7 +22,9 @@ import com.ssbmax.shared.domain.model.WATSubmission
 import com.ssbmax.shared.domain.model.gto.GTOSubmission
 import com.ssbmax.shared.domain.model.scoring.AnalysisStatus
 import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
+import com.ssbmax.shared.domain.model.FeatureFlags
 import com.ssbmax.shared.domain.repository.AuthRepository
+import com.ssbmax.shared.domain.repository.FeatureFlagRepository
 import com.ssbmax.shared.domain.repository.SubmissionRepository
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.TestContentRepository
@@ -76,6 +78,17 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     }
     override suspend fun getMonthlyUsage(userId: String, month: String) = monthlyUsageResult
     override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier) = updateTierResult
+}
+
+class FakeFeatureFlagRepository(
+    var flagsResult: FeatureFlags = FeatureFlags.SAFE_DEFAULT
+) : FeatureFlagRepository {
+    var getFeatureFlagsCallCount = 0
+
+    override suspend fun getFeatureFlags(): FeatureFlags {
+        getFeatureFlagsCallCount++
+        return flagsResult
+    }
 }
 
 class FakeTestContentRepository : TestContentRepository {

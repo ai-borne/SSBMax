@@ -1,8 +1,10 @@
 # Cross-Platform SSOT — Execution Plan (Android + iOS + Web + Functions)
 
-**Status:** Phases 0–7 complete (Phase 7's color-token half implemented in full;
+**Status:** Phases 0–8 complete (Phase 7's color-token half implemented in full;
 its strings half deliberately not built — see Phase 7 Handoff). Phase 8
-optional, not started.
+(kill-switch + CI hardening) implemented — see Phase 8 Handoff. One open item
+predating Phase 8 remains: web has no read path for GTO/GPE scenario content
+or the OIR content-version doc (see Phase 8 Handoff §5, carried from Phase 6/7).
 **Created:** 2026-08-10
 **Owner:** sunilpawar (indie — optimise for low token/time cost per phase)
 **Scope:** Establishing and mechanically enforcing a single source of truth across
@@ -895,3 +897,166 @@ phase's scope, re-flagged for visibility per the deep-check the user asked for)
 - Phase 8 (remote kill-switch + CI hardening) remains **not started** — it is
   explicitly optional in the plan's own phase table (§6) and was not
   requested this session.
+
+---
+
+## Phase 8 Handoff
+
+### 1. Tech debt incurred
+
+- `AppRootViewModelTest.kt`'s `` `compares numerically, not lexicographically` ``
+  test name (in the new `FeatureFlagsTest.kt`, not this file) compiled fine
+  on the JVM/Android test target but failed
+  `:shared:compileTestKotlinIosSimulatorArm64` with "Name contains illegal
+  characters: ','" — Kotlin/Native's symbol mangling for backtick-quoted test
+  names rejects commas, a constraint the JVM target doesn't enforce. Not
+  caught until the full `iosSimulatorArm64Test` run, since `:shared:
+  testDebugUnitTest` alone (the fast loop used while writing the tests) never
+  touches the iOS target.
+- Two of the new `AppRootViewModelTest` cases (`updateRequired stays false
+  when the live minimum is at or below the current build` /
+  `... becomes true once the live minimum exceeds ...`) hardcoded version
+  strings ("0.0.1" / "999.0.0") on the assumption `currentAppVersion()`
+  would read the real "1.0.0" build value on every target. It does on
+  Android (via `shared`'s new `BuildConfig.APP_VERSION_NAME`), but iOS's
+  actual reads `NSBundle.mainBundle`'s Info.plist dictionary, which a bare
+  Kotlin/Native test binary (no real app bundle) doesn't populate — it falls
+  back to `"0.0.0"`. Against that fallback, "0.0.1" is *above* the running
+  version, flipping the "stays false" test to `true` and failing only on
+  `iosSimulatorArm64Test`, never on the Android/JVM run.
+- Found while running the full `./gradlew check` verification pass (not
+  discovered by `:shared:testDebugUnitTest`, which this session ran first and
+  which stayed green throughout) — a reminder that this repo's real
+  cross-platform gate is `check`, not the Android-only fast loop.
+- Separately, `node scripts/audit-web-codebase.js` — run as part of this
+  session's verification of the `web-ci` CI job this phase modified — was
+  found already failing on `main` before this session touched anything
+  (verified via `git stash`): `generated/contracts.ts`'s Phase 7 `DesignTokens`
+  hex values (`#f8fafc`, `#0f172a`, etc.) trip the script's raw-hex-color
+  check, which has no carve-out for `generated/` despite `contracts/
+  README.md` documenting that directory as DO-NOT-EDIT-by-design. This
+  predates Phase 8 (introduced whenever Phase 7 actually shipped) and would
+  have failed the `web-ci` job — and therefore `ci-success`, the job this
+  phase just added two new required checks to — on every PR since.
+
+### 2. How it was resolved (immediately, not deferred)
+
+- Renamed the offending test to
+  `` `compares numerically rather than lexicographically` `` (no comma) —
+  behavior and intent unchanged, only the title's punctuation.
+- Rewrote the two flaky tests to derive their version strings from the real
+  `currentAppVersion()` call instead of a hardcoded assumption: the "stays
+  false" case now asserts against `minimumSupportedAppVersion =
+  currentAppVersion()` (equality is always non-blocking by construction,
+  regardless of what the real/fallback value is), and the "becomes true"
+  case uses `"99999.0.0"`, safely above any real or fallback version on any
+  platform. Both now pass identically on `testDebugUnitTest` and
+  `iosSimulatorArm64Test`.
+- Added a `!f.includes('/generated/')` exclusion to `scripts/
+  audit-web-codebase.js`'s raw-hex-color check, mirroring the same carve-out
+  `contracts/README.md` already documents for the 300-LOC rule (`**/
+  generated/**`) — a generated file mirroring `contracts/tokens.yaml`
+  verbatim is not a hand-authored violation. Confirmed the audit now exits 0
+  with only its 16 pre-existing (unrelated, pre-dating this session)
+  `RESOURCE_AUDIT` warnings, none of which are errors.
+- Both fixes verified via a full, unmodified `./gradlew check` and `node
+  scripts/audit-web-codebase.js` run (see §3) before this phase was
+  considered done — not spot-checked on the two changed files alone.
+
+### 3. Build & test confirmation
+
+- `./gradlew check` (KMP: lint + detekt + unit tests, Android + iOS + JVM,
+  all modules, including the new `iosSimulatorArm64Test` run) ...... PASS
+- `node scripts/generate-contracts.js --check` ......................... PASS
+- `web: npm run build` (tsc strict + vite build) ........................ PASS
+- `web: npm run test` .................................................. PASS (314 tests,
+  57 files — 11 new: `featureFlags.test.ts` (7) + `FeatureFlagRepository.test.ts` (4))
+- `node scripts/audit-web-codebase.js` (web-ci's Codebase Audit step) ... PASS
+  (0 errors, 16 pre-existing warnings — confirmed via `git stash` that all
+  16 predate this session)
+- `functions: npm test` ................................................. PASS (27/27,
+  unchanged — Phase 8 added no functions/ code)
+- `firestore-tests: npm test` (emulator rules-unit suite) ............... PASS (29/29 —
+  5 new in `feature_flags.rules.test.mjs`; `firestoreRulesCoverage.rules.test.mjs`
+  updated with a `config` doc-id exception and passed without further changes)
+- `scripts/validate-security.sh` ........................................ PASS (10/10)
+
+### 4. Contract changes shipped this phase
+
+- `contracts/firestore-paths.yaml`: added `FEATURE_FLAGS` (`feature_flags`)
+  and `FEATURE_FLAGS_CONFIG_DOC_ID` (`config`). Additive only — no existing
+  entry changed shape. `routes.yaml`'s `minimumSupportedAppVersion` (added in
+  Phase 7, inert until this phase) is now live: it's the compile-time safe
+  default (`FeatureFlags.SAFE_DEFAULT` / `SAFE_DEFAULT_FEATURE_FLAGS`) every
+  platform falls back to when `feature_flags/config` is unreachable, missing,
+  or malformed — the live, remotely-editable value lives in that Firestore
+  doc instead.
+
+### 5. Accepted divergences (if any)
+
+- **The kill-switch is fail-open by design, not fail-closed.** A Firestore
+  outage, a missing `feature_flags/config` doc, or a malformed field never
+  blocks a real user — it silently falls back to the version baked into the
+  build. This is the plan's own intent (§0 "an indie developer must be able
+  to disable a broken feature... without an app-store release" implies the
+  inverse must never happen by accident: a Firestore hiccup must not lock
+  everyone out). Documented directly in `FeatureFlagRepository.kt`'s and
+  `IFeatureFlagRepository.ts`'s doc comments so a future reader doesn't
+  "fix" it into fail-closed.
+- **`feature_flags/config` is the one collection in `firestore.rules` with
+  `allow read: if true` (unauthenticated)**, a deliberate deviation from
+  every other collection's `isAuthenticated()` convention — the version gate
+  must be readable before login, since the login/splash screens are
+  themselves gated by it. Documented inline in `firestore.rules`.
+- **Item 1 of the plan's own Phase 8 spec ("Firestore-backed feature flags")
+  ships the version-gate half fully; the generic per-feature boolean flags
+  half (`FeatureFlags.flags` / `isEnabled(name)`) ships as plumbing only** —
+  the domain model, DTO, repository, and Firestore doc shape all support
+  arbitrary named boolean flags end-to-end, but no call site in the app
+  reads a named flag yet (there is no broken feature to gate today). This
+  mirrors Phase 7's own precedent of shipping only the half of a phase with
+  a real, present need and scoping out the rest explicitly rather than
+  building speculative call sites (root Rule 2, "no speculative features").
+- **Carried forward, not this phase's scope** (re-verified still true by
+  grep during this session's deep-check, not assumed from the old handoff):
+  - **GPE content still has no web read path** — `ContentRepository.ts`'s
+    `subcollMap` (line ~132) has a `gto` entry but no `gpe` entry, and there
+    is no `getGPEBatch` method. Traces to Phase 0b's Open Question 1
+    resolution ("full parity"), never actually implemented, flagged again in
+    Phase 6 and Phase 7. Still open.
+  - **OIR content-version (`test_content/oir/meta/config`) still has no web
+    read path.** Same category, same history, still open.
+  - Both are pre-existing gaps against the plan's own stated goal, not new
+    debt from Phase 8. Fixing either is a real repository-method-plus-UI
+    change, not a tech-debt-sweep-sized edit — flagged again here rather
+    than silently fixed or silently dropped, per root Rule 12.
+
+---
+
+## Deep-Check: Plan vs. Implementation (end of Phase 8)
+
+Requested explicitly at the end of this session. Verified by re-reading each
+phase's own Handoff/success criteria against current repo state (contract
+files, generated output, CI config, rules file) — not assumed from memory.
+
+| Phase | Goal | Status |
+|---|---|---|
+| 0a | Real server-side OIR scoring | ✅ Done (Phase 0a handoff) |
+| 0b | Every consumer reads the same paths, no guessing | ✅ Done, with the two GPE/meta-config web gaps noted above as accepted divergences, not failures of 0b's mechanism |
+| 1 | `contracts/` + generator, 4 outputs | ✅ Done; now 8 contract files (added `firestore-paths.yaml`'s feature_flags entries this phase) |
+| 2 | Migrate consumers, ban raw literals | ✅ Done (guard tests exist and pass in KMP, web, functions) |
+| 3 | Enum & taxonomy SSOT (OLQ) | ✅ Done |
+| 4 | Subscription model reconciliation | ✅ Done |
+| 5 | Server-side eligibility enforcement | ✅ Done |
+| 6 | Shared-corpus contract tests | ✅ Done, with the documented `data-firebase` live-emulator accepted divergence |
+| 7 | Design tokens + strings codegen (optional) | ✅ Colors done in full; strings half deliberately scoped out (Phase 7 Handoff) |
+| 8 | Kill-switch + CI hardening (optional) | ✅ Done this session (see Phase 8 Handoff above) |
+
+**Overall: every Must-do phase (0a–6) and both optional phases (7, 8) are
+implemented and green.** The only items still open against the plan's own
+stated goals are the two carried-forward web read-path gaps (GPE content,
+OIR content-version) — both pre-date Phase 8, are explicitly out of scope
+for a tech-debt sweep (they're new-feature-sized, not cleanup-sized), and
+have now been re-flagged three sessions running (Phase 6, Phase 7, Phase 8)
+without being picked up. If this workflow is done, they're worth a
+dedicated follow-up task rather than a fourth deferral.

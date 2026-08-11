@@ -51,6 +51,8 @@ object SsbContracts {
         const val USER_PROFILE_DOC_ID = "profile"
         const val USER_SUBSCRIPTION_TIER_DOC_ID = "subscription"
         const val CONTENT_VERSIONS_GLOBAL_DOC_ID = "global"
+        const val FEATURE_FLAGS = "feature_flags"
+        const val FEATURE_FLAGS_CONFIG_DOC_ID = "config"
 
         object TestContent {
             const val OIR_BATCHES = "test_content/oir/batches"

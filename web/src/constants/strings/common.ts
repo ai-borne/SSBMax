@@ -300,5 +300,9 @@ export const commonStrings = {
     sec3Text: 'Candidates agree to use the platform solely for personal SSB preparation. Redistribution or unauthorized automated scraping of psychological test material and AI evaluation models is prohibited.',
     sec4Title: '4. Independent Platform Disclaimer',
     sec4Text: 'SSBMax is an independent educational preparatory platform. It is not directly affiliated with, endorsed by, or representing the Ministry of Defence or official Services Selection Boards.'
+  },
+  updateRequired: {
+    title: 'Update Required',
+    body: 'This version of SSBMax is no longer supported. Please refresh the page to load the latest version.'
   }
 } as const;

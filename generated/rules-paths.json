@@ -3,9 +3,11 @@
   "generatedBy": "node scripts/generate-contracts.js",
   "paths": [
     "archived_submissions",
+    "config",
     "content_versions",
     "data",
     "fcmTokens",
+    "feature_flags",
     "generic_questions",
     "global",
     "gto_results",

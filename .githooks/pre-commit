@@ -187,15 +187,17 @@ if [ -n "$UI_OR_RULE_FILES" ]; then
 fi
 
 # ============================================
-# 7d. Contracts SSOT check (docs/plans/CrossPlatform_SSOT Phase 1)
+# 7d. Contracts SSOT check (docs/plans/CrossPlatform_SSOT Phase 1/8)
 # ============================================
-CONTRACTS_FILES=$(echo "$STAGED_FILES" | grep -E '^(contracts/|generated/|scripts/generate-contracts\.js|shared/src/commonMain/kotlin/com/ssbmax/shared/contracts/|web/src/generated/|functions/src/generated/)' || true)
-if [ -n "$CONTRACTS_FILES" ]; then
-    echo "🔍 Checking contracts/ generated output is up to date..."
-    if ! npm run --silent contracts:check; then
-        echo -e "${RED}❌ ERROR: generated/* is stale — run 'npm run contracts:generate' and commit the result${NC}"
-        ERRORS=$((ERRORS + 1))
-    fi
+# Phase 8: runs on every commit, not just contracts-touching ones -- it's
+# fast (a Node script diffing against a temp dir, no network) and a stale
+# generated/* can be introduced by editing SsbContracts.kt/contracts.ts/
+# contracts.cjs by hand without touching contracts/*.yaml at all, which the
+# old path-based gate would have missed entirely.
+echo "🔍 Checking contracts/ generated output is up to date..."
+if ! npm run --silent contracts:check; then
+    echo -e "${RED}❌ ERROR: generated/* is stale — run 'npm run contracts:generate' and commit the result${NC}"
+    ERRORS=$((ERRORS + 1))
 fi
 
 # ============================================
