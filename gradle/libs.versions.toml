@@ -168,6 +168,7 @@ gitlive-firebase-firestore = { group = "dev.gitlive", name = "firebase-firestore
 gitlive-firebase-common = { group = "dev.gitlive", name = "firebase-common", version.ref = "gitliveFirebase" }
 gitlive-firebase-common-internal = { group = "dev.gitlive", name = "firebase-common-internal", version.ref = "gitliveFirebase" }
 gitlive-firebase-storage = { group = "dev.gitlive", name = "firebase-storage", version.ref = "gitliveFirebase" }
+gitlive-firebase-functions = { group = "dev.gitlive", name = "firebase-functions", version.ref = "gitliveFirebase" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatformSettings" }

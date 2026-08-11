@@ -140,46 +140,29 @@ class FirebaseRulesValidationTest {
     // ==================== Test Usage Tracking Tests ====================
 
     @Test
-    fun `test_usage requires all required fields`() {
+    fun `usage docs are readable by their owner`() {
         val content = getRulesContent()
-        val testUsageRules = content.substringAfter("match /subscription/{document}")
-            .substringBefore("// NEVER allow delete")
-
-        val requiredFields = listOf(
-            "oirTestsUsed", "tatTestsUsed", "watTestsUsed",
-            "srtTestsUsed", "ppdtTestsUsed", "gtoTestsUsed",
-            "interviewTestsUsed", "sdTestsUsed", "lastUpdated"
-        )
-
-        requiredFields.forEach { field ->
-            assertTrue("test_usage should require field: $field",
-                testUsageRules.contains("'$field'"))
-        }
-    }
-
-    @Test
-    fun `test_usage validates integer types and non-negative values`() {
-        val content = getRulesContent()
-        val testUsageRules = content.substringAfter("match /subscription/{document}")
-            .substringBefore("// NEVER allow delete")
-
-        // Check that oirTestsUsed has validation for >= 0
-        assertTrue("Should validate oirTestsUsed >= 0",
-            testUsageRules.contains("request.resource.data.oirTestsUsed >= 0"))
-    }
-
-    @Test
-    fun `test_usage is user-specific`() {
-        val content = getRulesContent()
-        val testUsageRules = content.substringAfter("match /subscription/{document}")
-            .substringBefore("// NEVER allow delete")
+        val usageRules = content.substringAfter("match /subscription/{document}")
+            .substringBefore("match /data/subscription")
 
         assertTrue("Users should read own usage",
-            testUsageRules.contains("allow read: if isOwner(userId)"))
-        // Check for create and update (not generic write)
-        assertTrue("Users should create/update own usage",
-            testUsageRules.contains("allow create: if isOwner(userId)") ||
-            testUsageRules.contains("allow update: if isOwner(userId)"))
+            usageRules.contains("allow read: if isOwner(userId)"))
+    }
+
+    // Phase 5 (docs/plans/CrossPlatform_SSOT): the recordTestUsage callable Cloud Function
+    // (functions/src/eligibility.js, Admin SDK) is now the sole writer of usage_{month} docs --
+    // the old client-writable increment-by-one create/update rules this test class used to pin
+    // (`test_usage requires all required fields` / `validates integer types` / `is user-specific`)
+    // are gone. Admin SDK writes bypass rules entirely, so "no client write, of any shape" is the
+    // whole contract now.
+    @Test
+    fun `usage docs cannot be written by a client, of any shape`() {
+        val content = getRulesContent()
+        val usageRules = content.substringAfter("match /subscription/{document}")
+            .substringBefore("match /data/subscription")
+
+        assertTrue("Clients cannot write usage docs",
+            usageRules.contains("allow write: if false"))
     }
 
     // ==================== Subscription Data Tests ====================
@@ -383,7 +366,7 @@ class FirebaseRulesValidationTest {
         val content = getRulesContent()
 
         val criticalCollections = listOf(
-            "users", "test_usage", "subscription", "test_sessions",
+            "users", "subscription", "test_sessions",
             "submissions", "test_content/oir"
         )
 

@@ -63,96 +63,19 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
       
-      // Test usage tracking (for subscription limits)
-      match /test_usage/{month} {
-        // Users can read their own test usage
-        allow read: if isOwner(userId);
-        
-        // Users can write their own test usage
-        // Relaxed validation: Allow updates and creates
-        // Create: Must have all fields
-        allow create: if isOwner(userId) &&
-                         request.resource.data.keys().hasAll([
-                           'oirTestsUsed', 'tatTestsUsed', 'watTestsUsed',
-                           'srtTestsUsed', 'ppdtTestsUsed', 'gtoTestsUsed',
-                           'interviewTestsUsed', 'lastUpdated'
-                         ]);
-        
-        // Update: Can update individual fields via transactions
-        allow update: if isOwner(userId) &&
-                         request.resource.data.lastUpdated is timestamp;
-      }
-      
       // Subscription usage tracking (server-side persistence)
-      // SECURITY: Cannot be bypassed by clearing app cache
+      // Phase 5 (docs/plans/CrossPlatform_SSOT): the `recordTestUsage` callable Cloud
+      // Function (functions/src/eligibility.js, Admin SDK) is now the sole writer of
+      // usage_{month} docs -- Admin SDK bypasses these rules entirely, so clients have
+      // no write path left at all. This closes the "clear app cache to reset quota"
+      // bypass the old client-writable rules (a client could construct any counter
+      // value satisfying the increment-by-one invariant) still nominally allowed.
       match /subscription/{document} {
         // Users can read their own subscription usage
         allow read: if isOwner(userId);
-        
-        // Users can CREATE new usage document with initial values
-        // Note: Transactions may increment immediately after set(), so allow counts 0-10
-        allow create: if isOwner(userId) &&
-                        request.resource.data.userId == userId &&
-                        request.resource.data.keys().hasAll([
-                          'month', 'oirTestsUsed', 'tatTestsUsed', 'watTestsUsed',
-                          'srtTestsUsed', 'ppdtTestsUsed', 'piqTestsUsed', 'gtoTestsUsed',
-                          'interviewTestsUsed', 'sdTestsUsed', 'recordedSubmissionIds', 'lastUpdated'
-                        ]) &&
-                        // The doc id is `usage_{month}` (GitLiveTestUsageRecorder /
-                        // GitLiveSubscriptionRepository) but the `month` field itself holds the
-                        // bare value (e.g. "2026-08", no "usage_" prefix -- see
-                        // GitLiveSubscriptionRepository.getMonthlyUsage, which reads the same bare
-                        // value back). Comparing `month` directly to `document` (the doc id) can
-                        // never match and permanently denied every user's first usage write of
-                        // every month; reconstruct the doc id instead.
-                        document == 'usage_' + request.resource.data.month &&
-                        request.resource.data.recordedSubmissionIds is list &&
-                        request.resource.data.lastUpdated is int &&
-                         // Allow counts 0-10 on create (transaction may increment immediately)
-                        request.resource.data.oirTestsUsed >= 0 && request.resource.data.oirTestsUsed <= 10 &&
-                        request.resource.data.tatTestsUsed >= 0 && request.resource.data.tatTestsUsed <= 10 &&
-                        request.resource.data.watTestsUsed >= 0 && request.resource.data.watTestsUsed <= 10 &&
-                        request.resource.data.srtTestsUsed >= 0 && request.resource.data.srtTestsUsed <= 10 &&
-                        request.resource.data.ppdtTestsUsed >= 0 && request.resource.data.ppdtTestsUsed <= 10 &&
-                        request.resource.data.piqTestsUsed >= 0 && request.resource.data.piqTestsUsed <= 10 &&
-                        request.resource.data.gtoTestsUsed >= 0 && request.resource.data.gtoTestsUsed <= 10 &&
-                        request.resource.data.interviewTestsUsed >= 0 && request.resource.data.interviewTestsUsed <= 10 &&
-                        request.resource.data.sdTestsUsed >= 0 && request.resource.data.sdTestsUsed <= 10;
-        
-        // A client may record exactly one attempt: one counter increases by one,
-        // and exactly one new submission ID is appended. Existing attempts cannot
-        // be removed or replayed by changing the document directly.
-        allow update: if isOwner(userId) &&
-                         request.resource.data.userId == resource.data.userId &&
-                         request.resource.data.month == resource.data.month &&
-                         request.resource.data.lastUpdated is int &&
-                         request.resource.data.recordedSubmissionIds is list &&
-                         ((!resource.data.keys().hasAny(['recordedSubmissionIds']) &&
-                           request.resource.data.recordedSubmissionIds.size() == 1) ||
-                          (resource.data.keys().hasAny(['recordedSubmissionIds']) &&
-                           request.resource.data.recordedSubmissionIds.size() == resource.data.recordedSubmissionIds.size() + 1 &&
-                           request.resource.data.recordedSubmissionIds.hasAll(resource.data.recordedSubmissionIds))) &&
-                         request.resource.data.oirTestsUsed >= resource.data.oirTestsUsed &&
-                         request.resource.data.oirTestsUsed <= resource.data.oirTestsUsed + 1 &&
-                         request.resource.data.tatTestsUsed >= resource.data.tatTestsUsed &&
-                         request.resource.data.tatTestsUsed <= resource.data.tatTestsUsed + 1 &&
-                         request.resource.data.watTestsUsed >= resource.data.watTestsUsed &&
-                         request.resource.data.watTestsUsed <= resource.data.watTestsUsed + 1 &&
-                         request.resource.data.srtTestsUsed >= resource.data.srtTestsUsed &&
-                         request.resource.data.srtTestsUsed <= resource.data.srtTestsUsed + 1 &&
-                         request.resource.data.ppdtTestsUsed >= resource.data.ppdtTestsUsed &&
-                         request.resource.data.ppdtTestsUsed <= resource.data.ppdtTestsUsed + 1 &&
-                         request.resource.data.piqTestsUsed >= resource.data.piqTestsUsed &&
-                         request.resource.data.piqTestsUsed <= resource.data.piqTestsUsed + 1 &&
-                         request.resource.data.gtoTestsUsed >= resource.data.gtoTestsUsed &&
-                         request.resource.data.gtoTestsUsed <= resource.data.gtoTestsUsed + 1 &&
-                         request.resource.data.interviewTestsUsed >= resource.data.interviewTestsUsed &&
-                         request.resource.data.interviewTestsUsed <= resource.data.interviewTestsUsed + 1 &&
-                         request.resource.data.sdTestsUsed >= resource.data.sdTestsUsed &&
-                         request.resource.data.sdTestsUsed <= resource.data.sdTestsUsed + 1;
-        
-        // NEVER allow delete (audit trail)
-        allow delete: if false;
+
+        // Only the recordTestUsage callable function (Admin SDK) may write.
+        allow write: if false;
       }
       
       // User subscription data

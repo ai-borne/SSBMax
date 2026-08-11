@@ -310,10 +310,8 @@ class FakeGTORepository : com.ssbmax.shared.domain.repository.GTORepository {
     // Phase 1c (GD/Lecturette/GPE) additions -- see GTOEligibilityChecker/GTOSubmissionCoordinator.
     var canUserTakeTestResult: Result<Boolean> = Result.success(true)
     var getCompletedTestsResult: Result<List<com.ssbmax.shared.domain.model.gto.GTOTestType>> = Result.success(emptyList())
-    var recordTestUsageResult: Result<Unit> = Result.success(Unit)
     var updateProgressResult: Result<Unit> = Result.success(Unit)
     var getTestResultResult: Result<com.ssbmax.shared.domain.model.gto.GTOResult> = Result.failure(UnsupportedOperationException("not stubbed"))
-    val recordedUsage = mutableListOf<Pair<String, com.ssbmax.shared.domain.model.gto.GTOTestType>>()
     val recordedProgress = mutableListOf<Pair<String, com.ssbmax.shared.domain.model.gto.GTOTestType>>()
 
     private fun unused(name: String): Nothing = error("FakeGTORepository.$name not stubbed for this test")
@@ -348,12 +346,6 @@ class FakeGTORepository : com.ssbmax.shared.domain.repository.GTORepository {
     override suspend fun canUserTakeTest(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType) = canUserTakeTestResult
     override suspend fun getCompletedTests(userId: String) = getCompletedTestsResult
     override suspend fun getNextAvailableTest(userId: String) = unused("getNextAvailableTest")
-    override suspend fun recordTestUsage(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType, submissionId: String): Result<Unit> {
-        recordedUsage += userId to testType
-        return recordTestUsageResult
-    }
-    override suspend fun getTestUsageCount(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType) = unused("getTestUsageCount")
-    override suspend fun resetMonthlyUsage(userId: String) = unused("resetMonthlyUsage")
     override suspend fun getTestResult(submissionId: String) = getTestResultResult
     override suspend fun getUserResults(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType?) = unused("getUserResults")
     override suspend fun getLatestResult(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType) = getLatestResultResult

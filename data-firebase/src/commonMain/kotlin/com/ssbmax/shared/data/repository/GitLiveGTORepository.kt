@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
  *
  * This class implements [GTORepository] directly and keeps the test-content/cache methods
  * (`getRandomTest`/`getTestById`/`getRandomGPEScenario`/`getObstaclesForTest`/`cacheTestContent`/
- * `clearCache`/`isContentCached`) inline; the submissions, progress/usage, and results clusters
+ * `clearCache`/`isContentCached`) inline; the submissions, progress, and results clusters
  * are delegated to [GitLiveGTOSubmissionDelegate], [GitLiveGTOProgressDelegate], and
  * [GitLiveGTOResultsDelegate] respectively — a later structural split of this originally-single
  * class, done purely to keep every file under the repo's 300-line-per-file limit. No behavior
@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.Flow
  *
  * One real, documented deviation from the Android original (not silently dropped):
  *
- * 1. **`updateProgress`/`recordTestUsage` are read-then-write instead of the Android original's
+ * 1. **`updateProgress` is read-then-write instead of the Android original's
  *    `firestore.runTransaction`.** No other `GitLive*Repository` port in this codebase has
  *    exercised GitLive's `Transaction` API yet, and its `set(documentRef, data: Any, merge)`
  *    overload (unlike `WriteBatch.set`, which is `<reified T : Any>`) takes a plain `Any` — i.e.
@@ -63,7 +63,7 @@ import kotlinx.coroutines.flow.Flow
  * `init` invariants and throw for any partially-analyzed `gto_results` doc) -- not "fixed" to match,
  * regression-tested instead (`GTODtoTest`). Two risks reviewed and deliberately left as-is, both
  * pre-existing and self-documented above/nearby rather than introduced by this review: the
- * `updateProgress`/`recordTestUsage` non-atomicity (item 1 above), and `getRandomGPEScenario`/
+ * `updateProgress` non-atomicity (item 1 above), and `getRandomGPEScenario`/
  * `getObstaclesForTest`'s whole-batch-document decode (one malformed scenario/obstacle field could
  * fail the entire batch, vs. the Android original's per-field graceful defaults) -- the latter
  * couldn't be verified against real Firestore content without an emulator, so it's flagged rather
@@ -196,17 +196,6 @@ class GitLiveGTORepository internal constructor(
 
     override suspend fun getNextAvailableTest(userId: String): Result<GTOTestType?> =
         progressDelegate.getNextAvailableTest(userId)
-
-    // ==================== Test Usage Tracking (delegated) ====================
-
-    override suspend fun recordTestUsage(userId: String, testType: GTOTestType, submissionId: String): Result<Unit> =
-        progressDelegate.recordTestUsage(userId, testType, submissionId)
-
-    override suspend fun getTestUsageCount(userId: String, testType: GTOTestType): Result<Int> =
-        progressDelegate.getTestUsageCount(userId, testType)
-
-    override suspend fun resetMonthlyUsage(userId: String): Result<Unit> =
-        progressDelegate.resetMonthlyUsage(userId)
 
     // ==================== Results & Analysis (delegated) ====================
 

@@ -1,14 +1,11 @@
 // Rules-unit coverage for users/{userId}/subscription/{month} in ../firestore.rules.
 //
-// Why this file exists: commit d6abd123 ("harden idempotent submission and quota integrity")
-// added `request.resource.data.month == document` to the create rule, comparing the `month`
-// field (bare value, e.g. "2026-08" -- see GitLiveTestUsageRecorder/GitLiveSubscriptionRepository)
-// against `document`, which is the doc id ("usage_2026-08"). The two can never be equal, so
-// every user's first usage write of every month was denied -- which, because
-// SubmitPPDTTestUseCase/SubmitOIRTestUseCase call recordTestUsage() after the submission write
-// and propagate its exception through runCatching, made EVERY test submission report failure to
-// the user (even though the submission document itself had already persisted) and silently
-// skipped the OLQ analysis trigger, which only runs in the ViewModel's onSuccess branch.
+// Phase 5 (docs/plans/CrossPlatform_SSOT): the recordTestUsage callable Cloud Function
+// (functions/src/eligibility.js, Admin SDK) became the sole writer of usage_{month} docs,
+// closing the "clear app cache to reset quota" bypass the old client-writable
+// increment-by-one rules still nominally allowed. This file used to pin that clients COULD
+// write usage docs directly (see git history for the pre-Phase-5 version); it now pins the
+// opposite -- clients can read their own usage but cannot write it at all, from any shape.
 //
 // Run via `firebase emulators:exec --only firestore "npm --prefix firestore-tests test"` --
 // requires the emulator listening on 127.0.0.1:8080 (see ../firebase.json).
@@ -62,31 +59,10 @@ function freshUsageDoc(overrides = {}) {
   };
 }
 
-test('the real write shape (bare month field, usage_-prefixed doc id) is allowed', async () => {
-  // This is GitLiveTestUsageRecorder.recordTestUsage()'s actual first-write-of-the-month
-  // transaction shape. Regression guard for the exact incident: this used to be denied.
+test('a client cannot create a usage doc directly, even a well-formed one', async () => {
+  // Pre-Phase-5 this succeeded (the real GitLiveTestUsageRecorder write shape). Now only the
+  // recordTestUsage callable (Admin SDK, bypasses rules) may create this doc.
   const db = testEnv.authenticatedContext('user-1').firestore();
-
-  await assertSucceeds(
-    db.collection('users').doc('user-1').collection('subscription').doc('usage_2026-08')
-      .set(freshUsageDoc())
-  );
-});
-
-test('a doc id that does not match usage_{month} is rejected', async () => {
-  // The bug was fixed by reconstructing the doc id from the field, not by dropping the check
-  // entirely -- a mismatched id/field pair (a client bug, or a forged month field) must still
-  // be denied.
-  const db = testEnv.authenticatedContext('user-1').firestore();
-
-  await assertFails(
-    db.collection('users').doc('user-1').collection('subscription').doc('usage_2026-09')
-      .set(freshUsageDoc({ month: '2026-08' }))
-  );
-});
-
-test('a client cannot create a usage doc for another user', async () => {
-  const db = testEnv.authenticatedContext('user-2').firestore();
 
   await assertFails(
     db.collection('users').doc('user-1').collection('subscription').doc('usage_2026-08')
@@ -94,14 +70,14 @@ test('a client cannot create a usage doc for another user', async () => {
   );
 });
 
-test('an existing usage doc accepts an incremental update recording one more submission', async () => {
+test('a client cannot update an existing usage doc, even by exactly one attempt', async () => {
   const db = testEnv.authenticatedContext('user-1').firestore();
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await ctx.firestore().collection('users').doc('user-1').collection('subscription')
       .doc('usage_2026-08').set(freshUsageDoc());
   });
 
-  await assertSucceeds(
+  await assertFails(
     db.collection('users').doc('user-1').collection('subscription').doc('usage_2026-08').update({
       ppdtTestsUsed: 2,
       lastUpdated: Date.now(),
@@ -110,7 +86,7 @@ test('an existing usage doc accepts an incremental update recording one more sub
   );
 });
 
-test('an update cannot jump a counter by more than one attempt', async () => {
+test('a client cannot delete a usage doc', async () => {
   const db = testEnv.authenticatedContext('user-1').firestore();
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await ctx.firestore().collection('users').doc('user-1').collection('subscription')
@@ -118,10 +94,30 @@ test('an update cannot jump a counter by more than one attempt', async () => {
   });
 
   await assertFails(
-    db.collection('users').doc('user-1').collection('subscription').doc('usage_2026-08').update({
-      ppdtTestsUsed: 5,
-      lastUpdated: Date.now(),
-      recordedSubmissionIds: ['submission-1', 'submission-2']
-    })
+    db.collection('users').doc('user-1').collection('subscription').doc('usage_2026-08').delete()
+  );
+});
+
+test('a user can still read their own usage doc (optimistic UX check survives the lockdown)', async () => {
+  const db = testEnv.authenticatedContext('user-1').firestore();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection('users').doc('user-1').collection('subscription')
+      .doc('usage_2026-08').set(freshUsageDoc());
+  });
+
+  await assertSucceeds(
+    db.collection('users').doc('user-1').collection('subscription').doc('usage_2026-08').get()
+  );
+});
+
+test('a client cannot read another user\'s usage doc', async () => {
+  const db = testEnv.authenticatedContext('user-2').firestore();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection('users').doc('user-1').collection('subscription')
+      .doc('usage_2026-08').set(freshUsageDoc());
+  });
+
+  await assertFails(
+    db.collection('users').doc('user-1').collection('subscription').doc('usage_2026-08').get()
   );
 });

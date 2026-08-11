@@ -306,7 +306,7 @@ CheckTestEligibilityUseCase(TestType.TAT, userId)
   → TestEligibility.NetworkError → show error state → stop
 ```
 
-`SubscriptionManager` no longer exists anywhere in this codebase — `CheckTestEligibilityUseCase` (`shared/.../domain/usecase/subscription/`) is the sole eligibility SSOT, backed by `SubscriptionLimits`. Usage is recorded via `TestUsageRecorder.recordTestUsage(...)` on successful submission (see §8) — not a direct Firestore increment inside the ViewModel.
+`SubscriptionManager` no longer exists anywhere in this codebase — `CheckTestEligibilityUseCase` (`shared/.../domain/usecase/subscription/`) is the sole eligibility SSOT, backed by `SubscriptionLimits`. Usage is recorded via `TestUsageRecorder.recordTestUsage(...)` on successful submission (see §8) — as of Phase 5 (docs/plans/CrossPlatform_SSOT) this calls the server-side `recordTestUsage` Cloud Function rather than writing `subscription/usage_*` directly; firestore.rules denies that client write entirely now.
 
 Debug override: Settings → Developer Settings → **Subscription Override** (`Follow Real` / `Force Free` / `Force Pro` / `Force Premium`) does the same job on both platforms without a rebuild — the old `BuildConfig.BYPASS_SUBSCRIPTION_LIMITS` flag is gone (Android-only, never wired on iOS, retired by the dev-subscription-override plan).
 

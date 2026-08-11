@@ -226,7 +226,7 @@ CheckTestEligibilityUseCase(TestType.PPDT, userId)
 
 - `TestEligibility.LimitReached` → `isLimitReached = true` → `TestLimitReachedDialog` shown; test does not load.
 - `TestEligibility.NetworkError` → typed `TestError`, test does not load.
-- Usage recorded via `TestUsageRecorder.recordTestUsage(...)` on successful submission (see Section 8) — not a direct Firestore increment inside the ViewModel.
+- Usage recorded via `TestUsageRecorder.recordTestUsage(...)` on successful submission (see Section 8) — not a direct Firestore increment inside the ViewModel, and as of Phase 5 (docs/plans/CrossPlatform_SSOT) not a direct Firestore write at all: it calls the server-side `recordTestUsage` Cloud Function.
 - **Debug override:** the old `BuildConfig.BYPASS_SUBSCRIPTION_LIMITS` flag is gone (Android-only, never wired on iOS, retired by the dev-subscription-override plan). Settings → Developer Settings → **Subscription Override** now does the same job on both platforms without a rebuild: `Follow Real` / `Force Free` / `Force Pro` / `Force Premium` changes what every eligibility/limit read sees; usage counters are not incremented while overridden.
 
 ---
@@ -960,6 +960,8 @@ match /subscription/{document} {
 ```
 
 `GitLiveTestUsageRecorder.recordTestUsage()` is the only writer, called from step 4 of Section 8's flow. Doc id is `usage_{yyyy-MM}`; the `month` **field** stored inside the doc is the bare `{yyyy-MM}` value (`getMonthlyUsage()` reads it back for display). **Any future rule change that compares `month` to `document` directly, instead of reconstructing `'usage_' + month`, reintroduces #17.** Generic trap, not PPDT-specific: wherever a wildcard path segment encodes a derived form of a field the doc also stores, compare by reconstruction, not direct equality.
+
+**Superseded by Phase 5 (docs/plans/CrossPlatform_SSOT):** the `create`/`update` rules quoted above no longer exist — `firestore.rules` now reads `allow read: if isOwner(userId); allow write: if false;` for this path. `GitLiveTestUsageRecorder.recordTestUsage()` calls the `recordTestUsage` Cloud Function (Admin SDK, bypasses rules) instead of writing the doc directly, so the reconstruction trap above can no longer recur in *client* rules — but the same reconstruction (`'usage_' + month`, not `document`) still applies inside `functions/src/eligibility.js`, which now owns this doc id shape.
 
 A rule that *adds* a restriction is the highest-risk change in this codebase — see Section 25 for why and how to verify one safely before it ships.
 

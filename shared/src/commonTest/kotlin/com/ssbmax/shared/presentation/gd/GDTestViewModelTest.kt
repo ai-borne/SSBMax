@@ -14,6 +14,7 @@ import com.ssbmax.shared.presentation.testing.FakeSubmissionAnalysisTrigger
 import com.ssbmax.shared.presentation.testing.FakeSubmissionRepository
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
 import com.ssbmax.shared.presentation.testing.FakeTestContentRepository
+import com.ssbmax.shared.presentation.testing.FakeTestUsageRecorder
 import com.ssbmax.shared.presentation.testing.RecordingAnalyticsTracker
 import com.ssbmax.shared.presentation.testing.testUser
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ class GDTestViewModelTest {
     private lateinit var authRepository: FakeAuthRepository
     private lateinit var subscriptionRepository: FakeSubscriptionRepository
     private lateinit var gtoRepository: FakeGTORepository
+    private lateinit var usageRecorder: FakeTestUsageRecorder
     private lateinit var testContentRepository: FakeTestContentRepository
     private lateinit var submissionRepository: FakeSubmissionRepository
     private lateinit var analysisTrigger: FakeSubmissionAnalysisTrigger
@@ -53,6 +55,7 @@ class GDTestViewModelTest {
         authRepository = FakeAuthRepository(initialUser = testUser())
         subscriptionRepository = FakeSubscriptionRepository()
         gtoRepository = FakeGTORepository()
+        usageRecorder = FakeTestUsageRecorder()
         testContentRepository = FakeTestContentRepository()
         submissionRepository = FakeSubmissionRepository()
         analysisTrigger = FakeSubmissionAnalysisTrigger()
@@ -78,6 +81,7 @@ class GDTestViewModelTest {
         )
         val submissionCoordinator = GTOSubmissionCoordinator(
             gtoRepository = gtoRepository,
+            usageRecorder = usageRecorder,
             analysisTrigger = analysisTrigger,
             logger = logger
         )
@@ -180,7 +184,7 @@ class GDTestViewModelTest {
         assertTrue(state.isCompleted)
         assertEquals(GDPhase.SUBMITTED, state.phase)
         assertNotNull(state.submissionId)
-        assertTrue(gtoRepository.recordedUsage.isNotEmpty())
+        assertTrue(usageRecorder.recorded.isNotEmpty())
         assertTrue(gtoRepository.recordedProgress.isNotEmpty())
         assertTrue(analysisTrigger.triggeredCalls.isNotEmpty())
     }

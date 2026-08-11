@@ -201,6 +201,14 @@ export class PsychologyTestViewModel {
 
     try {
       // Direct API invocation for online evaluation
+      // Phase 5 (docs/plans/CrossPlatform_SSOT) intentionally does not wire
+      // EligibilityService.recordTestUsage here: TAT/WAT/SRT/PPDT have no real
+      // server-side submission/scoring call on web yet (this branch is a stub --
+      // no Cloud Function invocation exists to make the result durable), so there is
+      // no successful submission event to charge quota against. Recorded as an
+      // accepted divergence from KMP (which does record usage for these test types)
+      // rather than wired against a stub. Wire it in alongside whatever change adds
+      // the real submission call.
       this.state = {
         ...this.state,
         isSubmitting: false,

@@ -92,8 +92,6 @@ class GTOAnalysisUnavailableException(submissionId: String) :
 data class GTOProgress(
     val userId: String,
     val completedTests: List<GTOTestType> = emptyList(),
-    val testsUsedThisMonth: Map<GTOTestType, Int> = emptyMap(),
-    val lastResetDate: Long = Clock.System.now().toEpochMilliseconds(),
     val currentSequentialOrder: Int = 1, // Next test to unlock (1-8)
     val lastCompletedAt: Long? = null
 ) {

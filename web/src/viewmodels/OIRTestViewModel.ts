@@ -2,6 +2,7 @@ import { OIRQuestion } from '../types/testContent';
 import { IContentRepository } from '../repositories/interfaces/IContentRepository';
 import { OfflineQueueService } from '../services/OfflineQueueService';
 import { OIRScoringService } from '../services/OIRScoringService';
+import { EligibilityService } from '../services/EligibilityService';
 
 export interface OIRAnswerPayload {
   questionId: string;
@@ -40,6 +41,7 @@ export class OIRTestViewModel {
   private repository: IContentRepository;
   private offlineQueueService: OfflineQueueService;
   private scoringService: OIRScoringService;
+  private eligibilityService: EligibilityService;
   private state: OIRTestState;
   private listeners: Set<() => void> = new Set();
   private totalDurationSeconds: number = 30 * 60; // 30 minutes for 50 questions
@@ -47,11 +49,13 @@ export class OIRTestViewModel {
   constructor(
     repository: IContentRepository,
     offlineQueueService: OfflineQueueService = new OfflineQueueService(),
-    scoringService: OIRScoringService = new OIRScoringService()
+    scoringService: OIRScoringService = new OIRScoringService(),
+    eligibilityService: EligibilityService = new EligibilityService()
   ) {
     this.repository = repository;
     this.offlineQueueService = offlineQueueService;
     this.scoringService = scoringService;
+    this.eligibilityService = eligibilityService;
     this.state = {
       questions: [],
       currentIndex: 0,
@@ -214,6 +218,16 @@ export class OIRTestViewModel {
         this.state.batchId,
         this.state.answers
       );
+
+      // Charge quota only after the score is durable server-side. A recordTestUsage failure
+      // (including resource-exhausted, if the client-side eligibility check was stale) is
+      // logged, not surfaced -- the evaluation already succeeded and the user has already
+      // earned this result, matching the KMP submit use cases' same "log, don't block" handling.
+      try {
+        await this.eligibilityService.recordTestUsage('OIR', crypto.randomUUID());
+      } catch (usageError) {
+        console.error('Failed to record OIR test usage', usageError);
+      }
 
       const evalResult: OIREvaluationResult = {
         score: evaluation.score,

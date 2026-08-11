@@ -221,7 +221,7 @@ Each OIR test is a **freshly sampled 50-question set** drawn from the **flattene
 - `NetworkError` → stop and show retry state.
 - Unknown/malformed subscription data → fail closed rather than granting access.
 
-`recordTestUsage()` increments usage atomically in a Firestore transaction after durable submission. Its submission/session identity makes retries idempotent. `markQuestionsUsed()` updates SQLDelight for the 7-day reuse window and is best effort after the durable flow succeeds.
+`recordTestUsage()` calls the server-side `recordTestUsage` Cloud Function (Phase 5, docs/plans/CrossPlatform_SSOT) after durable submission — clients can no longer write `subscription/usage_*` directly, so the function is the sole writer and the real quota gate. Its submission/session identity makes retries idempotent (dedup now lives in the function's transaction, not the client). `markQuestionsUsed()` updates SQLDelight for the 7-day reuse window and is best effort after the durable flow succeeds.
 
 ### Start-Gate Decision Table
 
@@ -247,7 +247,7 @@ getTestQuestions(50)     → SQLDelight query with type distribution + 7-day pre
 SubmitOIRTestUseCase:
   1. scoreCalculator.calculate(session)
   2. submissionRepository.submitOIR(submission)  → durable submissionId
-  3. usageRecorder.recordTestUsage(OIR, userId, submissionId) ← idempotent Firestore transaction
+  3. usageRecorder.recordTestUsage(OIR, userId, submissionId) ← recordTestUsage Cloud Function (idempotent by submissionId, server-side)
   4. testSessionRepository.endTestSession(sessionId)
   5. dashboardUseCase.invalidateCache(userId)
 markQuestionsUsed()      → SQLDelight (7-day suppression)

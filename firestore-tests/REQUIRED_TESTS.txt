@@ -25,10 +25,15 @@ test_sessions.rules.test.mjs|userId, testId, and testType are immutable on updat
 test_sessions.rules.test.mjs|an unauthenticated client cannot update a session
 test_sessions.rules.test.mjs|a client cannot create a session with someone else's userId
 test_sessions.rules.test.mjs|a client cannot delete a session
-subscription_usage.rules.test.mjs|the real write shape (bare month field, usage_-prefixed doc id) is allowed
-subscription_usage.rules.test.mjs|a doc id that does not match usage_{month} is rejected
-subscription_usage.rules.test.mjs|a client cannot create a usage doc for another user
-subscription_usage.rules.test.mjs|an existing usage doc accepts an incremental update recording one more submission
-subscription_usage.rules.test.mjs|an update cannot jump a counter by more than one attempt
+# Phase 5 (docs/plans/CrossPlatform_SSOT) removed the five pinned tests that used to live here --
+# they asserted clients COULD write usage_{month} docs directly (the exact write shape
+# GitLiveTestUsageRecorder used pre-Phase-5). That write path no longer exists: the
+# recordTestUsage callable Cloud Function (functions/src/eligibility.js, Admin SDK) is now the
+# sole writer, and firestore.rules denies all client writes to this path. The tests below pin
+# the opposite guarantee.
+subscription_usage.rules.test.mjs|a client cannot create a usage doc directly, even a well-formed one
+subscription_usage.rules.test.mjs|a client cannot update an existing usage doc, even by exactly one attempt
+subscription_usage.rules.test.mjs|a client cannot delete a usage doc
+subscription_usage.rules.test.mjs|a user can still read their own usage doc (optimistic UX check survives the lockdown)
 submissions.rules.test.mjs|a first OIR submission under a fresh, session-decoupled id succeeds under the create rule
 submissions.rules.test.mjs|a retake creates a second, distinct OIR submission doc against the same test_sessions doc

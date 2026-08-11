@@ -8,6 +8,7 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
   let mockRepo: IContentRepository;
   let mockOfflineQueue: any;
   let mockScoringService: any;
+  let mockEligibilityService: any;
 
   const sampleQuestions: OIRQuestion[] = [
     {
@@ -60,7 +61,11 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
       })
     };
 
-    viewModel = new OIRTestViewModel(mockRepo, mockOfflineQueue, mockScoringService);
+    mockEligibilityService = {
+      recordTestUsage: vi.fn().mockResolvedValue({ success: true, alreadyRecorded: false, used: 1, limit: 5 })
+    };
+
+    viewModel = new OIRTestViewModel(mockRepo, mockOfflineQueue, mockScoringService, mockEligibilityService);
   });
 
   it('should load questions and initialize state correctly', async () => {
@@ -104,6 +109,22 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     expect(state.isCompleted).toBe(true);
     expect(state.result).not.toBeNull();
     expect(state.result?.totalQuestions).toBe(2);
+    expect(state.result?.score).toBe(1);
+    // Phase 5 (docs/plans/CrossPlatform_SSOT): quota is only charged after the score is
+    // durable server-side -- this is the first and only place web records OIR usage.
+    expect(mockEligibilityService.recordTestUsage).toHaveBeenCalledWith('OIR', expect.any(String));
+  });
+
+  it('still completes and shows the result even if recordTestUsage fails (log, do not block an already-earned score)', async () => {
+    mockEligibilityService.recordTestUsage.mockRejectedValue(new Error('resource-exhausted'));
+    await viewModel.loadQuestions(0);
+    viewModel.selectOption('q1', 2);
+    viewModel.selectOption('q2', 0);
+
+    await viewModel.submitTest('user-123', true);
+    const state = viewModel.getState();
+
+    expect(state.isCompleted).toBe(true);
     expect(state.result?.score).toBe(1);
   });
 

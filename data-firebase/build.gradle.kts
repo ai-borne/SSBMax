@@ -107,6 +107,7 @@ kotlin {
             // FirebaseDecoder/FirebaseEncoder.
             implementation(libs.gitlive.firebase.common.internal)
             implementation(libs.gitlive.firebase.storage)
+            implementation(libs.gitlive.firebase.functions)
 
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
