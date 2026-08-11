@@ -112,7 +112,7 @@ export class ContentRepository implements IContentRepository {
     }
   }
 
-  async getPPDTContext(id = 'ppdt_1'): Promise<PPDTContext> {
+  async getPPDTContext(id = 'batch_001'): Promise<PPDTContext> {
     try {
       const snap = await getDoc(doc(db, FirestorePaths.TestContent.PPDT_BATCHES, id));
       if (!snap.exists()) {

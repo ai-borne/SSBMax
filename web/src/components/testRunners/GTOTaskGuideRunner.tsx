@@ -42,6 +42,32 @@ export const GTOTaskGuideRunner: FC<GTOTaskGuideRunnerProps> = ({
     );
   }
 
+  if (secondsRemaining <= 0) {
+    return (
+      <div className="p-8 bg-slate-900 border border-slate-800 rounded-xl text-center max-w-lg mx-auto space-y-6 shadow-xl my-8 text-white">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto animate-pulse">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-black text-white mb-1">{config.title} Completed</h2>
+          <p className="text-xs text-slate-400 leading-relaxed">Timed task simulation finished. Great job practicing your GTO / Interview execution!</p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+          <button
+            onClick={onExitTest}
+            data-testid="return-to-tests-button"
+            className="min-h-[44px] px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20 transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Return to SSB Tests</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const formatTimer = (totalSecs: number) => {
     const mins = Math.floor(totalSecs / 60);
     const secs = totalSecs % 60;

@@ -70,7 +70,7 @@ export class PsychologyTestViewModel {
   /**
    * Loads psychology test content based on test type
    */
-  async loadTestContent(batchId: string = 'batch-1'): Promise<void> {
+  async loadTestContent(batchId: string = 'batch_001'): Promise<void> {
     this.state = { ...this.state, isLoading: true, error: null };
     this.notify();
 
