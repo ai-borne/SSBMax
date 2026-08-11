@@ -163,7 +163,12 @@ export function mapDocToPPDTContext(id: string, data?: Record<string, any>): PPD
   let item: any = data;
   if (Array.isArray(data.images) && data.images.length > 0) {
     const found = data.images.find((img: any) => img.id === id || img.imageUrl === id);
-    item = found || data.images[0];
+    if (found) {
+      item = found;
+    } else {
+      const randomIndex = Math.floor(Math.random() * data.images.length);
+      item = data.images[randomIndex];
+    }
   }
 
   const rawUrl = item.imageUrl || item.image || item.url || data.imageUrl || data.image || '';
@@ -175,6 +180,19 @@ export function mapDocToPPDTContext(id: string, data?: Record<string, any>): PPD
     ? item.writingTimeMinutes * 60
     : 240;
 
+  const rawContext = item.context || item.imageContext || data.context || data.imageContext;
+  const imageContext = rawContext ? {
+    sceneDescription: rawContext.sceneDescription || '',
+    coreElements: Array.isArray(rawContext.coreElements) ? rawContext.coreElements : [],
+    ambiguousElements: Array.isArray(rawContext.ambiguousElements) ? rawContext.ambiguousElements : [],
+    expectedThemes: Array.isArray(rawContext.expectedThemes) ? rawContext.expectedThemes : [],
+    penalizedThemes: Array.isArray(rawContext.penalizedThemes) ? rawContext.penalizedThemes : [],
+    primaryOLQs: Array.isArray(rawContext.primaryOLQs) ? rawContext.primaryOLQs : [],
+    deviationTolerance: rawContext.deviationTolerance || 'MEDIUM',
+    exemplarGoodHints: Array.isArray(rawContext.exemplarGoodHints) ? rawContext.exemplarGoodHints : [],
+    exemplarBadHints: Array.isArray(rawContext.exemplarBadHints) ? rawContext.exemplarBadHints : []
+  } : undefined;
+
   return {
     id: item.id || data.id || id,
     title: item.title || item.imageDescription || data.title || data.setName || 'PPDT Image Test',
@@ -183,7 +201,8 @@ export function mapDocToPPDTContext(id: string, data?: Record<string, any>): PPD
     writingTimeSeconds,
     instructions: Array.isArray(data.instructions)
       ? data.instructions
-      : ['Observe the picture for 30 seconds.', 'Identify characters and write a constructive story in 4 minutes.']
+      : ['Observe the picture for 30 seconds.', 'Identify characters and write a constructive story in 4 minutes.'],
+    imageContext
   };
 }
 

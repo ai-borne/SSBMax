@@ -45,18 +45,29 @@ export function getFallbackOIRBatch(batchIndex = 0): BatchDocument<OIRQuestion> 
   };
 }
 
-export function getFallbackPPDTContext(id = 'ppdt_1'): PPDTContext {
+export function getFallbackPPDTContext(id = 'batch_001'): PPDTContext {
   return {
     id,
     title: 'Stage I PPDT Picture Stimulus',
-    imageUrl: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=800&q=80',
+    imageUrl: 'https://storage.googleapis.com/ssbmax-49e68.firebasestorage.app/ppdt_images/batch_001/ppdt_image_001.jpg',
     viewingTimeSeconds: 30,
     writingTimeSeconds: 240,
     instructions: [
       'Observe the picture for 30 seconds.',
       'Identify number of characters, age, gender, and mood.',
       'Write a constructive, action-oriented story in 4 minutes.'
-    ]
+    ],
+    imageContext: {
+      sceneDescription: 'A group of people assembled near a community infrastructure site',
+      coreElements: ['Community assembly', 'Group members', 'Leader/Coordinator'],
+      ambiguousElements: ['Specific background details', 'Exact environmental conditions'],
+      expectedThemes: ['Community problem solving', 'Leadership and initiative', 'Infrastructure development'],
+      penalizedThemes: ['Violence', 'Panic', 'Fatalism', 'Crime'],
+      primaryOLQs: ['INITIATIVE', 'ORGANIZING_ABILITY', 'SOCIAL_ADJUSTMENT', 'REASONING_ABILITY'],
+      deviationTolerance: 'MEDIUM',
+      exemplarGoodHints: ['Proactive group coordination', 'Resource allocation and planning'],
+      exemplarBadHints: ['Passive observation', 'Blaming authorities without action']
+    }
   };
 }
 

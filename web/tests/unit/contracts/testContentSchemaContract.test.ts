@@ -173,6 +173,42 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
     expect(result.writingTimeSeconds).toBe(240);
   });
 
+  it('CONTRACT: MUST decode PPDTImageContext rubric fields from Firestore batch document', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({
+      exists: () => true,
+      id: 'batch_001',
+      data: () => ({
+        batch_id: 'batch_001',
+        totalImages: 1,
+        images: [
+          {
+            id: 'ppdt_001',
+            imageUrl: 'https://storage.googleapis.com/ssbmax-prod.appspot.com/ppdt/ppdt_image_001.jpg',
+            imageDescription: 'A group of villagers meeting near a bridge',
+            context: {
+              sceneDescription: 'Villagers meeting near damaged bridge',
+              coreElements: ['Damaged bridge', 'Group of villagers', 'Paper carrying leader'],
+              expectedThemes: ['Community repair', 'Leadership action'],
+              penalizedThemes: ['Violent protest', 'Crime'],
+              primaryOLQs: ['INITIATIVE', 'ORGANIZING_ABILITY', 'SOCIAL_ADJUSTMENT'],
+              deviationTolerance: 'MEDIUM'
+            }
+          }
+        ]
+      })
+    } as any);
+
+    const result = await repository.getPPDTContext('batch_001');
+
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content/ppdt/image_batches', 'batch_001');
+    expect(result.id).toBe('ppdt_001');
+    expect(result.imageUrl).toBe('https://storage.googleapis.com/ssbmax-prod.appspot.com/ppdt/ppdt_image_001.jpg');
+    expect(result.imageContext).toBeDefined();
+    expect(result.imageContext?.sceneDescription).toBe('Villagers meeting near damaged bridge');
+    expect(result.imageContext?.coreElements).toEqual(['Damaged bridge', 'Group of villagers', 'Paper carrying leader']);
+    expect(result.imageContext?.primaryOLQs).toEqual(['INITIATIVE', 'ORGANIZING_ABILITY', 'SOCIAL_ADJUSTMENT']);
+  });
+
   it('CONTRACT: a missing PPDT context fails loudly with ContentUnavailableError', async () => {
     vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
     await expect(repository.getPPDTContext('ppdt_missing')).rejects.toBeInstanceOf(ContentUnavailableError);

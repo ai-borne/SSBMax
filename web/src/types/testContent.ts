@@ -13,6 +13,18 @@ export interface OIRQuestion {
   // Security Note: correctAnswerIndex is omitted from client payloads for anti-cheating.
 }
 
+export interface PPDTImageContext {
+  sceneDescription?: string;
+  coreElements?: string[];
+  ambiguousElements?: string[];
+  expectedThemes?: string[];
+  penalizedThemes?: string[];
+  primaryOLQs?: string[];
+  deviationTolerance?: string;
+  exemplarGoodHints?: string[];
+  exemplarBadHints?: string[];
+}
+
 export interface PPDTContext {
   id: string;
   title: string;
@@ -20,6 +32,7 @@ export interface PPDTContext {
   viewingTimeSeconds: number;
   writingTimeSeconds: number;
   instructions: string[];
+  imageContext?: PPDTImageContext;
 }
 
 export interface TATSet {
