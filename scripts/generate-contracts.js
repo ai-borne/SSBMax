@@ -29,6 +29,7 @@ const { emitKotlin } = require('./lib/contracts/emit-kotlin');
 const { emitTypeScript } = require('./lib/contracts/emit-typescript');
 const { emitCjs } = require('./lib/contracts/emit-cjs');
 const { emitRulesPaths } = require('./lib/contracts/emit-rules-paths');
+const { emitCss } = require('./lib/contracts/emit-css');
 
 function generateAll(data) {
   const bundle = data || loadAllContracts();
@@ -37,6 +38,7 @@ function generateAll(data) {
     'contracts.ts': emitTypeScript(bundle),
     'contracts.cjs': emitCjs(bundle),
     'rules-paths.json': emitRulesPaths(bundle),
+    'tokens.css': emitCss(bundle),
   };
 }
 
@@ -99,6 +101,7 @@ module.exports = {
   emitTypeScript,
   emitCjs,
   emitRulesPaths,
+  emitCss,
   CONTRACTS_DIR,
   GENERATED_DIR,
   MIRROR_TARGETS,

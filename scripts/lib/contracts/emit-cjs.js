@@ -3,7 +3,7 @@
 const { header, ALL_SOURCE_FILES } = require('./header');
 
 function emitCjs(data) {
-  const { firestorePaths, enums, subscription, testConfig, events, routes } = data;
+  const { firestorePaths, enums, subscription, testConfig, events, routes, tokens } = data;
   const out = [];
   out.push(header('cjs', ALL_SOURCE_FILES));
 
@@ -43,6 +43,12 @@ function emitCjs(data) {
   const Routes = { MINIMUM_SUPPORTED_APP_VERSION: routes.minimumSupportedAppVersion };
   for (const r of routes.routes) Routes[r.name] = r.path;
 
+  const DesignTokens = { light: {}, dark: {} };
+  for (const t of tokens.tokens) {
+    DesignTokens.light[t.name] = t.light;
+    DesignTokens.dark[t.name] = t.dark;
+  }
+
   out.push(`const FirestorePaths = ${JSON.stringify(FirestorePaths, null, 2)};`);
   out.push('');
   out.push(`const Enums = ${JSON.stringify(EnumsOut, null, 2)};`);
@@ -55,7 +61,9 @@ function emitCjs(data) {
   out.push('');
   out.push(`const Routes = ${JSON.stringify(Routes, null, 2)};`);
   out.push('');
-  out.push('module.exports = { FirestorePaths, Enums, SubscriptionLimits, TestConfig, SecurityEvents, Routes };');
+  out.push(`const DesignTokens = ${JSON.stringify(DesignTokens, null, 2)};`);
+  out.push('');
+  out.push('module.exports = { FirestorePaths, Enums, SubscriptionLimits, TestConfig, SecurityEvents, Routes, DesignTokens };');
   out.push('');
 
   return out.join('\n');

@@ -47,12 +47,14 @@ class PhaseProgressRibbonUiTest {
         )
 
         setContent {
-            PhaseProgressRibbon(
+            com.ssbmax.shared.ui.theme.SSBMaxTheme {
+                PhaseProgressRibbon(
                 phase1Progress = phase1Progress,
                 phase2Progress = null,
                 onPhaseClick = {},
                 onTopicClick = {}
-            )
+                )
+            }
         }
 
         onNodeWithText("PHASE 1", substring = true).assertIsDisplayed()
@@ -67,12 +69,14 @@ class PhaseProgressRibbonUiTest {
         )
 
         setContent {
-            PhaseProgressRibbon(
+            com.ssbmax.shared.ui.theme.SSBMaxTheme {
+                PhaseProgressRibbon(
                 phase1Progress = null,
                 phase2Progress = phase2Progress,
                 onPhaseClick = {},
                 onTopicClick = {}
-            )
+                )
+            }
         }
 
         onNodeWithText("PHASE 2", substring = true).assertIsDisplayed()
@@ -87,12 +91,14 @@ class PhaseProgressRibbonUiTest {
         )
 
         setContent {
-            PhaseProgressRibbon(
+            com.ssbmax.shared.ui.theme.SSBMaxTheme {
+                PhaseProgressRibbon(
                 phase1Progress = phase1Progress,
                 phase2Progress = null,
                 onPhaseClick = { phaseClicked = true },
                 onTopicClick = {}
-            )
+                )
+            }
         }
 
         // Phase1Card has multiple clickable descendants (the card itself,
@@ -124,12 +130,14 @@ class PhaseProgressRibbonUiTest {
         )
 
         setContent {
-            PhaseProgressRibbon(
+            com.ssbmax.shared.ui.theme.SSBMaxTheme {
+                PhaseProgressRibbon(
                 phase1Progress = phase1Progress,
                 phase2Progress = null,
                 onPhaseClick = {},
                 onTopicClick = { capturedTopicId = it }
-            )
+                )
+            }
         }
 
         onNodeWithText("OIR Test", substring = false).performClick()

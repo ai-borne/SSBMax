@@ -2,7 +2,7 @@
  * DO NOT EDIT. Generated file — hand edits will be overwritten and are
  * caught by `npm run contracts:check` in CI / pre-commit.
  *
- * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, test-config.yaml, events.yaml, routes.yaml (contracts/README.md documents the SSOT policy)
+ * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
  * Regenerate: node scripts/generate-contracts.js
  *
  * SRP justification for exceeding the project 300-LOC limit: this file has
@@ -468,4 +468,61 @@ const Routes = {
   "SUBMISSION_DETAIL": "submission/{submissionId}"
 };
 
-module.exports = { FirestorePaths, Enums, SubscriptionLimits, TestConfig, SecurityEvents, Routes };
+const DesignTokens = {
+  "light": {
+    "bgPrimary": "#f8fafc",
+    "bgSecondary": "#ffffff",
+    "bgCard": "#ffffff",
+    "bgElevated": "#f1f5f9",
+    "textPrimary": "#0f172a",
+    "textSecondary": "#475569",
+    "textMuted": "#94a3b8",
+    "border": "#e2e8f0",
+    "borderSubtle": "#f1f5f9",
+    "accent": "#0284c7",
+    "accentHover": "#0369a1",
+    "success": "#16a34a",
+    "warning": "#d97706",
+    "danger": "#dc2626",
+    "info": "#0284c7",
+    "gold": "#d97706",
+    "goldSubtle": "#d977061a",
+    "emerald": "#059669",
+    "emeraldSubtle": "#0596691a",
+    "violet": "#7c3aed",
+    "violetSubtle": "#7c3aed1a",
+    "day1": "#4f46e5",
+    "day2": "#7c3aed",
+    "day34": "#0d9488",
+    "day5": "#d97706"
+  },
+  "dark": {
+    "bgPrimary": "#0b0f19",
+    "bgSecondary": "#0f172a",
+    "bgCard": "#1e293b",
+    "bgElevated": "#334155",
+    "textPrimary": "#f8fafc",
+    "textSecondary": "#94a3b8",
+    "textMuted": "#64748b",
+    "border": "#334155",
+    "borderSubtle": "#1e293b",
+    "accent": "#38bdf8",
+    "accentHover": "#0284c7",
+    "success": "#22c55e",
+    "warning": "#f59e0b",
+    "danger": "#ef4444",
+    "info": "#38bdf8",
+    "gold": "#f59e0b",
+    "goldSubtle": "#f59e0b1a",
+    "emerald": "#10b981",
+    "emeraldSubtle": "#10b9811a",
+    "violet": "#8b5cf6",
+    "violetSubtle": "#8b5cf61a",
+    "day1": "#6366f1",
+    "day2": "#8b5cf6",
+    "day34": "#14b8a6",
+    "day5": "#f59e0b"
+  }
+};
+
+module.exports = { FirestorePaths, Enums, SubscriptionLimits, TestConfig, SecurityEvents, Routes, DesignTokens };

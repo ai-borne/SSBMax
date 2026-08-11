@@ -1,6 +1,8 @@
 # Cross-Platform SSOT — Execution Plan (Android + iOS + Web + Functions)
 
-**Status:** Phases 0–6 complete. Phases 7–8 optional, not started.
+**Status:** Phases 0–7 complete (Phase 7's color-token half implemented in full;
+its strings half deliberately not built — see Phase 7 Handoff). Phase 8
+optional, not started.
 **Created:** 2026-08-10
 **Owner:** sunilpawar (indie — optimise for low token/time cost per phase)
 **Scope:** Establishing and mechanically enforcing a single source of truth across
@@ -764,3 +766,132 @@ CI matrix should run the content health check on a schedule.
   more than a tech-debt-sweep-sized change. Flagged for a follow-up task.
 - **OIR content-version (`test_content/oir/meta/config`) has no web read path either**,
   same Open Question 1 resolution, same gap category, same reason for not fixing here.
+
+---
+
+## Phase 7 Handoff
+
+### Scoping decision, made before implementation
+
+The plan's Phase 7 goal bundles two sub-goals: color-token codegen ("one palette,
+two renderings") and strings codegen. Investigating both before writing code
+surfaced a real fork the plan's own text doesn't quite anticipate:
+
+- **Colors:** KMP's `SSBColors` (navy/olive/military-gold, no dark-mode variant)
+  and web's `themeColors`/`index.css` (slate/sky, full light+dark) were two
+  *different visual languages*, not spelling variants of the same thing — unlike
+  the OLQ/subscription forks fixed in Phases 3–4, which really were the same
+  thing said two ways. This was surfaced to the user as a genuine product
+  decision (not guessed): **full unification**, chosen explicitly — web's
+  palette wins (it already had light+dark), and KMP's military palette is
+  retired.
+- **Strings:** By the time Phase 7 started, the only two vocabularies that are
+  *genuinely* shared (not just each platform's own UI chrome) were already
+  unified — OLQ display names via `enums.yaml`'s `displayName` field (Phase 3)
+  and subscription tier names, Free/Pro/Premium on every platform (Phase 4,
+  Open Question 2). Building a `contracts/strings/*.yaml` + Compose-XML/TS
+  generator now would duplicate that win and pull genuinely platform-specific
+  UI copy (web marketing copy vs. in-app copy — the plan's own Tier-3
+  classification, §2) into a Tier-1 mechanism designed for values that must be
+  byte-identical. Scoped out; verified via grep that no unshared cross-platform
+  wording risk remains (tier names, OLQ names).
+
+### 1. Tech debt incurred
+
+- Building `contracts/tokens.yaml` and wiring `SsbContracts.DesignTokens` into
+  KMP's `MaterialTheme` `ColorScheme` (`Theme.kt`) surfaced that
+  `secondaryContainer`/`tertiaryContainer`/`errorContainer`, if paired with the
+  generic `textPrimary`/`onSurface` neutral tokens, land several brand hues
+  (`accent`, `emerald`, `gold`, `danger`) in a WCAG AA dead zone —
+  [SemanticUiStandardsTest](shared/src/androidUnitTest/kotlin/com/ssbmax/shared/ui/theme/SemanticUiStandardsTest.kt)'s
+  contrast assertions caught this immediately (`info=4.0953298`, then
+  `info=4.359242` after a first attempted fix, both below the 4.5:1 floor).
+  A related latent bug: `SemanticColors.onWarning` was hardcoded to the
+  generic `onSurface` instead of `onTertiaryContainer` — an existing fragility
+  the token swap exposed rather than introduced (the old `SSBColors` palette's
+  `tertiaryContainer` happened to auto-derive dark enough in dark mode to pass
+  by coincidence).
+- Provisioning `LocalDesignTokens` (a new required `CompositionLocal`, same
+  strict-`error()`-on-missing convention as the pre-existing
+  `LocalSemanticColors`) broke two Robolectric UI test suites that render
+  production composables without wrapping them in `SSBMaxTheme`
+  (`PhaseProgressRibbonUiTest`, `StudentHomeScreenUiTest`) — they never needed
+  a theme wrapper before because `StudentHomeSections.kt`/`TestProgressItem.kt`
+  read `SSBColors` (a plain object, no composition-local) directly.
+
+### 2. How it was resolved (immediately, not deferred)
+
+- `Theme.kt`: every `onX`/`onXContainer` painted on top of a brand-hue fill
+  (`onPrimary`, `onPrimaryContainer`, `onSecondary`, `onSecondaryContainer`,
+  `onTertiary`, `onTertiaryContainer`, `onError`, `onErrorContainer`) is now
+  literal `Color.Black`/`Color.White` — computed per-token via the WCAG
+  relative-luminance crossover (a container role passes with black text above
+  ~0.179 relative luminance, white text below it; `accent`'s 0.2064 is close
+  enough to that line that neither `textPrimary` nor `bgPrimary`, both a few
+  points off pure black/white, clears 4.5:1 — only a true extreme does).
+  Structural roles (`background`, `surface`, `surfaceVariant`, `onBackground`,
+  `onSurface`, `onSurfaceVariant`) stay on the soft `bgPrimary`/`bgCard`/
+  `bgElevated`/`textPrimary`/`textSecondary` tokens, which were never in the
+  dead zone (neutral-on-neutral, wide margins). `secondaryContainer`/
+  `tertiaryContainer`/`errorContainer` are pinned to solid (non-`Subtle`)
+  tokens rather than the alpha-bearing `*Subtle` tier tokens (those exist for
+  web's translucent tier-badge CSS, not Compose's solid Material container
+  roles) or Compose's un-derived Material baseline defaults (the latter *is*
+  the unbranded purple/pink `SSBMaxTheme`'s own doc comment already flags as a
+  historical bug).
+- `SemanticColors.kt`: `onWarning` changed from `onSurface` to
+  `onTertiaryContainer`, matching how `onSuccess`/`onError` already pair with
+  their own container's dedicated "on" role rather than the generic surface
+  role.
+- `PhaseProgressRibbonUiTest.kt`/`StudentHomeScreenUiTest.kt`: wrapped
+  `setContent` bodies in `SSBMaxTheme { }` — the same requirement production
+  rendering already satisfies via the app's root theme wrapper, now made
+  explicit in the tests that render these composables directly.
+- Verified every fix against the actual `contrastRatio()` implementation (WCAG
+  2 relative-luminance formula, alpha ignored) rather than eyeballing hex
+  values — recomputed all ten brand-hue/neutral pairs by hand before editing,
+  then confirmed with `./gradlew :shared:testDebugUnitTest`.
+- Tech-debt sweep: `SSBScoreTheme.kt`'s `SSBScoreColors` object (touched this
+  phase to migrate off `SSBColors`) turned out to have zero callers anywhere
+  in the repo (confirmed by grep, predates this phase) — deleted per root
+  CLAUDE.md's "delete dangling code when you're already touching the area"
+  rule rather than migrating dead code to the new token system.
+
+### 3. Build & test confirmation
+
+- `./gradlew check` (KMP: lint + detekt + unit tests, Android + iOS + JVM,
+  all modules) ......................................................... PASS
+- `node scripts/generate-contracts.js --check` ......................... PASS
+- `node --test scripts/test/generate-contracts.test.js` ................ PASS
+  (18/18 — 4 new: Kotlin/TS/CJS/CSS token golden-file assertions plus a
+  cross-language token-parity test mirroring Phase 3's OLQ-parity test)
+- `web: npm run build` .................................................. PASS
+- `web: npm run test` .................................................. PASS (303 tests,
+  55 files — includes the pre-existing `colors.test.ts`, which now exercises
+  the generated contract transitively via `colors.ts`'s re-export)
+- `functions: npm test` ................................................. PASS (27/27)
+- `scripts/validate-security.sh` ....................................... PASS (10/10)
+
+### 4. Contract changes shipped this phase
+
+- New file `contracts/tokens.yaml` (schemaVersion 1.0.0): 25 color tokens
+  across 7 categories (elevation, text, border, accent, status, tier,
+  journey), each with a light and dark hex value. Additive — no existing
+  contract file changed shape.
+- New generated output `generated/tokens.css` (mirrored to
+  `web/src/generated/tokens.css`), consumed by `web/src/index.css` via
+  `@import`. `SsbContracts.kt`/`contracts.ts`/`contracts.cjs` gained a
+  `DesignTokens`/`Palette` section (Kotlin `object`, TS `interface` + `const`,
+  CJS export) alongside the existing `FirestorePaths`/`Enums`/etc. sections.
+
+### 5. Accepted divergences (carried over from Phase 6, still open — not this
+phase's scope, re-flagged for visibility per the deep-check the user asked for)
+
+- **GPE content still has no web read path** (`ContentRepository`'s
+  `subcollMap` has a `gto` entry but no `gpe` entry, and there is no
+  `getGPEBatch` method). Phase 0b scope, not fixed in Phase 6 or Phase 7.
+- **OIR content-version (`test_content/oir/meta/config`) still has no web read
+  path.** Same category, same reason.
+- Phase 8 (remote kill-switch + CI hardening) remains **not started** — it is
+  explicitly optional in the plan's own phase table (§6) and was not
+  requested this session.

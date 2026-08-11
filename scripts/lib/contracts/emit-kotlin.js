@@ -6,11 +6,20 @@ function ktString(s) {
   return JSON.stringify(String(s));
 }
 
+// '#rrggbb' or '#rrggbbaa' -> Kotlin's 0xAARRGGBB Color(...) literal.
+function ktColor(hex) {
+  const h = hex.replace('#', '');
+  const argb = h.length === 8 ? h.slice(6, 8) + h.slice(0, 6) : `FF${h}`;
+  return `Color(0x${argb.toUpperCase()})`;
+}
+
 function emitKotlin(data) {
-  const { firestorePaths, enums, subscription, testConfig, events, routes } = data;
+  const { firestorePaths, enums, subscription, testConfig, events, routes, tokens } = data;
   const out = [];
   out.push(header('kt', ALL_SOURCE_FILES));
   out.push('package com.ssbmax.shared.contracts');
+  out.push('');
+  out.push('import androidx.compose.ui.graphics.Color');
   out.push('');
   out.push('object SsbContracts {');
   out.push('');
@@ -89,6 +98,22 @@ function emitKotlin(data) {
   for (const r of routes.routes) {
     out.push(`        const val ${r.name} = ${ktString(r.path)}`);
   }
+  out.push('    }');
+  out.push('');
+
+  // Design tokens (Phase 7)
+  out.push('    data class Palette(');
+  for (const t of tokens.tokens) {
+    out.push(`        val ${t.name}: Color,`);
+  }
+  out.push('    )');
+  out.push('    object DesignTokens {');
+  out.push('        val Light = Palette(');
+  out.push(tokens.tokens.map((t) => `            ${t.name} = ${ktColor(t.light)}`).join(',\n'));
+  out.push('        )');
+  out.push('        val Dark = Palette(');
+  out.push(tokens.tokens.map((t) => `            ${t.name} = ${ktColor(t.dark)}`).join(',\n'));
+  out.push('        )');
   out.push('    }');
   out.push('}');
   out.push('');

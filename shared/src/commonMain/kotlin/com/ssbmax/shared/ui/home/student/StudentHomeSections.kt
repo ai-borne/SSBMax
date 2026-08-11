@@ -10,13 +10,14 @@ import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import com.ssbmax.shared.ui.home.student.components.QuickActionCard
 import com.ssbmax.shared.ui.home.student.components.StatsCard
-import com.ssbmax.shared.ui.theme.SSBColors
 import com.ssbmax.shared.ui.theme.Spacing
+import com.ssbmax.shared.ui.theme.tokens
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.action_join_batch
@@ -47,7 +48,7 @@ internal fun StatsCardsRow(currentStreak: Int, testsCompleted: Int) {
             subtitle = stringResource(Res.string.stats_days),
             icon = Icons.Default.LocalFireDepartment,
             gradient = Brush.linearGradient(
-                colors = listOf(SSBColors.Warning, SSBColors.Warning.copy(alpha = 0.8f))
+                colors = listOf(MaterialTheme.tokens.warning, MaterialTheme.tokens.warning.copy(alpha = 0.8f))
             ),
             iconContentDescription = stringResource(Res.string.cd_stats_streak_icon),
             modifier = Modifier.weight(1f)
@@ -59,7 +60,7 @@ internal fun StatsCardsRow(currentStreak: Int, testsCompleted: Int) {
             subtitle = stringResource(Res.string.stats_tests),
             icon = Icons.Default.CheckCircle,
             gradient = Brush.linearGradient(
-                colors = listOf(SSBColors.Success, SSBColors.Success.copy(alpha = 0.8f))
+                colors = listOf(MaterialTheme.tokens.success, MaterialTheme.tokens.success.copy(alpha = 0.8f))
             ),
             iconContentDescription = stringResource(Res.string.cd_stats_tests_icon),
             modifier = Modifier.weight(1f)
@@ -76,7 +77,7 @@ internal fun QuickActionsRowOne(onOpenDrawer: () -> Unit, onNavigateToMarketplac
         QuickActionCard(
             title = stringResource(Res.string.action_self_preparation),
             icon = Icons.AutoMirrored.Filled.MenuBook,
-            color = SSBColors.NavyBlue,
+            color = MaterialTheme.tokens.accent,
             onClick = onOpenDrawer,
             modifier = Modifier.weight(1f)
         )
@@ -84,7 +85,7 @@ internal fun QuickActionsRowOne(onOpenDrawer: () -> Unit, onNavigateToMarketplac
         QuickActionCard(
             title = stringResource(Res.string.action_join_batch),
             icon = Icons.Default.GroupAdd,
-            color = SSBColors.Info,
+            color = MaterialTheme.tokens.violet,
             onClick = onNavigateToMarketplace,
             modifier = Modifier.weight(1f)
         )
@@ -100,7 +101,7 @@ internal fun QuickActionsRowTwo(onNavigateToAnalytics: () -> Unit, onNavigateToS
         QuickActionCard(
             title = stringResource(Res.string.action_view_analytics),
             icon = Icons.Default.Analytics,
-            color = SSBColors.OliveGreen,
+            color = MaterialTheme.tokens.emerald,
             onClick = onNavigateToAnalytics,
             modifier = Modifier.weight(1f)
         )
@@ -108,7 +109,7 @@ internal fun QuickActionsRowTwo(onNavigateToAnalytics: () -> Unit, onNavigateToS
         QuickActionCard(
             title = stringResource(Res.string.action_study_materials),
             icon = Icons.Default.Book,
-            color = SSBColors.Error,
+            color = MaterialTheme.tokens.danger,
             onClick = onNavigateToStudy,
             modifier = Modifier.weight(1f)
         )

@@ -1,0 +1,68 @@
+/**
+ * DO NOT EDIT. Generated file — hand edits will be overwritten and are
+ * caught by `npm run contracts:check` in CI / pre-commit.
+ *
+ * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
+ * Regenerate: node scripts/generate-contracts.js
+ *
+ * SRP justification for exceeding the project 300-LOC limit: this file has
+ * exactly one responsibility — mirror its YAML contract sources 1:1 into
+ * this target language. Splitting it would break that 1:1 mapping. See
+ * contracts/README.md "Generated-file LOC exemption".
+ */
+
+:root {
+  --color-bg-primary: #f8fafc;
+  --color-bg-secondary: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-elevated: #f1f5f9;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --color-accent: #0284c7;
+  --color-accent-hover: #0369a1;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #0284c7;
+  --color-gold: #d97706;
+  --color-gold-subtle: #d977061a;
+  --color-emerald: #059669;
+  --color-emerald-subtle: #0596691a;
+  --color-violet: #7c3aed;
+  --color-violet-subtle: #7c3aed1a;
+  --color-day1: #4f46e5;
+  --color-day2: #7c3aed;
+  --color-day34: #0d9488;
+  --color-day5: #d97706;
+}
+
+.dark {
+  --color-bg-primary: #0b0f19;
+  --color-bg-secondary: #0f172a;
+  --color-bg-card: #1e293b;
+  --color-bg-elevated: #334155;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-border: #334155;
+  --color-border-subtle: #1e293b;
+  --color-accent: #38bdf8;
+  --color-accent-hover: #0284c7;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #38bdf8;
+  --color-gold: #f59e0b;
+  --color-gold-subtle: #f59e0b1a;
+  --color-emerald: #10b981;
+  --color-emerald-subtle: #10b9811a;
+  --color-violet: #8b5cf6;
+  --color-violet-subtle: #8b5cf61a;
+  --color-day1: #6366f1;
+  --color-day2: #8b5cf6;
+  --color-day34: #14b8a6;
+  --color-day5: #f59e0b;
+}

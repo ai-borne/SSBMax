@@ -7,7 +7,7 @@ function tsString(s) {
 }
 
 function emitTypeScript(data) {
-  const { firestorePaths, enums, subscription, testConfig, events, routes } = data;
+  const { firestorePaths, enums, subscription, testConfig, events, routes, tokens } = data;
   const out = [];
   out.push(header('ts', ALL_SOURCE_FILES));
 
@@ -73,6 +73,25 @@ function emitTypeScript(data) {
     out.push(`  ${r.name}: ${tsString(r.path)},`);
   }
   out.push('} as const;');
+  out.push('');
+
+  out.push('export interface Palette {');
+  for (const t of tokens.tokens) {
+    out.push(`  ${t.name}: string;`);
+  }
+  out.push('}');
+  out.push('export const DesignTokens: { light: Palette; dark: Palette } = {');
+  out.push('  light: {');
+  for (const t of tokens.tokens) {
+    out.push(`    ${t.name}: ${tsString(t.light)},`);
+  }
+  out.push('  },');
+  out.push('  dark: {');
+  for (const t of tokens.tokens) {
+    out.push(`    ${t.name}: ${tsString(t.dark)},`);
+  }
+  out.push('  },');
+  out.push('};');
   out.push('');
 
   return out.join('\n');

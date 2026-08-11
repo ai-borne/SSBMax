@@ -12,6 +12,7 @@ const MIRROR_TARGETS = {
   'SsbContracts.kt': path.join(ROOT, 'shared/src/commonMain/kotlin/com/ssbmax/shared/contracts/SsbContracts.kt'),
   'contracts.ts': path.join(ROOT, 'web/src/generated/contracts.ts'),
   'contracts.cjs': path.join(ROOT, 'functions/src/generated/contracts.cjs'),
+  'tokens.css': path.join(ROOT, 'web/src/generated/tokens.css'),
 };
 
 function loadContract(filename) {
@@ -35,6 +36,7 @@ function loadAllContracts() {
     testConfig: loadContract('test-config.yaml'),
     events: loadContract('events.yaml'),
     routes: loadContract('routes.yaml'),
+    tokens: loadContract('tokens.yaml'),
   };
 }
 

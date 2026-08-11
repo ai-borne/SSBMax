@@ -2,7 +2,7 @@
  * DO NOT EDIT. Generated file — hand edits will be overwritten and are
  * caught by `npm run contracts:check` in CI / pre-commit.
  *
- * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, test-config.yaml, events.yaml, routes.yaml (contracts/README.md documents the SSOT policy)
+ * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
  * Regenerate: node scripts/generate-contracts.js
  *
  * SRP justification for exceeding the project 300-LOC limit: this file has
@@ -12,6 +12,8 @@
  */
 
 package com.ssbmax.shared.contracts
+
+import androidx.compose.ui.graphics.Color
 
 object SsbContracts {
 
@@ -198,5 +200,89 @@ object SsbContracts {
         const val BATCH_CREATE = "batch/create"
         const val BATCH_DETAIL = "batch/{batchId}"
         const val SUBMISSION_DETAIL = "submission/{submissionId}"
+    }
+
+    data class Palette(
+        val bgPrimary: Color,
+        val bgSecondary: Color,
+        val bgCard: Color,
+        val bgElevated: Color,
+        val textPrimary: Color,
+        val textSecondary: Color,
+        val textMuted: Color,
+        val border: Color,
+        val borderSubtle: Color,
+        val accent: Color,
+        val accentHover: Color,
+        val success: Color,
+        val warning: Color,
+        val danger: Color,
+        val info: Color,
+        val gold: Color,
+        val goldSubtle: Color,
+        val emerald: Color,
+        val emeraldSubtle: Color,
+        val violet: Color,
+        val violetSubtle: Color,
+        val day1: Color,
+        val day2: Color,
+        val day34: Color,
+        val day5: Color,
+    )
+    object DesignTokens {
+        val Light = Palette(
+            bgPrimary = Color(0xFFF8FAFC),
+            bgSecondary = Color(0xFFFFFFFF),
+            bgCard = Color(0xFFFFFFFF),
+            bgElevated = Color(0xFFF1F5F9),
+            textPrimary = Color(0xFF0F172A),
+            textSecondary = Color(0xFF475569),
+            textMuted = Color(0xFF94A3B8),
+            border = Color(0xFFE2E8F0),
+            borderSubtle = Color(0xFFF1F5F9),
+            accent = Color(0xFF0284C7),
+            accentHover = Color(0xFF0369A1),
+            success = Color(0xFF16A34A),
+            warning = Color(0xFFD97706),
+            danger = Color(0xFFDC2626),
+            info = Color(0xFF0284C7),
+            gold = Color(0xFFD97706),
+            goldSubtle = Color(0x1AD97706),
+            emerald = Color(0xFF059669),
+            emeraldSubtle = Color(0x1A059669),
+            violet = Color(0xFF7C3AED),
+            violetSubtle = Color(0x1A7C3AED),
+            day1 = Color(0xFF4F46E5),
+            day2 = Color(0xFF7C3AED),
+            day34 = Color(0xFF0D9488),
+            day5 = Color(0xFFD97706)
+        )
+        val Dark = Palette(
+            bgPrimary = Color(0xFF0B0F19),
+            bgSecondary = Color(0xFF0F172A),
+            bgCard = Color(0xFF1E293B),
+            bgElevated = Color(0xFF334155),
+            textPrimary = Color(0xFFF8FAFC),
+            textSecondary = Color(0xFF94A3B8),
+            textMuted = Color(0xFF64748B),
+            border = Color(0xFF334155),
+            borderSubtle = Color(0xFF1E293B),
+            accent = Color(0xFF38BDF8),
+            accentHover = Color(0xFF0284C7),
+            success = Color(0xFF22C55E),
+            warning = Color(0xFFF59E0B),
+            danger = Color(0xFFEF4444),
+            info = Color(0xFF38BDF8),
+            gold = Color(0xFFF59E0B),
+            goldSubtle = Color(0x1AF59E0B),
+            emerald = Color(0xFF10B981),
+            emeraldSubtle = Color(0x1A10B981),
+            violet = Color(0xFF8B5CF6),
+            violetSubtle = Color(0x1A8B5CF6),
+            day1 = Color(0xFF6366F1),
+            day2 = Color(0xFF8B5CF6),
+            day34 = Color(0xFF14B8A6),
+            day5 = Color(0xFFF59E0B)
+        )
     }
 }

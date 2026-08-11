@@ -20,6 +20,12 @@ This regenerates:
 | `generated/contracts.ts` | `web/src/generated/` |
 | `generated/contracts.cjs` | `functions/src/generated/` |
 | `generated/rules-paths.json` | `firestore.rules` path linter |
+| `generated/tokens.css` | `web/src/generated/` (`web/src/index.css` `@import`s it) |
+
+`SsbContracts.kt`/`contracts.ts`/`contracts.cjs` also carry the `DesignTokens`
+color palette (`tokens.yaml`, Phase 7) — `tokens.css` is the one output with no
+Kotlin/CJS equivalent, since it exists only to feed Tailwind/CSS custom
+properties.
 
 `npm run contracts:check` regenerates into a temp location and diffs against
 what's committed — it's what CI and the pre-commit hook run to catch a hand
@@ -33,6 +39,10 @@ edit or a stale generation.
 - `test-config.yaml` — question/item counts, timers, TAT's 12-slide blank-card rule
 - `events.yaml` — analytics + security event names
 - `routes.yaml` — route / deep-link identifiers
+- `tokens.yaml` — color design tokens, light+dark (Phase 7; KMP's `SSBColors`
+  military palette was retired in favour of web's slate/sky palette — see
+  this file's own header comment for why that was a product decision, not a
+  mechanical dedup)
 
 ## Authority
 

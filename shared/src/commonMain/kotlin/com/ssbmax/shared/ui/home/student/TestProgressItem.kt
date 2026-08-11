@@ -23,8 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.domain.model.TestProgress
 import com.ssbmax.shared.domain.model.TestStatus
-import com.ssbmax.shared.ui.theme.SSBColors
 import com.ssbmax.shared.ui.theme.Spacing
+import com.ssbmax.shared.ui.theme.tokens
 import com.ssbmax.shared.ui.util.formatFullDate
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
@@ -57,9 +57,9 @@ internal fun TestProgressItem(
         // Status Icon - Checkmark for any completed/attempted test, empty circle for not attempted
         val (icon, iconColor) = when (testProgress.status) {
             TestStatus.COMPLETED, TestStatus.GRADED, TestStatus.SUBMITTED_PENDING_REVIEW ->
-                Icons.Default.CheckCircle to SSBColors.Success
+                Icons.Default.CheckCircle to MaterialTheme.tokens.success
             TestStatus.IN_PROGRESS ->
-                Icons.Default.Schedule to SSBColors.Warning
+                Icons.Default.Schedule to MaterialTheme.tokens.warning
             TestStatus.NOT_ATTEMPTED ->
                 Icons.Default.RadioButtonUnchecked to MaterialTheme.colorScheme.onSurfaceVariant
         }

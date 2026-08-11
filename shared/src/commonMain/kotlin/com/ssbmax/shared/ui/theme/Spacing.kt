@@ -5,8 +5,12 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Centralized spacing system for SSBMax — Phase 5 KMP port of
- * `core/designsystem/.../theme/Spacing.kt`. See [SSBColors]'s class doc for
- * why this is a straight copy rather than a `:core:designsystem` dependency.
+ * `core/designsystem/.../theme/Spacing.kt` — a straight copy rather than a
+ * `:core:designsystem` dependency (that module is Android-only, not a KMP
+ * target). Unlike colors (retired to the generated design-token contract in
+ * Phase 7, docs/plans/CrossPlatform_SSOT), spacing/dimension tokens stay
+ * platform-specific: Tailwind's numeric spacing scale already systematizes
+ * web's layout, so there is no equivalent fork to unify here.
  * Follows a 4dp grid system (Material Design 3).
  */
 object Spacing {

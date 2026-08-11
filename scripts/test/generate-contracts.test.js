@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { parseYaml, loadContract, loadAllContracts, generateAll, emitKotlin, emitTypeScript, emitCjs, emitRulesPaths, GENERATED_DIR } = require('../generate-contracts');
+const { parseYaml, loadContract, loadAllContracts, generateAll, emitKotlin, emitTypeScript, emitCjs, emitRulesPaths, emitCss, GENERATED_DIR } = require('../generate-contracts');
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -45,6 +45,10 @@ const FIXTURE_BUNDLE = {
     schemaVersion: '1.0.0',
     minimumSupportedAppVersion: '2.0.0',
     routes: [{ name: 'HOME', path: 'home' }],
+  },
+  tokens: {
+    schemaVersion: '1.0.0',
+    tokens: [{ name: 'accent', category: 'accent', light: '#0284c7', dark: '#38bdf8' }],
   },
 };
 
@@ -147,6 +151,9 @@ test('golden-file: a fixture contract bundle produces the exact expected Kotlin 
   assert.match(kt, /const val SAMPLE_EVENT = "sec_sample"/);
   assert.match(kt, /const val MINIMUM_SUPPORTED_APP_VERSION = "2\.0\.0"/);
   assert.match(kt, /const val HOME = "home"/);
+  assert.match(kt, /data class Palette\(\s*val accent: Color,/);
+  assert.match(kt, /val Light = Palette\(\s*accent = Color\(0xFF0284C7\)/);
+  assert.match(kt, /val Dark = Palette\(\s*accent = Color\(0xFF38BDF8\)/);
 });
 
 test('golden-file: a fixture contract bundle produces the exact expected TypeScript output', () => {
@@ -163,6 +170,9 @@ test('golden-file: a fixture contract bundle produces the exact expected TypeScr
   assert.match(ts, /SAMPLE_EVENT: "sec_sample",/);
   assert.match(ts, /MINIMUM_SUPPORTED_APP_VERSION: "2\.0\.0",/);
   assert.match(ts, /HOME: "home",/);
+  assert.match(ts, /export interface Palette \{\s*accent: string;/);
+  assert.match(ts, /light: \{\s*accent: "#0284c7",/);
+  assert.match(ts, /dark: \{\s*accent: "#38bdf8",/);
 });
 
 test('golden-file: a fixture contract bundle produces the exact expected CommonJS (Functions) output', () => {
@@ -182,6 +192,14 @@ test('golden-file: a fixture contract bundle produces the exact expected CommonJ
   assert.deepEqual(mod.TestConfig, [{ testType: 'OIR', values: { totalQuestions: 5 } }]);
   assert.deepEqual(mod.SecurityEvents, { SAMPLE_EVENT: 'sec_sample' });
   assert.deepEqual(mod.Routes, { MINIMUM_SUPPORTED_APP_VERSION: '2.0.0', HOME: 'home' });
+  assert.deepEqual(mod.DesignTokens, { light: { accent: '#0284c7' }, dark: { accent: '#38bdf8' } });
+});
+
+test('golden-file: a fixture contract bundle produces the exact expected tokens.css output', () => {
+  const css = emitCss(FIXTURE_BUNDLE);
+  assert.match(css, /DO NOT EDIT\. Generated file/);
+  assert.match(css, /:root \{\s*--color-accent: #0284c7;\s*\}/);
+  assert.match(css, /\.dark \{\s*--color-accent: #38bdf8;\s*\}/);
 });
 
 test('golden-file: a fixture contract bundle produces the exact expected rules-paths.json', () => {
@@ -259,4 +277,40 @@ test('real contracts: rules-paths.json has no duplicate paths and stays sorted',
   const sorted = [...rulesPaths.paths].sort();
   assert.deepEqual(rulesPaths.paths, sorted, 'rules-paths.json paths must be sorted for stable diffs');
   assert.equal(new Set(rulesPaths.paths).size, rulesPaths.paths.length, 'rules-paths.json must not contain duplicate paths');
+});
+
+test('Phase 7: every design token has an identical name set and identical hex values across Kotlin, TypeScript, CommonJS, and CSS', () => {
+  const bundle = loadAllContracts();
+  const canonicalNames = bundle.tokens.tokens.map((t) => t.name);
+  assert.ok(canonicalNames.length > 0, 'contracts/tokens.yaml must define at least one token');
+
+  const kt = emitKotlin(bundle);
+  const ktNames = [...kt.matchAll(/^\s{8}val (\w+): Color,/gm)].map((m) => m[1]);
+  assert.deepEqual(new Set(ktNames), new Set(canonicalNames), 'Kotlin Palette fields must match the contract exactly');
+
+  const ts = emitTypeScript(bundle);
+  const tsNames = [...ts.matchAll(/^\s{2}(\w+): string;/gm)].map((m) => m[1]);
+  assert.deepEqual(new Set(tsNames), new Set(canonicalNames), 'TypeScript Palette fields must match the contract exactly');
+
+  const cjs = emitCjs(bundle);
+  const mod = (() => {
+    const Module = require('module');
+    const m = new Module('real-tokens-contracts.cjs', module);
+    m._compile(cjs, 'real-tokens-contracts.cjs');
+    return m.exports;
+  })();
+  assert.deepEqual(new Set(Object.keys(mod.DesignTokens.light)), new Set(canonicalNames), 'CommonJS DesignTokens.light keys must match the contract exactly');
+  assert.deepEqual(new Set(Object.keys(mod.DesignTokens.dark)), new Set(canonicalNames), 'CommonJS DesignTokens.dark keys must match the contract exactly');
+
+  for (const t of bundle.tokens.tokens) {
+    assert.equal(mod.DesignTokens.light[t.name], t.light, `DesignTokens.light.${t.name} must equal contracts/tokens.yaml's light value`);
+    assert.equal(mod.DesignTokens.dark[t.name], t.dark, `DesignTokens.dark.${t.name} must equal contracts/tokens.yaml's dark value`);
+  }
+
+  const css = emitCss(bundle);
+  for (const t of bundle.tokens.tokens) {
+    const varName = `--color-${t.name.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+    assert.match(css, new RegExp(`:root \\{[\\s\\S]*?${varName}: ${t.light};`), `tokens.css :root must define ${varName} as the light value`);
+    assert.match(css, new RegExp(`\\.dark \\{[\\s\\S]*?${varName}: ${t.dark};`), `tokens.css .dark must define ${varName} as the dark value`);
+  }
 });

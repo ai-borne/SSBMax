@@ -2,7 +2,7 @@
 
 const GENERATED_AT_COMMAND = 'node scripts/generate-contracts.js';
 
-const ALL_SOURCE_FILES = ['firestore-paths.yaml', 'enums.yaml', 'subscription.yaml', 'test-config.yaml', 'events.yaml', 'routes.yaml'];
+const ALL_SOURCE_FILES = ['firestore-paths.yaml', 'enums.yaml', 'subscription.yaml', 'test-config.yaml', 'events.yaml', 'routes.yaml', 'tokens.yaml'];
 
 function header(commentStyle, sourceFiles) {
   const lines = [
@@ -17,7 +17,7 @@ function header(commentStyle, sourceFiles) {
     'this target language. Splitting it would break that 1:1 mapping. See',
     'contracts/README.md "Generated-file LOC exemption".',
   ];
-  if (commentStyle === 'kt' || commentStyle === 'ts' || commentStyle === 'cjs') {
+  if (commentStyle === 'kt' || commentStyle === 'ts' || commentStyle === 'cjs' || commentStyle === 'css') {
     return `/**\n${lines.map((l) => ` * ${l}`.replace(/\s+$/, '')).join('\n')}\n */\n`;
   }
   throw new Error(`unknown comment style ${commentStyle}`);
