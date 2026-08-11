@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--console-level",
+        "debug",
+        "--caps",
+        "vision,devtools"
+      ]
+    }
+  }
+}

@@ -42,9 +42,15 @@ export const App: FC = () => {
 
   const repository = useMemo(() => new ContentRepository(), []);
   const oirViewModel = useMemo(() => new OIRTestViewModel(repository), [repository]);
+  const psychTestType = (
+    activeTest === 'ppdt' ? 'PPDT' :
+    activeTest === 'wat' ? 'WAT' :
+    activeTest === 'srt' ? 'SRT' :
+    'TAT'
+  );
   const psychViewModel = useMemo(
-    () => new PsychologyTestViewModel(activeTest === 'ppdt' ? 'PPDT' : 'TAT', repository),
-    [repository, activeTest]
+    () => new PsychologyTestViewModel(psychTestType, repository),
+    [repository, psychTestType]
   );
 
   const handleStartTest = (testType: string, batchId?: string) => {

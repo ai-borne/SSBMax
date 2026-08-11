@@ -70,15 +70,34 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
   }
 
   if (state.error) {
+    const isPermissionError = state.error.toLowerCase().includes('permission') || state.error.toLowerCase().includes('sign in');
     return (
-      <div className="p-6 bg-red-900/20 border border-red-700/50 rounded-lg text-red-300 flex items-center justify-between">
-        <span>{state.error}</span>
-        <button
-          onClick={() => viewModel.loadTestContent()}
-          className="px-4 py-2 bg-red-800 hover:bg-red-700 rounded text-white text-sm"
-        >
-          {strings.common.retry}
-        </button>
+      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-md mx-auto space-y-4 shadow-lg my-12">
+        <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+          {isPermissionError ? 'Sign-In Required' : strings.common.error}
+        </h3>
+        <p className="text-sm text-[var(--color-text-muted)]">
+          {state.error}
+        </p>
+        <div className="flex justify-center gap-3 pt-2">
+          {onExitTest && (
+            <button
+              onClick={onExitTest}
+              className="px-4 py-2 text-xs font-semibold rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-card)]"
+            >
+              {strings.common.back}
+            </button>
+          )}
+          <button
+            onClick={() => viewModel.loadTestContent(batchId)}
+            className="px-4 py-2 bg-[var(--color-accent)] hover:opacity-90 rounded-lg text-white text-xs font-bold"
+          >
+            {strings.common.retry}
+          </button>
+        </div>
       </div>
     );
   }

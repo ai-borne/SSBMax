@@ -14,6 +14,14 @@ import {
   mapDocToGPEBatch
 } from './mappers/testContentMappers';
 
+import {
+  getFallbackOIRBatch,
+  getFallbackPPDTContext,
+  getFallbackTATSet,
+  getFallbackWATBatch,
+  getFallbackSRTBatch
+} from '../constants/fallbackTestContent';
+
 export class ContentRepository implements IContentRepository {
   async getStudyMaterials(): Promise<StudyMaterial[]> {
     try {
@@ -84,48 +92,92 @@ export class ContentRepository implements IContentRepository {
   }
 
   /**
-   * KMP-authoritative doc-id convention for OIR batches (see
-   * `GitLiveOIRQuestionCacheManager.batchId`): `batch_pdf_{NNN}`, 1-indexed.
+   * KMP-authoritative doc-id convention for OIR batches: `batch_pdf_{NNN}`, 1-indexed.
    */
   async getOIRQuestions(batchIndex = 0): Promise<BatchDocument<OIRQuestion>> {
     const batchId = `batch_pdf_${String(batchIndex + 1).padStart(3, '0')}`;
-    const snap = await getDoc(doc(db, FirestorePaths.TestContent.OIR_BATCHES, batchId));
-    if (!snap.exists()) {
-      throw new ContentUnavailableError(`OIR batch ${batchId} is unavailable`);
+    try {
+      const snap = await getDoc(doc(db, FirestorePaths.TestContent.OIR_BATCHES, batchId));
+      if (!snap.exists()) {
+        throw new ContentUnavailableError(`OIR batch ${batchId} is unavailable`);
+      }
+      return mapDocToOIRBatch(snap.id, snap.data(), batchIndex);
+    } catch (error: any) {
+      if (error instanceof ContentUnavailableError) throw error;
+      if (import.meta.env.DEV || error?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for OIR batch ${batchId}:`, error?.message || error);
+        return getFallbackOIRBatch(batchIndex);
+      }
+      throw error;
     }
-    return mapDocToOIRBatch(snap.id, snap.data(), batchIndex);
   }
 
   async getPPDTContext(id = 'ppdt_1'): Promise<PPDTContext> {
-    const snap = await getDoc(doc(db, FirestorePaths.TestContent.PPDT_BATCHES, id));
-    if (!snap.exists()) {
-      throw new ContentUnavailableError(`PPDT context ${id} is unavailable`);
+    try {
+      const snap = await getDoc(doc(db, FirestorePaths.TestContent.PPDT_BATCHES, id));
+      if (!snap.exists()) {
+        throw new ContentUnavailableError(`PPDT context ${id} is unavailable`);
+      }
+      return mapDocToPPDTContext(id, snap.data());
+    } catch (error: any) {
+      if (error instanceof ContentUnavailableError) throw error;
+      if (import.meta.env.DEV || error?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for PPDT context ${id}:`, error?.message || error);
+        return getFallbackPPDTContext(id);
+      }
+      throw error;
     }
-    return mapDocToPPDTContext(id, snap.data());
   }
 
   async getTATSet(id = 'tat_set_1'): Promise<TATSet> {
-    const snap = await getDoc(doc(db, FirestorePaths.TestContent.TAT_BATCHES, id));
-    if (!snap.exists()) {
-      throw new ContentUnavailableError(`TAT set ${id} is unavailable`);
+    try {
+      const snap = await getDoc(doc(db, FirestorePaths.TestContent.TAT_BATCHES, id));
+      if (!snap.exists()) {
+        throw new ContentUnavailableError(`TAT set ${id} is unavailable`);
+      }
+      return mapDocToTATSet(snap.id, snap.data());
+    } catch (error: any) {
+      if (error instanceof ContentUnavailableError) throw error;
+      if (import.meta.env.DEV || error?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for TAT set ${id}:`, error?.message || error);
+        return getFallbackTATSet(id);
+      }
+      throw error;
     }
-    return mapDocToTATSet(snap.id, snap.data());
   }
 
   async getWATBatch(id = 'wat_batch_1'): Promise<WATBatch> {
-    const snap = await getDoc(doc(db, FirestorePaths.TestContent.WAT_BATCHES, id));
-    if (!snap.exists()) {
-      throw new ContentUnavailableError(`WAT batch ${id} is unavailable`);
+    try {
+      const snap = await getDoc(doc(db, FirestorePaths.TestContent.WAT_BATCHES, id));
+      if (!snap.exists()) {
+        throw new ContentUnavailableError(`WAT batch ${id} is unavailable`);
+      }
+      return mapDocToWATBatch(id, snap.data());
+    } catch (error: any) {
+      if (error instanceof ContentUnavailableError) throw error;
+      if (import.meta.env.DEV || error?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for WAT batch ${id}:`, error?.message || error);
+        return getFallbackWATBatch(id);
+      }
+      throw error;
     }
-    return mapDocToWATBatch(id, snap.data());
   }
 
   async getSRTBatch(id = 'srt_batch_1'): Promise<SRTBatch> {
-    const snap = await getDoc(doc(db, FirestorePaths.TestContent.SRT_BATCHES, id));
-    if (!snap.exists()) {
-      throw new ContentUnavailableError(`SRT batch ${id} is unavailable`);
+    try {
+      const snap = await getDoc(doc(db, FirestorePaths.TestContent.SRT_BATCHES, id));
+      if (!snap.exists()) {
+        throw new ContentUnavailableError(`SRT batch ${id} is unavailable`);
+      }
+      return mapDocToSRTBatch(id, snap.data());
+    } catch (error: any) {
+      if (error instanceof ContentUnavailableError) throw error;
+      if (import.meta.env.DEV || error?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for SRT batch ${id}:`, error?.message || error);
+        return getFallbackSRTBatch(id);
+      }
+      throw error;
     }
-    return mapDocToSRTBatch(id, snap.data());
   }
 
   async getGPEBatch(id = 'batch_001', batchIndex = 0): Promise<BatchDocument<GPEImage>> {

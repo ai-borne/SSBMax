@@ -135,6 +135,8 @@ scripts/node_modules/
 web/node_modules/
 web/dist/
 web/dev-dist/
+web/test-results/
+web/playwright-report/
 *.tsbuildinfo
 
 # ============================================

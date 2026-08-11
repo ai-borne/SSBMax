@@ -456,89 +456,89 @@ service cloud.firestore {
     
     // OIR Test Content
     match /test_content/oir/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/oir/batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // WAT Test Content
     match /test_content/wat/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/wat/word_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // SRT Test Content
     match /test_content/srt/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/srt/situation_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // TAT Test Content
     match /test_content/tat/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/tat/image_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // PPDT Test Content
     match /test_content/ppdt/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/ppdt/image_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // GTO Test Content
     match /test_content/gto/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/gto/task_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // GPE (Group Planning Exercise) Test Content
     match /test_content/gto/scenarios/gpe/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/gto/scenarios/gpe/batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // Interview Test Content
     match /test_content/interview/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/interview/question_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
