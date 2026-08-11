@@ -46,11 +46,25 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
   }, [propUser]);
 
   useEffect(() => {
-    vm.loadMaterials().then(() => {
-      setMaterialsLoaded(true);
-      setRefreshState((prev) => prev + 1);
-    });
-  }, [vm]);
+    let isMounted = true;
+    setMaterialsLoaded(false);
+    vm.loadMaterials()
+      .then(() => {
+        if (isMounted) {
+          setMaterialsLoaded(true);
+          setRefreshState((prev) => prev + 1);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setMaterialsLoaded(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [vm, authUser]);
 
   usePostAuthResume({
     user: authUser,

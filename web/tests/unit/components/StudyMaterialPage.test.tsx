@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StudyMaterialPage } from '../../../src/components/study/StudyMaterialPage';
 import { strings } from '../../../src/constants/strings';
@@ -210,4 +210,68 @@ describe('StudyMaterialPage Component', () => {
       expect(card.className).toContain('shadow-[var(--card-shadow)]');
     });
   });
+
+  it('auto-reloads study materials when auth state changes from unauthenticated to authenticated', async () => {
+    let authCallback: ((user: UserProfile | null) => void) | null = null;
+    vi.spyOn(authService, 'onAuthStateChanged').mockImplementation((cb) => {
+      authCallback = cb;
+      return () => {};
+    });
+
+    const repo = new MockContentRepository();
+    const loadSpy = vi.spyOn(repo, 'getStudyMaterials');
+    const vm = new StudyMaterialViewModel(repo);
+
+    render(<StudyMaterialPage viewModel={vm} />);
+
+    await waitFor(() => {
+      expect(loadSpy).toHaveBeenCalledTimes(1);
+    });
+
+    // Simulate auth state change (User signs in)
+    if (authCallback) {
+      act(() => {
+        (authCallback as (user: UserProfile | null) => void)(mockUser);
+      });
+    }
+
+    await waitFor(() => {
+      expect(loadSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('handles network error in loadMaterials during auth state change gracefully', async () => {
+    let authCallback: ((user: UserProfile | null) => void) | null = null;
+    vi.spyOn(authService, 'onAuthStateChanged').mockImplementation((cb) => {
+      authCallback = cb;
+      return () => {};
+    });
+
+    class NetworkFailingRepository extends MockContentRepository {
+      async getStudyMaterials(): Promise<StudyMaterial[]> {
+        throw new Error('Network timeout or Firestore connection failed');
+      }
+    }
+
+    const vm = new StudyMaterialViewModel(new NetworkFailingRepository());
+    render(<StudyMaterialPage viewModel={vm} />);
+
+    await waitFor(() => {
+      // Skeleton loader finishes (materialsLoaded = true) even on network failure
+      expect(screen.queryByTestId('study-materials-skeleton')).not.toBeInTheDocument();
+    });
+
+    // Trigger auth state change during network failure
+    if (authCallback) {
+      act(() => {
+        (authCallback as (user: UserProfile | null) => void)(mockUser);
+      });
+    }
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('study-materials-skeleton')).not.toBeInTheDocument();
+    });
+  });
 });
+
+
