@@ -189,6 +189,10 @@ export class AntiCheatService {
   }
 
   private handleBlur(): void {
+    // Ignore in-page DOM element focus shifts (e.g. clicking MCQ answer option buttons)
+    if (typeof document !== 'undefined' && document.hasFocus()) {
+      return;
+    }
     this.recordUnfocusViolation();
   }
 
