@@ -1,6 +1,6 @@
 # Cross-Platform SSOT — Execution Plan (Android + iOS + Web + Functions)
 
-**Status:** Ready to execute — Phase 0 not started
+**Status:** Phases 0–6 complete. Phases 7–8 optional, not started.
 **Created:** 2026-08-10
 **Owner:** sunilpawar (indie — optimise for low token/time cost per phase)
 **Scope:** Establishing and mechanically enforcing a single source of truth across
@@ -659,3 +659,108 @@ VERDICT: both legacy collections EMPTY -> Phase 0a is A SIMPLE PATH FIX
 path and id convention. The drift in §3.1 existed despite a correct, committed
 health check — evidence that a script nobody runs in CI is not a contract. Phase 8's
 CI matrix should run the content health check on a schedule.
+
+---
+
+## Phase 6 Handoff
+
+### 1. Tech debt incurred
+
+- The plan's literal instruction — exercise the corpus from "`data-firebase`'s
+  `androidUnitTest` suite" — could not be honored as written. Spiked it first rather
+  than assuming: added Robolectric to `data-firebase`, and connecting GitLive's Android
+  Firestore client to a live emulator from a JVM `androidUnitTest` failed three times in
+  a row, each fix uncovering the next wall — (1) `Firebase.initialize(app)` needs
+  `google-services.json`-generated resources that don't exist for a bare unit-test
+  manifest; (2) fixed via explicit `FirebaseOptions`, then `Firebase.firestore` threw
+  `"Firestore component is not present"` until `testOptions.unitTests
+  .isIncludeAndroidResources = true` was added so AGP merges dependency manifests; (3)
+  fixed that too, then `FirebaseApp.initializeApp()` itself threw
+  `IllegalStateException: The Crashlytics build ID is missing` — Firebase eagerly
+  initializes every registered product on init, `shared/build.gradle.kts:190` declares
+  `firebase-crashlytics` as a dependency, `data-firebase` depends on `shared`, and only
+  `app/build.gradle.kts` applies the Crashlytics Gradle plugin that generates the build
+  ID resource. This is also why every existing `GitLive*CacheManagerTest` in this module
+  already documents Firestore reads as "outside a JVM unit test's reach" — the spike
+  confirmed that documented limitation is real, not stale caution.
+
+### 2. How it was resolved (immediately, not deferred)
+
+- Reverted the Robolectric spike in full (`data-firebase/build.gradle.kts`, the deleted
+  `FirestoreEmulatorSpikeTest.kt`) — confirmed via `git diff --stat data-firebase/` is
+  empty.
+- Pivoted to the corpus test's actual goal — catching a field/path renamed on one side
+  and not the other — without needing a live Kotlin reader: `firestore-tests/fixtures/
+  shared-corpus.json` is the one JSON fixture both real readers assert against.
+  `firestore-tests/seed-shared-corpus.mjs` seeds it into the emulator (security rules
+  disabled for the write, matching how content ingestion actually reaches Firestore —
+  scripts/Cloud Functions, never a client). `firestore-tests/sharedCorpus.contract
+  .test.mjs` reads it back and asserts the exact field names data-firebase's
+  `GitLive*CacheManager` `@Serializable` DTOs decode (`OirBatchDocDto`,
+  `WATWordBatchDocDto`, etc.) — a Node proxy for the Kotlin reader, not the reader
+  itself, and its docstring says so explicitly rather than implying real Kotlin
+  coverage. `web/tests/unit/contracts/sharedCorpusEmulator.test.ts` reads the same
+  fixture through the real `firebase/firestore` SDK (`connectFirestoreEmulator`) and the
+  real `ContentRepository`, not a mock — closing §3.6's actual gap (a per-platform mock
+  can lock in a wrong path; a real read against a shared fixture cannot).
+- Deleted `web/tests/unit/contracts/firestoreSchemaContract.test.ts` — a mocked test
+  asserting `study_materials` path/mapping via `vi.mock('firebase/firestore', ...)`, now
+  fully superseded by the real corpus test's `getStudyMaterials` assertion.
+- Narrowed (did not delete) `testContentSchemaContract.test.ts` — its path-literal
+  assertions are superseded by the corpus test, but its business-logic assertions
+  (TAT blank-card append, OIR anti-cheat stripping, `readTime` string parsing) have no
+  duplicate anywhere else, so deleting the whole file would have been a real coverage
+  loss for logic the corpus test doesn't re-assert per field. Added a docstring
+  explaining the narrowed scope so a future reader doesn't mistake it for the
+  drift-detection layer again.
+- Wired `.github/workflows/main-ci.yml`'s `firestore-rules` job to install web's deps,
+  seed the corpus, and run both real readers in one `firebase emulators:exec
+  --only firestore,auth` invocation, against the default project (`.firebaserc`'s
+  `ssbmax-49e68`) — matching `web/.env`'s `VITE_FIREBASE_PROJECT_ID`, which is why this
+  runs as a separate `emulators:exec` call from the existing rules-unit-test step
+  (that one deliberately uses a different demo project).
+
+### 3. Build & test confirmation
+
+- `./gradlew :data-firebase:testDebugUnitTest :shared:testDebugUnitTest` ... PASS
+  (unchanged from baseline — `data-firebase` has zero diff after the spike revert)
+- `node scripts/generate-contracts.js --check` ......................... PASS
+- `web: npm run build` ................................................. PASS
+- `web: npm run test` (mocked/default suite) ........................... PASS (308 tests,
+  56 files — the emulator test is excluded by `--exclude` and does not run here)
+- `firestore-tests: npm test` (existing rules suite) ................... PASS (unchanged)
+- **New — `firestore-tests: npm run seed:corpus && npm run test:corpus`** ... PASS
+  (9/9, against a live local emulator, verified interactively this session)
+- **New — `web: npm run test:corpus`** ................................. PASS (6/6,
+  real `ContentRepository` + real `firebase/firestore` SDK against the same emulator,
+  verified interactively this session)
+- `scripts/validate-security.sh` ....................................... not re-run this
+  phase (no security-surface file touched — new files are test-only fixtures/suites)
+
+### 4. Contract changes shipped this phase
+
+- None. Phase 6 adds test infrastructure only; `contracts/*.yaml` and `generated/*` are
+  unchanged (`generate-contracts.js --check` confirms this).
+
+### 5. Accepted divergences
+
+- **`data-firebase` is not exercised against a live Firestore emulator**, contrary to
+  the plan's literal wording. Reason: see §1 above — Crashlytics eager-init is a real
+  cross-module dependency conflict (`shared` → `firebase-crashlytics`, no Crashlytics
+  Gradle plugin outside `app`), not a config oversight, and fixing it is out of scope
+  for a test-infrastructure phase. `firestore-tests/sharedCorpus.contract.test.mjs`
+  asserts the exact DTO shapes the Kotlin code expects as a documented proxy instead.
+  Revisit if `data-firebase` ever needs a live-Firestore JVM test for an unrelated
+  reason — the same wall will need solving then regardless.
+- **GPE content has no web read path.** Phase 0b's Open Question 1 resolution says web
+  should reach "full parity," explicitly adding reads for `test_content/gto/task_batches`
+  and `test_content/gto/scenarios/gpe/batches`. `ContentRepository.getAvailableBatches`'s
+  `subcollMap` has a `gto` entry but no `gpe` entry, and there is no dedicated
+  `getGPEBatch` method at all — confirmed by grep, not assumed. This predates Phase 6
+  (introduced whenever Phase 0b actually shipped) and was only surfaced now because this
+  phase's corpus includes a GPE fixture; the Node-side reader asserts it, but there was
+  no web-side method to assert it against. Not fixed here — it's Phase 0b scope, not
+  Phase 6 scope, and the fix (a new repository method plus whatever UI consumes it) is
+  more than a tech-debt-sweep-sized change. Flagged for a follow-up task.
+- **OIR content-version (`test_content/oir/meta/config`) has no web read path either**,
+  same Open Question 1 resolution, same gap category, same reason for not fixing here.

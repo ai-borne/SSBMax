@@ -355,8 +355,28 @@ jobs:
         working-directory: firestore-tests
         run: npm ci
 
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
       - name: Run rules-unit tests against the emulator
         run: firebase emulators:exec --only firestore --project demo-ssbmax-rules-test "npm --prefix firestore-tests test"
+
+      # ── Phase 6 (docs/plans/CrossPlatform_SSOT): shared-corpus contract tests ──
+      # Seeds one fixture corpus (firestore-tests/fixtures/shared-corpus.json) into the
+      # emulator, then exercises it from BOTH readers against the same running instance --
+      # firestore-tests' Node suite (a proxy for data-firebase's Kotlin DTOs; androidUnitTest
+      # itself can't reach a live emulator, see sharedCorpus.contract.test.mjs's docstring)
+      # and web's real ContentRepository via the actual firebase/firestore SDK. Needs the
+      # Auth emulator too (web signs in anonymously to satisfy firestore.rules'
+      # isAuthenticated() checks) and must run against the default project
+      # (.firebaserc's "ssbmax-49e68") to match web/.env's VITE_FIREBASE_PROJECT_ID --
+      # the rules-unit job above intentionally uses a different demo project, so this is a
+      # separate emulators:exec invocation, not appended to it.
+      - name: Run shared-corpus contract tests against the emulator
+        run: |
+          firebase emulators:exec --only firestore,auth \
+            "npm --prefix firestore-tests run seed:corpus && npm --prefix firestore-tests run test:corpus && npm --prefix web run test:corpus"
 
   # ── Detekt (Kotlin static analysis) ──────────────────────────────────
   # Fails only on NEW smells; existing ones are grandfathered per-module via

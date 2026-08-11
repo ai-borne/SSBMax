@@ -16,6 +16,14 @@ vi.mock('../../../src/config/firebase', () => ({
   db: {}
 }));
 
+// Phase 6 (docs/plans/CrossPlatform_SSOT) narrowed this file's scope: cross-platform path
+// drift detection (the reason it originally mocked firebase/firestore and asserted call
+// args) now lives in sharedCorpusEmulator.test.ts, which reads a real emulator seeded with
+// the same fixture data-firebase's Kotlin DTOs are asserted against -- a per-platform mock
+// can lock in a wrong path (§3.6 of the plan) but can never catch it forking from KMP. What
+// stays here is real, mock-independent value: mapping/normalization business logic
+// (blank-card append, gs:// URL rewriting, readTime parsing) and the anti-cheat answer-key
+// stripping invariant, none of which the emulator suite re-asserts per field.
 describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
   let repository: ContentRepository;
 

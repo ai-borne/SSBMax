@@ -1,0 +1,141 @@
+{
+  "_comment": "Phase 6 (docs/plans/CrossPlatform_SSOT): one fixture document per test_content sub-collection, study_materials, and a subscription usage doc. Field names match what data-firebase's GitLive*CacheManager @Serializable DTOs actually decode (the authoritative shape) -- not what any one consumer's mapper happens to read. Seeded verbatim into the emulator by seed-shared-corpus.mjs and read back by BOTH firestore-tests (Node/admin, KMP-shape proxy) and web's Vitest suite via a real firebase/firestore client -- a field renamed here without updating both readers fails both suites, closing the drift gap in contracts/README.md Phase 6.",
+
+  "oir": {
+    "path": "test_content/oir/batches/batch_pdf_001",
+    "doc": {
+      "questions": [
+        {
+          "id": "q_1",
+          "questionNumber": 1,
+          "type": "VERBAL_REASONING",
+          "questionText": "Choose the word that is most nearly opposite in meaning to CANDID.",
+          "options": [
+            { "id": "opt_a", "text": "Honest" },
+            { "id": "opt_b", "text": "Secretive" },
+            { "id": "opt_c", "text": "Frank" },
+            { "id": "opt_d", "text": "Open" }
+          ],
+          "correctAnswerId": "opt_b",
+          "explanation": "CANDID means open/honest; SECRETIVE is its nearest opposite."
+        },
+        {
+          "id": "q_2",
+          "questionNumber": 2,
+          "type": "NON_VERBAL_REASONING",
+          "questionText": "Which figure completes the series?",
+          "options": [
+            { "id": "opt_a", "text": "Triangle" },
+            { "id": "opt_b", "text": "Square" },
+            { "id": "opt_c", "text": "Circle" },
+            { "id": "opt_d", "text": "Pentagon" }
+          ],
+          "correctAnswerId": "opt_c",
+          "explanation": "The series alternates between two shapes; the circle continues the pattern."
+        }
+      ],
+      "totalQuestions": 2,
+      "version": "1.0.0"
+    }
+  },
+
+  "ppdt": {
+    "path": "test_content/ppdt/image_batches/batch_001",
+    "doc": {
+      "images": [
+        {
+          "id": "ppdt_1",
+          "imageUrl": "gs://ssbmax-prod.appspot.com/ppdt/image_1.png",
+          "imageDescription": "A hazy figure standing near a riverbank at dusk.",
+          "viewingTimeSeconds": 30,
+          "writingTimeMinutes": 4
+        }
+      ],
+      "version": "1.0.0"
+    }
+  },
+
+  "tat": {
+    "path": "test_content/tat/image_batches/batch_001",
+    "doc": {
+      "images": [
+        { "id": "tat_1", "imageUrl": "gs://ssbmax-prod.appspot.com/tat/slide_1.jpg", "cardPosition": 1, "viewingTimeSeconds": 30 },
+        { "id": "tat_2", "imageUrl": "gs://ssbmax-prod.appspot.com/tat/slide_2.jpg", "cardPosition": 2, "viewingTimeSeconds": 30 }
+      ],
+      "version": "1.0.0"
+    }
+  },
+
+  "wat": {
+    "path": "test_content/wat/word_batches/batch_001",
+    "doc": {
+      "words": [
+        { "id": "w_1", "word": "LEADERSHIP", "sequenceNumber": 1, "timeAllowedSeconds": 15 },
+        { "id": "w_2", "word": "COURAGE", "sequenceNumber": 2, "timeAllowedSeconds": 15 }
+      ],
+      "version": "1.0.0"
+    }
+  },
+
+  "srt": {
+    "path": "test_content/srt/situation_batches/batch_001",
+    "doc": {
+      "situations": [
+        { "id": "s_1", "situation": "He was going to appear for an exam and saw a road accident victim. He...", "sequenceNumber": 1, "timeAllowedSeconds": 30 },
+        { "id": "s_2", "situation": "While leading a trekking expedition, one of his teammates injured his leg severely. He...", "sequenceNumber": 2, "timeAllowedSeconds": 30 }
+      ],
+      "version": "1.0.0"
+    }
+  },
+
+  "gto": {
+    "path": "test_content/gto/task_batches/batch_001",
+    "doc": {
+      "tasks": [
+        { "id": "gto_1", "taskType": "GD", "title": "Should social media be regulated by the government?", "description": "10-minute group discussion.", "instructions": "Discuss both sides and reach a consensus.", "timeAllowedMinutes": 10 },
+        { "id": "gto_2", "taskType": "LECTURETTE", "title": "Impact of AI on employment", "description": "3-minute solo lecturette.", "instructions": "Speak for 3 minutes after 3 minutes of preparation.", "timeAllowedMinutes": 3 }
+      ],
+      "version": "1.0.0"
+    }
+  },
+
+  "gpe": {
+    "path": "test_content/gto/scenarios/gpe/batches/batch_001",
+    "doc": {
+      "images": [
+        { "id": "gpe_1", "imageUrl": "gs://ssbmax-prod.appspot.com/gpe/scenario_1.png", "scenario": "A village cut off by a flooded river with limited resources.", "solution": "Model bridge using available materials to cross the river.", "imageDescription": "Map showing river, village, and available resources.", "resources": ["rope", "planks", "barrels"] }
+      ],
+      "version": "1.0.0"
+    }
+  },
+
+  "studyMaterial": {
+    "path": "study_materials/mat_oir_101",
+    "doc": {
+      "title": "SSOT OIR Guide",
+      "topicType": "OIR",
+      "contentMarkdown": "# Full OIR Guide Content",
+      "readTime": "6 min read",
+      "displayOrder": 1
+    }
+  },
+
+  "subscriptionUsage": {
+    "path": "users/corpus_test_user/subscription/usage_2026-08",
+    "doc": {
+      "userId": "corpus_test_user",
+      "month": "2026-08",
+      "oirTestsUsed": 3,
+      "ppdtTestsUsed": 1,
+      "piqTestsUsed": 0,
+      "tatTestsUsed": 0,
+      "watTestsUsed": 0,
+      "srtTestsUsed": 0,
+      "sdTestsUsed": 0,
+      "gtoTestsUsed": 0,
+      "interviewTestsUsed": 0,
+      "recordedSubmissionIds": ["sub_001", "sub_002", "sub_003", "sub_ppdt_001"],
+      "lastUpdated": 1754870400000
+    }
+  }
+}
