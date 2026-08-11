@@ -149,5 +149,14 @@ describe('AntiCheatService Cross-Platform Tests', () => {
     expect(antiCheatService.getViolations()).toBe(1);
     expect(warningMessages[0].message).toContain('Fullscreen mode exited');
   });
+
+  it('should NOT record an unfocus violation when blur occurs but document.hasFocus() is true (e.g. clicking MCQ answer option buttons)', () => {
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+
+    window.dispatchEvent(new Event('blur'));
+
+    expect(antiCheatService.getViolations()).toBe(0);
+    expect(warningMessages.length).toBe(0);
+  });
 });
 
