@@ -8,8 +8,10 @@ import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { TermsAndRefunds } from './components/legal/TermsAndRefunds';
 import { OIRTestRunner } from './components/testRunners/OIRTestRunner';
 import { PsychologyTestRunner } from './components/testRunners/PsychologyTestRunner';
+import { GTOTaskGuideRunner } from './components/testRunners/GTOTaskGuideRunner';
+import { PIQWizardContainer } from './components/practice/piq/PIQWizardContainer';
 import { OIRTestViewModel } from './viewmodels/OIRTestViewModel';
-import { PsychologyTestViewModel } from './viewmodels/PsychologyTestViewModel';
+import { PsychologyTestViewModel, PsychologyTestType } from './viewmodels/PsychologyTestViewModel';
 import { ContentRepository } from './repositories/ContentRepository';
 import { useTabRouting } from './hooks/useTabRouting';
 import { authService } from './services/AuthService';
@@ -42,10 +44,11 @@ export const App: FC = () => {
 
   const repository = useMemo(() => new ContentRepository(), []);
   const oirViewModel = useMemo(() => new OIRTestViewModel(repository), [repository]);
-  const psychTestType = (
+  const psychTestType: PsychologyTestType = (
     activeTest === 'ppdt' ? 'PPDT' :
     activeTest === 'wat' ? 'WAT' :
     activeTest === 'srt' ? 'SRT' :
+    activeTest === 'sd' ? 'SD' :
     'TAT'
   );
   const psychViewModel = useMemo(
@@ -77,6 +80,9 @@ export const App: FC = () => {
     return <UpdateRequiredScreen />;
   }
 
+  const isPsychTest = ['ppdt', 'tat', 'wat', 'srt', 'sd', 'psychology'].includes(activeTest || '');
+  const isGTOTaskOrBoard = ['gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt', 'interview', 'conference'].includes(activeTest || '');
+
   return (
     <AppLayout activeTab={activeTab} onTabChange={setActiveTab} isTestMode={Boolean(activeTest)}>
       {activeTest ? (
@@ -85,6 +91,23 @@ export const App: FC = () => {
             viewModel={oirViewModel}
             userId="cadet-web-user"
             batchIndex={oirBatchIndex}
+            onExitTest={handleExitTest}
+          />
+        ) : activeTest === 'piq' ? (
+          <PIQWizardContainer
+            isOpen={true}
+            onClose={handleExitTest}
+          />
+        ) : isPsychTest ? (
+          <PsychologyTestRunner
+            viewModel={psychViewModel}
+            userId="cadet-web-user"
+            batchId={activeBatchId}
+            onExitTest={handleExitTest}
+          />
+        ) : isGTOTaskOrBoard ? (
+          <GTOTaskGuideRunner
+            testId={activeTest}
             onExitTest={handleExitTest}
           />
         ) : (

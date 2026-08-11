@@ -2,7 +2,7 @@ import { TATSet, WATBatch, SRTBatch, PPDTContext } from '../types/testContent';
 import { IContentRepository } from '../repositories/interfaces/IContentRepository';
 import { OfflineQueueService } from '../services/OfflineQueueService';
 
-export type PsychologyTestType = 'TAT' | 'WAT' | 'SRT' | 'PPDT';
+export type PsychologyTestType = 'TAT' | 'WAT' | 'SRT' | 'PPDT' | 'SD';
 
 export interface SlideItem {
   id: string;
@@ -117,6 +117,16 @@ export class PsychologyTestViewModel {
               content: ppdtContext.imageUrl,
               durationSeconds: ppdtContext.viewingTimeSeconds + ppdtContext.writingTimeSeconds
             }
+          ];
+          break;
+        }
+        case 'SD': {
+          slides = [
+            { id: 'sd-1', index: 0, content: 'Paragraph 1: What your Parents think of you', durationSeconds: 180 },
+            { id: 'sd-2', index: 1, content: 'Paragraph 2: What your Teachers / Employer think of you', durationSeconds: 180 },
+            { id: 'sd-3', index: 2, content: 'Paragraph 3: What your Friends / Peers think of you', durationSeconds: 180 },
+            { id: 'sd-4', index: 3, content: 'Paragraph 4: What you think of yourself (Strengths & Weaknesses)', durationSeconds: 180 },
+            { id: 'sd-5', index: 4, content: 'Paragraph 5: What kind of person you wish to become', durationSeconds: 180 },
           ];
           break;
         }
