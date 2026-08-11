@@ -95,22 +95,42 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
 
   if (state.isCompleted && state.result) {
     return (
-      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-lg mx-auto">
-        <CheckCircle2 className="w-16 h-16 text-[var(--color-success)] mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">{strings.oir.completedTitle}</h2>
-        <div className="my-6 p-4 bg-[var(--color-bg-elevated)] rounded-lg flex justify-around">
+      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-lg mx-auto space-y-6 shadow-xl my-8">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto animate-pulse">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+        
+        <div>
+          <h2 className="text-2xl font-black text-[var(--color-text-primary)] mb-1">{strings.oir.completedTitle}</h2>
+          <p className="text-xs text-[var(--color-text-muted)]">Your responses have been processed and scored against Assessor OIR Benchmarks.</p>
+        </div>
+
+        <div className="p-5 bg-[var(--color-bg-elevated)] rounded-xl border border-[var(--color-border)] grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{strings.oir.scoreLabel}</p>
-            <p className="text-3xl font-extrabold text-[var(--color-accent)]">
-              {state.result.score} / {state.result.totalQuestions}
+            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{strings.oir.scoreLabel}</p>
+            <p className="text-3xl font-extrabold text-[var(--color-accent)] mt-1">
+              {state.result.score} <span className="text-sm font-normal text-[var(--color-text-muted)]">/ {state.result.totalQuestions}</span>
             </p>
           </div>
           <div>
-            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{strings.oir.ratingLabel}</p>
-            <p className="text-3xl font-extrabold text-[var(--color-success)]">
+            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{strings.oir.ratingLabel}</p>
+            <p className="text-3xl font-extrabold text-emerald-500 mt-1">
               OIR-{state.result.oirRating}
             </p>
           </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+          {onExitTest && (
+            <button
+              onClick={onExitTest}
+              data-testid="return-to-tests-button"
+              className="min-h-[44px] px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20 transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Return to SSB Tests</span>
+            </button>
+          )}
         </div>
       </div>
     );

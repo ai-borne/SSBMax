@@ -4,7 +4,7 @@ import { useTestTimer } from '../../hooks/useTestTimer';
 import { strings } from '../../constants/strings';
 import { useAntiCheat } from '../../hooks/useAntiCheat';
 import { AntiCheatWarningBanner } from '../common/AntiCheatWarningBanner';
-import { Clock, CheckCircle2, ChevronRight, Send, AlertTriangle, FileText, LogOut } from 'lucide-react';
+import { Clock, CheckCircle2, ChevronRight, ChevronLeft, Send, AlertTriangle, FileText, LogOut } from 'lucide-react';
 
 export interface PsychologyTestRunnerProps {
   viewModel: PsychologyTestViewModel;
@@ -104,10 +104,33 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
 
   if (state.isCompleted) {
     return (
-      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-lg mx-auto">
-        <CheckCircle2 className="w-16 h-16 text-[var(--color-success)] mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">{strings.psychology.completedTitle}</h2>
-        <p className="text-sm text-[var(--color-text-muted)] mb-6">{strings.psychology.completedMessage}</p>
+      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-lg mx-auto space-y-6 shadow-xl my-8">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto animate-pulse">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-black text-[var(--color-text-primary)] mb-1">{strings.psychology.completedTitle}</h2>
+          <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">{strings.psychology.completedMessage}</p>
+        </div>
+
+        <div className="p-4 bg-[var(--color-bg-elevated)] rounded-xl border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] space-y-1">
+          <p className="font-bold text-[var(--color-text-primary)]">Assessor Queue Confirmation</p>
+          <p className="text-[var(--color-text-muted)]">Your responses are securely queued for 15 OLQ Factor Analysis & Psychologist Dossier evaluation.</p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+          {onExitTest && (
+            <button
+              onClick={onExitTest}
+              data-testid="return-to-tests-button"
+              className="min-h-[44px] px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20 transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Return to SSB Tests</span>
+            </button>
+          )}
+        </div>
       </div>
     );
   }
