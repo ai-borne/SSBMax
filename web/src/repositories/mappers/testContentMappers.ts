@@ -1,4 +1,4 @@
-import { OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument } from '../../types/testContent';
+import { OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, GPEImage } from '../../types/testContent';
 
 /**
  * Normalizes gs:// Google Cloud Storage URLs to HTTPS URLs accessible via web client.
@@ -219,6 +219,43 @@ export function mapDocToOIRBatch(id: string, data?: Record<string, any>, batchIn
           options: options.length > 0 ? options : ['Option A', 'Option B', 'Option C', 'Option D'],
           imageUrl,
           type
+        };
+      })
+    : [];
+
+  return {
+    id: data.id || id || `batch_${batchIndex}`,
+    batchIndex: typeof data.batchIndex === 'number' ? data.batchIndex : batchIndex,
+    totalItems: items.length,
+    items
+  };
+}
+
+/**
+ * Maps GPE (Group Planning Exercise) scenario batch documents, performing anti-cheating
+ * `solution` stripping -- same pattern as OIR's correctAnswerId (see GitLiveGPEImageCacheManager).
+ */
+export function mapDocToGPEBatch(id: string, data?: Record<string, any>, batchIndex = 0): BatchDocument<GPEImage> {
+  if (!data) {
+    return { id: `batch_${batchIndex}`, batchIndex, totalItems: 0, items: [] };
+  }
+
+  const rawItems = data.images || data.items || [];
+  const items: GPEImage[] = Array.isArray(rawItems)
+    ? rawItems.map((img: any, index: number) => {
+        // Anti-cheating: explicitly pick only safe client fields -- `solution` never included.
+        return {
+          id: String(img.id || `gpe_${batchIndex}_${index + 1}`),
+          imageUrl: normalizeStorageUrl(img.imageUrl || img.image || ''),
+          scenario: String(img.scenario || ''),
+          imageDescription: String(img.imageDescription || ''),
+          resources: Array.isArray(img.resources) ? img.resources.map((r: any) => String(r)) : [],
+          viewingTimeSeconds: typeof img.viewingTimeSeconds === 'number' ? img.viewingTimeSeconds : 30,
+          planningTimeSeconds: typeof img.planningTimeSeconds === 'number' ? img.planningTimeSeconds : 300,
+          minCharacters: typeof img.minCharacters === 'number' ? img.minCharacters : undefined,
+          maxCharacters: typeof img.maxCharacters === 'number' ? img.maxCharacters : undefined,
+          category: typeof img.category === 'string' ? img.category : undefined,
+          difficulty: typeof img.difficulty === 'string' ? img.difficulty : undefined
         };
       })
     : [];

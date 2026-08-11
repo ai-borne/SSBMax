@@ -109,6 +109,14 @@
     }
   },
 
+  "oirMetaConfig": {
+    "path": "test_content/oir/meta/config",
+    "doc": {
+      "batchCount": 28,
+      "contentVersion": 1
+    }
+  },
+
   "studyMaterial": {
     "path": "study_materials/mat_oir_101",
     "doc": {

@@ -4,6 +4,7 @@ import { SSBDayOverview, AccessTier, SSBDayNumber } from '../../constants/ssbSel
 import { getTestConfigsForDay } from './ssbTestConfigs';
 import { TestSimulatorCard } from './TestSimulatorCard';
 import { TestType } from '../../generated/contracts';
+import { strings } from '../../constants/strings';
 
 export interface TestDayAccordionProps {
   dayOverview: SSBDayOverview;
@@ -89,7 +90,7 @@ export const TestDayAccordion: FC<TestDayAccordionProps> = ({
               </span>
               <span className="flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
                 <Layers className="w-3 h-3" />
-                {dayOverview.testCount} Tests
+                {dayOverview.testCount} {strings.practice.testCountSuffix}
               </span>
             </div>
             <h3 className="text-base font-extrabold text-slate-900 dark:text-white">

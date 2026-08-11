@@ -1,5 +1,6 @@
 import { FC } from 'react';
 import { ChevronLeft, ChevronRight, Grid, Bookmark, CheckCircle2 } from 'lucide-react';
+import { strings } from '../../../constants/strings';
 
 export interface TestRunnerBottomBarProps {
   currentIndex: number;
@@ -35,7 +36,7 @@ export const TestRunnerBottomBar: FC<TestRunnerBottomBarProps> = ({
           data-testid="runner-prev-button"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Prev</span>
+          <span className="hidden sm:inline">{strings.testRunner.bottomBar.prev}</span>
         </button>
 
         <button
@@ -59,7 +60,7 @@ export const TestRunnerBottomBar: FC<TestRunnerBottomBarProps> = ({
           data-testid="runner-flag-button"
         >
           <Bookmark className={`w-4 h-4 ${isFlagged ? 'fill-amber-400' : ''}`} />
-          <span className="hidden sm:inline">{isFlagged ? 'Flagged' : 'Flag'}</span>
+          <span className="hidden sm:inline">{isFlagged ? strings.testRunner.bottomBar.flagged : strings.testRunner.bottomBar.flag}</span>
         </button>
 
         {currentIndex < totalQuestions - 1 ? (
@@ -68,7 +69,7 @@ export const TestRunnerBottomBar: FC<TestRunnerBottomBarProps> = ({
             className="min-h-[44px] min-w-[44px] px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center gap-1 transition-all shadow-sm"
             data-testid="runner-next-button"
           >
-            <span>Next</span>
+            <span>{strings.testRunner.bottomBar.next}</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         ) : (
@@ -78,7 +79,7 @@ export const TestRunnerBottomBar: FC<TestRunnerBottomBarProps> = ({
             data-testid="runner-submit-button"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>Submit Test</span>
+            <span>{strings.testRunner.bottomBar.submitTest}</span>
           </button>
         )}
       </div>

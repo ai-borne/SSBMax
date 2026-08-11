@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { StudyMaterialViewModel } from '../../src/viewmodels/StudyMaterialViewModel';
 import { IContentRepository } from '../../src/repositories/interfaces/IContentRepository';
-import { StudyMaterial, BatchDocument, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch } from '../../src/types/testContent';
+import { StudyMaterial, BatchDocument, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, GPEImage, OIRContentMeta } from '../../src/types/testContent';
 
 class MockContentRepository implements IContentRepository {
   async getStudyMaterials(): Promise<StudyMaterial[]> {
@@ -59,6 +59,14 @@ class MockContentRepository implements IContentRepository {
 
   async getSRTBatch(): Promise<SRTBatch> {
     return { id: 'srt-1', situations: [], totalTimeMinutes: 30 };
+  }
+
+  async getGPEBatch(): Promise<BatchDocument<GPEImage>> {
+    return { id: 'gpe-1', batchIndex: 0, totalItems: 0, items: [] };
+  }
+
+  async getOIRContentVersion(): Promise<OIRContentMeta> {
+    return { contentVersion: 1, batchCount: 1 };
   }
 
   async getAvailableBatches(): Promise<any[]> {

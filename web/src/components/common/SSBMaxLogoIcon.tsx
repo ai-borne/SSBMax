@@ -1,4 +1,5 @@
 import React from 'react';
+import { strings } from '../../constants/strings';
 
 export interface SSBMaxLogoIconProps {
   className?: string;
@@ -14,7 +15,7 @@ export const SSBMaxLogoIcon: React.FC<SSBMaxLogoIconProps> = ({ className = "w-5
       className={className}
       width={size}
       height={size}
-      aria-label="SSBMax Logo"
+      aria-label={strings.header.title}
     >
       {/* Outer Shield Outline */}
       <path

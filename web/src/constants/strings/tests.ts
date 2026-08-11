@@ -57,8 +57,8 @@ export const testStrings = {
     selectBatchTitle: 'Select Practice Set Batch',
     selectBatchSubtitle: 'Choose from available practice sets fetched from Services Selection Board protocol database.',
     batchDefault: 'Batch 1 (Default)',
-    confirmSelect: 'Select & Launch'
-
+    confirmSelect: 'Select & Launch',
+    testCountSuffix: 'Tests'
   },
   anticheat: {
     contextMenuBlocked: 'Right-click context menu is disabled during active standardized test mode.',

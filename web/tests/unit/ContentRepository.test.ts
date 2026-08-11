@@ -139,5 +139,51 @@ describe('ContentRepository Unit Tests', () => {
     expect(wat.id).toBe('wat_batch_1');
     expect(wat.words).toEqual(['COURAGE', 'HONESTY']);
   });
+
+  it('should return GPE batch and strip the solution answer-key field', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({
+      exists: () => true,
+      id: 'batch_001',
+      data: () => ({
+        images: [
+          { id: 'gpe_1', imageUrl: 'gs://bucket/gpe/scenario_1.png', scenario: 'A flooded village.', solution: 'Build a bridge.', resources: ['rope'] }
+        ]
+      })
+    } as any);
+
+    const gpe = await repository.getGPEBatch('batch_001');
+    expect(gpe.items).toHaveLength(1);
+    expect(gpe.items[0].scenario).toBe('A flooded village.');
+    expect((gpe.items[0] as any).solution).toBeUndefined();
+  });
+
+  it('should throw ContentUnavailableError when the GPE batch is missing', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({
+      exists: () => false,
+      data: () => null
+    } as any);
+
+    await expect(repository.getGPEBatch('missing_batch')).rejects.toThrow();
+  });
+
+  it('should return OIR content version from the meta/config doc', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ batchCount: 28, contentVersion: 2 })
+    } as any);
+
+    const meta = await repository.getOIRContentVersion();
+    expect(meta.batchCount).toBe(28);
+    expect(meta.contentVersion).toBe(2);
+  });
+
+  it('should throw ContentUnavailableError when the OIR meta/config doc is missing', async () => {
+    vi.mocked(getDoc).mockResolvedValueOnce({
+      exists: () => false,
+      data: () => null
+    } as any);
+
+    await expect(repository.getOIRContentVersion()).rejects.toThrow();
+  });
 });
 

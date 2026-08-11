@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { Lock, FileText, CheckCircle, Clock, ChevronRight } from 'lucide-react';
 import { StudyMaterial } from '../../types/testContent';
 import { AccessTier } from '../../constants/ssbSelectionProcess';
+import { strings } from '../../constants/strings';
 
 export interface SSBTestCardInfo {
   id: string;
@@ -46,12 +47,12 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
   const getTierBadgeLabel = () => {
     switch (cardInfo.requiredTier) {
       case 'PREMIUM':
-        return 'PREMIUM DOSSIER';
+        return strings.study.testCard.tierPremiumLabel;
       case 'PRO':
-        return 'PRO DOSSIER';
+        return strings.study.testCard.tierProLabel;
       case 'FREE':
       default:
-        return 'FREE GUIDE';
+        return strings.study.testCard.tierFreeLabel;
     }
   };
 
@@ -80,7 +81,7 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
               data-testid={`locked-badge-${cardInfo.testTypeId}`}
             >
               <Lock className="w-3 h-3" />
-              <span>Locked</span>
+              <span>{strings.study.testCard.locked}</span>
             </span>
           )}
         </div>
@@ -96,11 +97,11 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
         <div className="space-y-2 mt-3 pt-3 border-t border-slate-200/70 dark:border-slate-700/60">
           <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
             <FileText className="w-3.5 h-3.5" />
-            <span>Study Guides & Practice Sets ({cardInfo.materials.length})</span>
+            <span>{strings.study.testCard.guidesSetsLabel} ({cardInfo.materials.length})</span>
           </div>
 
           {cardInfo.materials.length === 0 ? (
-            <p className="text-xs text-slate-400 italic">Material coming soon from Firestore</p>
+            <p className="text-xs text-slate-400 italic">{strings.study.testCard.materialComingSoon}</p>
           ) : (
             cardInfo.materials.map((mat) => {
               const isDone = isMaterialCompleted(mat.id);
@@ -124,7 +125,7 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
                     </h5>
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1 mt-0.5">
                       <Clock className="w-3 h-3" />
-                      {mat.estimatedReadTimeMinutes ?? 5}m read
+                      {mat.estimatedReadTimeMinutes ?? 5}{strings.study.testCard.minReadSuffix}
                     </span>
                   </div>
 
@@ -137,7 +138,7 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
                             ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
                             : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                         }`}
-                        title={isDone ? 'Completed' : 'Mark as Read'}
+                        title={isDone ? strings.study.testCard.markCompleted : strings.study.testCard.markAsRead}
                         data-testid={`toggle-completed-${mat.id}`}
                       >
                         <CheckCircle className="w-4 h-4" />

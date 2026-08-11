@@ -42,6 +42,27 @@ export interface SRTBatch {
   totalTimeMinutes: number;
 }
 
+export interface GPEImage {
+  id: string;
+  imageUrl: string;
+  scenario: string;
+  imageDescription: string;
+  resources: string[];
+  viewingTimeSeconds: number;
+  planningTimeSeconds: number;
+  minCharacters?: number;
+  maxCharacters?: number;
+  category?: string;
+  difficulty?: string;
+  // Security Note: `solution` is omitted from client payloads, mirroring OIR's
+  // correctAnswerIndex anti-cheating stripping (see GitLiveGPEImageCacheManager DTO).
+}
+
+export interface OIRContentMeta {
+  contentVersion: number;
+  batchCount: number;
+}
+
 export interface SDPrompt {
   id: string;
   categories: {

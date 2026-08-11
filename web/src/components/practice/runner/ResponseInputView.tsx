@@ -1,4 +1,5 @@
 import { FC } from 'react';
+import { strings } from '../../../constants/strings';
 
 export interface ResponseInputViewProps {
   options?: string[];
@@ -25,7 +26,7 @@ export const ResponseInputView: FC<ResponseInputViewProps> = ({
       {options.length > 0 ? (
         <div className="space-y-2.5">
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-            Select Response Option
+            {strings.testRunner.response.selectOptionLabel}
           </label>
           {options.map((opt, idx) => {
             const isSelected = selectedOption === opt;
@@ -53,13 +54,13 @@ export const ResponseInputView: FC<ResponseInputViewProps> = ({
       ) : (
         <div className="space-y-3 flex-1 flex flex-col">
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-            Write Your Response Action
+            {strings.testRunner.response.writeResponseLabel}
           </label>
 
           {/* 1-Tap Preset Action Chips */}
           {presetChips.length > 0 && (
             <div className="space-y-1.5 mb-2">
-              <span className="text-[11px] font-semibold text-slate-400">1-Tap Preset Quick Actions:</span>
+              <span className="text-[11px] font-semibold text-slate-400">{strings.testRunner.response.presetChipsLabel}</span>
               <div className="flex flex-wrap gap-1.5">
                 {presetChips.map((chip, idx) => (
                   <button
@@ -79,7 +80,7 @@ export const ResponseInputView: FC<ResponseInputViewProps> = ({
           <textarea
             value={textResponse}
             onChange={(e) => onTextChange?.(e.target.value)}
-            placeholder="Type your response here..."
+            placeholder={strings.testRunner.response.textareaPlaceholder}
             className="w-full flex-1 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500 resize-none min-h-[120px]"
             data-testid="response-textarea"
           />

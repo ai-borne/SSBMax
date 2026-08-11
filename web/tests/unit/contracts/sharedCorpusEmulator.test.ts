@@ -68,6 +68,24 @@ describe('Shared-corpus emulator contract tests (Phase 6)', () => {
     expect(result.situations[0]).toContain('road accident victim');
   });
 
+  it('CONTRACT: getGPEBatch reads the seeded batch and strips the anti-cheat solution field', async () => {
+    const result = await repository.getGPEBatch('batch_001');
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].scenario).toContain('flooded river');
+    expect(result.items[0].resources).toContain('rope');
+    result.items.forEach((item) => {
+      expect((item as any).solution).toBeUndefined();
+    });
+  });
+
+  it('CONTRACT: getOIRContentVersion reads the seeded meta/config doc', async () => {
+    const result = await repository.getOIRContentVersion();
+
+    expect(result.batchCount).toBe(28);
+    expect(result.contentVersion).toBe(1);
+  });
+
   it('CONTRACT: getStudyMaterials reads the seeded study_materials doc', async () => {
     const materials = await repository.getStudyMaterials();
 

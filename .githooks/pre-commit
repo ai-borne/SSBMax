@@ -214,6 +214,26 @@ if [ -n "$WEB_FILES" ]; then
 fi
 
 # ============================================
+# 8c. Cross-platform behavior-parity nudge (non-blocking)
+# ============================================
+# Tier 3 (ViewModels, use-case decision logic, screen flows) and Tier 2's
+# hand-duplicated eligibility/scoring *logic* (not just the Tier-1 numbers,
+# which codegen already covers) are "mirror by convention" per
+# docs/plans/CrossPlatform_SSOT §2 -- nothing else catches drift here. This
+# is a reminder, not a gate: false positives are expected and fine (an
+# Android-only rendering fix touches a ViewModel with no web equivalent).
+KMP_BEHAVIOR_FILES=$(echo "$STAGED_FILES" | grep -E '^shared/src/commonMain/.*/(domain/usecase|presentation)/.*\.kt$' || true)
+FUNCTIONS_LOGIC_FILES=$(echo "$STAGED_FILES" | grep -E '^functions/src/(eligibility|oirScoring|aiAnalysis)' || true)
+WEB_LOGIC_FILES=$(echo "$STAGED_FILES" | grep -E '^web/src/(viewmodels|repositories)/' || true)
+
+if [ -n "$KMP_BEHAVIOR_FILES$FUNCTIONS_LOGIC_FILES" ] && [ -z "$WEB_LOGIC_FILES" ]; then
+    echo -e "${YELLOW}⚠️  PARITY CHECK: this commit changes KMP/functions behavior but no web/src/viewmodels or web/src/repositories file:${NC}"
+    [ -n "$KMP_BEHAVIOR_FILES" ] && echo "$KMP_BEHAVIOR_FILES" | sed 's/^/     /'
+    [ -n "$FUNCTIONS_LOGIC_FILES" ] && echo "$FUNCTIONS_LOGIC_FILES" | sed 's/^/     /'
+    echo -e "${YELLOW}   Consider whether web needs the same fix (see root CLAUDE.md SSOT section). Not blocking.${NC}"
+fi
+
+# ============================================
 # 9. Validate commit message doesn't contain secrets
 # ============================================
 echo "🔍 Checking commit message (if available)..."

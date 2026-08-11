@@ -1,5 +1,6 @@
 import { FC } from 'react';
 import { Calendar, Clock, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { strings } from '../../constants/strings';
 
 export interface StudyDayInfo {
   dayNumber: string;
@@ -31,7 +32,7 @@ export const StudyDayCard: FC<StudyDayCardProps> = ({ dayInfo, onSelectDay }) =>
           {dayInfo.isCompleted && (
             <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Done</span>
+              <span>{strings.study.dayCard.done}</span>
             </span>
           )}
         </div>
@@ -63,7 +64,7 @@ export const StudyDayCard: FC<StudyDayCardProps> = ({ dayInfo, onSelectDay }) =>
       <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
         <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-mono">
           <Clock className="w-3.5 h-3.5" />
-          {dayInfo.estimatedMinutes} min guide
+          {dayInfo.estimatedMinutes} {strings.study.dayCard.minGuideSuffix}
         </span>
         <button
           onClick={(e) => {
@@ -73,7 +74,7 @@ export const StudyDayCard: FC<StudyDayCardProps> = ({ dayInfo, onSelectDay }) =>
           className="min-h-[44px] min-w-[44px] px-3 py-2 flex items-center gap-1 font-bold text-sky-600 dark:text-sky-400 hover:text-sky-500 group-hover:translate-x-0.5 transition-all"
           data-testid={`explore-day-${dayInfo.dayNumber}`}
         >
-          <span>Open Module</span>
+          <span>{strings.study.dayCard.openModule}</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

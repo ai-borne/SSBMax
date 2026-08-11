@@ -57,6 +57,12 @@ class MockContentRepository implements IContentRepository {
   async getSRTBatch() {
     return { id: 's1', situations: [], totalTimeMinutes: 30 };
   }
+  async getGPEBatch() {
+    return { id: 'g1', batchIndex: 0, totalItems: 0, items: [] };
+  }
+  async getOIRContentVersion() {
+    return { contentVersion: 1, batchCount: 1 };
+  }
   async getAvailableBatches() {
     return [];
   }

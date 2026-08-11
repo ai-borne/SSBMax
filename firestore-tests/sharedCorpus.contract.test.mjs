@@ -152,6 +152,17 @@ test('GPE batch lives at the generated FirestorePaths.TestContent.GPE_BATCHES pa
   assert.ok(Array.isArray(data.images[0].resources));
 });
 
+test('OIR content-version doc lives at the generated FirestorePaths.TestContent.OIR_META_CONFIG path and decodes into MetaConfig shape', async () => {
+  assert.equal(corpus.oirMetaConfig.path, FirestorePaths.TestContent.OIR_META_CONFIG);
+
+  const snap = await docRefFromPath(corpus.oirMetaConfig.path).get();
+  assert.ok(snap.exists);
+  const data = snap.data();
+
+  assert.equal(typeof data.batchCount, 'number');
+  assert.equal(typeof data.contentVersion, 'number');
+});
+
 test('study material lives at the generated FirestorePaths.STUDY_MATERIALS path and decodes into CloudStudyMaterialDto shape', async () => {
   const expectedPath = `${FirestorePaths.STUDY_MATERIALS}/mat_oir_101`;
   assert.equal(corpus.studyMaterial.path, expectedPath);

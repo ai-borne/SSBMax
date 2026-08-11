@@ -5,6 +5,7 @@ import { StudyMaterial } from '../../types/testContent';
 import { SSBDayNumber } from '../../constants/ssbSelectionProcess';
 import { GridCardContainer } from '../common/GridCardContainer';
 import { CardGridVariant } from '../../constants/cardTokens';
+import { strings } from '../../constants/strings';
 
 export interface StudyDayAccordionSection {
   dayNumber: SSBDayNumber;
@@ -90,7 +91,7 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
               {!isUnlocked && (
                 <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
                   <Lock className="w-3 h-3" />
-                  <span>Google OAuth Required</span>
+                  <span>{strings.study.accordion.oauthRequired}</span>
                 </span>
               )}
             </div>
@@ -105,7 +106,7 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 hidden md:inline">
-            {section.testCards.length} Modules
+            {section.testCards.length} {strings.study.accordion.modulesSuffix}
           </span>
           <div
             className={`p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-slate-500 transition-transform duration-200 ${

@@ -2,9 +2,10 @@
 
 **Status:** Phases 0–8 complete (Phase 7's color-token half implemented in full;
 its strings half deliberately not built — see Phase 7 Handoff). Phase 8
-(kill-switch + CI hardening) implemented — see Phase 8 Handoff. One open item
-predating Phase 8 remains: web has no read path for GTO/GPE scenario content
-or the OIR content-version doc (see Phase 8 Handoff §5, carried from Phase 6/7).
+(kill-switch + CI hardening) implemented — see Phase 8 Handoff. The GPE/OIR
+content-version web read-path gap carried across Phases 6, 7, and 8 is now
+closed — see the Closure Handoff at the end of this document. **Plan closed,
+no open items remain.**
 **Created:** 2026-08-10
 **Owner:** sunilpawar (indie — optimise for low token/time cost per phase)
 **Scope:** Establishing and mechanically enforcing a single source of truth across
@@ -1053,10 +1054,85 @@ files, generated output, CI config, rules file) — not assumed from memory.
 | 8 | Kill-switch + CI hardening (optional) | ✅ Done this session (see Phase 8 Handoff above) |
 
 **Overall: every Must-do phase (0a–6) and both optional phases (7, 8) are
-implemented and green.** The only items still open against the plan's own
-stated goals are the two carried-forward web read-path gaps (GPE content,
-OIR content-version) — both pre-date Phase 8, are explicitly out of scope
-for a tech-debt sweep (they're new-feature-sized, not cleanup-sized), and
-have now been re-flagged three sessions running (Phase 6, Phase 7, Phase 8)
-without being picked up. If this workflow is done, they're worth a
-dedicated follow-up task rather than a fourth deferral.
+implemented and green.** The two carried-forward web read-path gaps (GPE
+content, OIR content-version), re-flagged across Phases 6, 7, and 8 without
+being picked up, were closed in a dedicated follow-up session — see the
+Closure Handoff below. **The plan has no open items.**
+
+---
+
+## Closure Handoff (GPE + OIR content-version web read paths)
+
+**Goal:** close the last two items carried forward since Phase 6 — web had
+no read path for GPE scenario content or the OIR content-version doc, despite
+both paths already existing as generated constants
+(`FirestorePaths.TestContent.GPE_BATCHES`, `OIR_META_CONFIG`) since Phase 1.
+
+**Scope decision:** repository-layer read paths only, no new UI screen. GTO
+itself (GPE's sibling) has no consuming UI either — `PracticeTestsPage.tsx`'s
+`testModules` list doesn't even include `'gto'` — so building a GPE-specific
+screen now would be a speculative feature, not a tech-debt close (root Rule 2).
+The gap as stated in every prior handoff was "no read path," not "no UI";
+this closes exactly that.
+
+**Implementation:**
+1. `web/src/types/testContent.ts`: added `GPEImage` (mirrors KMP's
+   `GPEImageFirestoreDto`, `solution` deliberately omitted — same anti-cheat
+   stripping as OIR's `correctAnswerIndex`) and `OIRContentMeta`
+   (`contentVersion`/`batchCount`, mirrors KMP's `MetaConfig`).
+2. `web/src/repositories/mappers/testContentMappers.ts`: added
+   `mapDocToGPEBatch`, following `mapDocToOIRBatch`'s anti-cheat field-picking
+   pattern.
+3. `web/src/repositories/ContentRepository.ts`: added `getGPEBatch(id, batchIndex)`
+   (reads `GPE_BATCHES`) and `getOIRContentVersion()` (reads `OIR_META_CONFIG`,
+   fails loud via `ContentUnavailableError` if `batchCount` is missing — same
+   fail-closed posture as KMP's `fetchMetaConfig`). Not added to
+   `getAvailableBatches`'s generic `subcollMap` — GPE's real path
+   (`test_content/gto/scenarios/gpe/batches`) doesn't fit that helper's
+   3-segment join (`test_content/{module}/{subcoll}`), so a dedicated method
+   was correct, not a workaround.
+4. `web/src/repositories/interfaces/IContentRepository.ts`: added both method
+   signatures; updated all three `IContentRepository` implementers (the real
+   repository and two test mocks in `StudyMaterialViewModel.test.ts` /
+   `StudyMaterialPage.test.tsx`) plus two structurally-typed mock objects in
+   `OIRTestViewModel.test.ts` / `PsychologyTestViewModel.test.ts` — TypeScript's
+   structural typing surfaced all four via `tsc -b` failures, not by grep.
+5. `firestore-tests/fixtures/shared-corpus.json`: added an `oirMetaConfig`
+   fixture (`batchCount: 28, contentVersion: 1`) — the GPE fixture already
+   existed since Phase 6 but had no web-side reader to assert it, per that
+   phase's own accepted-divergence note.
+6. Added CONTRACT-level assertions against the live Firestore emulator in both
+   readers: `firestore-tests/sharedCorpus.contract.test.mjs` (Node/KMP-shape
+   proxy) and `web/tests/unit/contracts/sharedCorpusEmulator.test.ts` (real
+   `ContentRepository` + real `firebase/firestore` SDK) — closing the same
+   drift gap Phase 6 closed for the other seven collections.
+7. Added mocked unit tests to `web/tests/unit/ContentRepository.test.ts`
+   covering the success and missing-doc paths for both new methods.
+
+**Build & test confirmation:**
+- `web: npm run build` (tsc strict + vite build) ....................... PASS
+- `web: npm run test` .................................................. PASS (318 tests,
+  57 files — 4 new: 2 for `getGPEBatch`, 2 for `getOIRContentVersion`)
+- `firestore-tests: npm run seed:corpus && npm test` ................... PASS (29/29,
+  unchanged — `oirMetaConfig` isn't a `*.rules.test.mjs` file)
+- `firestore-tests: npm run seed:corpus && npm run test:corpus` ........ PASS (10/10 —
+  1 new: OIR content-version contract test)
+- `web: npm run seed:corpus && npm run test:corpus`
+  (`firebase emulators:exec --only firestore,auth ...`) ................ PASS (8/8 —
+  2 new: `getGPEBatch` solution-stripping + `getOIRContentVersion`)
+- `node scripts/generate-contracts.js --check` ......................... PASS (no contract
+  files touched — both paths were already generated in Phase 1)
+- `node scripts/audit-web-codebase.js` .................................. PASS (0 errors,
+  same 16 pre-existing warnings as Phase 8, confirmed unrelated to this change)
+- `scripts/validate-security.sh` ....................................... PASS (10/10)
+- `./gradlew check` ...................................................... not re-run — no
+  KMP/`shared`/`data-firebase` file was touched this session (web + test-fixture
+  files only), so the KMP build surface is unchanged from Phase 8's last PASS.
+
+**Accepted divergence (unchanged from Phase 6/7/8, now explicitly final):**
+- GTO/GPE still have no consuming UI screen in web (`PracticeTestsPage.tsx`
+  fetches `['oir', 'ppdt', 'tat', 'wat', 'srt']` only). This was never what the
+  three prior handoffs flagged as open — they flagged the missing *read path*,
+  which is now closed. A GTO/GPE practice screen is a new feature, not a plan
+  closure item; if wanted, it's a fresh piece of work, not a continuation of
+  this plan.

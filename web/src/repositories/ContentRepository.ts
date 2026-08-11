@@ -2,7 +2,7 @@ import { collection, doc, getDoc, getDocs, query, limit } from 'firebase/firesto
 import { db } from '../config/firebase';
 import { FirestorePaths } from '../generated/contracts';
 import { IContentRepository } from './interfaces/IContentRepository';
-import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, TestBatchInfo } from '../types/testContent';
+import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, TestBatchInfo, GPEImage, OIRContentMeta } from '../types/testContent';
 import { ContentUnavailableError } from '../types/errors';
 import { getFallbackStudyMaterials, getFallbackStudyMaterialById } from '../constants/fallbackStudyMaterials';
 import {
@@ -10,7 +10,8 @@ import {
   mapDocToSRTBatch,
   mapDocToTATSet,
   mapDocToPPDTContext,
-  mapDocToOIRBatch
+  mapDocToOIRBatch,
+  mapDocToGPEBatch
 } from './mappers/testContentMappers';
 
 export class ContentRepository implements IContentRepository {
@@ -125,6 +126,30 @@ export class ContentRepository implements IContentRepository {
       throw new ContentUnavailableError(`SRT batch ${id} is unavailable`);
     }
     return mapDocToSRTBatch(id, snap.data());
+  }
+
+  async getGPEBatch(id = 'batch_001', batchIndex = 0): Promise<BatchDocument<GPEImage>> {
+    const snap = await getDoc(doc(db, FirestorePaths.TestContent.GPE_BATCHES, id));
+    if (!snap.exists()) {
+      throw new ContentUnavailableError(`GPE batch ${id} is unavailable`);
+    }
+    return mapDocToGPEBatch(snap.id, snap.data(), batchIndex);
+  }
+
+  async getOIRContentVersion(): Promise<OIRContentMeta> {
+    const snap = await getDoc(doc(db, FirestorePaths.TestContent.OIR_META_CONFIG));
+    if (!snap.exists()) {
+      throw new ContentUnavailableError('OIR content-version doc is unavailable');
+    }
+    const data = snap.data();
+    const batchCount = typeof data.batchCount === 'number' ? data.batchCount : undefined;
+    if (batchCount === undefined) {
+      throw new ContentUnavailableError('OIR content-version doc is missing batchCount');
+    }
+    return {
+      contentVersion: typeof data.contentVersion === 'number' ? data.contentVersion : 0,
+      batchCount
+    };
   }
 
   async getAvailableBatches(moduleName: string): Promise<TestBatchInfo[]> {

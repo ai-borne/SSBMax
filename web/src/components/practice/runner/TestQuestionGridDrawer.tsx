@@ -1,5 +1,6 @@
 import { FC } from 'react';
 import { X, Bookmark } from 'lucide-react';
+import { strings } from '../../../constants/strings';
 
 export interface QuestionStatus {
   index: number;
@@ -39,12 +40,13 @@ export const TestQuestionGridDrawer: FC<TestQuestionGridDrawerProps> = ({
         <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Question Palette ({totalQuestions} Total)
+              {strings.testRunner.grid.paletteTitle} ({totalQuestions} {strings.testRunner.grid.totalSuffix})
             </h3>
           </div>
           <button
             onClick={onClose}
             className="min-h-[44px] min-w-[44px] p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center"
+            aria-label={strings.testRunner.grid.closeDrawer}
             data-testid="close-drawer-button"
           >
             <X className="w-5 h-5" />
@@ -53,10 +55,10 @@ export const TestQuestionGridDrawer: FC<TestQuestionGridDrawerProps> = ({
 
         {/* Legend Bar */}
         <div className="flex items-center justify-around text-[11px] font-semibold text-slate-400 border-b border-slate-800 pb-3 mb-4">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> Current</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Answered</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Flagged</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-700" /> Unanswered</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> {strings.testRunner.grid.legendCurrent}</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> {strings.testRunner.grid.legendAnswered}</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> {strings.testRunner.grid.legendFlagged}</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-700" /> {strings.testRunner.grid.legendUnanswered}</span>
         </div>
 
         {/* 60 Question Grid */}

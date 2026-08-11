@@ -1,4 +1,5 @@
 import { FC } from 'react';
+import { strings } from '../../../constants/strings';
 
 export interface StimulusViewProps {
   questionNumber: number;
@@ -24,7 +25,7 @@ export const StimulusView: FC<StimulusViewProps> = ({
             Q{questionNumber}
           </span>
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            {stimulusType} STIMULUS
+            {stimulusType} {strings.testRunner.stimulus.stimulusTypeSuffix}
           </span>
         </div>
 
