@@ -9,24 +9,26 @@ Replaces `core/data/ai/CLAUDE.md`, deleted with the package it documented in the
 ## The shape
 
 ```
-KtorGeminiClient      raw REST call to generativelanguage.googleapis.com/v1beta
-  ↑
+GeminiClient (interface, shared/ai/)     "send a prompt (+ image) to Gemini, get text back"
+  ↑ implemented by
+GeminiProxyClient (data-firebase)        calls the geminiGenerateContent Cloud Function via
+                                          GitLive's Firebase Functions httpsCallable
+  ↑ consumed by
 KtorAIService         the AIService implementation (12 methods) — SSOT, both platforms
   ├── KtorPPDTAnalyzer / KtorTATStoryAnalyzer   multimodal (image + story) calls
   ├── prompts/                                  the prompt corpus
   └── KtorGeminiResponseParser                  kotlinx.serialization, 3 response shapes
 ```
 
-`AIService` (the interface) lives in `shared/domain/service/`. `KtorAIService` is its only implementation; `coreInfraModule` is its only binding. There is no Android-specific and no cloud-backed variant — `core:data`'s `GeminiAIService`/`CloudGeminiAIService` were deleted in Phase 9.0.
+`AIService` (the interface) lives in `shared/domain/service/`. `KtorAIService` is its only implementation; `coreInfraModule` binds `KtorAIService`/`KtorPPDTAnalyzer`/`KtorTATStoryAnalyzer`, but **not** `GeminiClient` — that binding lives in `data-firebase`'s `repositoryModule` (see below). There is no Android-specific and no cloud-backed variant of `AIService` itself — `core:data`'s `GeminiAIService`/`CloudGeminiAIService` were deleted in Phase 9.0.
 
-## API key
+## API key — never on the client, not even via Koin property
 
-Never read from `BuildConfig` inside a module. The key arrives as a **Koin property**, keyed by `GEMINI_API_KEY_PROPERTY` (defined once, in `shared/di/CoreInfraModule.kt`):
+There used to be a raw `KtorGeminiClient` here calling `generativelanguage.googleapis.com` directly, with the API key delivered as a Koin property from `BuildConfig`/`Info.plist` — that shipped the key inside the app binary, extractable from any built APK/IPA. **Fixed**: `shared` no longer holds a Gemini API key at all, in any form. Calls go through `geminiGenerateContent` (`functions/src/geminiProxy.js`), authenticated by the caller's Firebase Auth ID token (attached automatically by GitLive's `httpsCallable`, the same mechanism `GitLiveTestUsageRecorder` already relies on). The key lives only in that Cloud Function's environment.
 
-- Android — `SSBMaxApplication.onCreate` → `properties(mapOf(GEMINI_API_KEY_PROPERTY to BuildConfig.GEMINI_API_KEY))`, sourced from `local.properties`
-- iOS — `ensureKoinStarted()` → same property, sourced from `Info.plist`'s `GeminiAPIKey`
+This is also why `GeminiClient`'s implementation (`GeminiProxyClient`) lives in `data-firebase`, not here — it depends on GitLive's Firebase Functions client, which `shared` may not import (see `data-firebase`'s own module doc for why: `shared`'s Kotlin/Native test binaries must link without CocoaPods). `shared/ai/` only ever sees the `GeminiClient` interface.
 
-`getProperty(GEMINI_API_KEY_PROPERTY, "")` defaults to empty, so a missing `properties(...)` call fails **silently at runtime**, not at build time. `app`'s `GeminiKeyWiringTest` is the guard; keep it green.
+`app/src/test/kotlin/com/ssbmax/architecture/GeminiKeyNotInClientTest.kt` is the regression guard — it asserts `GEMINI_API_KEY` never reappears in `BuildConfig`/`Info.plist`. Keep it green; don't "fix" a broken AI call by re-adding the key client-side.
 
 ## Determinism
 

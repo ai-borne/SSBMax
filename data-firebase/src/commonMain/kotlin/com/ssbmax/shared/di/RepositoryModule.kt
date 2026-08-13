@@ -1,5 +1,7 @@
 package com.ssbmax.shared.di
 
+import com.ssbmax.shared.ai.GeminiClient
+import com.ssbmax.shared.data.ai.GeminiProxyClient
 import com.ssbmax.shared.data.repository.DebugOverrideSubscriptionRepository
 import com.ssbmax.shared.data.repository.DebugOverrideTestUsageRecorder
 import com.ssbmax.shared.data.repository.GitLiveAnalyticsRepository
@@ -85,6 +87,10 @@ import org.koin.dsl.module
  */
 val repositoryModule = module {
     single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
+    // Calls Gemini through the `geminiGenerateContent` Cloud Function proxy, not directly --
+    // see GeminiProxyClient's own doc comment. Bound here (not shared/CoreInfraModule) because
+    // it depends on GitLive's Firebase Functions client, which `shared` may not import.
+    single<GeminiClient> { GeminiProxyClient() }
     // GitLiveAuthRepository's userRepository constructor param has a Kotlin default
     // value (= GitLiveUserRepository()), but singleOf's reflection-based DSL ignores
     // Kotlin default parameters and always resolves every constructor param through

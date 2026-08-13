@@ -13,8 +13,8 @@ import kotlinx.coroutines.withTimeout
 
 /**
  * KMP port of core:data's `GeminiAIService`, replacing the Android-only
- * `com.google.ai.client.generativeai.GenerativeModel` with [KtorGeminiClient]'s
- * plain REST calls. Full [AIService] implementation (12 methods) — supersedes
+ * `com.google.ai.client.generativeai.GenerativeModel` with [GeminiClient]'s
+ * proxied calls. Full [AIService] implementation (12 methods) — supersedes
  * the Phase 2 narrower `InterviewResponseAnalysisService`/
  * `KtorInterviewResponseAnalysisService` slice, which is removed as part of
  * this port (nothing else depended on the narrower interface).
@@ -22,13 +22,13 @@ import kotlinx.coroutines.withTimeout
  * Deviation from the Android original: that version constructs three separate
  * `GenerativeModel` instances (one per token tier) because the Android SDK
  * bakes `generationConfig` into the model at construction time. Here,
- * [KtorGeminiClient.generateContent] takes `maxOutputTokens`/`temperature` as
+ * [GeminiClient.generateContent] takes `maxOutputTokens`/`temperature` as
  * call-site parameters, so one client instance serves all three tiers —
  * same tier semantics, no functional change, just a simpler shape enabled by
- * the REST call being stateless per-request.
+ * the call being stateless per-request.
  */
 class KtorAIService(
-    private val client: KtorGeminiClient,
+    private val client: GeminiClient,
     private val logger: DomainLogger,
     private val ppdtAnalyzer: KtorPPDTAnalyzer,
     private val tatStoryAnalyzer: KtorTATStoryAnalyzer

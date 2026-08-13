@@ -16,6 +16,7 @@ const { createRazorpayOrder } = require('./payments');
 const { evaluateOIRAnswers } = require('./oirScoring');
 const { analyzeInterviewResponse, analyzeResponseInline } = require('./aiAnalysis');
 const { recordTestUsage } = require('./eligibility');
+const { geminiGenerateContent } = require('./geminiProxy');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
@@ -23,3 +24,4 @@ exports.evaluateOIRAnswers = evaluateOIRAnswers;
 exports.analyzeInterviewResponse = analyzeInterviewResponse;
 exports.analyzeResponseInline = analyzeResponseInline;
 exports.recordTestUsage = recordTestUsage;
+exports.geminiGenerateContent = geminiGenerateContent;

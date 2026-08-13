@@ -9,11 +9,11 @@ import kotlinx.coroutines.withTimeout
 /**
  * Handles PPDT multimodal analysis (image bytes + story). KMP port of
  * core:data's `GeminiPPDTAnalyzer`: same prompt + parser, but the image is
- * attached via [KtorGeminiClient]'s `inline_data` REST part instead of the
+ * attached via [GeminiClient]'s `imageBytes` parameter instead of the
  * Android SDK's `content { blob(...) }` DSL.
  */
 class KtorPPDTAnalyzer(
-    private val client: KtorGeminiClient,
+    private val client: GeminiClient,
     private val logger: DomainLogger,
     private val responseTimeout: Long = 60_000L
 ) {
