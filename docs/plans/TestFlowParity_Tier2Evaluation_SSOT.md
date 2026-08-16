@@ -143,3 +143,16 @@ file directly, when a type is ready.
   scope. This note does not change any type's Cutover status above — the notify hook fires
   regardless of Cutover state, since it's attached to each pipeline's real completion write
   either way.
+- **2026-08-17 (Phase 2, Centralized Result-Announcement Notifications plan):** every
+  `notifyEvaluationComplete` call now also pushes via
+  `admin.messaging().sendEachForMulticast()` against the user's `FCM_TOKENS` rows, one call
+  path for Android/iOS/web. iOS's `IosPushNotificationBridge.kt` was rewritten from
+  `onApnsDeviceTokenReceived` (saved the raw APNs device token — GitLive has no Messaging
+  module) to `onFcmTokenReceived` (saves a real FCM registration token): `iosApp` now links
+  `FirebaseMessaging` via SPM, `AppDelegate.swift` hands the APNs token to
+  `Messaging.messaging().apnsToken` and receives the exchanged FCM token via
+  `MessagingDelegate.messaging(_:didReceiveRegistrationToken:)`. A push-send failure is
+  caught and logged, never fails the evaluation or the `NOTIFICATIONS` doc write — the
+  in-app inbox stays the source of truth, push is best-effort on top of it. Stale tokens
+  (`messaging/registration-token-not-registered`) are deleted from `FCM_TOKENS` on send.
+  This does not change any type's Cutover status.

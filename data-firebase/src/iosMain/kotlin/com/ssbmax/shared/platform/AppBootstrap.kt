@@ -53,7 +53,7 @@ fun ensureKoinStarted(
 
 /**
  * The started [Koin] instance. Callers must call [ensureKoinStarted] first
- * (both real bridge entry points -- [com.ssbmax.shared.platform.notifications.onApnsDeviceTokenReceived]
+ * (both real bridge entry points -- [com.ssbmax.shared.platform.notifications.onFcmTokenReceived]
  * and [com.ssbmax.shared.platform.worker.registerAndScheduleBackgroundTasks]
  * -- already do this themselves before calling this getter).
  */

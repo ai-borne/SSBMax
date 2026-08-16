@@ -2,6 +2,7 @@ import UIKit
 import UserNotifications
 import SharedKit
 import FirebaseCore
+import FirebaseMessaging
 import GoogleSignIn
 
 /// Real app-launch lifecycle hook (Phase 6 of the KMP migration plan).
@@ -21,7 +22,7 @@ import GoogleSignIn
 /// in `BackgroundTaskRegistrar.kt`) MUST match `Info.plist`'s
 /// `BGTaskSchedulerPermittedIdentifiers` array below -- both are wired
 /// together in this same change.
-class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
 
     func application(
         _ application: UIApplication,
@@ -35,6 +36,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // configured before the default Auth instance can be initialized") -- this call
         // never existed anywhere in this codebase before now, Swift or Kotlin.
         FirebaseApp.configure()
+
+        // Phase 2 (Centralized Result-Announcement Notifications plan): must be set
+        // before registerForRemoteNotifications() below so Messaging can exchange
+        // the APNs device token for a real FCM registration token once it arrives
+        // (see didRegisterForRemoteNotificationsWithDeviceToken and
+        // messaging(_:didReceiveRegistrationToken:) further down).
+        Messaging.messaging().delegate = self
 
         // GIDSignIn needs its own client ID (Google's OAuth client, distinct
         // from Firebase's own config) before RealIosGoogleSignInLauncher's
@@ -90,16 +98,29 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         GIDSignIn.sharedInstance.handle(url)
     }
 
-    /// APNs device token arrived -- hand it to `shared` so it can be saved
-    /// against the signed-in user, same collection Android's FCM token was
-    /// always meant to be saved to (see `IosPushNotificationBridge.kt`'s
-    /// class doc for why that Android path is itself only a stub today).
+    /// APNs device token arrived. Phase 2: this is no longer handed to `shared`
+    /// directly -- it's handed to `Messaging`, which exchanges it (plus the
+    /// APNs auth key configured in Firebase Console) for a real FCM
+    /// registration token, delivered via `messaging(_:didReceiveRegistrationToken:)`
+    /// below. That FCM token, not this raw APNs one, is what actually gets
+    /// saved and what the server's `admin.messaging().sendEachForMulticast()`
+    /// can target (see `IosPushNotificationBridge.kt`'s class doc).
     func application(
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
-        let tokenHex = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        IosPushNotificationBridgeKt.onApnsDeviceTokenReceived(tokenHex: tokenHex)
+        Messaging.messaging().apnsToken = deviceToken
+    }
+
+    // MARK: - MessagingDelegate
+
+    /// Fires once Messaging has exchanged the APNs device token for an FCM
+    /// registration token (at launch if a token already exists, and again
+    /// whenever it rotates). No-ops in `shared` if no user is signed in yet --
+    /// see `onFcmTokenReceived`'s doc.
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        guard let fcmToken else { return }
+        IosPushNotificationBridgeKt.onFcmTokenReceived(token: fcmToken)
     }
 
     func application(
