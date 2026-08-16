@@ -80,7 +80,7 @@ export const App: FC = () => {
     return <UpdateRequiredScreen />;
   }
 
-  const isPsychTest = ['ppdt', 'tat', 'wat', 'srt', 'sd', 'psychology'].includes(activeTest || '');
+  const isPsychTest = ['ppdt', 'tat', 'wat', 'srt', 'sd'].includes(activeTest || '');
   const isGTOTaskOrBoard = ['gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt', 'interview', 'conference'].includes(activeTest || '');
 
   return (

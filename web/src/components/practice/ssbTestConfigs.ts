@@ -6,11 +6,10 @@ export interface TestSimulatorConfig {
   id: string;
   testTypeId: string;
   /**
-   * Bucket lookup key for `checkTestEligibility` (contracts/subscription.yaml). All 8 GTO
-   * sub-tests resolve to the same "GTO" bucket regardless of which member they're mapped to, so
-   * `iot`/`fgt` (which have no 1:1 contract enum member — the contract's GTO_IO/GTO_LECTURETTE
-   * don't name-match web's Individual Obstacles/Final Group Task) use a same-bucket placeholder;
-   * see docs/plans/CrossPlatform_SSOT Phase 4 handoff for this accepted divergence.
+   * Bucket lookup key for `checkTestEligibility` (contracts/subscription.yaml). All 7 gradeable
+   * GTO sub-tests (GD/GPE/PGT/HGT/IO/GOR/CT) resolve to the same "GTO" bucket and map 1:1 to
+   * their contract `TestType` member. `fgt` is undefined here — it's a non-gradable,
+   * study-content-only label with no matching `GTOSubmission` variant or contract member.
    */
   contractTestType?: TestType;
   shortCode: string;
@@ -24,6 +23,14 @@ export interface TestSimulatorConfig {
   isMostPopular?: boolean;
 }
 
+/**
+ * `fgt` (Final Group Task) has no matching `GTOSubmission` variant or contract `TestType`
+ * member — it is a non-gradable, study-content-only label (`StudyMaterialsProvider.kt`'s
+ * "Snake Race & FGT Strategies" item), so it is intentionally omitted here and left with no
+ * `contractTestType` (see DAY_3_4_TESTS below). `snake_race` (shortCode GOR) IS a real
+ * gradeable type — `GTOSubmission.GORSubmission` / `GTOTestType.GROUP_OBSTACLE_RACE` — and
+ * keeps its 1:1 `GTO_GOR` mapping.
+ */
 const GTO_CONTRACT_TYPE_BY_ID: Record<string, TestType> = {
   gd: 'GTO_GD',
   gpe: 'GTO_GPE',
@@ -32,7 +39,6 @@ const GTO_CONTRACT_TYPE_BY_ID: Record<string, TestType> = {
   iot: 'GTO_IO',
   command_task: 'GTO_CT',
   snake_race: 'GTO_GOR',
-  fgt: 'GTO_LECTURETTE',
 };
 
 export const DAY_1_TESTS: TestSimulatorConfig[] = [
@@ -78,20 +84,6 @@ export const DAY_2_TESTS: TestSimulatorConfig[] = [
     requiredTier: 'FREE',
     stageBadge: 'Stage II Psychology',
     olqsEvaluated: ['Organising Ability', 'Sense of Responsibility'],
-  },
-  {
-    id: 'psychology',
-    testTypeId: 'tat',
-    shortCode: 'BATTERY',
-    dayNumber: '2',
-    title: 'Full Psychology Test Battery',
-    description: 'Complete TAT, WAT, SRT, and SD in one continuous timed assessment.',
-    timeLimit: 'Full 4-Test Battery',
-    contractTestType: 'TAT',
-    requiredTier: 'PRO',
-    stageBadge: 'Stage II Psychology',
-    olqsEvaluated: ['All 15 Officer-Like Qualities'],
-    isMostPopular: true,
   },
   {
     id: 'tat',
@@ -177,6 +169,8 @@ export const DAY_5_TESTS: TestSimulatorConfig[] = [
     olqsEvaluated: ['Power of Expression', 'General Awareness', 'Moral Courage'],
   },
   {
+    // Non-gradable content/briefing card — Board Conference/SMB standards are a protocol guide,
+    // not a submittable/gradeable test, so this intentionally carries no `contractTestType`.
     id: 'conference',
     testTypeId: 'conference',
     shortCode: 'CONF',

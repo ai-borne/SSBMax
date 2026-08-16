@@ -4,7 +4,6 @@ const ALL_TEST_IDS = [
   'oir',
   'ppdt',
   'piq',
-  'psychology',
   'tat',
   'wat',
   'srt',
@@ -22,7 +21,7 @@ const ALL_TEST_IDS = [
 ];
 
 test.describe('Comprehensive SSB Test Cards Runtime Audit', () => {
-  test('Audit all 18 test cards on localhost:5173 for launch, content loading, and errors', async ({ page }) => {
+  test('Audit all 17 test cards on localhost:5173 for launch, content loading, and errors', async ({ page }) => {
     // 1. Force Dev Tier Override to FORCE_PREMIUM so all cards are unlocked
     await page.goto('http://localhost:5173/?tab=settings');
     await page.waitForLoadState('domcontentloaded');
@@ -34,7 +33,7 @@ test.describe('Comprehensive SSB Test Cards Runtime Audit', () => {
     }
 
     console.log('\n========================================');
-    console.log('STARTING RUNTIME AUDIT OF ALL 18 SSB TEST CARDS');
+    console.log('STARTING RUNTIME AUDIT OF ALL 17 SSB TEST CARDS');
     console.log('========================================\n');
 
     const results: Record<string, { status: string; title: string; details: string }> = {};

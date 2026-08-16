@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const SSB_TEST_IDS = [
-  'oir', 'ppdt', 'piq', 'psychology', 'tat', 'wat', 'srt', 'sd',
+  'oir', 'ppdt', 'piq', 'tat', 'wat', 'srt', 'sd',
   'gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt',
   'interview', 'conference'
 ];
@@ -39,7 +39,7 @@ test.describe('SSB Test Wiring & Firestore Binding Audit', () => {
         expect(bodyText).toContain('Personal Information Questionnaire');
       } else if (testId === 'oir') {
         expect(bodyText.toLowerCase()).toContain('oir');
-      } else if (['tat', 'wat', 'srt', 'ppdt', 'psychology'].includes(testId)) {
+      } else if (['tat', 'wat', 'srt', 'ppdt'].includes(testId)) {
         // Psychology runner test state
         const isRunnerMounted = bodyText.includes('Slide') || bodyText.includes('Psychology') || bodyText.includes('TAT') || bodyText.includes('WAT') || bodyText.includes('SRT') || bodyText.includes('PPDT') || bodyText.includes('Failed to load');
         expect(isRunnerMounted).toBe(true);
