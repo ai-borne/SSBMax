@@ -39,16 +39,23 @@ src/
 │   ├── dashboard/      # CandidateDashboard
 │   ├── practice/       # PracticeTestsPage
 │   ├── study/          # StudyMaterialPage + 5-Day SSB vertical layout
-│   ├── testRunners/    # OIRTestRunner, PsychologyTestRunner (anti-cheat wired)
+│   ├── testRunners/    # OIRTestRunner, PsychologyTestRunner, GTOTaskGuideRunner (anti-cheat wired;
+│   │                   #   GTO/Interview capture is plain multiline textarea + char counter, no media)
 │   ├── evaluation/     # PsychologistDossier report viewer
-│   ├── reports/        # AIReportsPage
+│   ├── reports/        # AIReportsPage — OLQ dashboard, routed via `activeTab === 'reports'` in App.tsx
 │   ├── subscription/   # SubscriptionPage + Razorpay triggers
 │   ├── settings/       # SettingsPage
 │   ├── account/        # AccountPage
 │   ├── onboarding/     # First-run onboarding
 │   └── legal/          # Privacy, Terms
 ├── viewmodels/         # State containers (custom hooks returning UiState + actions)
-├── repositories/       # Firestore read wrappers (ContentRepository)
+│   ├── useOLQDashboardViewModel.ts     # aggregates `{type}_results` into AIReportsPage's props
+│   └── useSubmissionResultViewModel.ts # polls `submissions/{id}.analysisStatus` until COMPLETED
+├── repositories/       # Firestore read wrappers + Cloud Function write wrappers
+│   ├── ContentRepository.ts    # Firestore reads (study materials, question batches)
+│   ├── SubmissionRepository.ts # wraps submit*/evaluate* callables (writes) + result-collection reads
+│   ├── FeatureFlagRepository.ts
+│   ├── SubscriptionRepository.ts
 │   └── interfaces/     # Repository TypeScript interfaces
 ├── services/           # Side-effect singletons
 │   ├── AuthService.ts
@@ -74,6 +81,15 @@ Component → ViewModel hook → Repository → Firestore SDK → IndexedDB cach
 ```
 Component → ViewModel hook → Cloud Function (HTTPS callable) → Firestore Admin SDK
 ```
+
+**Data flow (test submission + AI evaluation — Tier-2 SSOT, see root `CLAUDE.md` and `functions/CLAUDE.md`):**
+```
+Component → ViewModel → SubmissionRepository.submit*() callable → submissions/{id} doc created
+                       → SubmissionRepository.evaluate*() callable (functions/src/evaluation/*Evaluate.js)
+                       → result screen polls submissions/{id}.analysisStatus until COMPLETED
+                       → reads {type}_results/{id} once
+```
+KMP calls the exact same `evaluate*` Cloud Functions — this is the one piece of Tier-2 *decision logic* (prompt construction, scoring, quota enforcement) that is **not** hand-duplicated between web and `shared`, unlike the eligibility pre-check duplication called out in root `CLAUDE.md`.
 
 ---
 
@@ -260,6 +276,9 @@ Follows root CLAUDE.md exactly. In JSX string literals and `strings/` files:
 | Anti-cheat | `src/services/AntiCheatService.ts` |
 | Offline sync | `src/services/OfflineQueueService.ts` |
 | Firestore reads | `src/repositories/ContentRepository.ts` |
+| Test submission + evaluation writes | `src/repositories/SubmissionRepository.ts` |
+| OLQ dashboard aggregation | `src/viewmodels/useOLQDashboardViewModel.ts` |
+| Submission result polling | `src/viewmodels/useSubmissionResultViewModel.ts` |
 | Tab routing | `src/hooks/useTabRouting.ts` |
 | App entry | `src/App.tsx` |
 | PWA config | `vite.config.ts` |

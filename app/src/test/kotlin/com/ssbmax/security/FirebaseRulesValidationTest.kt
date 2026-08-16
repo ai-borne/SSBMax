@@ -182,28 +182,33 @@ class FirebaseRulesValidationTest {
     // ==================== OIR Test Content Tests ====================
 
     @Test
-    fun `OIR metadata is read-only for authenticated users`() {
+    fun `OIR metadata is public read-only`() {
+        // Widened from isAuthenticated() to `if true` in ea4b938c so the unauthenticated
+        // Playwright E2E wiring test (scripts/e2e-ssb-wiring-test.mjs) and web's dev
+        // fallback test content can read question metadata without a login step -- test
+        // content carries no PII, only writes need to stay locked down.
         val content = getRulesContent()
         val oirMetaRules = content.substringAfter("match /test_content/oir/meta/{document}")
             .substringBefore("}")
 
-        assertTrue("Authenticated users can read OIR metadata",
-            oirMetaRules.contains("allow read: if isAuthenticated()"))
+        assertTrue("Anyone can read OIR metadata",
+            oirMetaRules.contains("allow read: if true"))
         assertTrue("Clients cannot write OIR metadata",
             oirMetaRules.contains("allow write: if false"))
     }
 
     @Test
-    fun `OIR question batches are read-only for authenticated users`() {
+    fun `OIR question batches are public read-only`() {
         // Phase 0b (CrossPlatform_SSOT): "question_batches" was a web-only path-drift
         // collection nobody wrote to; the KMP/web-authoritative path is "batches"
         // (GitLiveOIRQuestionCacheManager.FIRESTORE_BATCHES).
+        // Widened from isAuthenticated() to `if true` in ea4b938c -- see rationale above.
         val content = getRulesContent()
         val oirBatchRules = content.substringAfter("match /test_content/oir/batches/{batchId}")
             .substringBefore("}")
 
-        assertTrue("Authenticated users can read question batches",
-            oirBatchRules.contains("allow read: if isAuthenticated()"))
+        assertTrue("Anyone can read question batches",
+            oirBatchRules.contains("allow read: if true"))
         assertTrue("Clients cannot write question batches",
             oirBatchRules.contains("allow write: if false"))
     }

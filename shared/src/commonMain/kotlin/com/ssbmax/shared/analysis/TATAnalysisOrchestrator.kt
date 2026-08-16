@@ -67,12 +67,7 @@ class TATAnalysisOrchestrator(
         if (submission.analysisStatus != AnalysisStatus.PENDING_ANALYSIS) return
         if (submission.stories.isEmpty()) return
 
-        if (featureFlagRepository.getFeatureFlags().isEnabled(FEATURE_FLAG_SERVER_EVALUATION)) {
-            evaluationFunctionsClient.evaluateTAT(submissionId).onFailure {
-                logger.e(TAG, "Server-side TAT evaluation failed: $submissionId: ${it.message}")
-            }
-            return
-        }
+        if (tryServerSideEvaluation(submissionId)) return
 
         submissionRepository.updateTATAnalysisStatus(submissionId, AnalysisStatus.ANALYZING)
             .onFailure {
@@ -152,6 +147,14 @@ class TATAnalysisOrchestrator(
         }
         runCatching { getOLQDashboard.invalidateCache(submission.userId) }
             .onFailure { logger.w(TAG, "Failed to invalidate dashboard cache: ${it.message}") }
+    }
+
+    private suspend fun tryServerSideEvaluation(submissionId: String): Boolean {
+        if (!featureFlagRepository.getFeatureFlags().isEnabled(FEATURE_FLAG_SERVER_EVALUATION)) return false
+        evaluationFunctionsClient.evaluateTAT(submissionId).onFailure {
+            logger.e(TAG, "Server-side TAT evaluation failed: $submissionId: ${it.message}")
+        }
+        return true
     }
 
     private suspend fun analyzeStory(
