@@ -194,11 +194,20 @@ class SDAnalysisOrchestrator(
     private val userProfileRepository: UserProfileRepository,
     private val aiService: AIService,
     private val getOLQDashboard: GetOLQDashboardUseCase,
-    private val logger: DomainLogger
+    private val logger: DomainLogger,
+    private val featureFlagRepository: FeatureFlagRepository,
+    private val evaluationFunctionsClient: EvaluationFunctionsClient
 ) {
     suspend fun analyze(submissionId: String) {
         val submission = submissionRepository.getSDTSubmission(submissionId).getOrNull() ?: return
         if (submission.analysisStatus != AnalysisStatus.PENDING_ANALYSIS) return
+
+        if (featureFlagRepository.getFeatureFlags().isEnabled(FEATURE_FLAG_SERVER_EVALUATION)) {
+            evaluationFunctionsClient.evaluateSD(submissionId).onFailure {
+                logger.e("PsychAnalysis", "Server-side SD evaluation failed: $submissionId: ${it.message}")
+            }
+            return
+        }
 
         runPsychAnalysis(
             testType = TestType.SD,
@@ -220,5 +229,9 @@ class SDAnalysisOrchestrator(
             markFailed = { submissionRepository.updateSDTAnalysisStatus(submissionId, AnalysisStatus.FAILED) },
             writeResult = { submissionRepository.updateSDTOLQResult(submissionId, it) }
         )
+    }
+
+    private companion object {
+        const val FEATURE_FLAG_SERVER_EVALUATION = "sd_server_evaluation"
     }
 }

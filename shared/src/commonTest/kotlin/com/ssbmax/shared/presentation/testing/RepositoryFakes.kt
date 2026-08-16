@@ -214,6 +214,8 @@ class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
     val evaluateWATCalls = mutableListOf<String>()
     var evaluateSRTResult: Result<Unit> = Result.success(Unit)
     val evaluateSRTCalls = mutableListOf<String>()
+    var evaluateSDResult: Result<Unit> = Result.success(Unit)
+    val evaluateSDCalls = mutableListOf<String>()
 
     override suspend fun evaluateWAT(submissionId: String): Result<Unit> {
         evaluateWATCalls.add(submissionId)
@@ -223,6 +225,11 @@ class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
     override suspend fun evaluateSRT(submissionId: String): Result<Unit> {
         evaluateSRTCalls.add(submissionId)
         return evaluateSRTResult
+    }
+
+    override suspend fun evaluateSD(submissionId: String): Result<Unit> {
+        evaluateSDCalls.add(submissionId)
+        return evaluateSDResult
     }
 }
 

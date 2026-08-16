@@ -19,6 +19,7 @@ const { recordTestUsage } = require('./eligibility');
 const { geminiGenerateContent } = require('./geminiProxy');
 const { evaluateWAT } = require('./evaluation/watEvaluate');
 const { evaluateSRT } = require('./evaluation/srtEvaluate');
+const { evaluateSD } = require('./evaluation/sdEvaluate');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
@@ -33,3 +34,6 @@ exports.evaluateWAT = evaluateWAT;
 // Phase 5 Ship (Web SSB Test Flow Parity plan): behind KMP's `srt_server_evaluation`
 // feature flag, default off -- see SRTAnalysisOrchestrator.
 exports.evaluateSRT = evaluateSRT;
+// Phase 6 Ship (Web SSB Test Flow Parity plan): behind KMP's `sd_server_evaluation`
+// feature flag, default off -- see SDAnalysisOrchestrator.
+exports.evaluateSD = evaluateSD;
