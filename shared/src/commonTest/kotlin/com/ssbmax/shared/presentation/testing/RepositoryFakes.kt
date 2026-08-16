@@ -254,6 +254,14 @@ class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
         evaluatePPDTCalls.add(submissionId)
         return evaluatePPDTResult
     }
+
+    var evaluateTATResult: Result<Unit> = Result.success(Unit)
+    val evaluateTATCalls = mutableListOf<String>()
+
+    override suspend fun evaluateTAT(submissionId: String): Result<Unit> {
+        evaluateTATCalls.add(submissionId)
+        return evaluateTATResult
+    }
 }
 
 class FakeDifficultyProgressionRepository(

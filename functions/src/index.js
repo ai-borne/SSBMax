@@ -23,6 +23,7 @@ const { evaluateSD } = require('./evaluation/sdEvaluate');
 const { evaluateInterviewResponse } = require('./evaluation/interviewEvaluate');
 const { evaluateGTO } = require('./evaluation/gtoEvaluate');
 const { evaluatePPDT } = require('./evaluation/ppdtEvaluate');
+const { evaluateTAT } = require('./evaluation/tatEvaluate');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
@@ -55,3 +56,9 @@ exports.evaluateGTO = evaluateGTO;
 // evaluate* function; parity harness (synthetic fixtures) required before flag exceeds 5%
 // per the plan's Verification section, since PPDT is production-verified today.
 exports.evaluatePPDT = evaluatePPDT;
+// Phase 10 Ship (Web SSB Test Flow Parity plan): behind KMP's `tat_server_evaluation`
+// feature flag, default off -- see TATAnalysisOrchestrator. Highest-risk, last-migrated
+// type per the plan's risk ordering -- 12-story-parallel + synthesis two-stage pipeline;
+// parity harness (synthetic fixtures) required before flag exceeds 5% per the plan's
+// Verification section, since TAT is production-verified today.
+exports.evaluateTAT = evaluateTAT;

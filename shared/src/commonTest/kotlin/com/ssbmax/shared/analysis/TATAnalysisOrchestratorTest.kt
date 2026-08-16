@@ -1,5 +1,6 @@
 package com.ssbmax.shared.analysis
 
+import com.ssbmax.shared.domain.model.FeatureFlags
 import com.ssbmax.shared.domain.model.TATQuestion
 import com.ssbmax.shared.domain.model.TATStoryResponse
 import com.ssbmax.shared.domain.model.TATSubmission
@@ -9,6 +10,8 @@ import com.ssbmax.shared.domain.service.OLQScoreWithReasoning
 import com.ssbmax.shared.domain.service.ResponseAnalysis
 import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
 import com.ssbmax.shared.presentation.testing.FakeAIService
+import com.ssbmax.shared.presentation.testing.FakeEvaluationFunctionsClient
+import com.ssbmax.shared.presentation.testing.FakeFeatureFlagRepository
 import com.ssbmax.shared.presentation.testing.FakeGTORepository
 import com.ssbmax.shared.presentation.testing.FakeInterviewRepository
 import com.ssbmax.shared.presentation.testing.FakeSubmissionRepository
@@ -115,7 +118,9 @@ class TATAnalysisOrchestratorTest {
         submissionRepo: com.ssbmax.shared.domain.repository.SubmissionRepository,
         testContentRepo: com.ssbmax.shared.domain.repository.TestContentRepository,
         aiService: FakeAIService,
-        httpClient: HttpClient
+        httpClient: HttpClient,
+        featureFlagRepository: FakeFeatureFlagRepository = FakeFeatureFlagRepository(),
+        evaluationFunctionsClient: FakeEvaluationFunctionsClient = FakeEvaluationFunctionsClient()
     ) = TATAnalysisOrchestrator(
         submissionRepo,
         testContentRepo,
@@ -123,7 +128,9 @@ class TATAnalysisOrchestratorTest {
         aiService,
         GetOLQDashboardUseCase(submissionRepo, FakeGTORepository(), FakeInterviewRepository(), RecordingLogger()),
         httpClient,
-        RecordingLogger()
+        RecordingLogger(),
+        featureFlagRepository,
+        evaluationFunctionsClient
     )
 
     @Test
@@ -196,5 +203,32 @@ class TATAnalysisOrchestratorTest {
 
         assertEquals(0, aiService.lastImageBytes?.size)
         assertTrue(aiService.lastImageBytes != null)
+    }
+
+    @Test
+    fun `analyze delegates to the server-side evaluation function and skips the legacy AI path when tat_server_evaluation is enabled`() = runTest {
+        var legacyStatusUpdateCalled = false
+        val submissionRepo = object : com.ssbmax.shared.domain.repository.SubmissionRepository by (FakeSubmissionRepository()) {
+            override suspend fun getTATSubmission(id: String): Result<TATSubmission?> =
+                Result.success(buildSubmission(questions = persistedQuestions))
+            override suspend fun updateTATAnalysisStatus(id: String, status: AnalysisStatus): Result<Unit> {
+                legacyStatusUpdateCalled = true
+                return Result.success(Unit)
+            }
+        }
+        val aiService = FakeAIService().apply { responseAnalysisResult = Result.success(fullOlqAnalysis()) }
+        val evaluationFunctionsClient = FakeEvaluationFunctionsClient()
+        val featureFlagRepository = FakeFeatureFlagRepository(
+            flagsResult = FeatureFlags(flags = mapOf("tat_server_evaluation" to true))
+        )
+        val orchestrator = orchestrator(
+            submissionRepo, FakeTestContentRepository(), aiService, noopHttpClient(),
+            featureFlagRepository, evaluationFunctionsClient
+        )
+
+        orchestrator.analyze(submissionId)
+
+        assertEquals(listOf(submissionId), evaluationFunctionsClient.evaluateTATCalls)
+        assertTrue(!legacyStatusUpdateCalled, "legacy client-side AI path (status ANALYZING/FAILED flip) must not run when the flag is on")
     }
 }

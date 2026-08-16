@@ -49,4 +49,14 @@ interface EvaluationFunctionsClient {
      * `batchId` (SSRF guard, §A of the plan); this call only ever sends `submissionId`.
      */
     suspend fun evaluatePPDT(submissionId: String): Result<Unit>
+
+    /**
+     * TAT evaluation (Phase 10, Web SSB Test Flow Parity plan) -- last and highest-risk
+     * type migrated. `functions/src/evaluation/tatEvaluate.js` resolves every story's
+     * picture server-side from the submission's `batchId` against the `test_content/tat/
+     * image_batches` doc (SSRF guard, §A of the plan, same as PPDT/GTO) and runs the 12
+     * per-story Gemini calls with a bounded concurrency cap before running synthesis once
+     * -- this call only ever sends `submissionId`.
+     */
+    suspend fun evaluateTAT(submissionId: String): Result<Unit>
 }
