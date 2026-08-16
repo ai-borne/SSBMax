@@ -17,6 +17,7 @@ const { evaluateOIRAnswers } = require('./oirScoring');
 const { analyzeInterviewResponse, analyzeResponseInline } = require('./aiAnalysis');
 const { recordTestUsage } = require('./eligibility');
 const { geminiGenerateContent } = require('./geminiProxy');
+const { evaluateWAT } = require('./evaluation/watEvaluate');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
@@ -25,3 +26,6 @@ exports.analyzeInterviewResponse = analyzeInterviewResponse;
 exports.analyzeResponseInline = analyzeResponseInline;
 exports.recordTestUsage = recordTestUsage;
 exports.geminiGenerateContent = geminiGenerateContent;
+// Phase 4 Ship (Web SSB Test Flow Parity plan): behind KMP's `wat_server_evaluation`
+// feature flag, default off -- see WATAnalysisOrchestrator.
+exports.evaluateWAT = evaluateWAT;

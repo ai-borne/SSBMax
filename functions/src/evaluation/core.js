@@ -15,6 +15,15 @@
  *
  * No callable wrapper and no `index.js` export here -- nothing calls this yet
  * (Phase 1 scope is scaffolding only, wired up starting Phase 4).
+ *
+ * **Phase 4 fix:** the real "submissions" document envelope every
+ * `GitLive*SubmissionRepository` writes (`SubmissionDocDto` in
+ * `data-firebase/.../SubmissionSharedMappers.kt`) nests `analysisStatus`
+ * under `data.analysisStatus`, not at the document's top level -- only
+ * `userId`/`testType`/`submittedAt` are top-level. This module's status
+ * guard/flip logic originally assumed a flat `submission.analysisStatus`
+ * (untested against the real shape, since Phase 1 had no real caller yet).
+ * Fixed here, as the first real caller (`watEvaluate.js`) surfaced it.
  */
 
 const functions = require('firebase-functions');
@@ -117,13 +126,14 @@ async function runEvaluation({ firestoreDb, generateContent, uid, submissionId, 
     throw new functions.https.HttpsError('permission-denied', 'Permission denied: ownership check failed');
   }
 
-  if (submission.analysisStatus !== 'PENDING_ANALYSIS') {
-    return { success: true, skipped: true, status: submission.analysisStatus };
+  const currentStatus = submission.data ? submission.data.analysisStatus : submission.analysisStatus;
+  if (currentStatus !== 'PENDING_ANALYSIS') {
+    return { success: true, skipped: true, status: currentStatus };
   }
 
   await checkQuota(firestoreDb, uid, testType);
 
-  await submissionRef.update({ analysisStatus: 'ANALYZING' });
+  await submissionRef.update({ 'data.analysisStatus': 'ANALYZING' });
 
   const result = await withRetry({
     call: async () => parseAndValidate(await generateContent(buildPrompt(submission))),
@@ -133,15 +143,15 @@ async function runEvaluation({ firestoreDb, generateContent, uid, submissionId, 
   });
 
   if (result === null || result === undefined) {
-    await submissionRef.update({ analysisStatus: 'FAILED' });
+    await submissionRef.update({ 'data.analysisStatus': 'FAILED' });
     return { success: false, submissionId, status: 'FAILED' };
   }
 
   await firestoreDb
     .collection(resultCollection)
     .doc(submissionId)
-    .set({ submissionId, testType, ...result, analyzedAt: Date.now() });
-  await submissionRef.update({ analysisStatus: 'COMPLETED' });
+    .set({ submissionId, testType, ...result, analyzedAt: Date.now(), userId: submission.userId });
+  await submissionRef.update({ 'data.analysisStatus': 'COMPLETED' });
 
   return { success: true, submissionId, status: 'COMPLETED' };
 }

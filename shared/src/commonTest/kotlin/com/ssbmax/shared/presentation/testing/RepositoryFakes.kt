@@ -35,6 +35,7 @@ import com.ssbmax.shared.domain.repository.TestSessionRepository
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
 import com.ssbmax.shared.domain.repository.UsageInfo
 import com.ssbmax.shared.domain.repository.UserProfileRepository
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.domain.util.DomainLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -205,6 +206,16 @@ class FakeOIREvaluationClient : OIREvaluationClient {
                 correctnessByQuestionId = questionIds.associateWith { false }
             )
         )
+    }
+}
+
+class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
+    var evaluateWATResult: Result<Unit> = Result.success(Unit)
+    val evaluateWATCalls = mutableListOf<String>()
+
+    override suspend fun evaluateWAT(submissionId: String): Result<Unit> {
+        evaluateWATCalls.add(submissionId)
+        return evaluateWATResult
     }
 }
 

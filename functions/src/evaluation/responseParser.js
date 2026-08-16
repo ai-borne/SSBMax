@@ -148,7 +148,74 @@ function parseEvaluationResponse(responseText) {
   throw new Error('Invalid response structure from Gemini: missing olqScores');
 }
 
+const OLQ_ALL_IDS = Object.keys(Enums.OLQ);
+const MIN_ACCEPTABLE_OLQS = 14;
+const DEFAULT_SCORE_RANGE = [5, 9];
+const FILLED_OLQ_SCORE = 6;
+const FILLED_OLQ_CONFIDENCE = 30;
+const FILLED_OLQ_REASONING = 'AI did not assess this OLQ - neutral score assigned';
+
+function clampScore(score, range = DEFAULT_SCORE_RANGE) {
+  const [min, max] = range;
+  const n = Number.isFinite(score) ? Math.trunc(score) : min;
+  return Math.min(max, Math.max(min, n));
+}
+
+/**
+ * Port of `AnalysisRetry.kt`'s clamp/accept/fill-missing gate -- the piece of KMP's
+ * per-OLQ-score shaping that lived in the orchestrator's retry loop, not in
+ * `KtorGeminiResponseParser`, so it wasn't ported alongside `parseEvaluationResponse`
+ * in Phase 1. Takes `parseEvaluationResponse`'s output and either returns a
+ * fully-shaped 15-OLQ score map (accepted) or `null` (reject -> `core.js`'s
+ * `withRetry` tries again), exactly mirroring `AnalysisRetry.withRetry`'s
+ * `MIN_ACCEPTABLE_OLQS = 14` threshold, per-score clamp to `scoreRange` (default
+ * 5..9, the SSB scale), and neutral-fill (score 6, confidence 30) for any OLQ
+ * missing from a 14-of-15 response.
+ */
+function finalizeOlqScores(parsed, scoreRange = DEFAULT_SCORE_RANGE) {
+  const rawIds = Object.keys(parsed.olqScores || {}).filter((id) => OLQ_ALL_IDS.includes(id));
+  if (rawIds.length < MIN_ACCEPTABLE_OLQS) {
+    return null;
+  }
+
+  const olqScores = {};
+  for (const olqId of rawIds) {
+    const scoreDto = parsed.olqScores[olqId];
+    olqScores[olqId] = {
+      score: clampScore(scoreDto.score, scoreRange),
+      confidence: parsed.overallConfidence,
+      reasoning: scoreDto.reasoning || ''
+    };
+  }
+  for (const olqId of OLQ_ALL_IDS) {
+    if (!olqScores[olqId]) {
+      olqScores[olqId] = { score: FILLED_OLQ_SCORE, confidence: FILLED_OLQ_CONFIDENCE, reasoning: FILLED_OLQ_REASONING };
+    }
+  }
+
+  return {
+    olqScores,
+    overallConfidence: parsed.overallConfidence,
+    keyInsights: parsed.keyInsights || [],
+    suggestedFollowUp: parsed.suggestedFollowUp || null,
+    notRecommended: Boolean(parsed.notRecommended)
+  };
+}
+
+/** Port of `AnalysisRetry.ratingFromScore` -- maps an averaged overall OLQ score to a label. */
+function ratingFromScore(score) {
+  if (score <= 5.5) return 'Exceptional';
+  if (score <= 6.5) return 'Good';
+  if (score <= 7.5) return 'Average';
+  return 'Needs Improvement';
+}
+
 module.exports = {
   extractJsonFromResponse,
-  parseEvaluationResponse
+  parseEvaluationResponse,
+  finalizeOlqScores,
+  clampScore,
+  ratingFromScore,
+  MIN_ACCEPTABLE_OLQS,
+  DEFAULT_SCORE_RANGE
 };

@@ -42,6 +42,7 @@ import com.ssbmax.shared.data.repository.GitLiveUserProfileRepository
 import com.ssbmax.shared.data.repository.GitLiveUserRepository
 import com.ssbmax.shared.data.repository.GitLiveWATWordCacheManager
 import com.ssbmax.shared.data.repository.InterviewQuestionGenerator
+import com.ssbmax.shared.data.service.GitLiveEvaluationFunctionsClient
 import com.ssbmax.shared.domain.model.interview.QuestionCacheRepository
 import com.ssbmax.shared.domain.repository.AnalyticsRepository
 import com.ssbmax.shared.domain.repository.AuthRepository
@@ -65,6 +66,7 @@ import com.ssbmax.shared.domain.repository.TestSubmissionRepository
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
 import com.ssbmax.shared.domain.repository.UnifiedResultRepository
 import com.ssbmax.shared.domain.repository.UserProfileRepository
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.platform.isDebugBuild
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -107,6 +109,7 @@ val repositoryModule = module {
     singleOf(::GitLiveAuthRepository) bind AuthRepository::class
     singleOf(::GitLiveOirResultRepository) bind OirResultRepository::class
     singleOf(::GitLiveOIREvaluationClient) bind OIREvaluationClient::class
+    singleOf(::GitLiveEvaluationFunctionsClient) bind EvaluationFunctionsClient::class
     singleOf(::GitLiveUserProfileRepository) bind UserProfileRepository::class
     // Phase 3/4 (KMP-convergence plan): wraps the real repository in the dev-tier-override
     // decorator only when isDebugBuild() -- fail-closed, since isDebugBuild() is false in every
