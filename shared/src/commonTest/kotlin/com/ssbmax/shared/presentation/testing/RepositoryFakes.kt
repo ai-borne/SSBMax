@@ -246,6 +246,14 @@ class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
         evaluateGTOCalls.add(submissionId)
         return evaluateGTOResult
     }
+
+    var evaluatePPDTResult: Result<Unit> = Result.success(Unit)
+    val evaluatePPDTCalls = mutableListOf<String>()
+
+    override suspend fun evaluatePPDT(submissionId: String): Result<Unit> {
+        evaluatePPDTCalls.add(submissionId)
+        return evaluatePPDTResult
+    }
 }
 
 class FakeDifficultyProgressionRepository(

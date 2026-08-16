@@ -22,6 +22,7 @@ const { evaluateSRT } = require('./evaluation/srtEvaluate');
 const { evaluateSD } = require('./evaluation/sdEvaluate');
 const { evaluateInterviewResponse } = require('./evaluation/interviewEvaluate');
 const { evaluateGTO } = require('./evaluation/gtoEvaluate');
+const { evaluatePPDT } = require('./evaluation/ppdtEvaluate');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
@@ -49,3 +50,8 @@ exports.evaluateInterviewResponse = evaluateInterviewResponse;
 // (scope correction, confirmed with the user -- see gtoPrompts.js's class doc for why
 // PGT/HGT/GOR/CT/IO are out of reach today regardless of the flag).
 exports.evaluateGTO = evaluateGTO;
+// Phase 9 Ship (Web SSB Test Flow Parity plan): behind KMP's `ppdt_server_evaluation`
+// feature flag, default off -- see PPDTAnalysisOrchestrator. First image-based (multimodal)
+// evaluate* function; parity harness (synthetic fixtures) required before flag exceeds 5%
+// per the plan's Verification section, since PPDT is production-verified today.
+exports.evaluatePPDT = evaluatePPDT;

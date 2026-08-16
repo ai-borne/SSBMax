@@ -41,4 +41,12 @@ interface EvaluationFunctionsClient {
      * `gtoRepository.getSubmission` never returns one of those in the first place.
      */
     suspend fun evaluateGTO(submissionId: String): Result<Unit>
+
+    /**
+     * PPDT evaluation (Phase 9, Web SSB Test Flow Parity plan) -- the first image-based
+     * (multimodal) `evaluate*` function. `functions/src/evaluation/ppdtEvaluate.js`
+     * resolves the story's picture server-side from the submission's `questionId`/
+     * `batchId` (SSRF guard, §A of the plan); this call only ever sends `submissionId`.
+     */
+    suspend fun evaluatePPDT(submissionId: String): Result<Unit>
 }

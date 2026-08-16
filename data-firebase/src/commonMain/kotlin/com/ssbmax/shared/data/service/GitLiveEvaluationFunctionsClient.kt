@@ -61,4 +61,11 @@ class GitLiveEvaluationFunctionsClient : EvaluationFunctionsClient {
     } catch (e: Exception) {
         Result.failure(e)
     }
+
+    override suspend fun evaluatePPDT(submissionId: String): Result<Unit> = try {
+        Firebase.functions.httpsCallable("evaluatePPDT").invoke(EvaluateSubmissionRequest(submissionId))
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
 }
