@@ -25,6 +25,9 @@ import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
 import com.ssbmax.shared.domain.model.FeatureFlags
 import com.ssbmax.shared.domain.repository.AuthRepository
 import com.ssbmax.shared.domain.repository.FeatureFlagRepository
+import com.ssbmax.shared.domain.repository.OIREvaluationClient
+import com.ssbmax.shared.domain.repository.OIREvaluationResult
+import com.ssbmax.shared.domain.repository.OIRSubmittedAnswer
 import com.ssbmax.shared.domain.repository.SubmissionRepository
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.TestContentRepository
@@ -176,6 +179,32 @@ class FakeTestUsageRecorder : TestUsageRecorder {
     val recorded = mutableListOf<Triple<TestType, String, String?>>()
     override suspend fun recordTestUsage(testType: TestType, userId: String, submissionId: String?) {
         recorded += Triple(testType, userId, submissionId)
+    }
+}
+
+/**
+ * Stands in for the `evaluateOIRAnswers` Cloud Function (Phase 2, Web SSB Test Flow
+ * Parity plan). Defaults to marking every submitted question id incorrect -- tests that
+ * care about the resulting score should set [result] explicitly rather than relying on
+ * this default.
+ */
+class FakeOIREvaluationClient : OIREvaluationClient {
+    var result: Result<OIREvaluationResult>? = null
+
+    override suspend fun evaluateAnswers(
+        answersByBatch: Map<String, Map<String, OIRSubmittedAnswer>>
+    ): Result<OIREvaluationResult> {
+        result?.let { return it }
+        val questionIds = answersByBatch.values.flatMap { it.keys }
+        return Result.success(
+            OIREvaluationResult(
+                score = 0,
+                total = questionIds.size,
+                percentage = 0,
+                oirRating = 5,
+                correctnessByQuestionId = questionIds.associateWith { false }
+            )
+        )
     }
 }
 

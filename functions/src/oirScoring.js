@@ -43,22 +43,42 @@ async function fetchOIRBatchQuestions(firestoreDb, batchId) {
 }
 
 /**
+ * True if `selected` (a single id, or an array of ids for a multi-select
+ * question) matches `question`'s correct answer(s). Multi-select is compared
+ * as a set (order-independent, exact match); single-select falls back to the
+ * legacy index-or-id equality check.
+ */
+function isAnswerCorrect(question, selected) {
+  if (selected === undefined || selected === null) {
+    return false;
+  }
+  if (Array.isArray(question.correctAnswerIds) && question.correctAnswerIds.length > 0) {
+    const selectedArr = Array.isArray(selected) ? selected : [selected];
+    const correctSet = new Set(question.correctAnswerIds);
+    const selectedSet = new Set(selectedArr);
+    return correctSet.size === selectedSet.size && [...correctSet].every((id) => selectedSet.has(id));
+  }
+  const single = Array.isArray(selected) ? (selected.length === 1 ? selected[0] : undefined) : selected;
+  return single === question.correctAnswerIndex || single === question.correctAnswerId;
+}
+
+/**
  * Scores answers against a known question set. A question with no matching
  * answer is simply not counted correct -- there is no fallback that credits
- * an unanswered question.
+ * an unanswered question. `results` carries the per-question verdict so a
+ * caller (KMP's server-authoritative scoring, Phase 2) can build its own
+ * richer breakdown without ever trusting a client-supplied `isCorrect`.
  */
 function scoreOIRSubmission(questions, userAnswers) {
-  let score = 0;
-  questions.forEach((q) => {
+  const results = questions.map((q) => {
     const qId = q.id || `q_${q.questionNumber}`;
     const selected = userAnswers[qId] !== undefined ? userAnswers[qId] : userAnswers[q.questionNumber];
-    if (selected !== undefined && (selected === q.correctAnswerIndex || selected === q.correctAnswerId)) {
-      score++;
-    }
+    return { questionId: qId, isCorrect: isAnswerCorrect(q, selected) };
   });
+  const score = results.filter((r) => r.isCorrect).length;
   const total = questions.length;
-  const percentage = Math.round((score / total) * 100);
-  return { score, total, percentage, oirRating: calculateOIRRating(percentage) };
+  const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
+  return { score, total, percentage, oirRating: calculateOIRRating(percentage), results };
 }
 
 /**
@@ -74,6 +94,58 @@ async function evaluateOIRSubmission(firestoreDb, batchId, userAnswers) {
 }
 
 /**
+ * Scores only the questions the caller actually asked about (the keys of
+ * `answersForBatch`), not every question in the fetched batch doc. Required
+ * for KMP (Phase 2, Web SSB Test Flow Parity plan): its OIR sessions draw a
+ * shuffled subset of questions from a local cache pool spanning many
+ * Firestore batches, so a whole-batch-is-the-test assumption (which the
+ * single-batch `scoreOIRSubmission` above correctly makes for web) would
+ * silently count every *other* question in that batch as wrong.
+ */
+function scoreOIRQuestionSubset(questions, answersForBatch) {
+  const byId = new Map(questions.map((q) => [q.id || `q_${q.questionNumber}`, q]));
+  const results = Object.keys(answersForBatch).map((qId) => {
+    const q = byId.get(qId);
+    if (!q) {
+      throw new functions.https.HttpsError('invalid-argument', `Unknown OIR question id '${qId}' for its batch`);
+    }
+    return { questionId: qId, isCorrect: isAnswerCorrect(q, answersForBatch[qId]) };
+  });
+  return { score: results.filter((r) => r.isCorrect).length, total: results.length, results };
+}
+
+/**
+ * Multi-batch evaluation for KMP sessions: `batches` maps each source
+ * `batchId` to the subset of that batch's questions actually presented in
+ * this session (`{ questionId: selectedAnswer }`). Fetches and scores each
+ * batch independently, then aggregates -- one round trip regardless of how
+ * many batches the session's questions were drawn from.
+ */
+async function evaluateOIRMultiBatch(firestoreDb, batches) {
+  const batchIds = Object.keys(batches || {});
+  if (batchIds.length === 0) {
+    throw new functions.https.HttpsError('invalid-argument', 'batches must contain at least one batchId');
+  }
+
+  let score = 0;
+  let total = 0;
+  const results = [];
+  for (const batchId of batchIds) {
+    const questions = await fetchOIRBatchQuestions(firestoreDb, batchId);
+    if (!questions || questions.length === 0) {
+      throw new functions.https.HttpsError('not-found', `OIR batch ${batchId} not found`);
+    }
+    const batchResult = scoreOIRQuestionSubset(questions, batches[batchId] || {});
+    score += batchResult.score;
+    total += batchResult.total;
+    results.push(...batchResult.results);
+  }
+
+  const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
+  return { score, total, percentage, oirRating: calculateOIRRating(percentage), results };
+}
+
+/**
  * Evaluate OIR Answers Callable Function
  */
 exports.evaluateOIRAnswers = functions.https.onCall(async (data, context) => {
@@ -84,12 +156,19 @@ exports.evaluateOIRAnswers = functions.https.onCall(async (data, context) => {
     );
   }
 
-  const { batchId, userAnswers = {} } = data || {};
-  if (!batchId) {
-    throw new functions.https.HttpsError('invalid-argument', 'batchId is required');
-  }
+  const { batchId, userAnswers = {}, batches } = data || {};
 
   try {
+    // Phase 2 (Web SSB Test Flow Parity plan): KMP's session questions can span
+    // multiple Firestore batches, so it submits `batches` instead of a single
+    // `batchId`. Web keeps using the original single-batch shape.
+    if (batches && typeof batches === 'object' && Object.keys(batches).length > 0) {
+      const result = await evaluateOIRMultiBatch(db, batches);
+      return { success: true, ...result };
+    }
+    if (!batchId) {
+      throw new functions.https.HttpsError('invalid-argument', 'batchId is required');
+    }
     const result = await evaluateOIRSubmission(db, batchId, userAnswers);
     return { success: true, ...result };
   } catch (error) {
@@ -102,6 +181,9 @@ exports.evaluateOIRAnswers = functions.https.onCall(async (data, context) => {
 });
 
 exports.calculateOIRRating = calculateOIRRating;
+exports.isAnswerCorrect = isAnswerCorrect;
 exports.scoreOIRSubmission = scoreOIRSubmission;
+exports.scoreOIRQuestionSubset = scoreOIRQuestionSubset;
 exports.evaluateOIRSubmission = evaluateOIRSubmission;
+exports.evaluateOIRMultiBatch = evaluateOIRMultiBatch;
 exports.fetchOIRBatchQuestions = fetchOIRBatchQuestions;

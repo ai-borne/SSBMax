@@ -6,6 +6,8 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 import com.ssbmax.shared.domain.model.*
+import com.ssbmax.shared.domain.repository.OIREvaluationClient
+import com.ssbmax.shared.domain.repository.OIRSubmittedAnswer
 import com.ssbmax.shared.domain.repository.SubmissionRepository
 import com.ssbmax.shared.domain.repository.TestContentRepository
 import com.ssbmax.shared.domain.repository.TestSessionRepository
@@ -16,7 +18,12 @@ import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
  * Orchestrates the full OIR test-submission pipeline in a single, testable use case.
  *
  * Steps (run in strict order — any failure short-circuits remaining steps):
- *  1. Calculate score from the completed session.
+ *  1. Get the server-authoritative per-question correctness verdict, then calculate the
+ *     score from it. Phase 2 (Web SSB Test Flow Parity plan): scoring used to trust
+ *     `OIRQuestion.correctAnswerId`, which travels to the client -- a modified client
+ *     could forge its own score. Session questions are grouped by their source
+ *     `batchId` (a session's questions are drawn from a local cache pool spanning many
+ *     Firestore batches, not one whole batch) before calling `evaluateOIRAnswers`.
  *  2. Persist the submission under a freshly minted submission ID, distinct from the
  *     durable session ID — each attempt (including a retake of the same session) gets
  *     its own document, matching PPDT/TAT/WAT/SRT/SD.
@@ -24,9 +31,17 @@ import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
  *  4. Mark the test session as ended in Firestore.
  *  5. Invalidate the OLQ dashboard cache only after durable persistence succeeds.
  *
- * Returns `Result<String>` — the freshly minted submission ID on success.
+ * Returns `Result<OIRSubmissionOutcome>` — the freshly minted submission ID plus the
+ * server-scored [OIRTestResult] on success, so callers (the OIR ViewModel) never need
+ * their own [OIRTestScoreCalculator] dependency or a second, redundant scoring call.
  */
+data class OIRSubmissionOutcome(
+    val submissionId: String,
+    val testResult: OIRTestResult,
+)
+
 class SubmitOIRTestUseCase constructor(
+    private val evaluationClient: OIREvaluationClient,
     private val scoreCalculator: OIRTestScoreCalculator,
     private val usageRecorder: TestUsageRecorder,
     private val dashboardUseCase: GetOLQDashboardUseCase,
@@ -35,10 +50,22 @@ class SubmitOIRTestUseCase constructor(
     private val testContentRepository: TestContentRepository
 ) {
 
-    suspend operator fun invoke(session: OIRTestSession): Result<String> {
+    suspend operator fun invoke(session: OIRTestSession): Result<OIRSubmissionOutcome> {
         return runCatching {
-            // Step 1: Calculate score
-            val result = scoreCalculator.calculate(session)
+            // Step 1: Server-authoritative scoring
+            val answersByBatch: Map<String, Map<String, OIRSubmittedAnswer>> = session.questions
+                .groupBy { it.batchId }
+                .mapValues { (_, questionsInBatch) ->
+                    questionsInBatch.associate { question ->
+                        val answer = session.answers[question.id]
+                        question.id to OIRSubmittedAnswer(
+                            selectedOptionId = answer?.selectedOptionId,
+                            selectedOptionIds = answer?.selectedOptionIds ?: emptySet()
+                        )
+                    }
+                }
+            val evaluation = evaluationClient.evaluateAnswers(answersByBatch).getOrThrow()
+            val result = scoreCalculator.calculate(session, evaluation.correctnessByQuestionId)
 
             // Step 2: Persist submission under a fresh, unique ID — each attempt (including a
             // retake of the same session) gets its own document, so a retake's result is never
@@ -68,8 +95,8 @@ class SubmitOIRTestUseCase constructor(
                 testContentRepository.markOIRQuestionsUsed(session.questions.map { it.id })
             }
 
-            // Return the submission ID
-            submission.id
+            // Return the submission ID and the server-scored result together
+            OIRSubmissionOutcome(submissionId = submission.id, testResult = result)
         }
     }
 }

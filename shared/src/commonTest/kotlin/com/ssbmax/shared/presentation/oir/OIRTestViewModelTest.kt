@@ -17,6 +17,7 @@ import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.NoOpLogger
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
 import com.ssbmax.shared.presentation.testing.FakeGTORepository
+import com.ssbmax.shared.presentation.testing.FakeOIREvaluationClient
 import com.ssbmax.shared.presentation.testing.clearForTest
 import com.ssbmax.shared.presentation.testing.FakeInterviewRepository
 import com.ssbmax.shared.presentation.testing.FakeSubmissionRepository
@@ -110,9 +111,9 @@ class OIRTestViewModelTest {
 
     private fun buildViewModel(): OIRTestViewModel {
         val logger = NoOpLogger()
-        val scoreCalculator = OIRTestScoreCalculator(logger)
         val submitOIRTestUseCase = SubmitOIRTestUseCase(
-            scoreCalculator = scoreCalculator,
+            evaluationClient = FakeOIREvaluationClient(),
+            scoreCalculator = OIRTestScoreCalculator(logger),
             usageRecorder = FakeTestUsageRecorder(),
             dashboardUseCase = GetOLQDashboardUseCase(
                 submissionRepository = submissionRepository,
@@ -130,7 +131,6 @@ class OIRTestViewModelTest {
             observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
             checkTestEligibility = CheckTestEligibilityUseCase(subscriptionRepository, RecordingAnalyticsTracker()),
             getSubscriptionTier = GetSubscriptionTierUseCase(subscriptionRepository),
-            scoreCalculator = scoreCalculator,
             submitOIRTestUseCase = submitOIRTestUseCase,
             logger = logger,
             analyticsTracker = RecordingAnalyticsTracker()

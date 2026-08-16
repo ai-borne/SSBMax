@@ -9,7 +9,6 @@ import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.TestContentRepository
 import com.ssbmax.shared.domain.repository.TestSessionRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
-import com.ssbmax.shared.domain.usecase.oir.OIRTestScoreCalculator
 import com.ssbmax.shared.domain.usecase.oir.SubmitOIRTestUseCase
 import com.ssbmax.shared.domain.usecase.subscription.CheckTestEligibilityUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
@@ -39,7 +38,6 @@ class OIRTestViewModel(
     private val observeCurrentUser: ObserveCurrentUserUseCase,
     private val checkTestEligibility: CheckTestEligibilityUseCase,
     private val getSubscriptionTier: GetSubscriptionTierUseCase,
-    private val scoreCalculator: OIRTestScoreCalculator,
     private val submitOIRTestUseCase: SubmitOIRTestUseCase,
     private val logger: DomainLogger,
     private val analyticsTracker: AnalyticsTracker
@@ -231,7 +229,7 @@ class OIRTestViewModel(
         viewModelScope.launch {
             try {
                 val subscriptionType = getSubscriptionTier(completedSession.userId).getOrDefault(SubscriptionTier.FREE)
-                val submissionId = submitOIRTestUseCase(completedSession).getOrThrow()
+                val outcome = submitOIRTestUseCase(completedSession).getOrThrow()
                 // Note: served questions are marked used inside SubmitOIRTestUseCase --
                 // the single source of truth for submission orchestration. Do NOT mark
                 // them again here (that caused a duplicate write per submit on Android).
@@ -240,9 +238,12 @@ class OIRTestViewModel(
                     it.copy(
                         session = completedSession.copy(isCompleted = true),
                         isSubmitting = false,
-                        isCompleted = true, submissionId = submissionId,
+                        isCompleted = true, submissionId = outcome.submissionId,
                         subscriptionType = subscriptionType,
-                        testResult = scoreCalculator.calculate(completedSession)
+                        // Phase 2 (Web SSB Test Flow Parity plan): the use case's own
+                        // server-authoritative score, not a second local recomputation --
+                        // this ViewModel no longer holds an OIRTestScoreCalculator at all.
+                        testResult = outcome.testResult
                     )
                 }
             } catch (e: CancellationException) {

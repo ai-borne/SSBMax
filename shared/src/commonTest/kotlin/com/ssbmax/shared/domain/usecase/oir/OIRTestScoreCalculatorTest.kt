@@ -11,10 +11,18 @@ import com.ssbmax.shared.domain.model.QuestionDifficulty
 import com.ssbmax.shared.domain.util.NoOpLogger
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
+/**
+ * Phase 2 (Web SSB Test Flow Parity plan): `calculate` no longer trusts
+ * `OIRQuestion.correctAnswerId`/`OIRAnswer.isCorrect` -- correctness is an
+ * explicit `correctnessByQuestionId` input (what `evaluateOIRAnswers` would
+ * return server-side). These tests exercise `calculate`'s aggregation logic
+ * (score/category/skip counting, answered-questions building) given that
+ * input, not the correctness comparison itself (that now lives entirely in
+ * `functions/src/oirScoring.js`, tested there).
+ */
 class OIRTestScoreCalculatorTest {
 
     private lateinit var calculator: OIRTestScoreCalculator
@@ -70,81 +78,14 @@ class OIRTestScoreCalculatorTest {
         timeRemainingSeconds = 0,
     )
 
-    // --- Multi-select scoring ---
-
-    @Test
-    fun multiSelect_bothCorrect_isCorrectTrue() {
-        val question = multiSelectQuestion()
-        val answer = OIRAnswer(
-            questionId = "q1",
-            selectedOptionId = null,
-            selectedOptionIds = setOf("opt_b", "opt_c"),
-        )
-        assertTrue(calculator.isCorrect(question, answer))
-    }
-
-    @Test
-    fun multiSelect_oneCorrectOneMissing_isCorrectFalse() {
-        val question = multiSelectQuestion()
-        val answer = OIRAnswer(
-            questionId = "q1",
-            selectedOptionId = null,
-            selectedOptionIds = setOf("opt_b"),
-        )
-        assertFalse(calculator.isCorrect(question, answer))
-    }
-
-    @Test
-    fun multiSelect_wrongPairSelected_isCorrectFalse() {
-        val question = multiSelectQuestion()
-        val answer = OIRAnswer(
-            questionId = "q1",
-            selectedOptionId = null,
-            selectedOptionIds = setOf("opt_a", "opt_d"),
-        )
-        assertFalse(calculator.isCorrect(question, answer))
-    }
-
-    @Test
-    fun multiSelect_noSelection_isCorrectFalse() {
-        val question = multiSelectQuestion()
-        val answer = OIRAnswer(
-            questionId = "q1",
-            selectedOptionId = null,
-            selectedOptionIds = emptySet(),
-        )
-        assertFalse(calculator.isCorrect(question, answer))
-    }
-
-    // --- Single-select regression ---
-
-    @Test
-    fun singleSelect_correctOption_isCorrectTrue() {
-        val question = singleSelectQuestion()
-        val answer = OIRAnswer(
-            questionId = "q2",
-            selectedOptionId = "opt_a",
-        )
-        assertTrue(calculator.isCorrect(question, answer))
-    }
-
-    @Test
-    fun singleSelect_wrongOption_isCorrectFalse() {
-        val question = singleSelectQuestion()
-        val answer = OIRAnswer(
-            questionId = "q2",
-            selectedOptionId = "opt_b",
-        )
-        assertFalse(calculator.isCorrect(question, answer))
-    }
-
-    // --- Full calculate() integration ---
+    // --- calculate() aggregation, given a server-supplied correctness map ---
 
     @Test
     fun calculate_correctAnswer_scoresOnePointAndFullPercentage() {
         val question = singleSelectQuestion()
         val result = calculator.calculate(
-            session(listOf(question), mapOf("q2" to OIRAnswer("q2", "opt_a")))
+            session(listOf(question), mapOf("q2" to OIRAnswer("q2", "opt_a"))),
+            correctnessByQuestionId = mapOf("q2" to true)
         )
 
         assertEquals(1, result.rawScore)
@@ -159,7 +100,8 @@ class OIRTestScoreCalculatorTest {
             session(
                 listOf(easy, hard),
                 mapOf("q2" to OIRAnswer("q2", "opt_a"), "q3" to OIRAnswer("q3", "opt_a"))
-            )
+            ),
+            correctnessByQuestionId = mapOf("q2" to true, "q3" to true)
         )
 
         assertEquals(2, result.rawScore)
@@ -174,8 +116,9 @@ class OIRTestScoreCalculatorTest {
         val answers = questions.associate { question ->
             question.id to OIRAnswer(question.id, if (question.questionNumber <= 10) "opt_a" else "opt_b")
         }
+        val correctness = questions.associate { it.id to (it.questionNumber <= 10) }
 
-        val result = calculator.calculate(session(questions, answers))
+        val result = calculator.calculate(session(questions, answers), correctness)
 
         assertEquals(10, result.rawScore)
         assertEquals(20f, result.percentageScore)
@@ -183,11 +126,24 @@ class OIRTestScoreCalculatorTest {
 
     @Test
     fun calculate_emptySessionReturnsSafeEmptyResult() {
-        val result = calculator.calculate(session(emptyList(), emptyMap()))
+        val result = calculator.calculate(session(emptyList(), emptyMap()), emptyMap())
 
         assertEquals(0, result.rawScore)
         assertEquals(0f, result.percentageScore)
         assertEquals(0, result.totalQuestions)
+    }
+
+    @Test
+    fun calculate_missingQuestionIdInCorrectnessMap_defaultsToIncorrect() {
+        // Server response never mentioned this question id -- must never default to "correct".
+        val question = singleSelectQuestion()
+        val result = calculator.calculate(
+            session(listOf(question), mapOf("q2" to OIRAnswer("q2", "opt_a"))),
+            correctnessByQuestionId = emptyMap()
+        )
+
+        assertEquals(0, result.rawScore)
+        assertFalse(result.answeredQuestions.first().isCorrect)
     }
 
     @Test
@@ -201,7 +157,8 @@ class OIRTestScoreCalculatorTest {
                     "verbal" to OIRAnswer("verbal", "opt_a", timeTakenSeconds = 20),
                     "numerical" to OIRAnswer("numerical", "opt_b", timeTakenSeconds = 40),
                 )
-            )
+            ),
+            correctnessByQuestionId = mapOf("verbal" to true, "numerical" to false)
         )
 
         assertEquals(1, result.categoryScores[OIRQuestionType.VERBAL_REASONING]?.correctAnswers)
@@ -223,7 +180,8 @@ class OIRTestScoreCalculatorTest {
                     "incorrect" to OIRAnswer("incorrect", "opt_b"),
                     "skipped" to OIRAnswer("skipped", null, skipped = true),
                 )
-            )
+            ),
+            correctnessByQuestionId = mapOf("correct" to true, "incorrect" to false, "skipped" to false)
         )
 
         assertEquals(1, result.rawScore)
@@ -239,9 +197,11 @@ class OIRTestScoreCalculatorTest {
             questionId = "q1",
             selectedOptionId = null,
             selectedOptionIds = setOf("opt_b", "opt_c"),
-            isCorrect = false, // stale pre-computed value; calculator must recompute
         )
-        val result = calculator.calculate(session(listOf(question), mapOf("q1" to answer)))
+        val result = calculator.calculate(
+            session(listOf(question), mapOf("q1" to answer)),
+            correctnessByQuestionId = mapOf("q1" to true)
+        )
         assertEquals(1, result.correctAnswers)
         assertEquals(0, result.incorrectAnswers)
     }
@@ -254,7 +214,10 @@ class OIRTestScoreCalculatorTest {
             selectedOptionId = null,
             selectedOptionIds = setOf("opt_a", "opt_d"),
         )
-        val result = calculator.calculate(session(listOf(question), mapOf("q1" to answer)))
+        val result = calculator.calculate(
+            session(listOf(question), mapOf("q1" to answer)),
+            correctnessByQuestionId = mapOf("q1" to false)
+        )
         assertEquals(0, result.correctAnswers)
         assertEquals(1, result.incorrectAnswers)
     }
@@ -267,7 +230,10 @@ class OIRTestScoreCalculatorTest {
             selectedOptionId = null,
             selectedOptionIds = setOf("opt_b", "opt_c"),
         )
-        val result = calculator.calculate(session(listOf(question), mapOf("q1" to answer)))
+        val result = calculator.calculate(
+            session(listOf(question), mapOf("q1" to answer)),
+            correctnessByQuestionId = mapOf("q1" to true)
+        )
         assertEquals(1, result.answeredQuestions.size)
         val answered = result.answeredQuestions.first()
         assertEquals(listOf("opt_b", "opt_c"), answered.correctOptions.map { it.id })
@@ -275,8 +241,9 @@ class OIRTestScoreCalculatorTest {
     }
 
     @Test
-    fun calculate_ignoresStaleIsCorrectOnAnswer_recomputesFromSelectedOptionIds() {
-        // The ViewModel may set isCorrect=true incorrectly; the calculator must override it.
+    fun calculate_ignoresStaleIsCorrectOnAnswer_usesCorrectnessMapInstead() {
+        // The ViewModel may set isCorrect on the local OIRAnswer optimistically/incorrectly;
+        // the calculator must always defer to the server-supplied correctness map.
         val question = multiSelectQuestion()
         val answer = OIRAnswer(
             questionId = "q1",
@@ -284,7 +251,10 @@ class OIRTestScoreCalculatorTest {
             selectedOptionIds = setOf("opt_a", "opt_e"), // wrong pair
             isCorrect = true, // stale / wrong pre-computed value
         )
-        val result = calculator.calculate(session(listOf(question), mapOf("q1" to answer)))
+        val result = calculator.calculate(
+            session(listOf(question), mapOf("q1" to answer)),
+            correctnessByQuestionId = mapOf("q1" to false) // server says wrong
+        )
         assertEquals(0, result.correctAnswers)
         assertFalse(result.answeredQuestions.first().isCorrect)
     }

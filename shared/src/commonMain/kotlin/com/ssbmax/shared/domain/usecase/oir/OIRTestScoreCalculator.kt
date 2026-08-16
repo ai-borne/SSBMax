@@ -7,13 +7,27 @@ import com.ssbmax.shared.domain.util.DomainLogger
 
 private const val TAG = "OIRScoreCalculator"
 
-/** Calculates [OIRTestResult] from a completed [OIRTestSession]. Owns isCorrect computation — does NOT trust OIRAnswer.isCorrect. */
+/**
+ * Calculates [OIRTestResult] from a completed [OIRTestSession].
+ *
+ * Phase 2 (Web SSB Test Flow Parity plan): correctness now comes from
+ * [correctnessByQuestionId], sourced server-side via `evaluateOIRAnswers`
+ * (`OIREvaluationClient`) -- never trusting `OIRAnswer.isCorrect` (client-set)
+ * nor recomputing it locally from `OIRQuestion.correctAnswerId`, since that
+ * field travels to the client and a modified client could forge its own
+ * score. The old local `isCorrect(question, answer)` comparison is deleted
+ * outright, not kept as a "pure utility" -- it had no caller left once
+ * [calculate] stopped using it, and per-question correct/selected option
+ * display below still reads `OIRQuestion.correctAnswerId`/`correctAnswerIds`
+ * directly (that field stays shipped to the client for review-screen display,
+ * per Phase 2's scope decision -- only *scoring* had to stop trusting it).
+ */
 class OIRTestScoreCalculator constructor(
     private val logger: DomainLogger
 ) {
 
-    fun calculate(session: OIRTestSession): OIRTestResult {
-        val scoredAnswers = computeScoredAnswers(session)
+    fun calculate(session: OIRTestSession, correctnessByQuestionId: Map<String, Boolean>): OIRTestResult {
+        val scoredAnswers = computeScoredAnswers(session, correctnessByQuestionId)
 
         val correctAnswers   = scoredAnswers.values.count { it.isCorrect }
         val incorrectAnswers = scoredAnswers.values.count { !it.isCorrect && !it.skipped }
@@ -64,20 +78,12 @@ class OIRTestScoreCalculator constructor(
         )
     }
 
-    private fun computeScoredAnswers(session: OIRTestSession): Map<String, OIRAnswer> =
-        session.answers.mapValues { (_, answer) ->
-            val question = session.questions.find { it.id == answer.questionId }
-                ?: return@mapValues answer
-            answer.copy(isCorrect = isCorrect(question, answer))
-        }
-
-    internal fun isCorrect(question: OIRQuestion, answer: OIRAnswer): Boolean =
-        if (question.isMultiSelect) {
-            answer.selectedOptionIds == question.correctAnswerIds.toSet()
-        } else {
-            // selectedOptionId fallback covers old Firestore submissions that pre-date multi-select migration
-            val selected = answer.selectedOptionIds.singleOrNull() ?: answer.selectedOptionId
-            selected == question.correctAnswerId
+    private fun computeScoredAnswers(
+        session: OIRTestSession,
+        correctnessByQuestionId: Map<String, Boolean>
+    ): Map<String, OIRAnswer> =
+        session.answers.mapValues { (questionId, answer) ->
+            answer.copy(isCorrect = correctnessByQuestionId[questionId] ?: false)
         }
 
     private fun buildAnsweredQuestions(
