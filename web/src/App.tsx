@@ -9,7 +9,8 @@ import { TermsAndRefunds } from './components/legal/TermsAndRefunds';
 import { OIRTestRunner } from './components/testRunners/OIRTestRunner';
 import { PsychologyTestRunner } from './components/testRunners/PsychologyTestRunner';
 import { GTOTaskGuideRunner } from './components/testRunners/GTOTaskGuideRunner';
-import { PIQWizardContainer } from './components/practice/piq/PIQWizardContainer';
+import { AIReportsPage } from './components/reports/AIReportsPage';
+import { useOLQDashboardViewModel } from './viewmodels/useOLQDashboardViewModel';
 import { OIRTestViewModel } from './viewmodels/OIRTestViewModel';
 import { PsychologyTestViewModel, PsychologyTestType } from './viewmodels/PsychologyTestViewModel';
 import { ContentRepository } from './repositories/ContentRepository';
@@ -37,6 +38,7 @@ export const App: FC = () => {
   };
 
   const { tier: realTier, usage } = useSubscriptionViewModel(authService.getCurrentUser()?.uid, devTierOverride);
+  const olqDashboard = useOLQDashboardViewModel(authService.getCurrentUser()?.uid, undefined, activeTab === 'reports');
   const isPaidMember = realTier !== 'FREE';
   const effectiveTier: AccessTier = import.meta.env.DEV
     ? getEffectiveTier(devTierOverride, realTier)
@@ -66,6 +68,7 @@ export const App: FC = () => {
     setActiveBatchId(undefined);
   };
 
+
   const handleBackToHome = () => {
     setActiveTab('home');
   };
@@ -92,11 +95,6 @@ export const App: FC = () => {
             userId="cadet-web-user"
             batchIndex={oirBatchIndex}
             onExitTest={handleExitTest}
-          />
-        ) : activeTest === 'piq' ? (
-          <PIQWizardContainer
-            isOpen={true}
-            onClose={handleExitTest}
           />
         ) : isPsychTest ? (
           <PsychologyTestRunner
@@ -134,6 +132,14 @@ export const App: FC = () => {
               usage={usage}
               onStartTest={handleStartTest}
               onUpgrade={() => setActiveTab('settings')}
+            />
+          )}
+          {activeTab === 'reports' && (
+            <AIReportsPage
+              userReports={olqDashboard.completedTestsCount > 0 ? { olqScores: olqDashboard.olqScores, dossier: olqDashboard.dossier! } : null}
+              isGuest={!authService.getCurrentUser()}
+              onSignIn={() => authService.signInWithGoogle()}
+              onStartTest={() => setActiveTab('tests')}
             />
           )}
           {activeTab === 'study' && <StudyMaterialPage />}

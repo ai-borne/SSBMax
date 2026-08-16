@@ -24,6 +24,16 @@ const { evaluateInterviewResponse } = require('./evaluation/interviewEvaluate');
 const { evaluateGTO } = require('./evaluation/gtoEvaluate');
 const { evaluatePPDT } = require('./evaluation/ppdtEvaluate');
 const { evaluateTAT } = require('./evaluation/tatEvaluate');
+const {
+  submitPIQTest,
+  submitPPDTTest,
+  submitTATTest,
+  submitWATTest,
+  submitSRTTest,
+  submitSDTest,
+  submitGTOTest,
+  submitInterviewResponse
+} = require('./submissions');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
@@ -62,3 +72,16 @@ exports.evaluatePPDT = evaluatePPDT;
 // parity harness (synthetic fixtures) required before flag exceeds 5% per the plan's
 // Verification section, since TAT is production-verified today.
 exports.evaluateTAT = evaluateTAT;
+
+// Phase 11a Ship (Web SSB Test Flow Parity plan): submission-creation callables so web
+// can create `submissions/{id}` docs (writes-via-Cloud-Function-only per web/CLAUDE.md)
+// -- the gap that made every web `evaluate*` call above unreachable until now, since
+// nothing on web created the submission doc those functions read.
+exports.submitPIQTest = submitPIQTest;
+exports.submitPPDTTest = submitPPDTTest;
+exports.submitTATTest = submitTATTest;
+exports.submitWATTest = submitWATTest;
+exports.submitSRTTest = submitSRTTest;
+exports.submitSDTest = submitSDTest;
+exports.submitGTOTest = submitGTOTest;
+exports.submitInterviewResponse = submitInterviewResponse;

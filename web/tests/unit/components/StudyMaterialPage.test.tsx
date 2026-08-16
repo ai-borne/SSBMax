@@ -49,7 +49,7 @@ class MockContentRepository implements IContentRepository {
     return { id: 'p1', title: 'PPDT', imageUrl: '', viewingTimeSeconds: 30, writingTimeSeconds: 240, instructions: [] };
   }
   async getTATSet() {
-    return { id: 't1', setName: 'TAT', imageUrls: [], slideDurationSeconds: 240, totalSlides: 12 };
+    return { id: 't1', setName: 'TAT', imageUrls: [], imageIds: [], slideDurationSeconds: 240, totalSlides: 12 };
   }
   async getWATBatch() {
     return { id: 'w1', words: [], displayDurationSeconds: 15 };

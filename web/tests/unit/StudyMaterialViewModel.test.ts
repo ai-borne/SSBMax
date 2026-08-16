@@ -50,7 +50,7 @@ class MockContentRepository implements IContentRepository {
   }
 
   async getTATSet(): Promise<TATSet> {
-    return { id: 'tat-1', setName: 'Set 1', imageUrls: [], slideDurationSeconds: 240, totalSlides: 0 };
+    return { id: 'tat-1', setName: 'Set 1', imageUrls: [], imageIds: [], slideDurationSeconds: 240, totalSlides: 0 };
   }
 
   async getWATBatch(): Promise<WATBatch> {

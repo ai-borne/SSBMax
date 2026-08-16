@@ -5,6 +5,7 @@ import { strings } from '../../constants/strings';
 import { useAntiCheat } from '../../hooks/useAntiCheat';
 import { AntiCheatWarningBanner } from '../common/AntiCheatWarningBanner';
 import { Clock, CheckCircle2, ChevronRight, ChevronLeft, Send, AlertTriangle, FileText, LogOut } from 'lucide-react';
+import { SubmissionResultView } from '../evaluation/SubmissionResultView';
 
 export interface PsychologyTestRunnerProps {
   viewModel: PsychologyTestViewModel;
@@ -118,6 +119,10 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
           <p className="font-bold text-[var(--color-text-primary)]">Assessor Queue Confirmation</p>
           <p className="text-[var(--color-text-muted)]">Your responses are securely queued for 15 OLQ Factor Analysis & Psychologist Dossier evaluation.</p>
         </div>
+
+        {state.lastSubmissionId && state.lastResultCollection && (
+          <SubmissionResultView submissionId={state.lastSubmissionId} resultCollection={state.lastResultCollection} />
+        )}
 
         <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
           {onExitTest && (

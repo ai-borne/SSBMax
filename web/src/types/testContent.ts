@@ -39,6 +39,16 @@ export interface TATSet {
   id: string;
   setName: string;
   imageUrls: string[];
+  /**
+   * Per-image content ids, parallel to `imageUrls` (Phase 11b, Web SSB Test Flow
+   * Parity plan) -- these must match `test_content/tat/image_batches/{batchId}`'s
+   * `images[].id` field exactly, since `tatEvaluate.js::resolveImageBatch` looks
+   * images up by this id server-side and never trusts a URL from the submission
+   * itself (SSRF guard). Falls back to synthetic `tat-img-N` ids when the source
+   * doc has none (fallback/dev content) -- those submissions evaluate with empty
+   * images, same graceful-degradation behavior other under-seeded content already has.
+   */
+  imageIds: string[];
   slideDurationSeconds: number;
   totalSlides: number;
 }

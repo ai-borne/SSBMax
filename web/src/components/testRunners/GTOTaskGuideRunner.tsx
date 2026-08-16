@@ -2,6 +2,8 @@ import { FC, useState, useEffect } from 'react';
 import { ArrowLeft, Clock, ShieldCheck, Play, Award, CheckCircle2 } from 'lucide-react';
 import { getTestConfigById } from '../practice/ssbTestConfigs';
 import { strings } from '../../constants/strings';
+import { GTOResponseForm } from './GTOResponseForm';
+import { InterviewResponseCapture } from './InterviewResponseCapture';
 
 export interface GTOTaskGuideRunnerProps {
   testId: string;
@@ -191,6 +193,11 @@ export const GTOTaskGuideRunner: FC<GTOTaskGuideRunnerProps> = ({
           </div>
         </div>
       </div>
+
+      {config.contractTestType?.startsWith('GTO_') && (
+        <GTOResponseForm gtoType={config.contractTestType} topic={config.title} />
+      )}
+      {testId === 'interview' && <InterviewResponseCapture questionId={testId} />}
     </div>
   );
 };

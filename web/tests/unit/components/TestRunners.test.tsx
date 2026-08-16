@@ -26,6 +26,7 @@ class MockContentRepository {
       id: 'tat-1',
       title: 'TAT Set 1',
       imageUrls: ['https://example.com/slide1.jpg'],
+      imageIds: ['tat-content-1'],
       slideDurationSeconds: 60
     };
   }
@@ -93,7 +94,7 @@ describe('TestRunners Components Suite', () => {
     const textarea = screen.getByPlaceholderText(strings.psychology.writeResponsePlaceholder);
     fireEvent.change(textarea, { target: { value: 'A brave soldier...' } });
 
-    expect(vm.getState().responses['tat-img-1']).toBe('A brave soldier...');
+    expect(vm.getState().responses['tat-content-1']).toBe('A brave soldier...');
   });
 
   it('renders WAT word viewer with word prompt', async () => {

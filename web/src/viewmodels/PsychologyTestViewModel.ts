@@ -1,6 +1,9 @@
 import { TATSet, WATBatch, SRTBatch, PPDTContext } from '../types/testContent';
 import { IContentRepository } from '../repositories/interfaces/IContentRepository';
 import { OfflineQueueService } from '../services/OfflineQueueService';
+import { SubmissionService } from '../services/SubmissionService';
+import { EligibilityService } from '../services/EligibilityService';
+import { FirestorePaths } from '../generated/contracts';
 
 export type PsychologyTestType = 'TAT' | 'WAT' | 'SRT' | 'PPDT' | 'SD';
 
@@ -23,34 +26,46 @@ export interface PsychologyTestState {
   slides: SlideItem[];
   currentSlideIndex: number;
   responses: Record<string, string>;
+  batchId: string;
   isLoading: boolean;
   isSubmitting: boolean;
   isCompleted: boolean;
   error: string | null;
+  lastSubmissionId: string | null;
+  lastResultCollection: string | null;
 }
 
 export class PsychologyTestViewModel {
   private repository: IContentRepository;
   private offlineQueueService: OfflineQueueService;
+  private submissionService: SubmissionService;
+  private eligibilityService: EligibilityService;
   private state: PsychologyTestState;
   private listeners: Set<() => void> = new Set();
 
   constructor(
     testType: PsychologyTestType,
     repository: IContentRepository,
-    offlineQueueService: OfflineQueueService = new OfflineQueueService()
+    offlineQueueService: OfflineQueueService = new OfflineQueueService(),
+    submissionService: SubmissionService = new SubmissionService(),
+    eligibilityService: EligibilityService = new EligibilityService()
   ) {
     this.repository = repository;
     this.offlineQueueService = offlineQueueService;
+    this.submissionService = submissionService;
+    this.eligibilityService = eligibilityService;
     this.state = {
       testType,
       slides: [],
       currentSlideIndex: 0,
       responses: {},
+      batchId: 'batch_001',
       isLoading: false,
       isSubmitting: false,
       isCompleted: false,
-      error: null
+      error: null,
+      lastSubmissionId: null,
+      lastResultCollection: null
     };
   }
 
@@ -81,7 +96,7 @@ export class PsychologyTestViewModel {
         case 'TAT': {
           const tatSet: TATSet = await this.repository.getTATSet(batchId);
           slides = tatSet.imageUrls.map((url, i) => ({
-            id: `tat-img-${i + 1}`,
+            id: tatSet.imageIds[i] || `tat-img-${i + 1}`,
             index: i,
             content: url,
             durationSeconds: tatSet.slideDurationSeconds
@@ -136,6 +151,7 @@ export class PsychologyTestViewModel {
         ...this.state,
         slides,
         currentSlideIndex: 0,
+        batchId,
         isLoading: false
       };
     } catch (err: any) {
@@ -210,19 +226,20 @@ export class PsychologyTestViewModel {
     }
 
     try {
-      // Direct API invocation for online evaluation
-      // Phase 5 (docs/plans/CrossPlatform_SSOT) intentionally does not wire
-      // EligibilityService.recordTestUsage here: TAT/WAT/SRT/PPDT have no real
-      // server-side submission/scoring call on web yet (this branch is a stub --
-      // no Cloud Function invocation exists to make the result durable), so there is
-      // no successful submission event to charge quota against. Recorded as an
-      // accepted divergence from KMP (which does record usage for these test types)
-      // rather than wired against a stub. Wire it in alongside whatever change adds
-      // the real submission call.
+      const { submissionId, resultCollection } = await this.createSubmission();
+
+      // Log-don't-block, matching OIRTestViewModel's quota-recording pattern -- a
+      // recording failure must not undo an already-durable submission.
+      this.eligibilityService.recordTestUsage(this.state.testType, submissionId).catch((err) => {
+        console.warn(`Failed to record test usage for ${this.state.testType}/${submissionId}`, err);
+      });
+
       this.state = {
         ...this.state,
         isSubmitting: false,
-        isCompleted: true
+        isCompleted: true,
+        lastSubmissionId: submissionId,
+        lastResultCollection: resultCollection
       };
     } catch (err: any) {
       this.state = {
@@ -232,5 +249,55 @@ export class PsychologyTestViewModel {
       };
     }
     this.notify();
+  }
+
+  /**
+   * Creates the `submissions/{id}` doc via `SubmissionService` and immediately
+   * triggers the matching `evaluate*` callable -- mirrors KMP's explicit
+   * `SubmissionAnalysisTrigger.trigger()` call right after submit (one triggering
+   * mechanism, not a Firestore on-write trigger as an alternate path, per plan §C.3).
+   */
+  private async createSubmission(): Promise<{ submissionId: string; resultCollection: string }> {
+    const { testType, slides, responses, batchId } = this.state;
+
+    switch (testType) {
+      case 'PPDT': {
+        const slide = slides[0];
+        const { submissionId } = await this.submissionService.submitPPDTTest({
+          questionId: slide.id,
+          batchId,
+          story: responses[slide.id] || ''
+        });
+        await this.submissionService.evaluatePPDT({ submissionId });
+        return { submissionId, resultCollection: FirestorePaths.PPDT_RESULTS };
+      }
+      case 'TAT': {
+        const stories = slides.map((s) => ({ questionId: s.id, story: responses[s.id] || '' }));
+        const { submissionId } = await this.submissionService.submitTATTest({ stories, batchId });
+        await this.submissionService.evaluateTAT({ submissionId });
+        return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
+      }
+      case 'WAT': {
+        // timeTakenSeconds is not yet tracked per-response on web (no per-slide timer
+        // exists today) -- defaulted to 0 rather than inventing timing infra outside
+        // this phase's scope; evaluateWAT doesn't use it for scoring.
+        const responseItems = slides.map((s) => ({ word: s.content, response: responses[s.id] || '', timeTakenSeconds: 0 }));
+        const { submissionId } = await this.submissionService.submitWATTest({ responses: responseItems });
+        await this.submissionService.evaluateWAT({ submissionId });
+        return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
+      }
+      case 'SRT': {
+        const responseItems = slides.map((s) => ({ situation: s.content, response: responses[s.id] || '' }));
+        const { submissionId } = await this.submissionService.submitSRTTest({ responses: responseItems });
+        await this.submissionService.evaluateSRT({ submissionId });
+        return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
+      }
+      case 'SD': {
+        const responseItems = slides.map((s) => ({ answer: responses[s.id] || '' }));
+        const { submissionId } = await this.submissionService.submitSDTest({ responses: responseItems });
+        await this.submissionService.evaluateSD({ submissionId });
+        return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
+      }
+    }
   }
 }

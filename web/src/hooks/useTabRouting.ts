@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type TabId = 'home' | 'study' | 'tests' | 'settings' | 'privacy' | 'terms';
+export type TabId = 'home' | 'study' | 'tests' | 'reports' | 'settings' | 'privacy' | 'terms';
 
-export const CORE_TABS: TabId[] = ['home', 'study', 'tests', 'settings'];
-export const VALID_TABS: TabId[] = ['home', 'study', 'tests', 'settings', 'privacy', 'terms'];
+export const CORE_TABS: TabId[] = ['home', 'study', 'tests', 'reports', 'settings'];
+export const VALID_TABS: TabId[] = ['home', 'study', 'tests', 'reports', 'settings', 'privacy', 'terms'];
 
 export const TAB_ALIASES: Record<string, TabId> = {
   practice: 'tests',
   dashboard: 'home',
-  reports: 'tests',
   pricing: 'settings',
   account: 'settings'
 };

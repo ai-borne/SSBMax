@@ -5,7 +5,8 @@ import { SSB_5_DAY_TIMELINE, AccessTier } from '../../constants/ssbSelectionProc
 import { OLQFactorRadarSVG } from './OLQFactorRadarSVG';
 import { PaymentRibbon } from './PaymentRibbon';
 import { TestDayAccordion } from './TestDayAccordion';
-import { PIQWizardContainer } from './piq/PIQWizardContainer';
+import { PIQWizardContainer, PIQData } from './piq/PIQWizardContainer';
+import { SubmissionService } from '../../services/SubmissionService';
 import { ProUpgradeGateModal } from './ProUpgradeGateModal';
 import { BatchSelectorModal } from './BatchSelectorModal';
 import { GridCardContainer } from '../common/GridCardContainer';
@@ -34,6 +35,7 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
   onUpgrade,
 }) => {
   const repository = useMemo(() => contentRepository || new ContentRepository(), [contentRepository]);
+  const submissionService = useMemo(() => new SubmissionService(), []);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [piqOpen, setPiqOpen] = useState(false);
@@ -178,6 +180,11 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
       <PIQWizardContainer
         isOpen={piqOpen}
         onClose={() => setPiqOpen(false)}
+        onSave={(data: PIQData) => {
+          submissionService.submitPIQTest(data).catch((err) => {
+            console.warn('Failed to save PIQ submission', err);
+          });
+        }}
       />
 
       {/* Pro Upgrade Gate Modal */}

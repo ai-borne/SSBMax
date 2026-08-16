@@ -3,6 +3,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { PracticeTestsPage } from '../../../src/components/practice/PracticeTestsPage';
 import { strings } from '../../../src/constants/strings';
 
+const submitPIQTestMock = vi.fn().mockResolvedValue({ success: true, submissionId: 'piq-sub-1' });
+vi.mock('../../../src/services/SubmissionService', () => ({
+  SubmissionService: vi.fn().mockImplementation(() => ({ submitPIQTest: submitPIQTestMock }))
+}));
+
 describe('PracticeTestsPage Component', () => {
   it('renders header, search bar, OLQ radar SVG, payment ribbon, and 5-day accordions', () => {
     render(<PracticeTestsPage />);
@@ -58,6 +63,18 @@ describe('PracticeTestsPage Component', () => {
 
     expect(screen.getByTestId('piq-wizard-container')).toBeInTheDocument();
     expect(screen.getByTestId('piq-pii-warning')).toBeInTheDocument();
+  });
+
+  it('saves PIQ data via SubmissionService when the wizard is finished -- this is the real, reachable PIQWizardContainer instance (App.tsx had a dead, unreachable duplicate that never received onStartTest)', async () => {
+    render(<PracticeTestsPage userTier="FREE" />);
+    fireEvent.click(screen.getByTestId('launch-button-piq'));
+
+    fireEvent.click(screen.getByText(strings.common.next));
+    fireEvent.click(screen.getByText(strings.common.next));
+    fireEvent.click(screen.getByTestId('save-piq-button'));
+
+    expect(submitPIQTestMock).toHaveBeenCalledTimes(1);
+    expect(submitPIQTestMock.mock.calls[0][0]).toMatchObject({ targetBoard: expect.any(String), entryType: expect.any(String) });
   });
 
   it('opens ProUpgradeGateModal for locked test when clicked by FREE-tier user', () => {

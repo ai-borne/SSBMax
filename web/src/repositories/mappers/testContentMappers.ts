@@ -103,43 +103,45 @@ export function mapDocToTATSet(id: string, data?: Record<string, any>): TATSet {
       id,
       setName: 'TAT Practice Set 1',
       imageUrls: fallbackUrls,
+      imageIds: fallbackUrls.map((_, i) => `tat-img-${i + 1}`),
       slideDurationSeconds: 240,
       totalSlides: 12
     };
   }
 
-  const rawUrls = data.imageUrls || data.slides || data.images || [];
-  let imageUrls: string[] = Array.isArray(rawUrls)
-    ? rawUrls
-        .map((item: any) => {
-          const urlStr = typeof item === 'string' ? item : item?.url || item?.imageUrl || '';
-          return normalizeStorageUrl(urlStr);
-        })
-        .filter(Boolean)
+  const rawItems = data.imageUrls || data.slides || data.images || [];
+  let entries: { url: string; contentId: string | null }[] = Array.isArray(rawItems)
+    ? rawItems
+        .map((item: any) => ({
+          url: normalizeStorageUrl(typeof item === 'string' ? item : item?.url || item?.imageUrl || ''),
+          contentId: typeof item === 'object' && item?.id ? String(item.id) : null
+        }))
+        .filter((e: { url: string }) => Boolean(e.url))
     : [];
 
-  if (imageUrls.length > 0 && imageUrls.length < 12) {
-    while (imageUrls.length < 11) {
-      imageUrls.push(imageUrls[imageUrls.length % imageUrls.length]);
-    }
-    if (imageUrls.length === 11) {
-      imageUrls.push('blank');
-    }
-  } else if (imageUrls.length === 0) {
-    imageUrls = [
-      'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=600&q=80'
+  if (entries.length === 0) {
+    entries = [
+      { url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80', contentId: null },
+      { url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=600&q=80', contentId: null }
     ];
-    while (imageUrls.length < 11) {
-      imageUrls.push(imageUrls[imageUrls.length % imageUrls.length]);
-    }
-    imageUrls.push('blank');
   }
+  if (entries.length < 12) {
+    while (entries.length < 11) {
+      entries.push(entries[entries.length % entries.length]);
+    }
+    if (entries.length === 11) {
+      entries.push({ url: 'blank', contentId: 'blank' });
+    }
+  }
+
+  const imageUrls = entries.map((e) => e.url);
+  const imageIds = entries.map((e, i) => e.contentId || `tat-img-${i + 1}`);
 
   return {
     id: data.id || id,
     setName: data.setName || data.title || 'TAT Practice Set 1',
     imageUrls,
+    imageIds,
     slideDurationSeconds: typeof data.slideDurationSeconds === 'number' ? data.slideDurationSeconds : 240,
     totalSlides: imageUrls.length
   };
