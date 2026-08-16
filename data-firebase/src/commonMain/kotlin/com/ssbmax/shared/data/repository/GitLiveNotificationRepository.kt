@@ -7,9 +7,15 @@ import com.ssbmax.shared.domain.repository.NotificationRepository
 import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlin.time.Clock
-import kotlinx.serialization.Serializable
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * GitLive-Firebase-backed port of the Android `NotificationRepositoryImpl`.
@@ -18,8 +24,10 @@ import kotlinx.serialization.Serializable
  * firestore.rules, fixed from a snake_case mismatch in Phase 7c) plus the
  * local Room->SQLDelight cache
  * ([GitLiveNotificationCacheManager]) for [getNotifications]/[getUnreadCount]
- * (read from cache only, matching the Android original -- these two never
- * read Firestore directly there either).
+ * -- still cache-read, matching the Android original, but as of Phase 4 (Centralized
+ * Result-Announcement Notifications plan) the cache itself is kept in sync from the
+ * `NOTIFICATIONS` Firestore collection directly (see [ensureFirestoreSyncStarted]), not solely
+ * from `saveNotification` calls triggered by push receipt.
  *
  * Two things named here rather than silently ported, both confirmed by grep
  * across core/data + app before starting:
@@ -58,6 +66,39 @@ class GitLiveNotificationRepository(
     private val notificationsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.NOTIFICATIONS)
     private val preferencesCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.NOTIFICATION_PREFERENCES)
 
+    // Phase 4 (Centralized Result-Announcement Notifications plan): getNotifications/getUnreadCount
+    // below only ever read the local SQLDelight cache, and the ONLY writer into that cache was
+    // saveNotification() -- called solely from Android's FCM onMessageReceived (Phase 3). iOS's
+    // AppDelegate has no equivalent write at all, so its inbox was permanently empty, and even
+    // Android's inbox depended on a push actually being delivered (not guaranteed -- permissions,
+    // backgrounding, app not running). This listener mirrors the NOTIFICATIONS collection into the
+    // cache directly, independent of push delivery, on both platforms (this class is commonMain).
+    // No app-wide CoroutineScope singleton exists in this module's Koin graph (same gap
+    // GitLiveAuthRepository's class doc names), so this repository owns its own background scope,
+    // matching that precedent.
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val syncedUserIdsMutex = Mutex()
+    private val syncedUserIds = mutableSetOf<String>()
+
+    private fun ensureFirestoreSyncStarted(userId: String) {
+        repositoryScope.launch {
+            syncedUserIdsMutex.withLock {
+                if (!syncedUserIds.add(userId)) return@withLock
+                notificationsCollection
+                    .where { FIELD_USER_ID equalTo userId }
+                    .snapshots
+                    .onEach { snapshot ->
+                        snapshot.documents.forEach { doc ->
+                            runCatching { doc.data(SSBMaxNotificationDto.serializer()) }
+                                .getOrNull()
+                                ?.let { cache.insert(it.toDomain()) }
+                        }
+                    }
+                    .launchIn(repositoryScope)
+            }
+        }
+    }
+
     override suspend fun saveFCMToken(token: FCMToken): Result<Unit> = try {
         tokensCollection.document("${token.userId}_${token.deviceId}").set(token.toDto())
         Result.success(Unit)
@@ -88,11 +129,15 @@ class GitLiveNotificationRepository(
         Result.failure(Exception("Failed to save notification: ${e.message}", e))
     }
 
-    override fun getNotifications(userId: String): Flow<List<SSBMaxNotification>> =
-        cache.getNotifications(userId)
+    override fun getNotifications(userId: String): Flow<List<SSBMaxNotification>> {
+        ensureFirestoreSyncStarted(userId)
+        return cache.getNotifications(userId)
+    }
 
-    override fun getUnreadCount(userId: String): Flow<Int> =
-        cache.getUnreadCount(userId)
+    override fun getUnreadCount(userId: String): Flow<Int> {
+        ensureFirestoreSyncStarted(userId)
+        return cache.getUnreadCount(userId)
+    }
 
     override suspend fun markAsRead(notificationId: String): Result<Unit> = try {
         notificationsCollection.document(notificationId).update(FIELD_IS_READ to true)
@@ -153,111 +198,3 @@ class GitLiveNotificationRepository(
         const val FIELD_USER_ID = "userId"
     }
 }
-
-private fun FCMToken.toDto() = FCMTokenDto(
-    userId = userId,
-    token = token,
-    deviceId = deviceId,
-    platform = platform,
-    createdAt = createdAt,
-    updatedAt = updatedAt
-)
-
-private fun FCMTokenDto.toDomain() = FCMToken(
-    userId = userId,
-    token = token,
-    deviceId = deviceId,
-    platform = platform,
-    createdAt = createdAt,
-    updatedAt = updatedAt
-)
-
-private fun SSBMaxNotification.toDto() = SSBMaxNotificationDto(
-    id = id,
-    userId = userId,
-    type = type.name,
-    priority = priority.name,
-    title = title,
-    message = message,
-    imageUrl = imageUrl,
-    actionUrl = actionUrl,
-    actionData = actionData,
-    isRead = isRead,
-    createdAt = createdAt,
-    expiresAt = expiresAt
-)
-
-private fun NotificationPreferences.toDto() = NotificationPreferencesDto(
-    userId = userId,
-    enablePushNotifications = enablePushNotifications,
-    enableGradingNotifications = enableGradingNotifications,
-    enableFeedbackNotifications = enableFeedbackNotifications,
-    enableBatchInvitations = enableBatchInvitations,
-    enableGeneralAnnouncements = enableGeneralAnnouncements,
-    enableStudyReminders = enableStudyReminders,
-    enableTestReminders = enableTestReminders,
-    enableMarketplaceUpdates = enableMarketplaceUpdates,
-    quietHoursEnabled = quietHoursEnabled,
-    quietHoursStart = quietHoursStart,
-    quietHoursEnd = quietHoursEnd,
-    updatedAt = updatedAt
-)
-
-private fun NotificationPreferencesDto.toDomain() = NotificationPreferences(
-    userId = userId,
-    enablePushNotifications = enablePushNotifications,
-    enableGradingNotifications = enableGradingNotifications,
-    enableFeedbackNotifications = enableFeedbackNotifications,
-    enableBatchInvitations = enableBatchInvitations,
-    enableGeneralAnnouncements = enableGeneralAnnouncements,
-    enableStudyReminders = enableStudyReminders,
-    enableTestReminders = enableTestReminders,
-    enableMarketplaceUpdates = enableMarketplaceUpdates,
-    quietHoursEnabled = quietHoursEnabled,
-    quietHoursStart = quietHoursStart,
-    quietHoursEnd = quietHoursEnd,
-    updatedAt = updatedAt
-)
-
-@Serializable
-internal data class FCMTokenDto(
-    val userId: String = "",
-    val token: String = "",
-    val deviceId: String = "",
-    val platform: String = "android",
-    val createdAt: Long = 0L,
-    val updatedAt: Long = 0L
-)
-
-@Serializable
-internal data class SSBMaxNotificationDto(
-    val id: String = "",
-    val userId: String = "",
-    val type: String = "",
-    val priority: String = "NORMAL",
-    val title: String = "",
-    val message: String = "",
-    val imageUrl: String? = null,
-    val actionUrl: String? = null,
-    val actionData: Map<String, String>? = null,
-    val isRead: Boolean = false,
-    val createdAt: Long = 0L,
-    val expiresAt: Long? = null
-)
-
-@Serializable
-internal data class NotificationPreferencesDto(
-    val userId: String = "",
-    val enablePushNotifications: Boolean = true,
-    val enableGradingNotifications: Boolean = true,
-    val enableFeedbackNotifications: Boolean = true,
-    val enableBatchInvitations: Boolean = true,
-    val enableGeneralAnnouncements: Boolean = true,
-    val enableStudyReminders: Boolean = true,
-    val enableTestReminders: Boolean = true,
-    val enableMarketplaceUpdates: Boolean = true,
-    val quietHoursEnabled: Boolean = false,
-    val quietHoursStart: Int = 22,
-    val quietHoursEnd: Int = 8,
-    val updatedAt: Long = Clock.System.now().toEpochMilliseconds()
-)
