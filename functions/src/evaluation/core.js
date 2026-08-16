@@ -29,6 +29,7 @@
 const functions = require('firebase-functions');
 const { FirestorePaths, SubscriptionLimits, Enums } = require('../generated/contracts.cjs');
 const { withRetry } = require('./retry');
+const { recordAndEnforce } = require('../eligibility');
 
 function enforceQuota() {
   return process.env.ENFORCE_QUOTA !== 'false';
@@ -152,6 +153,12 @@ async function runEvaluation({ firestoreDb, generateContent, uid, submissionId, 
     .doc(submissionId)
     .set({ submissionId, testType, ...result, analyzedAt: Date.now(), userId: submission.userId });
   await submissionRef.update({ 'data.analysisStatus': 'COMPLETED' });
+
+  // Charge quota here, not left to a separate client-invoked `recordTestUsage` call --
+  // a client that simply never calls it would otherwise get unlimited attempts, since
+  // `checkQuota` above only re-reads an already-incremented counter. Idempotent by
+  // submissionId, so re-running a COMPLETED submission's evaluation never double-charges.
+  await recordAndEnforce(firestoreDb, uid, testType, submissionId);
 
   return { success: true, submissionId, status: 'COMPLETED' };
 }

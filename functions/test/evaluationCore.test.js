@@ -62,6 +62,13 @@ function makeFakeDb(initialDocs = {}) {
 
   return {
     collection: (path) => collectionRef(path),
+    async runTransaction(fn) {
+      const tx = {
+        get: (ref) => ref.get(),
+        set: (ref, value) => ref.set(value)
+      };
+      return fn(tx);
+    },
     _store: store,
     _writes: writes
   };
@@ -149,6 +156,58 @@ test('Phase 1: runEvaluation happy path flips ANALYZING -> COMPLETED and writes 
     (w) => w.path === `submissions/${SUBMISSION_ID}` && w.value['data.analysisStatus'] === 'ANALYZING'
   );
   assert.ok(analyzingWrite, 'must flip to ANALYZING before calling Gemini');
+});
+
+/**
+ * Fix for the "quota increment is opt-in by the client" gap: `recordTestUsage` used
+ * to be the *only* place usage counters were incremented, and it was called
+ * separately by the client after evaluation -- a client that simply never called it
+ * got unlimited attempts regardless of tier, since `checkQuota` only ever re-reads
+ * an unincremented counter. `runEvaluation` must charge the counter itself, tied to
+ * a successful server-confirmed COMPLETED evaluation, so charging can't be skipped
+ * by omission.
+ */
+test('Phase 1: runEvaluation charges the usage counter itself on a successful COMPLETED evaluation', async () => {
+  const db = makeFakeDb({
+    [`submissions/${SUBMISSION_ID}`]: { userId: UID, data: { analysisStatus: 'PENDING_ANALYSIS' } },
+    [`users/${UID}/data/subscription`]: { tier: 'PRO' }
+  });
+  await runEvaluation({ firestoreDb: db, generateContent: async (prompt) => `raw:${prompt}`, ...baseArgs() });
+
+  const usage = db._store[`users/${UID}/subscription/usage_${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}`];
+  assert.ok(usage, 'usage doc must be written by runEvaluation itself, not left to a separate client call');
+  assert.equal(usage.watTestsUsed, 1);
+  assert.deepEqual(usage.recordedSubmissionIds, [SUBMISSION_ID]);
+});
+
+test('Phase 1: runEvaluation does not charge the usage counter when parseAndValidate never accepts (FAILED)', async () => {
+  const db = makeFakeDb({
+    [`submissions/${SUBMISSION_ID}`]: { userId: UID, data: { analysisStatus: 'PENDING_ANALYSIS' } },
+    [`users/${UID}/data/subscription`]: { tier: 'PRO' }
+  });
+  await runEvaluation({
+    firestoreDb: db,
+    generateContent: async () => 'unparseable',
+    retryDelayFn: async () => {},
+    ...baseArgs({
+      parseAndValidate: () => {
+        throw new Error('rejected');
+      }
+    })
+  });
+
+  const month = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}`;
+  assert.equal(db._store[`users/${UID}/subscription/usage_${month}`], undefined, 'a FAILED evaluation must not consume quota');
+});
+
+test('Phase 1: runEvaluation charging the usage counter is idempotent per submissionId (re-running a COMPLETED skip never double-charges)', async () => {
+  const month = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}`;
+  const db = makeFakeDb({
+    [`submissions/${SUBMISSION_ID}`]: { userId: UID, data: { analysisStatus: 'COMPLETED' } },
+    [`users/${UID}/subscription/usage_${month}`]: { watTestsUsed: 1, recordedSubmissionIds: [SUBMISSION_ID] }
+  });
+  await runEvaluation({ firestoreDb: db, generateContent: async () => 'irrelevant', ...baseArgs() });
+  assert.equal(db._store[`users/${UID}/subscription/usage_${month}`].watTestsUsed, 1, 'skipped (already COMPLETED) path must not touch usage at all');
 });
 
 test('Phase 1: runEvaluation flips to FAILED and writes no result doc when parseAndValidate never accepts', async () => {

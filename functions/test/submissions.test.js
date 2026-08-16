@@ -15,10 +15,18 @@ const {
   createGTOSubmission,
   createInterviewResponse,
   createPIQSubmission,
+  checkInterviewPrerequisites,
   GTO_TEST_TYPES
 } = require('../src/submissions');
 
-/** Minimal fake supporting `collection(path).add(value)` and `.doc(id).get()`. */
+/**
+ * Fake supporting `collection(path).add(value)`, `.doc(id).get()`, and the
+ * `.where().where().orderBy().limit().get()` query chain `submitInterviewResponse`'s
+ * prerequisite check needs to find a user's latest PIQ/OIR/PPDT submission, plus
+ * the tier/usage doc reads `checkQuota` (functions/src/evaluation/core.js) needs.
+ * Query filtering is a plain in-memory scan over `_store` -- sufficient for unit
+ * tests, not a real Firestore query planner.
+ */
 function makeFakeDb(initialDocs = {}) {
   const store = { ...initialDocs };
   let nextId = 1;
@@ -28,6 +36,32 @@ function makeFakeDb(initialDocs = {}) {
       async get() {
         const data = store[path];
         return { exists: data !== undefined, data: () => data };
+      },
+      collection: (sub) => collectionRef(`${path}/${sub}`)
+    };
+  }
+
+  function queryRef(path, filters, orderField, orderDir, limitN) {
+    return {
+      where(field, op, value) {
+        return queryRef(path, [...filters, { field, op, value }], orderField, orderDir, limitN);
+      },
+      orderBy(field, dir = 'asc') {
+        return queryRef(path, filters, field, dir, limitN);
+      },
+      limit(n) {
+        return queryRef(path, filters, orderField, orderDir, n);
+      },
+      async get() {
+        let docs = Object.entries(store)
+          .filter(([key]) => key.startsWith(`${path}/`))
+          .map(([, value]) => value)
+          .filter((doc) => filters.every(({ field, value }) => doc[field] === value));
+        if (orderField) {
+          docs = docs.slice().sort((a, b) => (orderDir === 'desc' ? b[orderField] - a[orderField] : a[orderField] - b[orderField]));
+        }
+        if (limitN) docs = docs.slice(0, limitN);
+        return { empty: docs.length === 0, docs: docs.map((data) => ({ data: () => data })) };
       }
     };
   }
@@ -35,6 +69,9 @@ function makeFakeDb(initialDocs = {}) {
   function collectionRef(path) {
     return {
       doc: (id) => docRef(`${path}/${id}`),
+      where(field, op, value) {
+        return queryRef(path, [{ field, op, value }]);
+      },
       async add(value) {
         const id = `auto${nextId++}`;
         store[`${path}/${id}`] = value;
@@ -44,6 +81,11 @@ function makeFakeDb(initialDocs = {}) {
   }
 
   return { collection: (path) => collectionRef(path), _store: store };
+}
+
+/** Builds a submissions-collection doc matching the real userId/testType/submittedAt shape. */
+function submissionDoc({ userId, testType, submittedAt, data = {} }) {
+  return { userId, testType, submittedAt, data };
 }
 
 test('Phase 11a: createStandardSubmission writes the nested data.analysisStatus envelope evaluate* functions expect', async () => {
@@ -80,7 +122,13 @@ test('Phase 11a: GTO_TEST_TYPES covers all 7 real gradeable sub-types (not 8 -- 
 });
 
 test('Phase 11a: createInterviewResponse writes to interview_responses with empty olqScores, not the submissions collection', async () => {
-  const db = makeFakeDb({ 'interview_sessions/sess1': { userId: 'user1' } });
+  const db = makeFakeDb({
+    'interview_sessions/sess1': { userId: 'user1' },
+    'submissions/piq1': submissionDoc({ userId: 'user1', testType: 'PIQ', submittedAt: 1 }),
+    'submissions/ppdt1': submissionDoc({ userId: 'user1', testType: 'PPDT', submittedAt: 1 }),
+    'submissions/oir1': submissionDoc({ userId: 'user1', testType: 'OIR', submittedAt: 1, data: { testResult: { percentageScore: 80 } } }),
+    [TIER_DOC_PATH]: { tier: 'PREMIUM' }
+  });
   const result = await createInterviewResponse(db, 'user1', {
     sessionId: 'sess1',
     questionId: 'q1',
@@ -116,4 +164,107 @@ test('Phase 11b: createPIQSubmission writes analysisStatus COMPLETED immediately
   assert.equal(doc.testType, 'PIQ');
   assert.equal(doc.data.analysisStatus, 'COMPLETED');
   assert.equal(doc.data.targetBoard, 'Indian Army (SSB)');
+});
+
+/**
+ * Server-side mirror of `CheckInterviewPrerequisitesUseCase.kt` -- this is the fix
+ * for the gap the SSOT audit found: `submitInterviewResponse` previously only
+ * checked session ownership, so a client bypassing KMP's client-side prerequisite
+ * check (e.g. web, or a direct Functions/Firestore call) could submit interview
+ * responses without PIQ/OIR/PPDT/quota ever being verified.
+ */
+const TIER_DOC_PATH = 'users/user1/data/subscription';
+function usageDocPath(userId, month) {
+  return `users/${userId}/subscription/usage_${month}`;
+}
+function currentMonthKey() {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+test('checkInterviewPrerequisites rejects when PIQ has never been submitted', async () => {
+  const db = makeFakeDb({
+    'submissions/ppdt1': submissionDoc({ userId: 'user1', testType: 'PPDT', submittedAt: 1 }),
+    'submissions/oir1': submissionDoc({ userId: 'user1', testType: 'OIR', submittedAt: 1, data: { testResult: { percentageScore: 80 } } })
+  });
+  await assert.rejects(() => checkInterviewPrerequisites(db, 'user1'), /PIQ/);
+});
+
+test('checkInterviewPrerequisites rejects when PPDT has never been submitted', async () => {
+  const db = makeFakeDb({
+    'submissions/piq1': submissionDoc({ userId: 'user1', testType: 'PIQ', submittedAt: 1 }),
+    'submissions/oir1': submissionDoc({ userId: 'user1', testType: 'OIR', submittedAt: 1, data: { testResult: { percentageScore: 80 } } })
+  });
+  await assert.rejects(() => checkInterviewPrerequisites(db, 'user1'), /PPDT/);
+});
+
+test('checkInterviewPrerequisites rejects when OIR has never been submitted', async () => {
+  const db = makeFakeDb({
+    'submissions/piq1': submissionDoc({ userId: 'user1', testType: 'PIQ', submittedAt: 1 }),
+    'submissions/ppdt1': submissionDoc({ userId: 'user1', testType: 'PPDT', submittedAt: 1 })
+  });
+  await assert.rejects(() => checkInterviewPrerequisites(db, 'user1'), /OIR/);
+});
+
+test('checkInterviewPrerequisites rejects when OIR score is below the 50% threshold, matching CheckInterviewPrerequisitesUseCase', async () => {
+  const db = makeFakeDb({
+    'submissions/piq1': submissionDoc({ userId: 'user1', testType: 'PIQ', submittedAt: 1 }),
+    'submissions/ppdt1': submissionDoc({ userId: 'user1', testType: 'PPDT', submittedAt: 1 }),
+    'submissions/oir1': submissionDoc({ userId: 'user1', testType: 'OIR', submittedAt: 1, data: { testResult: { percentageScore: 49 } } })
+  });
+  await assert.rejects(() => checkInterviewPrerequisites(db, 'user1'), /OIR/);
+});
+
+test('checkInterviewPrerequisites uses the most recent OIR attempt (highest submittedAt), not an earlier failing one', async () => {
+  const db = makeFakeDb({
+    'submissions/piq1': submissionDoc({ userId: 'user1', testType: 'PIQ', submittedAt: 1 }),
+    'submissions/ppdt1': submissionDoc({ userId: 'user1', testType: 'PPDT', submittedAt: 1 }),
+    'submissions/oirOld': submissionDoc({ userId: 'user1', testType: 'OIR', submittedAt: 1, data: { testResult: { percentageScore: 20 } } }),
+    'submissions/oirNew': submissionDoc({ userId: 'user1', testType: 'OIR', submittedAt: 2, data: { testResult: { percentageScore: 80 } } }),
+    [TIER_DOC_PATH]: { tier: 'PREMIUM' }
+  });
+  await assert.doesNotReject(() => checkInterviewPrerequisites(db, 'user1'));
+});
+
+test('checkInterviewPrerequisites rejects when the interview monthly quota is exhausted', async () => {
+  const month = currentMonthKey();
+  const db = makeFakeDb({
+    'submissions/piq1': submissionDoc({ userId: 'user1', testType: 'PIQ', submittedAt: 1 }),
+    'submissions/ppdt1': submissionDoc({ userId: 'user1', testType: 'PPDT', submittedAt: 1 }),
+    'submissions/oir1': submissionDoc({ userId: 'user1', testType: 'OIR', submittedAt: 1, data: { testResult: { percentageScore: 80 } } }),
+    [TIER_DOC_PATH]: { tier: 'FREE' },
+    [usageDocPath('user1', month)]: { interviewTestsUsed: 5 }
+  });
+  await assert.rejects(() => checkInterviewPrerequisites(db, 'user1'), /quota|Quota/);
+});
+
+test('checkInterviewPrerequisites passes when PIQ + PPDT are submitted, OIR is >=50%, and quota remains', async () => {
+  const db = makeFakeDb({
+    'submissions/piq1': submissionDoc({ userId: 'user1', testType: 'PIQ', submittedAt: 1 }),
+    'submissions/ppdt1': submissionDoc({ userId: 'user1', testType: 'PPDT', submittedAt: 1 }),
+    'submissions/oir1': submissionDoc({ userId: 'user1', testType: 'OIR', submittedAt: 1, data: { testResult: { percentageScore: 50 } } }),
+    [TIER_DOC_PATH]: { tier: 'PREMIUM' }
+  });
+  await assert.doesNotReject(() => checkInterviewPrerequisites(db, 'user1'));
+});
+
+test('createInterviewResponse rejects a submission when prerequisites are not met, even with a valid owned session', async () => {
+  const db = makeFakeDb({ 'interview_sessions/sess1': { userId: 'user1' } });
+  await assert.rejects(
+    () => createInterviewResponse(db, 'user1', { sessionId: 'sess1', questionId: 'q1', responseText: 'my answer' }),
+    /PIQ/
+  );
+  assert.equal(Object.keys(db._store).some((k) => k.startsWith('interview_responses/')), false);
+});
+
+test('createInterviewResponse succeeds once prerequisites are met', async () => {
+  const db = makeFakeDb({
+    'interview_sessions/sess1': { userId: 'user1' },
+    'submissions/piq1': submissionDoc({ userId: 'user1', testType: 'PIQ', submittedAt: 1 }),
+    'submissions/ppdt1': submissionDoc({ userId: 'user1', testType: 'PPDT', submittedAt: 1 }),
+    'submissions/oir1': submissionDoc({ userId: 'user1', testType: 'OIR', submittedAt: 1, data: { testResult: { percentageScore: 80 } } }),
+    [TIER_DOC_PATH]: { tier: 'PREMIUM' }
+  });
+  const result = await createInterviewResponse(db, 'user1', { sessionId: 'sess1', questionId: 'q1', responseText: 'my answer' });
+  assert.equal(result.success, true);
 });

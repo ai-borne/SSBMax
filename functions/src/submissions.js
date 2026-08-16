@@ -30,9 +30,56 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths } = require('./generated/contracts.cjs');
+const { checkQuota } = require('./evaluation/core');
 
 if (!admin.apps.length) {
   admin.initializeApp();
+}
+
+const OIR_PASS_THRESHOLD = 50;
+
+/**
+ * Server-side mirror of `CheckInterviewPrerequisitesUseCase.kt` -- until this existed,
+ * `submitInterviewResponse` only checked session ownership, so any caller bypassing
+ * KMP's client-side check (web, or a direct Functions/Firestore call) could submit
+ * interview responses with no PIQ/OIR-threshold/PPDT/quota gate at all (SSOT audit
+ * finding: the client-side check was the *only* enforcement in the whole system).
+ * Reuses `evaluation/core.js::checkQuota` for the quota leg rather than duplicating
+ * it, since it's exactly the same tier/usage read `evaluateInterviewResponse` already
+ * performs for its own defense-in-depth re-check.
+ */
+async function latestSubmission(db, uid, testType) {
+  const snap = await db
+    .collection(FirestorePaths.SUBMISSIONS)
+    .where('userId', '==', uid)
+    .where('testType', '==', testType)
+    .orderBy('submittedAt', 'desc')
+    .limit(1)
+    .get();
+  return snap.empty ? null : snap.docs[0].data();
+}
+
+async function checkInterviewPrerequisites(db, uid) {
+  const piq = await latestSubmission(db, uid, 'PIQ');
+  if (!piq) {
+    throw new functions.https.HttpsError('failed-precondition', 'PIQ must be submitted before starting an interview');
+  }
+
+  const ppdt = await latestSubmission(db, uid, 'PPDT');
+  if (!ppdt) {
+    throw new functions.https.HttpsError('failed-precondition', 'PPDT must be submitted before starting an interview');
+  }
+
+  const oir = await latestSubmission(db, uid, 'OIR');
+  const oirScore = oir?.data?.testResult?.percentageScore ?? 0;
+  if (!oir || oirScore < OIR_PASS_THRESHOLD) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `OIR score of at least ${OIR_PASS_THRESHOLD}% is required before starting an interview`
+    );
+  }
+
+  await checkQuota(db, uid, 'IO');
 }
 
 const GTO_TEST_TYPES = new Set(['GTO_GD', 'GTO_GPE', 'GTO_PGT', 'GTO_HGT', 'GTO_GOR', 'GTO_CT', 'GTO_IO', 'GTO_LECTURETTE']);
@@ -174,6 +221,8 @@ async function createInterviewResponse(db, uid, { sessionId, questionId, respons
     throw new functions.https.HttpsError('permission-denied', 'Permission denied: ownership check failed');
   }
 
+  await checkInterviewPrerequisites(db, uid);
+
   const ref = await db.collection(FirestorePaths.INTERVIEW_RESPONSES).add({
     userId: uid,
     sessionId,
@@ -200,3 +249,4 @@ exports.createStandardSubmission = createStandardSubmission;
 exports.createPIQSubmission = createPIQSubmission;
 exports.createGTOSubmission = createGTOSubmission;
 exports.createInterviewResponse = createInterviewResponse;
+exports.checkInterviewPrerequisites = checkInterviewPrerequisites;

@@ -27,12 +27,12 @@
 
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
-const { checkQuota } = require('./core');
 const { withRetry } = require('./retry');
 const { parseEvaluationResponse } = require('./responseParser');
 const { buildInterviewPrompt } = require('./interviewPrompts');
 const { generateContent } = require('./geminiClient');
 const { FirestorePaths } = require('../generated/contracts.cjs');
+const { recordAndEnforce } = require('../eligibility');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -84,17 +84,12 @@ const runtimeOptions = {
   secrets: ['GEMINI_API_KEY']
 };
 
-exports.evaluateInterviewResponse = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
-  }
-  const uid = context.auth.uid;
-  const { responseId, sessionId } = data || {};
-  if (!responseId || typeof responseId !== 'string' || !sessionId || typeof sessionId !== 'string') {
-    throw new functions.https.HttpsError('invalid-argument', 'responseId and sessionId are required');
-  }
-
-  const db = admin.firestore();
+/**
+ * Injectable core -- the `onCall` wrapper below only fetches `admin.firestore()`/auth.
+ * `generateContentFn`/`retryDelayFn` default to the real Gemini call/backoff but are
+ * overridable so tests can exercise the full flow without a live Gemini key or real timers.
+ */
+async function evaluateInterviewResponseCore(db, uid, responseId, sessionId, generateContentFn = generateContent, retryDelayFn) {
   const responseRef = db.collection(FirestorePaths.INTERVIEW_RESPONSES).doc(responseId);
 
   const [responseSnap, sessionSnap] = await Promise.all([
@@ -127,7 +122,14 @@ exports.evaluateInterviewResponse = functions.runWith(runtimeOptions).https.onCa
     );
   }
 
-  await checkQuota(db, uid, INTERVIEW_TEST_TYPE);
+  // Enforce AND charge here, keyed by sessionId (not responseId or a read-only
+  // pre-check): a session has many evaluated responses, but the interview quota
+  // counts one interview attempt. A plain read-only `checkQuota` pre-check would
+  // see this session's own already-recorded charge as "at limit" and incorrectly
+  // block every response after the first in the same session -- `recordAndEnforce`'s
+  // idempotency-by-key makes the first response in a session the one that enforces
+  // the limit and charges; every later response in that same session is a no-op.
+  await recordAndEnforce(db, uid, INTERVIEW_TEST_TYPE, sessionId);
 
   const questionSnap = await db.collection(FirestorePaths.INTERVIEW_QUESTIONS).doc(responseData.questionId).get();
   const questionText = questionSnap.exists ? questionSnap.data().questionText || 'Question' : 'Question';
@@ -136,9 +138,10 @@ exports.evaluateInterviewResponse = functions.runWith(runtimeOptions).https.onCa
   const prompt = buildInterviewPrompt(questionText, candidateText, expectedOLQs, responseData.responseMode || 'VOICE_BASED');
 
   const result = await withRetry({
-    call: async () => buildInterviewResult(await generateContent(prompt)),
+    call: async () => buildInterviewResult(await generateContentFn(prompt)),
     isAcceptable: (r) => r !== null && r !== undefined,
-    fillDefaults: (r) => r
+    fillDefaults: (r) => r,
+    ...(retryDelayFn ? { delayFn: retryDelayFn } : {})
   });
 
   if (!result) {
@@ -148,7 +151,19 @@ exports.evaluateInterviewResponse = functions.runWith(runtimeOptions).https.onCa
   await responseRef.update({ olqScores: result.olqScores, confidenceScore: result.confidenceScore });
 
   return { success: true, responseId };
+}
+
+exports.evaluateInterviewResponse = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+  const { responseId, sessionId } = data || {};
+  if (!responseId || typeof responseId !== 'string' || !sessionId || typeof sessionId !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'responseId and sessionId are required');
+  }
+  return evaluateInterviewResponseCore(admin.firestore(), context.auth.uid, responseId, sessionId);
 });
 
 exports.buildInterviewResult = buildInterviewResult;
 exports.MAX_RESPONSE_CHARACTERS = MAX_RESPONSE_CHARACTERS;
+exports.evaluateInterviewResponseCore = evaluateInterviewResponseCore;

@@ -581,9 +581,12 @@ service cloud.firestore {
 
     // Interview questions - authenticated users can read/write questions
     // Questions are session-specific and stored temporarily during interview
+    // Shared question bank, seeded out-of-band (console/Admin SDK) -- no client writer
+    // exists anywhere in the app (KMP or web only ever read this collection), so any
+    // authenticated user having write access was excess permission, not a feature.
     match /interview_questions/{questionId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if false;
     }
 
     // Interview responses - users can write their own responses (cannot modify olqScores/analyzedBy)

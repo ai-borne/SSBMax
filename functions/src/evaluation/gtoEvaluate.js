@@ -37,6 +37,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { checkQuota } = require('./core');
+const { recordAndEnforce } = require('../eligibility');
 const { withRetry } = require('./retry');
 const { parseEvaluationResponse, finalizeOlqScores, ratingFromScore } = require('./responseParser');
 const { validateScores } = require('./validation');
@@ -98,17 +99,12 @@ const runtimeOptions = {
   secrets: ['GEMINI_API_KEY']
 };
 
-exports.evaluateGTO = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
-  }
-  const uid = context.auth.uid;
-  const { submissionId } = data || {};
-  if (!submissionId || typeof submissionId !== 'string') {
-    throw new functions.https.HttpsError('invalid-argument', 'submissionId is required');
-  }
-
-  const db = admin.firestore();
+/**
+ * Injectable core -- the `onCall` wrapper below only fetches `admin.firestore()`/auth.
+ * `generateContentFn` defaults to the real Gemini call but is overridable so tests can
+ * exercise the full success/failure/quota-charge flow without a live Gemini key.
+ */
+async function evaluateGTOSubmission(db, uid, submissionId, generateContentFn = generateContent, retryDelayFn) {
   const submissionRef = db.collection(FirestorePaths.SUBMISSIONS).doc(submissionId);
   const snapshot = await submissionRef.get();
   if (!snapshot.exists) {
@@ -137,9 +133,10 @@ exports.evaluateGTO = functions.runWith(runtimeOptions).https.onCall(async (data
   await submissionRef.update({ status: 'ANALYZING' });
 
   const result = await withRetry({
-    call: async () => buildGTOResult(await generateContent(config.buildPrompt(submission))),
+    call: async () => buildGTOResult(await generateContentFn(config.buildPrompt(submission))),
     isAcceptable: (r) => r !== null && r !== undefined,
-    fillDefaults: (r) => r
+    fillDefaults: (r) => r,
+    ...(retryDelayFn ? { delayFn: retryDelayFn } : {})
   });
 
   if (!result) {
@@ -159,8 +156,25 @@ exports.evaluateGTO = functions.runWith(runtimeOptions).https.onCall(async (data
     });
   await submissionRef.update({ status: 'COMPLETED' });
 
+  // See core.js::runEvaluation's identical comment -- charging here (not left to a
+  // separate client-invoked `recordTestUsage` call) closes the "client just never
+  // calls it" quota-bypass gap. Idempotent by submissionId.
+  await recordAndEnforce(db, uid, submission.testType, submissionId);
+
   return { success: true, submissionId, status: 'COMPLETED' };
+}
+
+exports.evaluateGTO = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+  const { submissionId } = data || {};
+  if (!submissionId || typeof submissionId !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'submissionId is required');
+  }
+  return evaluateGTOSubmission(admin.firestore(), context.auth.uid, submissionId);
 });
 
 exports.buildGTOResult = buildGTOResult;
 exports.GTO_SUBTYPE_CONFIG = GTO_SUBTYPE_CONFIG;
+exports.evaluateGTOSubmission = evaluateGTOSubmission;
