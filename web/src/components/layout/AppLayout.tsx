@@ -6,6 +6,7 @@ import { strings } from '../../constants/strings';
 import { useTheme } from '../../hooks/useTheme';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { Footer } from '../legal/Footer';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -158,6 +159,8 @@ export const AppLayout: FC<AppLayoutProps> = ({
                   <button onClick={toggleTheme} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" aria-label="Toggle theme" data-testid="theme-toggle-button">
                     {theme === 'dark' ? <Moon className="w-4 h-4 text-sky-400" /> : theme === 'light' ? <Sun className="w-4 h-4 text-amber-500" /> : <Monitor className="w-4 h-4 text-emerald-500" />}
                   </button>
+
+                  <NotificationBell userId={authUser?.uid} />
 
                   {!authUser && (
                     <button onClick={onSignInClick} className="min-h-[44px] px-4 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white shadow-sm transition-colors flex items-center gap-1.5" data-testid="sign-in-cta-button">
