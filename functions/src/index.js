@@ -20,6 +20,7 @@ const { geminiGenerateContent } = require('./geminiProxy');
 const { evaluateWAT } = require('./evaluation/watEvaluate');
 const { evaluateSRT } = require('./evaluation/srtEvaluate');
 const { evaluateSD } = require('./evaluation/sdEvaluate');
+const { evaluateInterviewResponse } = require('./evaluation/interviewEvaluate');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
@@ -37,3 +38,8 @@ exports.evaluateSRT = evaluateSRT;
 // Phase 6 Ship (Web SSB Test Flow Parity plan): behind KMP's `sd_server_evaluation`
 // feature flag, default off -- see SDAnalysisOrchestrator.
 exports.evaluateSD = evaluateSD;
+// Phase 7 Ship (Web SSB Test Flow Parity plan): behind KMP's `interview_server_evaluation`
+// feature flag, default off -- see InterviewAnalysisOrchestrator. Per-response, not
+// per-submission -- generalizes the legacy `analyzeInterviewResponse` above rather than
+// replacing it (legacy stays live during the canary/bake period).
+exports.evaluateInterviewResponse = evaluateInterviewResponse;

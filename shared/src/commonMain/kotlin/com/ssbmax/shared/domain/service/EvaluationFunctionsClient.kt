@@ -23,4 +23,12 @@ interface EvaluationFunctionsClient {
     suspend fun evaluateWAT(submissionId: String): Result<Unit>
     suspend fun evaluateSRT(submissionId: String): Result<Unit>
     suspend fun evaluateSD(submissionId: String): Result<Unit>
+
+    /**
+     * Interview keeps its per-response (not per-submission) evaluation shape (Phase 7,
+     * Web SSB Test Flow Parity plan) -- [responseId] is the `interview_responses/{id}`
+     * doc to evaluate, [sessionId] is its parent `interview_sessions/{id}`, used by
+     * `evaluateInterviewResponse`'s ownership check.
+     */
+    suspend fun evaluateInterviewResponse(responseId: String, sessionId: String): Result<Unit>
 }

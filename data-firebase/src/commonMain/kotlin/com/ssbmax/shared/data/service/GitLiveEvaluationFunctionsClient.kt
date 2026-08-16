@@ -8,6 +8,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 private data class EvaluateSubmissionRequest(val submissionId: String)
 
+@Serializable
+private data class EvaluateInterviewResponseRequest(val responseId: String, val sessionId: String)
+
 /**
  * [EvaluationFunctionsClient] backed by the `evaluate*` Cloud Functions
  * (`functions/src/evaluation/{type}Evaluate.js`). Same GitLive `httpsCallable` pattern
@@ -39,6 +42,14 @@ class GitLiveEvaluationFunctionsClient : EvaluationFunctionsClient {
 
     override suspend fun evaluateSD(submissionId: String): Result<Unit> = try {
         Firebase.functions.httpsCallable("evaluateSD").invoke(EvaluateSubmissionRequest(submissionId))
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun evaluateInterviewResponse(responseId: String, sessionId: String): Result<Unit> = try {
+        Firebase.functions.httpsCallable("evaluateInterviewResponse")
+            .invoke(EvaluateInterviewResponseRequest(responseId, sessionId))
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
