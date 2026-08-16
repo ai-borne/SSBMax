@@ -225,7 +225,13 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
       </div>
 
       {/* Navigation Controls */}
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-2">
+        {state.isSubmitting && (
+          <p className="flex items-center text-xs text-[var(--color-text-muted)]">
+            <Clock className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+            {strings.psychology.submitting}
+          </p>
+        )}
         {state.currentSlideIndex < state.slides.length - 1 ? (
           <button
             onClick={() => handleSlideComplete()}
@@ -238,9 +244,13 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
           <button
             onClick={() => viewModel.submitTest(userId, isOnline)}
             disabled={state.isSubmitting}
-            className="flex items-center px-6 py-2.5 bg-[var(--color-success)] hover:opacity-90 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center px-6 py-2.5 bg-[var(--color-success)] hover:opacity-90 disabled:opacity-60 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            <Send className="w-4 h-4 mr-1.5" />
+            {state.isSubmitting ? (
+              <Clock className="w-4 h-4 mr-1.5 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4 mr-1.5" />
+            )}
             {strings.psychology.finishTest}
           </button>
         )}

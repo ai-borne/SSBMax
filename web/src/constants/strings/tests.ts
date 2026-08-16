@@ -23,6 +23,7 @@ export const testStrings = {
     writeResponsePlaceholder: 'Write your story / response here...',
     nextSlide: 'Next Slide',
     finishTest: 'Complete & Submit',
+    submitting: 'Submitting and recording your test… this can take up to 30 seconds.',
     completedTitle: 'Psychology Test Completed',
     completedMessage: 'Your responses have been recorded and sent for AI evaluation.'
   },

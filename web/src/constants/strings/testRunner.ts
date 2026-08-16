@@ -34,6 +34,7 @@ export const testRunnerStrings = {
     charCountSuffix: 'characters',
     submitButton: 'Submit for AI Evaluation',
     submittingButton: 'Submitting...',
+    submittingNotice: 'Submitting and recording your test… this can take up to 30 seconds.',
     submittedMessage: 'Submitted for evaluation. Check your OLQ dashboard once analysis completes.',
     groundworkNotice: 'Response saved. AI evaluation for this task type is not available yet.',
     errorPrefix: 'Failed to submit: '
@@ -49,6 +50,7 @@ export const testRunnerStrings = {
     charCountSuffix: 'characters',
     submitButton: 'Submit Answer',
     submittingButton: 'Submitting...',
+    submittingNotice: 'Submitting and recording your test… this can take up to 30 seconds.',
     submittedMessage: 'Answer submitted for evaluation.',
     unavailableNotice: 'Interview session orchestration is not live yet -- capture is available for practice, but responses are not sent for evaluation.',
     errorPrefix: 'Failed to submit: '

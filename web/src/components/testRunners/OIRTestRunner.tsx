@@ -243,7 +243,11 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
               disabled={state.isSubmitting}
               className="flex items-center px-6 py-2 bg-[var(--color-success)] hover:opacity-90 text-white rounded-lg text-sm font-medium"
             >
-              <Send className="w-4 h-4 mr-1.5" />
+              {state.isSubmitting ? (
+                <Clock className="w-4 h-4 mr-1.5 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1.5" />
+              )}
               {state.isSubmitting ? strings.oir.submitting : strings.oir.submitTest}
             </button>
           )}

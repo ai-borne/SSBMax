@@ -1,4 +1,5 @@
 import { FC, useState } from 'react';
+import { Clock } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { SubmissionService } from '../../services/SubmissionService';
 import { EligibilityService } from '../../services/EligibilityService';
@@ -82,14 +83,23 @@ export const InterviewResponseCapture: FC<InterviewResponseCaptureProps> = ({
       ) : status === 'submitted' ? (
         <p className="text-xs text-emerald-400" data-testid="interview-submit-success">{t.submittedMessage}</p>
       ) : (
-        <button
-          onClick={handleSubmit}
-          disabled={status === 'submitting' || responseText.trim().length === 0}
-          data-testid="interview-submit-button"
-          className="min-h-[44px] px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold"
-        >
-          {status === 'submitting' ? t.submittingButton : t.submitButton}
-        </button>
+        <div className="space-y-2">
+          {status === 'submitting' && (
+            <p className="flex items-center text-xs text-slate-400">
+              <Clock className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              {t.submittingNotice}
+            </p>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={status === 'submitting' || responseText.trim().length === 0}
+            data-testid="interview-submit-button"
+            className="min-h-[44px] px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold flex items-center"
+          >
+            {status === 'submitting' && <Clock className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            {status === 'submitting' ? t.submittingButton : t.submitButton}
+          </button>
+        </div>
       )}
     </div>
   );
