@@ -153,7 +153,8 @@ function buildPPDTResult(rawResponseText) {
 
 const runtimeOptions = {
   maxInstances: 10,
-  timeoutSeconds: 60
+  timeoutSeconds: 60,
+  secrets: ['GEMINI_API_KEY']
 };
 
 exports.evaluatePPDT = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {

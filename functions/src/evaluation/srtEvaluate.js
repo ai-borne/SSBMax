@@ -88,7 +88,8 @@ function buildSRTResult(rawResponseText) {
 
 const runtimeOptions = {
   maxInstances: 10,
-  timeoutSeconds: 60
+  timeoutSeconds: 60,
+  secrets: ['GEMINI_API_KEY']
 };
 
 exports.evaluateSRT = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {

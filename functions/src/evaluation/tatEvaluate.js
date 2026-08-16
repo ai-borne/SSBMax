@@ -206,7 +206,8 @@ function buildTATResult(rawSynthesisText, assessments, failedCount) {
 const runtimeOptions = {
   maxInstances: 10,
   timeoutSeconds: 540,
-  memory: '512MB'
+  memory: '512MB',
+  secrets: ['GEMINI_API_KEY']
 };
 
 exports.evaluateTAT = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {

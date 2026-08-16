@@ -102,7 +102,8 @@ function validateRequest(data) {
 // Same DoW-defense shape as aiAnalysis.js's runtimeOptions.
 const runtimeOptions = {
   maxInstances: 10,
-  timeoutSeconds: 60
+  timeoutSeconds: 60,
+  secrets: ['GEMINI_API_KEY']
 };
 
 exports.geminiGenerateContent = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
