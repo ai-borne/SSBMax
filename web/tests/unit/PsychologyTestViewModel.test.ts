@@ -204,15 +204,16 @@ describe('PsychologyTestViewModel TDD Unit Tests', () => {
       expect(state.error).toBe('quota exceeded');
     });
 
-    it('a recordTestUsage failure does not block completion -- the submission is already durable', async () => {
-      mockEligibilityService.recordTestUsage.mockRejectedValueOnce(new Error('usage service down'));
+    it('a recordTestUsage failure blocks evaluation and surfaces as an error -- usage must be recorded before the costly evaluate* call runs, matching KMP\'s SubmitPPDTTestUseCase ordering', async () => {
+      mockEligibilityService.recordTestUsage.mockRejectedValueOnce(new Error('Monthly quota reached for WAT (1/1)'));
       const vm = new PsychologyTestViewModel('WAT', mockRepo, mockOfflineQueue, mockSubmissionService, mockEligibilityService);
       await vm.loadTestContent('wat-1');
 
       await vm.submitTest('user-1', true);
 
-      expect(vm.getState().isCompleted).toBe(true);
-      expect(vm.getState().error).toBeNull();
+      expect(vm.getState().isCompleted).toBe(false);
+      expect(vm.getState().error).toContain('Monthly quota reached');
+      expect(mockSubmissionService.evaluateWAT).not.toHaveBeenCalled();
     });
   });
 });

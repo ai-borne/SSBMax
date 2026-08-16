@@ -4,7 +4,12 @@
  * Initializes Razorpay payment orders with mandatory notes metadata (userId, planId).
  */
 
-const functions = require('firebase-functions');
+// Pinned to v1 -- see eligibility.js's identical comment: the handler below uses the v1
+// two-arg `(data, context)` onCall signature (`context.auth`), and bare
+// `require('firebase-functions')` resolves to the v2 API by default on this project's
+// installed firebase-functions@7, which would silently make `context.auth` always
+// undefined and this function always reject as unauthenticated.
+const functions = require('firebase-functions/v1');
 
 /**
  * Create Razorpay Order Callable Function

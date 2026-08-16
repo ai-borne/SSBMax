@@ -3,6 +3,7 @@ import { IContentRepository } from '../repositories/interfaces/IContentRepositor
 import { OfflineQueueService } from '../services/OfflineQueueService';
 import { SubmissionService } from '../services/SubmissionService';
 import { EligibilityService } from '../services/EligibilityService';
+import { recordUsageThenEvaluate } from '../services/testEvaluationOrchestrator';
 import { FirestorePaths } from '../generated/contracts';
 
 export type PsychologyTestType = 'TAT' | 'WAT' | 'SRT' | 'PPDT' | 'SD';
@@ -228,12 +229,6 @@ export class PsychologyTestViewModel {
     try {
       const { submissionId, resultCollection } = await this.createSubmission();
 
-      // Log-don't-block, matching OIRTestViewModel's quota-recording pattern -- a
-      // recording failure must not undo an already-durable submission.
-      this.eligibilityService.recordTestUsage(this.state.testType, submissionId).catch((err) => {
-        console.warn(`Failed to record test usage for ${this.state.testType}/${submissionId}`, err);
-      });
-
       this.state = {
         ...this.state,
         isSubmitting: false,
@@ -252,10 +247,10 @@ export class PsychologyTestViewModel {
   }
 
   /**
-   * Creates the `submissions/{id}` doc via `SubmissionService` and immediately
-   * triggers the matching `evaluate*` callable -- mirrors KMP's explicit
-   * `SubmissionAnalysisTrigger.trigger()` call right after submit (one triggering
-   * mechanism, not a Firestore on-write trigger as an alternate path, per plan §C.3).
+   * Creates the `submissions/{id}` doc, records quota usage, then calls `evaluate*` --
+   * in that order, matching KMP's `SubmitPPDTTestUseCase` et al. (`recordTestUsage`
+   * right after persisting, before analysis runs). Recording after `evaluate*` let the
+   * real quota gate (`recordAndEnforce`) fire only once Gemini had already been paid for.
    */
   private async createSubmission(): Promise<{ submissionId: string; resultCollection: string }> {
     const { testType, slides, responses, batchId } = this.state;
@@ -268,34 +263,32 @@ export class PsychologyTestViewModel {
           batchId,
           story: responses[slide.id] || ''
         });
-        await this.submissionService.evaluatePPDT({ submissionId });
+        await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluatePPDT({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PPDT_RESULTS };
       }
       case 'TAT': {
         const stories = slides.map((s) => ({ questionId: s.id, story: responses[s.id] || '' }));
         const { submissionId } = await this.submissionService.submitTATTest({ stories, batchId });
-        await this.submissionService.evaluateTAT({ submissionId });
+        await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluateTAT({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
       }
       case 'WAT': {
-        // timeTakenSeconds is not yet tracked per-response on web (no per-slide timer
-        // exists today) -- defaulted to 0 rather than inventing timing infra outside
-        // this phase's scope; evaluateWAT doesn't use it for scoring.
+        // timeTakenSeconds isn't tracked per-response on web yet; evaluateWAT doesn't score on it.
         const responseItems = slides.map((s) => ({ word: s.content, response: responses[s.id] || '', timeTakenSeconds: 0 }));
         const { submissionId } = await this.submissionService.submitWATTest({ responses: responseItems });
-        await this.submissionService.evaluateWAT({ submissionId });
+        await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluateWAT({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
       }
       case 'SRT': {
         const responseItems = slides.map((s) => ({ situation: s.content, response: responses[s.id] || '' }));
         const { submissionId } = await this.submissionService.submitSRTTest({ responses: responseItems });
-        await this.submissionService.evaluateSRT({ submissionId });
+        await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluateSRT({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
       }
       case 'SD': {
         const responseItems = slides.map((s) => ({ answer: responses[s.id] || '' }));
         const { submissionId } = await this.submissionService.submitSDTest({ responses: responseItems });
-        await this.submissionService.evaluateSD({ submissionId });
+        await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluateSD({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
       }
     }

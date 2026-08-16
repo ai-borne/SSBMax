@@ -10,7 +10,13 @@
  * Admin SDK write below (which bypasses rules) is the only path left.
  */
 
-const functions = require('firebase-functions');
+// Pinned to v1: the handler below uses the v1 two-arg `(data, context)` onCall signature
+// (`context.auth`). Bare `require('firebase-functions')` on this project's installed
+// firebase-functions@7 resolves `.https.onCall` to the v2 API by default, which invokes
+// handlers as `(request, responseProxy)` instead -- silently making `context.auth` always
+// undefined and this function always reject as unauthenticated, regardless of the caller's
+// real auth state. Matches `submissions.js`'s explicit v1 import for the same reason.
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths, SubscriptionLimits, Enums } = require('./generated/contracts.cjs');
 

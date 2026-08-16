@@ -13,10 +13,34 @@ function mockService(overrides: Partial<Record<string, any>> = {}) {
   } as any;
 }
 
+function mockEligibility(overrides: Partial<Record<string, any>> = {}) {
+  return {
+    recordTestUsage: vi.fn().mockResolvedValue({ success: true, alreadyRecorded: false, used: 1, limit: 3 }),
+    ...overrides
+  } as any;
+}
+
 describe('GTOResponseForm', () => {
-  it('sends GD-shaped fields (topic/response/charCount) and triggers evaluateGTO -- GD is server-evaluable today', async () => {
+  it('sends GD-shaped fields (topic/response/charCount), records usage before evaluateGTO -- GD is server-evaluable today', async () => {
     const service = mockService();
-    render(<GTOResponseForm gtoType="GTO_GD" topic="Leadership under pressure" submissionService={service} />);
+    const eligibility = mockEligibility();
+    const callOrder: string[] = [];
+    eligibility.recordTestUsage.mockImplementation(async () => {
+      callOrder.push('recordTestUsage');
+      return { success: true, alreadyRecorded: false, used: 1, limit: 3 };
+    });
+    service.evaluateGTO.mockImplementation(async () => {
+      callOrder.push('evaluateGTO');
+      return { success: true, status: 'PENDING_ANALYSIS' };
+    });
+    render(
+      <GTOResponseForm
+        gtoType="GTO_GD"
+        topic="Leadership under pressure"
+        submissionService={service}
+        eligibilityService={eligibility}
+      />
+    );
 
     fireEvent.change(screen.getByTestId('gto-response-textarea'), { target: { value: 'My response text' } });
     fireEvent.click(screen.getByTestId('gto-submit-button'));
@@ -28,12 +52,38 @@ describe('GTOResponseForm', () => {
       response: 'My response text',
       charCount: 'My response text'.length
     });
+    expect(eligibility.recordTestUsage).toHaveBeenCalledWith('GTO_GD', 'gto-sub-1');
     expect(service.evaluateGTO).toHaveBeenCalledWith({ submissionId: 'gto-sub-1' });
+    expect(callOrder).toEqual(['recordTestUsage', 'evaluateGTO']);
+  });
+
+  it('a recordTestUsage rejection (quota exhausted) blocks evaluateGTO and surfaces as the submit error -- this is the live bug this test guards against regressing', async () => {
+    const service = mockService();
+    const eligibility = mockEligibility({
+      recordTestUsage: vi.fn().mockRejectedValue(new Error('Monthly quota reached for GTO (3/3)'))
+    });
+    render(
+      <GTOResponseForm gtoType="GTO_GD" topic="Topic" submissionService={service} eligibilityService={eligibility} />
+    );
+
+    fireEvent.change(screen.getByTestId('gto-response-textarea'), { target: { value: 'text' } });
+    fireEvent.click(screen.getByTestId('gto-submit-button'));
+
+    await waitFor(() => expect(screen.getByTestId('gto-submit-error')).toBeInTheDocument());
+    expect(screen.getByTestId('gto-submit-error').textContent).toMatch(/quota reached/);
+    expect(service.evaluateGTO).not.toHaveBeenCalled();
   });
 
   it('sends GPE-shaped fields (scenario/plan/characterCount), not GD field names', async () => {
     const service = mockService();
-    render(<GTOResponseForm gtoType="GTO_GPE" topic="Flood rescue scenario" submissionService={service} />);
+    render(
+      <GTOResponseForm
+        gtoType="GTO_GPE"
+        topic="Flood rescue scenario"
+        submissionService={service}
+        eligibilityService={mockEligibility()}
+      />
+    );
 
     fireEvent.change(screen.getByTestId('gto-response-textarea'), { target: { value: 'My tactical plan' } });
     fireEvent.click(screen.getByTestId('gto-submit-button'));
@@ -49,7 +99,14 @@ describe('GTOResponseForm', () => {
 
   it('sends Lecturette-shaped fields (selectedTopic/topicChoices/speechTranscript)', async () => {
     const service = mockService();
-    render(<GTOResponseForm gtoType="GTO_LECTURETTE" topic="Space Exploration" submissionService={service} />);
+    render(
+      <GTOResponseForm
+        gtoType="GTO_LECTURETTE"
+        topic="Space Exploration"
+        submissionService={service}
+        eligibilityService={mockEligibility()}
+      />
+    );
 
     fireEvent.change(screen.getByTestId('gto-response-textarea'), { target: { value: 'My speech' } });
     fireEvent.click(screen.getByTestId('gto-submit-button'));
@@ -69,7 +126,14 @@ describe('GTOResponseForm', () => {
       () => ({ getSubmissionStatus: vi.fn().mockResolvedValue({ status: 'ANALYZING' }), getResult: vi.fn() }) as any
     );
     const service = mockService();
-    render(<GTOResponseForm gtoType="GTO_GD" topic="Leadership under pressure" submissionService={service} />);
+    render(
+      <GTOResponseForm
+        gtoType="GTO_GD"
+        topic="Leadership under pressure"
+        submissionService={service}
+        eligibilityService={mockEligibility()}
+      />
+    );
 
     fireEvent.change(screen.getByTestId('gto-response-textarea'), { target: { value: 'My response text' } });
     fireEvent.click(screen.getByTestId('gto-submit-button'));
@@ -77,15 +141,19 @@ describe('GTOResponseForm', () => {
     await waitFor(() => expect(screen.getByTestId('result-analyzing')).toBeInTheDocument());
   });
 
-  it('does NOT trigger evaluateGTO for a type gtoEvaluate.js does not support, and shows the groundwork notice instead', async () => {
+  it('does NOT trigger evaluateGTO or recordTestUsage for a type gtoEvaluate.js does not support, and shows the groundwork notice instead', async () => {
     const service = mockService();
-    render(<GTOResponseForm gtoType="GTO_PGT" topic="Obstacle course" submissionService={service} />);
+    const eligibility = mockEligibility();
+    render(
+      <GTOResponseForm gtoType="GTO_PGT" topic="Obstacle course" submissionService={service} eligibilityService={eligibility} />
+    );
 
     fireEvent.change(screen.getByTestId('gto-response-textarea'), { target: { value: 'My notes' } });
     fireEvent.click(screen.getByTestId('gto-submit-button'));
 
     await waitFor(() => expect(screen.getByTestId('gto-submit-success')).toBeInTheDocument());
     expect(service.submitGTOTest).toHaveBeenCalledWith({ gtoType: 'GTO_PGT', notes: 'My notes' });
+    expect(eligibility.recordTestUsage).not.toHaveBeenCalled();
     expect(service.evaluateGTO).not.toHaveBeenCalled();
     expect(screen.getByTestId('gto-submit-success').textContent).toMatch(/not available yet/i);
   });

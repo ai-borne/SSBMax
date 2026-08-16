@@ -1,6 +1,8 @@
 import { FC, useState } from 'react';
 import { strings } from '../../constants/strings';
 import { SubmissionService } from '../../services/SubmissionService';
+import { EligibilityService } from '../../services/EligibilityService';
+import { recordUsageThenEvaluate } from '../../services/testEvaluationOrchestrator';
 
 /**
  * Interview capture UI (Phase 11c, Web SSB Test Flow Parity plan) -- previously nothing
@@ -17,14 +19,19 @@ export interface InterviewResponseCaptureProps {
   sessionId?: string;
   questionId: string;
   submissionService?: SubmissionService;
+  eligibilityService?: EligibilityService;
 }
 
 type SubmitStatus = 'idle' | 'submitting' | 'submitted' | 'error';
 
+/** Contract `TestType` id backing the `INTERVIEW` quota bucket (`contracts.cjs`). */
+const INTERVIEW_TEST_TYPE = 'IO';
+
 export const InterviewResponseCapture: FC<InterviewResponseCaptureProps> = ({
   sessionId,
   questionId,
-  submissionService = new SubmissionService()
+  submissionService = new SubmissionService(),
+  eligibilityService = new EligibilityService()
 }) => {
   const [responseText, setResponseText] = useState('');
   const [status, setStatus] = useState<SubmitStatus>('idle');
@@ -42,7 +49,9 @@ export const InterviewResponseCapture: FC<InterviewResponseCaptureProps> = ({
         responseText,
         responseMode: 'TEXT_BASED'
       });
-      await submissionService.evaluateInterviewResponse({ responseId, sessionId });
+      await recordUsageThenEvaluate(eligibilityService, INTERVIEW_TEST_TYPE, responseId, () =>
+        submissionService.evaluateInterviewResponse({ responseId, sessionId })
+      );
       setStatus('submitted');
     } catch (err: any) {
       setStatus('error');

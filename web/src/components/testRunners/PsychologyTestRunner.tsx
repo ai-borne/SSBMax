@@ -72,16 +72,20 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
 
   if (state.error) {
     const isPermissionError = state.error.toLowerCase().includes('permission') || state.error.toLowerCase().includes('sign in');
+    // "Monthly quota reached" is the exact message both `recordAndEnforce` (eligibility.js)
+    // and `checkQuota` (evaluation/core.js) throw -- Retry would just repeat the same
+    // rejection, so it's hidden below rather than shown as if this were a transient error.
+    const isQuotaError = state.error.toLowerCase().includes('quota reached');
     return (
       <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-md mx-auto space-y-4 shadow-lg my-12">
         <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
           <AlertTriangle className="w-6 h-6" />
         </div>
         <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
-          {isPermissionError ? 'Sign-In Required' : strings.common.error}
+          {isQuotaError ? 'Monthly Limit Reached' : isPermissionError ? 'Sign-In Required' : strings.common.error}
         </h3>
         <p className="text-sm text-[var(--color-text-muted)]">
-          {state.error}
+          {isQuotaError ? `${state.error}. Upgrade to Officer Pass for more attempts this month.` : state.error}
         </p>
         <div className="flex justify-center gap-3 pt-2">
           {onExitTest && (
@@ -92,12 +96,14 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
               {strings.common.back}
             </button>
           )}
-          <button
-            onClick={() => viewModel.loadTestContent(batchId)}
-            className="px-4 py-2 bg-[var(--color-accent)] hover:opacity-90 rounded-lg text-white text-xs font-bold"
-          >
-            {strings.common.retry}
-          </button>
+          {!isQuotaError && (
+            <button
+              onClick={() => viewModel.loadTestContent(batchId)}
+              className="px-4 py-2 bg-[var(--color-accent)] hover:opacity-90 rounded-lg text-white text-xs font-bold"
+            >
+              {strings.common.retry}
+            </button>
+          )}
         </div>
       </div>
     );

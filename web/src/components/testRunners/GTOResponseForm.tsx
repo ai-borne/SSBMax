@@ -1,6 +1,8 @@
 import { FC, useState } from 'react';
 import { strings } from '../../constants/strings';
 import { SubmissionService } from '../../services/SubmissionService';
+import { EligibilityService } from '../../services/EligibilityService';
+import { recordUsageThenEvaluate } from '../../services/testEvaluationOrchestrator';
 import { SubmissionResultView } from '../evaluation/SubmissionResultView';
 import { FirestorePaths } from '../../generated/contracts';
 
@@ -31,11 +33,17 @@ export interface GTOResponseFormProps {
   gtoType: string;
   topic: string;
   submissionService?: SubmissionService;
+  eligibilityService?: EligibilityService;
 }
 
 type SubmitStatus = 'idle' | 'submitting' | 'submitted' | 'error';
 
-export const GTOResponseForm: FC<GTOResponseFormProps> = ({ gtoType, topic, submissionService = new SubmissionService() }) => {
+export const GTOResponseForm: FC<GTOResponseFormProps> = ({
+  gtoType,
+  topic,
+  submissionService = new SubmissionService(),
+  eligibilityService = new EligibilityService()
+}) => {
   const [response, setResponse] = useState('');
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +59,9 @@ export const GTOResponseForm: FC<GTOResponseFormProps> = ({ gtoType, topic, subm
         ...buildSubmissionData(gtoType, topic, response)
       });
       if (EVALUABLE_GTO_TYPES.has(gtoType)) {
-        await submissionService.evaluateGTO({ submissionId: newSubmissionId });
+        await recordUsageThenEvaluate(eligibilityService, gtoType, newSubmissionId, () =>
+          submissionService.evaluateGTO({ submissionId: newSubmissionId })
+        );
       }
       setSubmissionId(newSubmissionId);
       setStatus('submitted');
