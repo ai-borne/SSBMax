@@ -38,6 +38,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { checkQuota } = require('./core');
 const { recordAndEnforce } = require('../eligibility');
+const { notifyEvaluationComplete } = require('../notifications/sendNotification');
 const { withRetry } = require('./retry');
 const { parseEvaluationResponse, finalizeOlqScores, ratingFromScore } = require('./responseParser');
 const { validateScores } = require('./validation');
@@ -160,6 +161,8 @@ async function evaluateGTOSubmission(db, uid, submissionId, generateContentFn = 
   // separate client-invoked `recordTestUsage` call) closes the "client just never
   // calls it" quota-bypass gap. Idempotent by submissionId.
   await recordAndEnforce(db, uid, submission.testType, submissionId);
+
+  await notifyEvaluationComplete({ firestoreDb: db, userId: submission.userId, testType: config.resultTestType, submissionId });
 
   return { success: true, submissionId, status: 'COMPLETED' };
 }

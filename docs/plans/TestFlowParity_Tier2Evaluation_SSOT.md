@@ -129,3 +129,17 @@ file directly, when a type is ready.
   pushed from two patched call sites in `GetOLQDashboardUseCase.kt` down into every
   repository method across all 9 `GitLive*Repository`/`*Delegate`/`*Store` files in
   `data-firebase`.
+- **2026-08-17 (Phase 1, Centralized Result-Announcement Notifications plan):** every
+  evaluation-completion write now also calls `notifyEvaluationComplete`
+  (`functions/src/notifications/sendNotification.js`), writing an
+  `SSBMaxNotification`-shaped doc to `NOTIFICATIONS`. Hooked at each pipeline's existing
+  completion site, no dispatcher refactor: `core.js::runEvaluation` (covers SD/SRT/WAT in
+  one call site), plus `ppdtEvaluate.js`, `tatEvaluate.js`, `gtoEvaluate.js` individually
+  at their `COMPLETED` flip. `interviewEvaluate.js` has no session-level `COMPLETED` flip
+  (per-response evaluation is plan-locked, see that file's class doc) — it notifies once
+  per successfully evaluated response instead, which may be noisier than intended (many
+  responses per interview session); flagged for revisit if UX feedback says so, not fixed
+  here since it would require restructuring interview's completion model, out of Phase 1
+  scope. This note does not change any type's Cutover status above — the notify hook fires
+  regardless of Cutover state, since it's attached to each pipeline's real completion write
+  either way.

@@ -37,6 +37,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { checkQuota } = require('./core');
+const { notifyEvaluationComplete } = require('../notifications/sendNotification');
 const { withRetry } = require('./retry');
 const { parseEvaluationResponse, finalizeOlqScores } = require('./responseParser');
 const { validateScores } = require('./validation');
@@ -219,6 +220,8 @@ exports.evaluatePPDT = functions.runWith(runtimeOptions).https.onCall(async (dat
       analyzedAt: Date.now()
     });
   await submissionRef.update({ 'data.analysisStatus': 'COMPLETED' });
+
+  await notifyEvaluationComplete({ firestoreDb: db, userId: submission.userId, testType: PPDT_TEST_TYPE, submissionId });
 
   return { success: true, submissionId, status: 'COMPLETED' };
 });

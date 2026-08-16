@@ -138,3 +138,30 @@ test('evaluateGTOSubmission does not charge the usage counter when the Gemini re
   const month = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}`;
   assert.equal(db._store[`users/${GTO_UID}/subscription/usage_${month}`], undefined, 'a FAILED evaluation must not consume quota');
 });
+
+/** Phase 1 (Centralized Result-Announcement Notifications plan): notify hook on the completion write. */
+test('evaluateGTOSubmission writes a NOTIFICATIONS doc exactly once on COMPLETED, keyed to config.resultTestType', async () => {
+  const db = makeFakeDb({
+    [`submissions/${GTO_SUBMISSION_ID}`]: { userId: GTO_UID, testType: 'GTO_GD', status: 'PENDING_ANALYSIS' },
+    [`users/${GTO_UID}/data/subscription`]: { tier: 'PRO' }
+  });
+  await evaluateGTOSubmission(db, GTO_UID, GTO_SUBMISSION_ID, async () => fullOlqScoresResponse());
+
+  const notifications = Object.keys(db._store).filter((k) => k.startsWith('notifications/'));
+  assert.equal(notifications.length, 1, 'exactly one notification doc must be written on COMPLETED');
+  const doc = db._store[notifications[0]];
+  assert.equal(doc.userId, GTO_UID);
+  assert.equal(doc.type, 'GRADING_COMPLETE');
+  assert.equal(doc.actionData.testType, 'GROUP_DISCUSSION');
+});
+
+test('evaluateGTOSubmission does not write a NOTIFICATIONS doc when the Gemini response never parses (FAILED)', async () => {
+  const db = makeFakeDb({
+    [`submissions/${GTO_SUBMISSION_ID}`]: { userId: GTO_UID, testType: 'GTO_GD', status: 'PENDING_ANALYSIS' },
+    [`users/${GTO_UID}/data/subscription`]: { tier: 'PRO' }
+  });
+  await evaluateGTOSubmission(db, GTO_UID, GTO_SUBMISSION_ID, async () => 'not json at all', async () => {});
+
+  const notifications = Object.keys(db._store).filter((k) => k.startsWith('notifications/'));
+  assert.equal(notifications.length, 0, 'a FAILED evaluation must not notify the user a result is ready');
+});

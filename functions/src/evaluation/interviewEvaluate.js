@@ -33,6 +33,7 @@ const { buildInterviewPrompt } = require('./interviewPrompts');
 const { generateContent } = require('./geminiClient');
 const { FirestorePaths } = require('../generated/contracts.cjs');
 const { recordAndEnforce } = require('../eligibility');
+const { notifyEvaluationComplete } = require('../notifications/sendNotification');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -149,6 +150,11 @@ async function evaluateInterviewResponseCore(db, uid, responseId, sessionId, gen
   }
 
   await responseRef.update({ olqScores: result.olqScores, confidenceScore: result.confidenceScore });
+
+  // Interview has no session-level COMPLETED flip (per-response evaluation, plan-locked
+  // decision -- see this file's class doc) -- each evaluated response is its own
+  // completion unit, so that's the granularity notified at here.
+  await notifyEvaluationComplete({ firestoreDb: db, userId: uid, testType: INTERVIEW_TEST_TYPE, submissionId: responseId });
 
   return { success: true, responseId };
 }

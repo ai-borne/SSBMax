@@ -174,3 +174,26 @@ test('evaluateInterviewResponseCore rejects with resource-exhausted when a NEW s
     delete process.env.ENFORCE_QUOTA;
   }
 });
+
+/**
+ * Phase 1 (Centralized Result-Announcement Notifications plan): interview has no
+ * session-level COMPLETED flip (per-response evaluation, plan-locked decision -- see
+ * interviewEvaluate.js's class doc), so each evaluated response is its own notify unit.
+ */
+test('evaluateInterviewResponseCore writes a NOTIFICATIONS doc on a successful evaluation', async () => {
+  const db = makeFakeDb(baseFixtures());
+  await evaluateInterviewResponseCore(db, UID, 'resp1', SESSION_ID, async () => arrayResponse([{ olq: 'COURAGE', score: 5, reasoning: 'r' }], { overallConfidence: 70 }));
+
+  const notifications = Object.keys(db._store).filter((k) => k.startsWith('interview_responses') === false && k.startsWith('notifications/'));
+  assert.equal(notifications.length, 1, 'exactly one notification doc must be written on a successful evaluation');
+  assert.equal(db._store[notifications[0]].userId, UID);
+  assert.equal(db._store[notifications[0]].type, 'GRADING_COMPLETE');
+});
+
+test('evaluateInterviewResponseCore does not write a NOTIFICATIONS doc when the Gemini response never parses (FAILED)', async () => {
+  const db = makeFakeDb(baseFixtures());
+  await evaluateInterviewResponseCore(db, UID, 'resp1', SESSION_ID, async () => 'not json at all', async () => {});
+
+  const notifications = Object.keys(db._store).filter((k) => k.startsWith('notifications/'));
+  assert.equal(notifications.length, 0, 'a FAILED evaluation must not notify the user a result is ready');
+});

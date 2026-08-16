@@ -30,6 +30,7 @@ const functions = require('firebase-functions');
 const { FirestorePaths, SubscriptionLimits, Enums } = require('../generated/contracts.cjs');
 const { withRetry } = require('./retry');
 const { recordAndEnforce } = require('../eligibility');
+const { notifyEvaluationComplete } = require('../notifications/sendNotification');
 
 function enforceQuota() {
   return process.env.ENFORCE_QUOTA !== 'false';
@@ -159,6 +160,8 @@ async function runEvaluation({ firestoreDb, generateContent, uid, submissionId, 
   // `checkQuota` above only re-reads an already-incremented counter. Idempotent by
   // submissionId, so re-running a COMPLETED submission's evaluation never double-charges.
   await recordAndEnforce(firestoreDb, uid, testType, submissionId);
+
+  await notifyEvaluationComplete({ firestoreDb, userId: submission.userId, testType, submissionId });
 
   return { success: true, submissionId, status: 'COMPLETED' };
 }
