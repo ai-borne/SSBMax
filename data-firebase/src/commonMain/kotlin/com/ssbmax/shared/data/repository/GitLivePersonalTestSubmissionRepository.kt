@@ -37,29 +37,35 @@ class GitLivePersonalTestSubmissionRepository {
     // PPDT
     // ===========================
 
-    suspend fun submitPPDT(submission: PPDTSubmission, batchId: String?): Result<String> = try {
-        val doc = SubmissionDocDto(
-            id = submission.submissionId,
-            userId = submission.userId,
-            testId = submission.questionId,
-            testType = TestType.PPDT.name,
-            status = submission.status.name,
-            submittedAt = submission.submittedAt,
-            batchId = batchId,
-            data = submission.toDataDto()
-        )
-        submissionsCollection.document(submission.submissionId).set(doc)
-        Result.success(submission.submissionId)
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to submit PPDT: ${e.message}", e))
+    suspend fun submitPPDT(submission: PPDTSubmission, batchId: String?): Result<String> {
+        if (!isUsableDocumentId(submission.submissionId)) return blankDocumentIdFailure("submission.submissionId")
+        return try {
+            val doc = SubmissionDocDto(
+                id = submission.submissionId,
+                userId = submission.userId,
+                testId = submission.questionId,
+                testType = TestType.PPDT.name,
+                status = submission.status.name,
+                submittedAt = submission.submittedAt,
+                batchId = batchId,
+                data = submission.toDataDto()
+            )
+            submissionsCollection.document(submission.submissionId).set(doc)
+            Result.success(submission.submissionId)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to submit PPDT: ${e.message}", e))
+        }
     }
 
-    suspend fun getPPDTSubmission(submissionId: String): Result<PPDTSubmission?> = try {
-        val snapshot = getWithServerThenCacheFallback { submissionsCollection.document(submissionId).get(it) }
-        if (!snapshot.exists) Result.success(null)
-        else Result.success(snapshot.data(SubmissionDocDto.serializer(PPDTDataDto.serializer())).data.toDomain())
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to get PPDT submission: ${e.message}", e))
+    suspend fun getPPDTSubmission(submissionId: String): Result<PPDTSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            val snapshot = getWithServerThenCacheFallback { submissionsCollection.document(submissionId).get(it) }
+            if (!snapshot.exists) Result.success(null)
+            else Result.success(snapshot.data(SubmissionDocDto.serializer(PPDTDataDto.serializer())).data.toDomain())
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to get PPDT submission: ${e.message}", e))
+        }
     }
 
     suspend fun getLatestPPDTSubmission(userId: String): Result<PPDTSubmission?> = try {
@@ -79,11 +85,14 @@ class GitLivePersonalTestSubmissionRepository {
         Result.failure(Exception("Failed to get latest PPDT submission: ${e.message}", e))
     }
 
-    suspend fun updatePPDTAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> = try {
-        submissionsCollection.document(submissionId).update("$FIELD_DATA.analysisStatus" to status.name)
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to update PPDT status: ${e.message}", e))
+    suspend fun updatePPDTAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            submissionsCollection.document(submissionId).update("$FIELD_DATA.analysisStatus" to status.name)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to update PPDT status: ${e.message}", e))
+        }
     }
 
     /**
@@ -91,7 +100,9 @@ class GitLivePersonalTestSubmissionRepository {
      * pattern" (a dedicated results collection, not a nested `data.olqResult`) the Android
      * original uses for PPDT specifically, distinct from TAT/WAT/SRT/SDT's `psych_results`.
      */
-    suspend fun updatePPDTOLQResult(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> = try {
+    suspend fun updatePPDTOLQResult(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> {
+      if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+      return try {
         val submissionDoc = submissionsCollection.document(submissionId).get()
         val userId = submissionDoc.data(SubmissionDocDto.serializer(PPDTDataDto.serializer())).userId
         if (userId.isEmpty()) {
@@ -107,24 +118,29 @@ class GitLivePersonalTestSubmissionRepository {
             batch.commit()
             Result.success(Unit)
         }
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to update PPDT OLQ result: ${e.message}", e))
+      }
     }
 
-    suspend fun getPPDTResult(submissionId: String): Result<OLQAnalysisResult?> = try {
-        val doc = getWithServerThenCacheFallback { ppdtResultsCollection.document(submissionId).get(it) }
-        if (!doc.exists) Result.success(null)
-        else Result.success(doc.data(OLQAnalysisResultDto.serializer()).toDomain())
-    } catch (e: Exception) {
-        Result.failure(Exception("Error fetching PPDT result: ${e.message}", e))
+    suspend fun getPPDTResult(submissionId: String): Result<OLQAnalysisResult?> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            val doc = getWithServerThenCacheFallback { ppdtResultsCollection.document(submissionId).get(it) }
+            if (!doc.exists) Result.success(null)
+            else Result.success(doc.data(OLQAnalysisResultDto.serializer()).toDomain())
+        } catch (e: Exception) {
+            Result.failure(Exception("Error fetching PPDT result: ${e.message}", e))
+        }
     }
 
     /**
      * A regression-filtered snapshot is skipped (`transform`), not mapped to `null` — see
      * [GitLivePsychTestSubmissionRepository.observeTATSubmission]'s doc for why.
      */
-    fun observePPDTSubmission(submissionId: String): Flow<PPDTSubmission?> =
-        submissionsCollection.document(submissionId).snapshots
+    fun observePPDTSubmission(submissionId: String): Flow<PPDTSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return kotlinx.coroutines.flow.flowOf(null)
+        return submissionsCollection.document(submissionId).snapshots
             .transform { snapshot ->
                 if (!snapshot.exists) {
                     emit(null)
@@ -135,12 +151,15 @@ class GitLivePersonalTestSubmissionRepository {
                 if (filter.shouldFilterSnapshot(dto.data.analysisStatus, dto.data.olqResult != null, snapshot.metadata)) return@transform
                 emit(dto.data.toDomain())
             }
+    }
 
     // ===========================
     // OIR
     // ===========================
 
-    suspend fun submitOIR(submission: OIRSubmission, batchId: String?): Result<String> = try {
+    suspend fun submitOIR(submission: OIRSubmission, batchId: String?): Result<String> {
+      if (!isUsableDocumentId(submission.id)) return blankDocumentIdFailure("submission.id")
+      return try {
         // Each attempt now writes under a fresh submission id (OIR Retake Seal, Phase 1),
         // so this branch is only reachable on a genuine same-id retry (e.g. a client-side
         // resubmit of an in-flight request) — a real retake never collides here.
@@ -169,8 +188,9 @@ class GitLivePersonalTestSubmissionRepository {
             submissionsCollection.document(submission.id).set(doc, merge = true)
             Result.success(submission.id)
         }
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to submit OIR: ${e.message}", e))
+      }
     }
 
     suspend fun getLatestOIRSubmission(userId: String): Result<OIRSubmission?> = try {
@@ -194,23 +214,26 @@ class GitLivePersonalTestSubmissionRepository {
     // PIQ
     // ===========================
 
-    suspend fun submitPIQ(submission: PIQSubmission, batchId: String?): Result<String> = try {
-        val doc = SubmissionDocDto(
-            id = submission.id,
-            userId = submission.userId,
-            testId = submission.testId,
-            testType = TestType.PIQ.name,
-            status = submission.status.name,
-            submittedAt = submission.submittedAt,
-            gradedByInstructorId = submission.gradedByInstructorId,
-            gradingTimestamp = submission.gradingTimestamp,
-            batchId = batchId,
-            data = submission.toDataDto()
-        )
-        submissionsCollection.document(submission.id).set(doc, merge = true)
-        Result.success(submission.id)
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to submit PIQ: ${e.message}", e))
+    suspend fun submitPIQ(submission: PIQSubmission, batchId: String?): Result<String> {
+        if (!isUsableDocumentId(submission.id)) return blankDocumentIdFailure("submission.id")
+        return try {
+            val doc = SubmissionDocDto(
+                id = submission.id,
+                userId = submission.userId,
+                testId = submission.testId,
+                testType = TestType.PIQ.name,
+                status = submission.status.name,
+                submittedAt = submission.submittedAt,
+                gradedByInstructorId = submission.gradedByInstructorId,
+                gradingTimestamp = submission.gradingTimestamp,
+                batchId = batchId,
+                data = submission.toDataDto()
+            )
+            submissionsCollection.document(submission.id).set(doc, merge = true)
+            Result.success(submission.id)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to submit PIQ: ${e.message}", e))
+        }
     }
 
     suspend fun getLatestPIQSubmission(userId: String): Result<PIQSubmission?> = try {

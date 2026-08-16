@@ -59,7 +59,9 @@ class GitLivePsychTestSubmissionRepository internal constructor(
     // TAT
     // ===========================
 
-    suspend fun submitTAT(submission: TATSubmission, batchId: String?): Result<String> = try {
+    suspend fun submitTAT(submission: TATSubmission, batchId: String?): Result<String> {
+      if (!isUsableDocumentId(submission.id)) return blankDocumentIdFailure("submission.id")
+      return try {
         val doc = SubmissionDocDto(
             id = submission.id,
             userId = submission.userId,
@@ -86,16 +88,20 @@ class GitLivePsychTestSubmissionRepository internal constructor(
         )
         submissionsCollection.document(submission.id).set(doc, merge = true)
         Result.success(submission.id)
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to submit TAT: ${e.message}", e))
+      }
     }
 
-    suspend fun getTATSubmission(submissionId: String): Result<TATSubmission?> = try {
-        val snapshot = submissionsCollection.document(submissionId).get()
-        if (!snapshot.exists) Result.success(null)
-        else Result.success(snapshot.data(SubmissionDocDto.serializer(TATDataDto.serializer())).data.toDomain())
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to fetch TAT submission: ${e.message}", e))
+    suspend fun getTATSubmission(submissionId: String): Result<TATSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            val snapshot = submissionsCollection.document(submissionId).get()
+            if (!snapshot.exists) Result.success(null)
+            else Result.success(snapshot.data(SubmissionDocDto.serializer(TATDataDto.serializer())).data.toDomain())
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to fetch TAT submission: ${e.message}", e))
+        }
     }
 
     suspend fun getLatestTATSubmission(userId: String): Result<TATSubmission?> = try {
@@ -115,11 +121,14 @@ class GitLivePsychTestSubmissionRepository internal constructor(
         Result.failure(Exception("Failed to fetch latest TAT submission: ${e.message}", e))
     }
 
-    suspend fun updateTATAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> = try {
-        submissionsCollection.document(submissionId).update("$PSYCH_FIELD_DATA.analysisStatus" to status.name)
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to update TAT analysis status: ${e.message}", e))
+    suspend fun updateTATAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            submissionsCollection.document(submissionId).update("$PSYCH_FIELD_DATA.analysisStatus" to status.name)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to update TAT analysis status: ${e.message}", e))
+        }
     }
 
     /**
@@ -127,7 +136,9 @@ class GitLivePsychTestSubmissionRepository internal constructor(
      * with result metadata — same ordering guarantee as the Android original (see the domain
      * interface's doc comment on `finalizeTATAnalysisResult`).
      */
-    suspend fun finalizeTATAnalysisResult(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> = try {
+    suspend fun finalizeTATAnalysisResult(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> {
+      if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+      return try {
         val submissionDoc = submissionsCollection.document(submissionId).get()
         val userId = submissionDoc.data(SubmissionDocDto.serializer(TATDataDto.serializer())).userId
         if (userId.isEmpty()) {
@@ -143,8 +154,9 @@ class GitLivePsychTestSubmissionRepository internal constructor(
             )
             Result.success(Unit)
         }
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to finalize TAT analysis result: ${e.message}", e))
+      }
     }
 
     suspend fun getTATResult(submissionId: String): Result<OLQAnalysisResult?> = store.getOlqResult(submissionId)
@@ -157,8 +169,9 @@ class GitLivePsychTestSubmissionRepository internal constructor(
      * `trySend` in that case; emitting `null` here would incorrectly flip a shown result to
      * "Submission not found" for a merely-stale cache replay.
      */
-    fun observeTATSubmission(submissionId: String): Flow<TATSubmission?> =
-        submissionsCollection.document(submissionId).snapshots
+    fun observeTATSubmission(submissionId: String): Flow<TATSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return kotlinx.coroutines.flow.flowOf(null)
+        return submissionsCollection.document(submissionId).snapshots
             .transform { snapshot ->
                 if (!snapshot.exists) {
                     emit(null)
@@ -171,6 +184,7 @@ class GitLivePsychTestSubmissionRepository internal constructor(
                 }
                 emit(dto.data.toDomain())
             }
+    }
 
     // ===========================
     // WAT (delegated)

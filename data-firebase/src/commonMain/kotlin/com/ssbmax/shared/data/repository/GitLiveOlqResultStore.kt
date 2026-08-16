@@ -25,7 +25,9 @@ internal class GitLiveOlqResultStore {
     val psychResultsCollection: CollectionReference = Firebase.firestore.collection(SsbContracts.FirestorePaths.PSYCH_RESULTS)
 
     /** WAT/SRT/SDT's older two-step OLQ write (unlike TAT's atomic `finalizeTATAnalysisResult`). */
-    suspend fun updateOlqResultTwoStep(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> = try {
+    suspend fun updateOlqResultTwoStep(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> {
+      if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+      return try {
         val submissionDoc = submissionsCollection.document(submissionId).get()
         // userId is read generically from the top-level envelope, common to every test type's data shape.
         val userId = submissionDoc.get<String?>(PSYCH_FIELD_USER_ID)
@@ -37,11 +39,14 @@ internal class GitLiveOlqResultStore {
                 .update("$PSYCH_FIELD_DATA.analysisStatus" to SubmissionConstants.ANALYSIS_STATUS_COMPLETED)
             Result.success(Unit)
         }
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to update OLQ result: ${e.message}", e))
+      }
     }
 
-    suspend fun getOlqResult(submissionId: String): Result<OLQAnalysisResult?> = try {
+    suspend fun getOlqResult(submissionId: String): Result<OLQAnalysisResult?> {
+      if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+      return try {
         val resultDoc = psychResultsCollection.document(submissionId).get()
         if (resultDoc.exists) {
             Result.success(resultDoc.data(OLQAnalysisResultDto.serializer()).toDomain())
@@ -55,7 +60,8 @@ internal class GitLiveOlqResultStore {
             }.getOrNull()
             Result.success(olqDto?.toDomain())
         }
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to get OLQ result: ${e.message}", e))
+      }
     }
 }

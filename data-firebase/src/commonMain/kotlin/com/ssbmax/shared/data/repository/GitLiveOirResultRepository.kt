@@ -22,6 +22,7 @@ class GitLiveOirResultRepository(
 ) : OirResultRepository {
 
     override suspend fun getOirResult(submissionId: String): Result<OIRTestResult?> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
         cache.get(submissionId)?.let { cached ->
             return Result.success(cached.toDomain())
         }

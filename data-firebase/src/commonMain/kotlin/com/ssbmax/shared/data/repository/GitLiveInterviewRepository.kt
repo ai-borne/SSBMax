@@ -114,16 +114,22 @@ class GitLiveInterviewRepository(
         Result.success(snapshot.documents.firstOrNull()?.data(InterviewSessionDto.serializer())?.toDomain())
     } catch (e: Exception) { Result.failure(e) }
 
-    override suspend fun getSession(sessionId: String): Result<InterviewSession> = try {
-        val doc = sessionsCollection.document(sessionId).get()
-        if (!doc.exists) Result.failure(IllegalStateException("Session not found: $sessionId"))
-        else Result.success(doc.data(InterviewSessionDto.serializer()).toDomain())
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun getSession(sessionId: String): Result<InterviewSession> {
+        if (!isUsableDocumentId(sessionId)) return blankDocumentIdFailure("sessionId")
+        return try {
+            val doc = sessionsCollection.document(sessionId).get()
+            if (!doc.exists) Result.failure(IllegalStateException("Session not found: $sessionId"))
+            else Result.success(doc.data(InterviewSessionDto.serializer()).toDomain())
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
-    override suspend fun updateSession(session: InterviewSession): Result<Unit> = try {
-        sessionsCollection.document(session.id).set(session.toDto())
-        Result.success(Unit)
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun updateSession(session: InterviewSession): Result<Unit> {
+        if (!isUsableDocumentId(session.id)) return blankDocumentIdFailure("session.id")
+        return try {
+            sessionsCollection.document(session.id).set(session.toDto())
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     override suspend fun abandonSession(sessionId: String): Result<Unit> = try {
         val session = getSession(sessionId).getOrElse { return Result.failure(it) }
@@ -138,11 +144,14 @@ class GitLiveInterviewRepository(
         count: Int
     ): Result<List<InterviewQuestion>> = questionGenerator.generateQuestions(piqSnapshotId, count)
 
-    override suspend fun getQuestion(questionId: String): Result<InterviewQuestion> = try {
-        val doc = questionsCollection.document(questionId).get()
-        if (!doc.exists) Result.failure(IllegalStateException("Question not found: $questionId"))
-        else Result.success(doc.data(InterviewQuestionDto.serializer()).toDomain())
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun getQuestion(questionId: String): Result<InterviewQuestion> {
+        if (!isUsableDocumentId(questionId)) return blankDocumentIdFailure("questionId")
+        return try {
+            val doc = questionsCollection.document(questionId).get()
+            if (!doc.exists) Result.failure(IllegalStateException("Question not found: $questionId"))
+            else Result.success(doc.data(InterviewQuestionDto.serializer()).toDomain())
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     override suspend fun cacheQuestions(piqSnapshotId: String, questions: List<InterviewQuestion>): Result<Unit> =
         questionCacheRepository.cachePIQQuestions(
@@ -156,11 +165,14 @@ class GitLiveInterviewRepository(
 
     // ==================== Response Management ====================
 
-    override suspend fun submitResponse(response: InterviewResponse): Result<InterviewResponse> = try {
-        val session = getSession(response.sessionId).getOrElse { return Result.failure(it) }
-        responsesCollection.document(response.id).set(response.toDto(session.userId))
-        Result.success(response)
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun submitResponse(response: InterviewResponse): Result<InterviewResponse> {
+        if (!isUsableDocumentId(response.id)) return blankDocumentIdFailure("response.id")
+        return try {
+            val session = getSession(response.sessionId).getOrElse { return Result.failure(it) }
+            responsesCollection.document(response.id).set(response.toDto(session.userId))
+            Result.success(response)
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     override suspend fun updateResponse(response: InterviewResponse): Result<InterviewResponse> =
         submitResponse(response)
@@ -175,11 +187,14 @@ class GitLiveInterviewRepository(
         Result.success(snapshot.documents.map { it.data(InterviewResponseDto.serializer()).toDomain() })
     } catch (e: Exception) { Result.failure(e) }
 
-    override suspend fun getResponse(responseId: String): Result<InterviewResponse> = try {
-        val doc = responsesCollection.document(responseId).get()
-        if (!doc.exists) Result.failure(IllegalStateException("Response not found: $responseId"))
-        else Result.success(doc.data(InterviewResponseDto.serializer()).toDomain())
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun getResponse(responseId: String): Result<InterviewResponse> {
+        if (!isUsableDocumentId(responseId)) return blankDocumentIdFailure("responseId")
+        return try {
+            val doc = responsesCollection.document(responseId).get()
+            if (!doc.exists) Result.failure(IllegalStateException("Response not found: $responseId"))
+            else Result.success(doc.data(InterviewResponseDto.serializer()).toDomain())
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     // ==================== Result Management ====================
 
@@ -217,11 +232,14 @@ class GitLiveInterviewRepository(
         Result.success(result)
     } catch (e: Exception) { Result.failure(e) }
 
-    override suspend fun getResultById(resultId: String): Result<InterviewResult> = try {
-        val doc = resultsCollection.document(resultId).get()
-        if (!doc.exists) Result.failure(IllegalStateException("Result not found: $resultId"))
-        else Result.success(doc.data(InterviewResultDto.serializer()).toDomain())
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun getResultById(resultId: String): Result<InterviewResult> {
+        if (!isUsableDocumentId(resultId)) return blankDocumentIdFailure("resultId")
+        return try {
+            val doc = resultsCollection.document(resultId).get()
+            if (!doc.exists) Result.failure(IllegalStateException("Result not found: $resultId"))
+            else Result.success(doc.data(InterviewResultDto.serializer()).toDomain())
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     override fun getUserResults(userId: String): Flow<List<InterviewResult>> =
         resultsCollection

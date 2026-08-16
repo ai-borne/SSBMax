@@ -23,7 +23,9 @@ internal class GitLiveWATSubmissionDelegate(private val store: GitLiveOlqResultS
 
     private val submissionsCollection get() = store.submissionsCollection
 
-    suspend fun submitWAT(submission: WATSubmission, batchId: String?): Result<String> = try {
+    suspend fun submitWAT(submission: WATSubmission, batchId: String?): Result<String> {
+      if (!isUsableDocumentId(submission.id)) return blankDocumentIdFailure("submission.id")
+      return try {
         val doc = SubmissionDocDto(
             id = submission.id,
             userId = submission.userId,
@@ -49,16 +51,20 @@ internal class GitLiveWATSubmissionDelegate(private val store: GitLiveOlqResultS
         )
         submissionsCollection.document(submission.id).set(doc, merge = true)
         Result.success(submission.id)
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to submit WAT: ${e.message}", e))
+      }
     }
 
-    suspend fun getWATSubmission(submissionId: String): Result<WATSubmission?> = try {
-        val snapshot = submissionsCollection.document(submissionId).get()
-        if (!snapshot.exists) Result.success(null)
-        else Result.success(snapshot.data(SubmissionDocDto.serializer(WATDataDto.serializer())).data.toDomain())
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to fetch WAT submission: ${e.message}", e))
+    suspend fun getWATSubmission(submissionId: String): Result<WATSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            val snapshot = submissionsCollection.document(submissionId).get()
+            if (!snapshot.exists) Result.success(null)
+            else Result.success(snapshot.data(SubmissionDocDto.serializer(WATDataDto.serializer())).data.toDomain())
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to fetch WAT submission: ${e.message}", e))
+        }
     }
 
     suspend fun getLatestWATSubmission(userId: String): Result<WATSubmission?> = try {
@@ -78,11 +84,14 @@ internal class GitLiveWATSubmissionDelegate(private val store: GitLiveOlqResultS
         Result.failure(Exception("Failed to fetch latest WAT submission: ${e.message}", e))
     }
 
-    suspend fun updateWATAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> = try {
-        submissionsCollection.document(submissionId).update("$PSYCH_FIELD_DATA.analysisStatus" to status.name)
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to update WAT status: ${e.message}", e))
+    suspend fun updateWATAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            submissionsCollection.document(submissionId).update("$PSYCH_FIELD_DATA.analysisStatus" to status.name)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to update WAT status: ${e.message}", e))
+        }
     }
 
     suspend fun updateWATOLQResult(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> =
@@ -96,8 +105,9 @@ internal class GitLiveWATSubmissionDelegate(private val store: GitLiveOlqResultS
      * A regression-filtered snapshot is skipped (`transform`), not mapped to `null` — see
      * [GitLivePsychTestSubmissionRepository.observeTATSubmission]'s doc for why.
      */
-    fun observeWATSubmission(submissionId: String): Flow<WATSubmission?> =
-        submissionsCollection.document(submissionId).snapshots
+    fun observeWATSubmission(submissionId: String): Flow<WATSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return kotlinx.coroutines.flow.flowOf(null)
+        return submissionsCollection.document(submissionId).snapshots
             .transform { snapshot ->
                 if (!snapshot.exists) {
                     emit(null)
@@ -108,6 +118,7 @@ internal class GitLiveWATSubmissionDelegate(private val store: GitLiveOlqResultS
                 if (filter.shouldFilterSnapshot(dto.data.analysisStatus, dto.data.olqResult != null, snapshot.metadata)) return@transform
                 emit(dto.data.toDomain())
             }
+    }
 }
 
 // ===========================

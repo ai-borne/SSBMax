@@ -2,6 +2,8 @@ package com.ssbmax.shared.data.repository
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Pins [OLQAnalysisResultDto]'s missing-field default for `overallScore` at `5f` — see the DTO's
@@ -16,5 +18,29 @@ class SubmissionSharedMappersTest {
     fun olqAnalysisResultDto_overallScoreDefaultsToFive_matchingTatWatSrtSdtAndroidOriginal() {
         val dto = OLQAnalysisResultDto()
         assertEquals(5f, dto.overallScore)
+    }
+
+    @Test
+    fun isUsableDocumentId_rejectsEmptyString() {
+        assertFalse(isUsableDocumentId(""))
+    }
+
+    @Test
+    fun isUsableDocumentId_rejectsWhitespaceOnly() {
+        assertFalse(isUsableDocumentId("   "))
+    }
+
+    @Test
+    fun isUsableDocumentId_acceptsANonBlankId() {
+        assertTrue(isUsableDocumentId("sub123"))
+    }
+
+    @Test
+    fun blankDocumentIdFailure_wrapsAnIllegalArgumentExceptionNamingTheParam() {
+        val result = blankDocumentIdFailure<String>("submissionId")
+        assertTrue(result.isFailure)
+        val exception = result.exceptionOrNull()
+        assertTrue(exception is IllegalArgumentException)
+        assertTrue(exception.message!!.contains("submissionId"))
     }
 }
