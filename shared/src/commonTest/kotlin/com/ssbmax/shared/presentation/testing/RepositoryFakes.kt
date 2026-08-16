@@ -238,6 +238,14 @@ class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
         evaluateInterviewResponseCalls.add(responseId to sessionId)
         return evaluateInterviewResponseResult
     }
+
+    var evaluateGTOResult: Result<Unit> = Result.success(Unit)
+    val evaluateGTOCalls = mutableListOf<String>()
+
+    override suspend fun evaluateGTO(submissionId: String): Result<Unit> {
+        evaluateGTOCalls.add(submissionId)
+        return evaluateGTOResult
+    }
 }
 
 class FakeDifficultyProgressionRepository(

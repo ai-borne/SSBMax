@@ -21,6 +21,7 @@ const { evaluateWAT } = require('./evaluation/watEvaluate');
 const { evaluateSRT } = require('./evaluation/srtEvaluate');
 const { evaluateSD } = require('./evaluation/sdEvaluate');
 const { evaluateInterviewResponse } = require('./evaluation/interviewEvaluate');
+const { evaluateGTO } = require('./evaluation/gtoEvaluate');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
@@ -43,3 +44,8 @@ exports.evaluateSD = evaluateSD;
 // per-submission -- generalizes the legacy `analyzeInterviewResponse` above rather than
 // replacing it (legacy stays live during the canary/bake period).
 exports.evaluateInterviewResponse = evaluateInterviewResponse;
+// Phase 8 Ship (Web SSB Test Flow Parity plan): behind KMP's `gto_server_evaluation`
+// feature flag, default off -- see GTOAnalysisOrchestrator. GD/GPE/Lecturette only
+// (scope correction, confirmed with the user -- see gtoPrompts.js's class doc for why
+// PGT/HGT/GOR/CT/IO are out of reach today regardless of the flag).
+exports.evaluateGTO = evaluateGTO;

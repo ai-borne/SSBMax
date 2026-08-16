@@ -54,4 +54,11 @@ class GitLiveEvaluationFunctionsClient : EvaluationFunctionsClient {
     } catch (e: Exception) {
         Result.failure(e)
     }
+
+    override suspend fun evaluateGTO(submissionId: String): Result<Unit> = try {
+        Firebase.functions.httpsCallable("evaluateGTO").invoke(EvaluateSubmissionRequest(submissionId))
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
 }

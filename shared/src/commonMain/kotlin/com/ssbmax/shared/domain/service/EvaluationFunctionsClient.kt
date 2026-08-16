@@ -31,4 +31,14 @@ interface EvaluationFunctionsClient {
      * `evaluateInterviewResponse`'s ownership check.
      */
     suspend fun evaluateInterviewResponse(responseId: String, sessionId: String): Result<Unit>
+
+    /**
+     * GTO evaluation (Phase 8, Web SSB Test Flow Parity plan). Covers GD/GPE/Lecturette
+     * only, not all `GTOSubmission` variants -- `functions/src/evaluation/gtoEvaluate.js`
+     * rejects any other testType. This matches what `GTOAnalysisOrchestrator.kt` can
+     * ever actually call it for: `GitLiveGTOSubmissionDelegate.kt::parseGtoSubmissionTestType`
+     * already can't read back PGT/HGT/GOR/CT/IO submissions from Firestore, so
+     * `gtoRepository.getSubmission` never returns one of those in the first place.
+     */
+    suspend fun evaluateGTO(submissionId: String): Result<Unit>
 }
