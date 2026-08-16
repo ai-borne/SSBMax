@@ -192,12 +192,55 @@ class PsychAnalysisOrchestratorsTest {
         val submissionRepo = FakeSubmissionRepository().apply { srtSubmissionResult = Result.success(submission) }
         val aiService = FakeAIService().apply { responseAnalysisResult = Result.success(fullOlqAnalysis()) }
         val orchestrator = SRTAnalysisOrchestrator(
-            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger()
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
         )
 
         orchestrator.analyze("srt-1")
 
         assertEquals(1, aiService.recordedPrompts.size)
+    }
+
+    @Test
+    fun `SRT analyze delegates to the server-side evaluation function and skips the legacy AI path when srt_server_evaluation is enabled`() =
+        kotlinx.coroutines.test.runTest {
+            val submission = SRTSubmission(
+                id = "srt-1", userId = "user-1", testId = "test-1", responses = emptyList(),
+                totalTimeTakenMinutes = 30, submittedAt = 0L, analysisStatus = AnalysisStatus.PENDING_ANALYSIS
+            )
+            val submissionRepo = FakeSubmissionRepository().apply { srtSubmissionResult = Result.success(submission) }
+            val aiService = FakeAIService()
+            val evaluationFunctionsClient = FakeEvaluationFunctionsClient()
+            val featureFlagRepository = FakeFeatureFlagRepository(
+                flagsResult = FeatureFlags(flags = mapOf("srt_server_evaluation" to true))
+            )
+            val orchestrator = SRTAnalysisOrchestrator(
+                submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+                featureFlagRepository, evaluationFunctionsClient
+            )
+
+            orchestrator.analyze("srt-1")
+
+            assertEquals(listOf("srt-1"), evaluationFunctionsClient.evaluateSRTCalls)
+            assertTrue(aiService.recordedPrompts.isEmpty(), "legacy client-side AI path must not run when the flag is on")
+        }
+
+    @Test
+    fun `SRT analyze skips submissions that are not PENDING_ANALYSIS`() = kotlinx.coroutines.test.runTest {
+        val submission = SRTSubmission(
+            id = "srt-1", userId = "user-1", testId = "test-1", responses = emptyList(),
+            totalTimeTakenMinutes = 30, submittedAt = 0L, analysisStatus = AnalysisStatus.COMPLETED
+        )
+        val submissionRepo = FakeSubmissionRepository().apply { srtSubmissionResult = Result.success(submission) }
+        val aiService = FakeAIService()
+        val orchestrator = SRTAnalysisOrchestrator(
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
+        )
+
+        orchestrator.analyze("srt-1")
+
+        assertTrue(aiService.recordedPrompts.isEmpty())
     }
 
     // --- SD ---

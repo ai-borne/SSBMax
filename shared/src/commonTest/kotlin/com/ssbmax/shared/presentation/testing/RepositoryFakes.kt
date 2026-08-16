@@ -212,10 +212,17 @@ class FakeOIREvaluationClient : OIREvaluationClient {
 class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
     var evaluateWATResult: Result<Unit> = Result.success(Unit)
     val evaluateWATCalls = mutableListOf<String>()
+    var evaluateSRTResult: Result<Unit> = Result.success(Unit)
+    val evaluateSRTCalls = mutableListOf<String>()
 
     override suspend fun evaluateWAT(submissionId: String): Result<Unit> {
         evaluateWATCalls.add(submissionId)
         return evaluateWATResult
+    }
+
+    override suspend fun evaluateSRT(submissionId: String): Result<Unit> {
+        evaluateSRTCalls.add(submissionId)
+        return evaluateSRTResult
     }
 }
 

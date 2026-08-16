@@ -147,11 +147,20 @@ class SRTAnalysisOrchestrator(
     private val userProfileRepository: UserProfileRepository,
     private val aiService: AIService,
     private val getOLQDashboard: GetOLQDashboardUseCase,
-    private val logger: DomainLogger
+    private val logger: DomainLogger,
+    private val featureFlagRepository: FeatureFlagRepository,
+    private val evaluationFunctionsClient: EvaluationFunctionsClient
 ) {
     suspend fun analyze(submissionId: String) {
         val submission = submissionRepository.getSRTSubmission(submissionId).getOrNull() ?: return
         if (submission.analysisStatus != AnalysisStatus.PENDING_ANALYSIS) return
+
+        if (featureFlagRepository.getFeatureFlags().isEnabled(FEATURE_FLAG_SERVER_EVALUATION)) {
+            evaluationFunctionsClient.evaluateSRT(submissionId).onFailure {
+                logger.e("PsychAnalysis", "Server-side SRT evaluation failed: $submissionId: ${it.message}")
+            }
+            return
+        }
 
         runPsychAnalysis(
             testType = TestType.SRT,
@@ -173,6 +182,10 @@ class SRTAnalysisOrchestrator(
             markFailed = { submissionRepository.updateSRTAnalysisStatus(submissionId, AnalysisStatus.FAILED) },
             writeResult = { submissionRepository.updateSRTOLQResult(submissionId, it) }
         )
+    }
+
+    private companion object {
+        const val FEATURE_FLAG_SERVER_EVALUATION = "srt_server_evaluation"
     }
 }
 

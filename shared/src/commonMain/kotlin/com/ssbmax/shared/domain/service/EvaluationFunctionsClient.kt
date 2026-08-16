@@ -21,4 +21,5 @@ package com.ssbmax.shared.domain.service
  */
 interface EvaluationFunctionsClient {
     suspend fun evaluateWAT(submissionId: String): Result<Unit>
+    suspend fun evaluateSRT(submissionId: String): Result<Unit>
 }
