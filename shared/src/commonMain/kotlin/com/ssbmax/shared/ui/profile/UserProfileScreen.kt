@@ -26,9 +26,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
+import com.ssbmax.shared.ui.common.SsbBackHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.EntryType
@@ -55,13 +54,10 @@ import ssbmax.shared.generated.resources.user_profile_title_onboarding
  *
  * Phase 3c (#12): the Android original's `androidx.activity.compose.BackHandler`
  * "block back press while onboarding and profile incomplete" guard is restored
- * here using Compose Multiplatform's own commonMain
- * `androidx.compose.ui.backhandler.BackHandler` (ships since 1.7.0; androidMain
- * delegates to the platform back dispatcher, iosMain to the predictive-back
- * gesture) — no custom expect/actual shim needed.
+ * here using `SsbBackHandler` (`ui/common/SsbBackHandler.kt`) — the commonMain
+ * expect/actual shim over each platform's real back-gesture dispatcher.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
-@Suppress("DEPRECATION") // commonMain back-handler bridge; NavigationEventHandler has no Compose adapter yet.
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileScreen(
     onNavigateBack: () -> Unit,
@@ -72,7 +68,7 @@ fun UserProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    BackHandler(enabled = isOnboarding && uiState.profile == null) {
+    SsbBackHandler(enabled = isOnboarding && uiState.profile == null) {
         // Do nothing -- prevent back press during onboarding until profile is complete.
     }
 

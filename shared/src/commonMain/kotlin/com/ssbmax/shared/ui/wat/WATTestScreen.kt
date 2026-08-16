@@ -17,7 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
+import com.ssbmax.shared.ui.common.SsbBackHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.model.WATPhase
@@ -77,7 +77,7 @@ fun WATTestScreen(
     // Hardware/predictive back must go through the same exit path as the in-progress "exit"
     // action -- otherwise it silently pops the nav stack and leaves the durable test_sessions
     // doc stuck ACTIVE (see PPDTTestScreen's identical fix for the same bug).
-    BackHandler(enabled = uiState.words.isNotEmpty() && !uiState.isSubmitted) {
+    SsbBackHandler(enabled = uiState.words.isNotEmpty() && !uiState.isSubmitted) {
         showExitDialog = true
     }
 
