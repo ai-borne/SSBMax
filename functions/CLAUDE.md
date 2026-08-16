@@ -96,7 +96,7 @@ service cloud.firestore {
 
 ## Tier-2 Evaluation SSOT: `evaluation/` (the real pattern — read this before the generic example below)
 
-`functions/src/evaluation/` is the actual, current Tier-2 AI-evaluation architecture (Web SSB Test Flow Parity + Centralized Tier-2 Evaluation SSOT plan). The generic "Gemini AI Integration" pattern further down this file predates it and is kept only as a bare-Cloud-Functions teaching example — do not model a new evaluation type off it; extend the pattern here instead.
+`functions/src/evaluation/` is the actual, current Tier-2 AI-evaluation architecture (Web SSB Test Flow Parity + Centralized Tier-2 Evaluation SSOT plan — tracked in `docs/plans/TestFlowParity_Tier2Evaluation_SSOT.md`, check it for current per-type Cutover status). The generic "Gemini AI Integration" pattern further down this file predates it and is kept only as a bare-Cloud-Functions teaching example — do not model a new evaluation type off it; extend the pattern here instead.
 
 **Shape:** one shared dispatcher, thin per-type wrappers.
 - `core.js` — `runEvaluation({ testType, submissionId, uid, buildPrompt, parseAndValidate, resultCollection })` owns every cross-cutting concern exactly once: auth check, ownership check (`submissions/{id}.userId === uid`), status guard (`PENDING_ANALYSIS` only — idempotent if called again), **server-side quota/eligibility re-check** against `users/{uid}/subscription/usage_{yyyy-MM}` (rejects `FAILED_PRECONDITION` over quota — this is what actually stops a client from calling an `evaluate*` callable directly and getting free Gemini evaluations regardless of tier), flip to `ANALYZING`, retry-wrapped Gemini call, result-doc write, status flip to `COMPLETED`/`FAILED`.
