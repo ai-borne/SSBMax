@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { strings } from '../../constants/strings';
+import { OLQ, OLQCategory } from '../../generated/contracts';
 
 export interface OLQScoreItem {
   olq: string;
@@ -29,11 +30,14 @@ export const OLQScoreCard: FC<OLQScoreCardProps> = ({
     );
   }
 
-  // Factor classification
-  const factor1OLQs = ['EFFECTIVE_INTELLIGENCE', 'REASONING_ABILITY', 'ORGANIZING_ABILITY', 'POWER_OF_EXPRESSION'];
-  const factor2OLQs = ['SOCIAL_ADJUSTMENT', 'COOPERATION', 'INFLUENCE_GROUP'];
-  const factor3OLQs = ['INITIATIVE', 'SELF_CONFIDENCE', 'SPEED_OF_DECISION', 'DETERMINATION'];
-  const factor4OLQs = ['COURAGE', 'SENSE_OF_RESPONSIBILITY', 'STAMINA', 'LIVELINESS'];
+  // Factor classification — derived from the generated OLQ contract (SSOT: shared/.../domain/model/interview/OLQ.kt)
+  const olqIdsByCategory = (category: OLQCategory) =>
+    Object.values(OLQ).filter((def) => def.category === category).map((def) => def.id);
+
+  const factor1OLQs = olqIdsByCategory('INTELLECTUAL');
+  const factor2OLQs = olqIdsByCategory('SOCIAL');
+  const factor3OLQs = olqIdsByCategory('DYNAMIC');
+  const factor4OLQs = olqIdsByCategory('CHARACTER');
 
   const getFactorScores = (olqList: string[]) =>
     olqScores.filter((item) => olqList.includes(item.olq.toUpperCase()));

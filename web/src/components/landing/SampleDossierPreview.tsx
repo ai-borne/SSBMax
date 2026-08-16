@@ -2,6 +2,7 @@ import { FC, useState } from 'react';
 import { ShieldCheck, BarChart3, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { themeColors } from '../../constants/colors';
+import { OLQ, OLQCategory } from '../../generated/contracts';
 
 export interface FactorItem {
   id: string;
@@ -10,33 +11,61 @@ export interface FactorItem {
   benchmark: number;
 }
 
+// Display label for each factor is sample/marketing copy (not the SSOT — see FACTOR_ROMAN below
+// for the OLQ-category grouping, which is derived from `generated/contracts`).
+const coreFactorMeta: Record<OLQCategory, { id: string; name: string; benchmark: number }> = {
+  INTELLECTUAL: { id: 'factor1', name: 'Factor I: Planning & Reasoning', benchmark: 7.0 },
+  SOCIAL: { id: 'factor2', name: 'Factor II: Social Adjustment', benchmark: 7.0 },
+  DYNAMIC: { id: 'factor3', name: 'Factor III: Social Effectiveness', benchmark: 7.0 },
+  CHARACTER: { id: 'factor4', name: 'Factor IV: Dynamic & Courage', benchmark: 7.0 },
+};
+
+const FACTOR_ROMAN: Record<OLQCategory, string> = {
+  INTELLECTUAL: 'Factor I',
+  SOCIAL: 'Factor II',
+  DYNAMIC: 'Factor III',
+  CHARACTER: 'Factor IV',
+};
+
+// Illustrative sample scores only (marketing preview) — not real evaluation data.
+const SAMPLE_OLQ_SCORES: Record<string, number> = {
+  EFFECTIVE_INTELLIGENCE: 8.5,
+  REASONING_ABILITY: 8.4,
+  ORGANIZING_ABILITY: 8.6,
+  POWER_OF_EXPRESSION: 8.2,
+  SOCIAL_ADJUSTMENT: 8.1,
+  COOPERATION: 8.0,
+  SENSE_OF_RESPONSIBILITY: 8.5,
+  INITIATIVE: 9.0,
+  SELF_CONFIDENCE: 8.7,
+  SPEED_OF_DECISION: 8.8,
+  INFLUENCE_GROUP: 8.6,
+  LIVELINESS: 8.2,
+  DETERMINATION: 8.7,
+  COURAGE: 8.4,
+  STAMINA: 8.3,
+};
+
+const SAMPLE_FACTOR_SCORES: Record<OLQCategory, number> = {
+  INTELLECTUAL: 8.5,
+  SOCIAL: 8.0,
+  DYNAMIC: 8.8,
+  CHARACTER: 8.2,
+};
+
 export const SampleDossierPreview: FC = () => {
   const [showDetailed15, setShowDetailed15] = useState(false);
 
-  const coreFactors: FactorItem[] = [
-    { id: 'factor1', name: 'Factor I: Planning & Reasoning', score: 8.5, benchmark: 7.0 },
-    { id: 'factor2', name: 'Factor II: Social Adjustment', score: 8.0, benchmark: 7.0 },
-    { id: 'factor3', name: 'Factor III: Social Effectiveness', score: 8.8, benchmark: 7.0 },
-    { id: 'factor4', name: 'Factor IV: Dynamic & Courage', score: 8.2, benchmark: 7.0 }
-  ];
+  const coreFactors: FactorItem[] = (Object.keys(coreFactorMeta) as OLQCategory[]).map((category) => ({
+    ...coreFactorMeta[category],
+    score: SAMPLE_FACTOR_SCORES[category],
+  }));
 
-  const olq15List = [
-    { name: 'Effective Intelligence (OLQ-1)', score: 8.5, factor: 'Factor I' },
-    { name: 'Reasoning Ability (OLQ-2)', score: 8.4, factor: 'Factor I' },
-    { name: 'Organizing Ability (OLQ-3)', score: 8.6, factor: 'Factor I' },
-    { name: 'Power of Expression (OLQ-4)', score: 8.2, factor: 'Factor I' },
-    { name: 'Social Adaptability (OLQ-5)', score: 8.1, factor: 'Factor II' },
-    { name: 'Cooperation (OLQ-6)', score: 8.0, factor: 'Factor II' },
-    { name: 'Sense of Duty (OLQ-7)', score: 8.5, factor: 'Factor II' },
-    { name: 'Initiative (OLQ-8)', score: 9.0, factor: 'Factor III' },
-    { name: 'Self Confidence (OLQ-9)', score: 8.7, factor: 'Factor III' },
-    { name: 'Speed of Decision (OLQ-10)', score: 8.8, factor: 'Factor III' },
-    { name: 'Power of Influence (OLQ-11)', score: 8.6, factor: 'Factor III' },
-    { name: 'Determination (OLQ-12)', score: 8.7, factor: 'Factor III' },
-    { name: 'Liveliness (OLQ-13)', score: 8.2, factor: 'Factor IV' },
-    { name: 'Courage (OLQ-14)', score: 8.4, factor: 'Factor IV' },
-    { name: 'Stamina (OLQ-15)', score: 8.3, factor: 'Factor IV' }
-  ];
+  const olq15List = Object.values(OLQ).map((def, idx) => ({
+    name: `${def.displayName} (OLQ-${idx + 1})`,
+    score: SAMPLE_OLQ_SCORES[def.id] ?? 8.0,
+    factor: FACTOR_ROMAN[def.category as OLQCategory],
+  }));
 
   // Inline SVG Radar Math Coordinates (Center 100, 100, Radius 70)
   const cx = 100;
