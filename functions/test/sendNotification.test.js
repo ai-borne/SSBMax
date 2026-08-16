@@ -160,6 +160,9 @@ test('Phase 2: notifyEvaluationComplete sends the notification title/body and st
   assert.equal(sent.data.submissionId, 'sub42');
   assert.equal(sent.data.testType, 'SRT');
   assert.equal(typeof sent.data.actionUrl, 'string');
+  assert.equal(sent.data.type, 'GRADING_COMPLETE');
+  assert.equal(typeof sent.data.notificationId, 'string');
+  assert.ok(sent.data.notificationId.length > 0);
 });
 
 test('Phase 2: notifyEvaluationComplete deletes a token row FCM reports as unregistered', async () => {

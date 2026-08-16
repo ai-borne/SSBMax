@@ -14,6 +14,7 @@ import com.google.firebase.messaging.RemoteMessage
 import com.ssbmax.MainActivity
 import com.ssbmax.shared.domain.model.FCMToken
 import com.ssbmax.shared.domain.model.NotificationType
+import com.ssbmax.shared.domain.model.SSBMaxNotification
 import com.ssbmax.shared.domain.repository.AuthRepository
 import com.ssbmax.shared.domain.repository.NotificationRepository
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.util.UUID
 import kotlin.random.Random
 
 /**
@@ -60,79 +62,47 @@ class SSBMaxFirebaseMessagingService : FirebaseMessagingService(), KoinComponent
     
     /**
      * Called when a message is received
-     * Parse and display notification based on type
+     * Parse once (merging the data + notification payloads, which FCM delivers together in
+     * foreground), then display the tray notification and persist it to the in-app inbox.
      */
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        
+
         android.util.Log.d(TAG, "FCM message received")
-        
-        // Check if message contains data payload
-        if (message.data.isNotEmpty()) {
-            android.util.Log.d(TAG, "FCM data payload received")
-            handleDataPayload(message.data)
-        }
-        
-        // Check if message contains notification payload
-        message.notification?.let {
-            android.util.Log.d(TAG, "FCM notification payload received")
-            handleNotificationPayload(it.title, it.body, message.data)
-        }
-    }
-    
-    /**
-     * Handle data payload from FCM
-     */
-    private fun handleDataPayload(data: Map<String, String>) {
-        val type = data["type"]?.let { 
-            try { NotificationType.valueOf(it) } 
-            catch (e: Exception) { null }
-        } ?: NotificationType.GENERAL_ANNOUNCEMENT
-        
-        val title = data["title"] ?: getString(com.ssbmax.R.string.notification_default_title)
-        val message = data["message"] ?: ""
-        val actionUrl = data["actionUrl"]
-        val notificationId = data["notificationId"]
-        
-        android.util.Log.i(TAG, "Handling FCM data payload")
-        
-        // Show notification
-        showNotification(
-            type = type,
-            title = title,
-            message = message,
-            actionUrl = actionUrl,
-            notificationId = notificationId
-        )
-        
-        // TODO: Save notification to local database via NotificationRepository
-        // This allows:
-        //  - Showing notification history in NotificationCenterScreen
-        //  - Marking notifications as read/unread
-        //  - Tracking notification engagement analytics
-        //  - Providing offline access to notifications
-    }
-    
-    /**
-     * Handle notification payload from FCM
-     */
-    private fun handleNotificationPayload(
-        title: String?,
-        body: String?,
-        data: Map<String, String>
-    ) {
+
+        val data = message.data
         val type = data["type"]?.let {
             try { NotificationType.valueOf(it) }
             catch (e: Exception) { null }
         } ?: NotificationType.GENERAL_ANNOUNCEMENT
-        
+        val title = message.notification?.title ?: data["title"]
+            ?: getString(com.ssbmax.R.string.notification_default_title)
+        val body = message.notification?.body ?: data["message"] ?: ""
+        val actionUrl = data["actionUrl"]
+        val notificationId = data["notificationId"]
+
         showNotification(
             type = type,
-            title = title ?: getString(com.ssbmax.R.string.notification_default_title),
-            message = body ?: "",
-            actionUrl = data["actionUrl"],
-            notificationId = data["notificationId"]
+            title = title,
+            message = body,
+            actionUrl = actionUrl,
+            notificationId = notificationId
         )
+
+        val userId = authRepository.currentUser.value?.id ?: return
+        val notification = buildInboxNotification(
+            userId = userId,
+            notificationId = notificationId,
+            type = type,
+            title = title,
+            message = body,
+            actionUrl = actionUrl,
+            submissionId = data["submissionId"],
+            testType = data["testType"]
+        )
+        serviceScope.launch {
+            notificationRepository.saveNotification(notification)
+        }
     }
     
     /**
@@ -292,5 +262,38 @@ class SSBMaxFirebaseMessagingService : FirebaseMessagingService(), KoinComponent
         private const val CHANNEL_REMINDERS = "reminders_channel"
         private const val CHANNEL_MARKETPLACE = "marketplace_channel"
     }
+}
+
+/**
+ * Maps an FCM payload to the in-app inbox model. Pure/no Android deps so it's testable without
+ * Robolectric. `notificationId` is expected to match the Firestore `NOTIFICATIONS` doc id
+ * `sendNotification.js` wrote server-side (`data.notificationId`) so `saveNotification`'s
+ * `.document(id).set(...)` overwrites that same doc instead of creating a duplicate; falls back to
+ * a locally-generated id only when the payload doesn't carry one.
+ */
+internal fun buildInboxNotification(
+    userId: String,
+    notificationId: String?,
+    type: NotificationType,
+    title: String,
+    message: String,
+    actionUrl: String?,
+    submissionId: String?,
+    testType: String?
+): SSBMaxNotification {
+    val actionData = buildMap {
+        submissionId?.let { put("submissionId", it) }
+        testType?.let { put("testType", it) }
+    }.ifEmpty { null }
+
+    return SSBMaxNotification(
+        id = notificationId ?: UUID.randomUUID().toString(),
+        userId = userId,
+        type = type,
+        title = title,
+        message = message,
+        actionUrl = actionUrl,
+        actionData = actionData
+    )
 }
 

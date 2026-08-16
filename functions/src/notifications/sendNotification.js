@@ -73,6 +73,7 @@ async function notifyEvaluationComplete({ firestoreDb, userId, testType, submiss
       body: message,
       actionUrl: Routes.NOTIFICATIONS_CENTER,
       actionData: { submissionId, testType },
+      notificationId: notificationRef.id,
       messaging: messaging || require('firebase-admin').messaging()
     });
   } catch (error) {
@@ -93,7 +94,7 @@ async function notifyEvaluationComplete({ firestoreDb, userId, testType, submiss
  * unregistered so a stale token doesn't get retried on every future
  * notification.
  */
-async function sendPush({ firestoreDb, userId, title, body, actionUrl, actionData, messaging }) {
+async function sendPush({ firestoreDb, userId, title, body, actionUrl, actionData, notificationId, messaging }) {
   const tokensSnapshot = await firestoreDb
     .collection(FirestorePaths.FCM_TOKENS)
     .where('userId', '==', userId)
@@ -112,7 +113,9 @@ async function sendPush({ firestoreDb, userId, title, body, actionUrl, actionDat
     data: {
       actionUrl,
       submissionId: String(actionData.submissionId),
-      testType: String(actionData.testType)
+      testType: String(actionData.testType),
+      notificationId,
+      type: 'GRADING_COMPLETE'
     }
   });
 
