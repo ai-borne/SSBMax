@@ -86,6 +86,52 @@ const runtimeOptions = {
 };
 
 /**
+ * Interview has no session-level `COMPLETED` flip (per-response evaluation, plan-locked
+ * decision -- see this file's class doc), so "the interview is done" has to be derived
+ * from the session's own `questionIds` list (the one place a session already records its
+ * expected response count -- `GitLiveInterviewRepository.createSession` writes it at
+ * session-creation time). Tracks which responses have been evaluated on the session doc
+ * itself (`evaluatedResponseIds`), transactionally, and fires exactly one notification --
+ * guarded by a `notifiedComplete` flag so a retried/duplicate call after the session is
+ * already complete can't re-notify -- the same session-keyed idempotency shape
+ * `recordAndEnforce` (above) uses for quota charging, applied here to notification instead.
+ * Returns whether this call is the one that completed the session (caller notifies
+ * outside the transaction so a transaction retry can't send a duplicate push).
+ */
+async function markResponseEvaluatedAndMaybeCompleteSession(db, sessionRef, sessionData, responseId) {
+  const totalExpected = (sessionData.questionIds || []).length;
+  if (totalExpected === 0) {
+    // No expected-count signal on this session (legacy/malformed doc) -- fail loud by
+    // falling back to per-response notification rather than silently never notifying.
+    return true;
+  }
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(sessionRef);
+    const current = snap.exists ? snap.data() : sessionData;
+    const evaluatedResponseIds = current.evaluatedResponseIds || [];
+    const alreadyNotified = current.notifiedComplete === true;
+    const updatedIds = evaluatedResponseIds.includes(responseId)
+      ? evaluatedResponseIds
+      : [...evaluatedResponseIds, responseId];
+    const isComplete = updatedIds.length >= totalExpected;
+    const willNotifyNow = isComplete && !alreadyNotified;
+
+    tx.set(
+      sessionRef,
+      {
+        ...current,
+        evaluatedResponseIds: updatedIds,
+        ...(willNotifyNow ? { notifiedComplete: true } : {})
+      },
+      { merge: true }
+    );
+
+    return willNotifyNow;
+  });
+}
+
+/**
  * Injectable core -- the `onCall` wrapper below only fetches `admin.firestore()`/auth.
  * `generateContentFn`/`retryDelayFn` default to the real Gemini call/backoff but are
  * overridable so tests can exercise the full flow without a live Gemini key or real timers.
@@ -151,10 +197,11 @@ async function evaluateInterviewResponseCore(db, uid, responseId, sessionId, gen
 
   await responseRef.update({ olqScores: result.olqScores, confidenceScore: result.confidenceScore });
 
-  // Interview has no session-level COMPLETED flip (per-response evaluation, plan-locked
-  // decision -- see this file's class doc) -- each evaluated response is its own
-  // completion unit, so that's the granularity notified at here.
-  await notifyEvaluationComplete({ firestoreDb: db, userId: uid, testType: INTERVIEW_TEST_TYPE, submissionId: responseId });
+  const sessionRef = db.collection(FirestorePaths.INTERVIEW_SESSIONS).doc(sessionId);
+  const sessionComplete = await markResponseEvaluatedAndMaybeCompleteSession(db, sessionRef, sessionData, responseId);
+  if (sessionComplete) {
+    await notifyEvaluationComplete({ firestoreDb: db, userId: uid, testType: INTERVIEW_TEST_TYPE, submissionId: sessionId });
+  }
 
   return { success: true, responseId };
 }
@@ -173,3 +220,4 @@ exports.evaluateInterviewResponse = functions.runWith(runtimeOptions).https.onCa
 exports.buildInterviewResult = buildInterviewResult;
 exports.MAX_RESPONSE_CHARACTERS = MAX_RESPONSE_CHARACTERS;
 exports.evaluateInterviewResponseCore = evaluateInterviewResponseCore;
+exports.markResponseEvaluatedAndMaybeCompleteSession = markResponseEvaluatedAndMaybeCompleteSession;

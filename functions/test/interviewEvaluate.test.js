@@ -115,7 +115,7 @@ const SESSION_ID = 'sess1';
 function baseFixtures(overrides = {}) {
   return {
     [`interview_responses/resp1`]: { userId: UID, sessionId: SESSION_ID, questionId: 'q1', responseText: 'my answer', olqScores: {} },
-    [`interview_sessions/${SESSION_ID}`]: { userId: UID },
+    [`interview_sessions/${SESSION_ID}`]: { userId: UID, questionIds: ['q1'] },
     [`users/${UID}/data/subscription`]: { tier: 'PRO' },
     ...overrides
   };
@@ -176,11 +176,14 @@ test('evaluateInterviewResponseCore rejects with resource-exhausted when a NEW s
 });
 
 /**
- * Phase 1 (Centralized Result-Announcement Notifications plan): interview has no
- * session-level COMPLETED flip (per-response evaluation, plan-locked decision -- see
- * interviewEvaluate.js's class doc), so each evaluated response is its own notify unit.
+ * Phase 1 (Centralized Result-Announcement Notifications plan), collapsed to
+ * session-level in Phase 8: interview has no session-level COMPLETED flip
+ * (per-response evaluation, plan-locked decision -- see interviewEvaluate.js's
+ * class doc), so notification fires once the session's last expected response
+ * (per `questionIds`) is evaluated, not per response. This session has a single
+ * question, so the one evaluated response also completes the session.
  */
-test('evaluateInterviewResponseCore writes a NOTIFICATIONS doc on a successful evaluation', async () => {
+test('evaluateInterviewResponseCore writes a NOTIFICATIONS doc when the last (only) response in the session is evaluated', async () => {
   const db = makeFakeDb(baseFixtures());
   await evaluateInterviewResponseCore(db, UID, 'resp1', SESSION_ID, async () => arrayResponse([{ olq: 'COURAGE', score: 5, reasoning: 'r' }], { overallConfidence: 70 }));
 
@@ -188,6 +191,7 @@ test('evaluateInterviewResponseCore writes a NOTIFICATIONS doc on a successful e
   assert.equal(notifications.length, 1, 'exactly one notification doc must be written on a successful evaluation');
   assert.equal(db._store[notifications[0]].userId, UID);
   assert.equal(db._store[notifications[0]].type, 'GRADING_COMPLETE');
+  assert.equal(db._store[notifications[0]].actionData?.submissionId ?? db._store[notifications[0]].submissionId, SESSION_ID, 'notification must be keyed by sessionId, not responseId');
 });
 
 test('evaluateInterviewResponseCore does not write a NOTIFICATIONS doc when the Gemini response never parses (FAILED)', async () => {
@@ -196,4 +200,43 @@ test('evaluateInterviewResponseCore does not write a NOTIFICATIONS doc when the 
 
   const notifications = Object.keys(db._store).filter((k) => k.startsWith('notifications/'));
   assert.equal(notifications.length, 0, 'a FAILED evaluation must not notify the user a result is ready');
+});
+
+/**
+ * Phase 8: the actual bug fix under test -- a multi-response interview session must
+ * produce exactly ONE notification, written when the last response is evaluated, not
+ * one per response (the noise gap Phase 1 deliberately left open, tracked in
+ * docs/plans/TestFlowParity_Tier2Evaluation_SSOT.md §6).
+ */
+test('evaluateInterviewResponseCore collapses a multi-response session to exactly one NOTIFICATIONS doc, written on the last response', async () => {
+  const TWO_Q_SESSION = 'sess-multi';
+  const db = makeFakeDb({
+    'interview_responses/r1': { userId: UID, sessionId: TWO_Q_SESSION, questionId: 'q1', responseText: 'a1', olqScores: {} },
+    'interview_responses/r2': { userId: UID, sessionId: TWO_Q_SESSION, questionId: 'q2', responseText: 'a2', olqScores: {} },
+    [`interview_sessions/${TWO_Q_SESSION}`]: { userId: UID, questionIds: ['q1', 'q2'] },
+    [`users/${UID}/data/subscription`]: { tier: 'PRO' }
+  });
+  const geminiCall = async () => arrayResponse([{ olq: 'COURAGE', score: 5, reasoning: 'r' }], { overallConfidence: 70 });
+
+  await evaluateInterviewResponseCore(db, UID, 'r1', TWO_Q_SESSION, geminiCall);
+  const notificationsAfterFirst = Object.keys(db._store).filter((k) => k.startsWith('notifications/'));
+  assert.equal(notificationsAfterFirst.length, 0, 'must not notify after only the first of two responses is evaluated');
+
+  await evaluateInterviewResponseCore(db, UID, 'r2', TWO_Q_SESSION, geminiCall);
+  const notificationsAfterSecond = Object.keys(db._store).filter((k) => k.startsWith('notifications/'));
+  assert.equal(notificationsAfterSecond.length, 1, 'exactly one notification must be written once the last response completes the session');
+});
+
+test('evaluateInterviewResponseCore does not re-notify if a completed session is somehow re-evaluated', async () => {
+  const db = makeFakeDb(baseFixtures());
+  const geminiCall = async () => arrayResponse([{ olq: 'COURAGE', score: 5, reasoning: 'r' }], { overallConfidence: 70 });
+
+  await evaluateInterviewResponseCore(db, UID, 'resp1', SESSION_ID, geminiCall);
+  assert.equal(db._store[`interview_sessions/${SESSION_ID}`].notifiedComplete, true);
+
+  const { markResponseEvaluatedAndMaybeCompleteSession } = require('../src/evaluation/interviewEvaluate');
+  const sessionRef = db.collection('interview_sessions').doc(SESSION_ID);
+  const sessionSnap = await sessionRef.get();
+  const shouldNotifyAgain = await markResponseEvaluatedAndMaybeCompleteSession(db, sessionRef, sessionSnap.data(), 'resp1');
+  assert.equal(shouldNotifyAgain, false, 're-marking an already-notified session as complete must not signal another notify');
 });
