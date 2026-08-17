@@ -12,7 +12,8 @@ const {
   scoreOIRSubmission,
   scoreOIRQuestionSubset,
   evaluateOIRMultiBatch,
-  isAnswerCorrect
+  isAnswerCorrect,
+  unwrapOIRAnswer
 } = require('../src/oirScoring');
 
 /**
@@ -170,6 +171,45 @@ test('Phase 2: evaluateOIRMultiBatch rejects with not-found if any referenced ba
       return true;
     }
   );
+});
+
+// Regression: KMP's GitLiveOIREvaluationClient sends every answer wrapped as
+// `{ selectedOptionId, selectedOptionIds }` (OIRAnswerWire), not a bare id/array. Without
+// unwrapping, `isAnswerCorrect` compared that whole object to a string/array and every KMP OIR
+// submission scored 0 regardless of what the candidate actually answered (reported live on-device
+// 2026-08-17). Only the KMP multi-batch path (`scoreOIRQuestionSubset`/`evaluateOIRMultiBatch`) is
+// affected -- web's single-batch `scoreOIRSubmission` path already sent/still sends bare values.
+test('unwrapOIRAnswer unwraps a single-select OIRAnswerWire to its selectedOptionId', () => {
+  assert.equal(unwrapOIRAnswer({ selectedOptionId: 'opt_a', selectedOptionIds: [] }), 'opt_a');
+});
+
+test('unwrapOIRAnswer unwraps a multi-select OIRAnswerWire to its selectedOptionIds array', () => {
+  assert.deepEqual(unwrapOIRAnswer({ selectedOptionId: null, selectedOptionIds: ['opt_a', 'opt_b'] }), ['opt_a', 'opt_b']);
+});
+
+test('unwrapOIRAnswer passes bare (non-wire-shape) values through unchanged, for web parity', () => {
+  assert.equal(unwrapOIRAnswer('opt_a'), 'opt_a');
+  assert.deepEqual(unwrapOIRAnswer(['opt_a', 'opt_b']), ['opt_a', 'opt_b']);
+  assert.equal(unwrapOIRAnswer(undefined), undefined);
+  assert.equal(unwrapOIRAnswer(null), null);
+});
+
+test('regression: scoreOIRQuestionSubset scores a real KMP OIRAnswerWire-shaped single-select answer correctly', () => {
+  const questions = [{ id: 'q1', correctAnswerId: 'opt_a' }, { id: 'q2', correctAnswerId: 'opt_b' }];
+  const result = scoreOIRQuestionSubset(questions, {
+    q1: { selectedOptionId: 'opt_a', selectedOptionIds: [] }, // correct
+    q2: { selectedOptionId: 'opt_x', selectedOptionIds: [] } // wrong
+  });
+  assert.equal(result.score, 1, 'q1 must score correct once the wire-format answer is unwrapped');
+  assert.equal(result.total, 2);
+});
+
+test('regression: scoreOIRQuestionSubset scores a real KMP OIRAnswerWire-shaped multi-select answer correctly', () => {
+  const questions = [{ id: 'q1', correctAnswerId: '', correctAnswerIds: ['opt_a', 'opt_b'] }];
+  const result = scoreOIRQuestionSubset(questions, {
+    q1: { selectedOptionId: null, selectedOptionIds: ['opt_b', 'opt_a'] } // correct, order-independent
+  });
+  assert.equal(result.score, 1);
 });
 
 test('Phase 2: evaluateOIRMultiBatch rejects with invalid-argument for an empty batches map', async () => {

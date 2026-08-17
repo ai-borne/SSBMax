@@ -21,6 +21,9 @@ object DeepLinkParser {
     /** Route for interview history */
     const val ROUTE_INTERVIEW_HISTORY = "interview/history"
 
+    /** Route for the notification center; mirrors [com.ssbmax.navigation.SSBMaxDestinations.NotificationCenter.route] */
+    const val ROUTE_NOTIFICATION_CENTER = "notifications/center"
+
     // ========================
     // Deep Link Building
     // ========================

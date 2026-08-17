@@ -3,9 +3,11 @@ import { Bell } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { useNotificationCenterViewModel } from '../../viewmodels/useNotificationCenterViewModel';
 import { NotificationInbox } from './NotificationInbox';
+import type { SSBMaxNotification } from '../../types/notification';
 
 export interface NotificationBellProps {
   userId: string | undefined;
+  onNotificationClick?: (notification: SSBMaxNotification) => void;
 }
 
 /**
@@ -14,7 +16,7 @@ export interface NotificationBellProps {
  * Compose bell (Tier 3, no mechanical enforcement -- note this file as the parity
  * counterpart for future changes to the KMP ViewModel).
  */
-export const NotificationBell: FC<NotificationBellProps> = ({ userId }) => {
+export const NotificationBell: FC<NotificationBellProps> = ({ userId, onNotificationClick }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { notifications, unreadCount, isLoading, error, markAsRead, markAllAsRead } = useNotificationCenterViewModel(userId);
@@ -60,6 +62,10 @@ export const NotificationBell: FC<NotificationBellProps> = ({ userId }) => {
             error={error}
             onMarkAsRead={markAsRead}
             onMarkAllAsRead={markAllAsRead}
+            onNotificationClick={(notification) => {
+              setIsOpen(false);
+              onNotificationClick?.(notification);
+            }}
           />
         </div>
       )}

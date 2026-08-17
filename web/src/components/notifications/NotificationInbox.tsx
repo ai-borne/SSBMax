@@ -9,6 +9,7 @@ export interface NotificationInboxProps {
   error: string | null;
   onMarkAsRead: (notificationId: string) => void;
   onMarkAllAsRead: () => void;
+  onNotificationClick: (notification: SSBMaxNotification) => void;
 }
 
 function formatRelativeTime(createdAt: number): string {
@@ -28,7 +29,7 @@ function formatRelativeTime(createdAt: number): string {
  * KMP's `NotificationCenterViewModel` (Tier 3, hand-kept in sync): clicking an unread
  * notification marks only that one read; "Mark all read" batches every unread doc.
  */
-export const NotificationInbox: FC<NotificationInboxProps> = ({ notifications, isLoading, error, onMarkAsRead, onMarkAllAsRead }) => {
+export const NotificationInbox: FC<NotificationInboxProps> = ({ notifications, isLoading, error, onMarkAsRead, onMarkAllAsRead, onNotificationClick }) => {
   const hasUnread = notifications.some((n) => !n.isRead);
 
   return (
@@ -68,7 +69,10 @@ export const NotificationInbox: FC<NotificationInboxProps> = ({ notifications, i
           notifications.map((notification) => (
             <button
               key={notification.id}
-              onClick={() => !notification.isRead && onMarkAsRead(notification.id)}
+              onClick={() => {
+                if (!notification.isRead) onMarkAsRead(notification.id);
+                onNotificationClick(notification);
+              }}
               className={`w-full text-left px-4 py-3 flex flex-col gap-0.5 transition-colors ${
                 notification.isRead ? 'bg-transparent' : 'bg-sky-50 dark:bg-sky-950/30 hover:bg-sky-100 dark:hover:bg-sky-950/50'
               }`}

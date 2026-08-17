@@ -1,4 +1,5 @@
 import { useState, useMemo, FC } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { AppLayout } from './components/layout/AppLayout';
 import { LandingPage } from './components/landing/LandingPage';
 import { PracticeTestsPage } from './components/practice/PracticeTestsPage';
@@ -10,7 +11,11 @@ import { OIRTestRunner } from './components/testRunners/OIRTestRunner';
 import { PsychologyTestRunner } from './components/testRunners/PsychologyTestRunner';
 import { GTOTaskGuideRunner } from './components/testRunners/GTOTaskGuideRunner';
 import { AIReportsPage } from './components/reports/AIReportsPage';
+import { SubmissionResultView } from './components/evaluation/SubmissionResultView';
 import { useOLQDashboardViewModel } from './viewmodels/useOLQDashboardViewModel';
+import { resolveNotificationResultTarget, NotificationResultTarget } from './utils/notificationResultRoute';
+import type { SSBMaxNotification } from './types/notification';
+import { strings } from './constants/strings';
 import { OIRTestViewModel } from './viewmodels/OIRTestViewModel';
 import { PsychologyTestViewModel, PsychologyTestType } from './viewmodels/PsychologyTestViewModel';
 import { ContentRepository } from './repositories/ContentRepository';
@@ -28,6 +33,7 @@ export const App: FC = () => {
   const { activeTab, setActiveTab } = useTabRouting('home');
   const [activeTest, setActiveTest] = useState<string | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | undefined>(undefined);
+  const [selectedResult, setSelectedResult] = useState<NotificationResultTarget | null>(null);
   const [devTierOverride, setDevTierOverride] = useState<DevTierOverride>(
     () => (localStorage.getItem(DEV_TIER_OVERRIDE_KEY) as DevTierOverride | null) || 'FOLLOW_REAL'
   );
@@ -69,8 +75,23 @@ export const App: FC = () => {
   };
 
 
+  // Wraps setActiveTab so manually switching tabs (nav bar, Footer, back-to-home)
+  // always leaves the notification-triggered single-submission view -- only
+  // handleNotificationClick below sets selectedResult.
+  const handleTabChange = (tab: string) => {
+    setSelectedResult(null);
+    setActiveTab(tab);
+  };
+
+  const handleNotificationClick = (notification: SSBMaxNotification) => {
+    const target = resolveNotificationResultTarget(notification);
+    if (!target) return;
+    setSelectedResult(target);
+    setActiveTab('reports');
+  };
+
   const handleBackToHome = () => {
-    setActiveTab('home');
+    handleTabChange('home');
   };
 
   const oirBatchIndex = useMemo(() => {
@@ -87,7 +108,7 @@ export const App: FC = () => {
   const isGTOTaskOrBoard = ['gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt', 'interview', 'conference'].includes(activeTest || '');
 
   return (
-    <AppLayout activeTab={activeTab} onTabChange={setActiveTab} isTestMode={Boolean(activeTest)}>
+    <AppLayout activeTab={activeTab} onTabChange={handleTabChange} onNotificationClick={handleNotificationClick} isTestMode={Boolean(activeTest)}>
       {activeTest ? (
         activeTest === 'oir' ? (
           <OIRTestRunner
@@ -135,12 +156,26 @@ export const App: FC = () => {
             />
           )}
           {activeTab === 'reports' && (
-            <AIReportsPage
-              userReports={olqDashboard.completedTestsCount > 0 ? { olqScores: olqDashboard.olqScores, dossier: olqDashboard.dossier! } : null}
-              isGuest={!authService.getCurrentUser()}
-              onSignIn={() => authService.signInWithGoogle()}
-              onStartTest={() => setActiveTab('tests')}
-            />
+            selectedResult ? (
+              <div className="max-w-7xl w-full mx-auto px-4 py-6" data-testid="notification-result-detail">
+                <button
+                  onClick={() => setSelectedResult(null)}
+                  className="mb-4 flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline"
+                  data-testid="notification-result-back-button"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  {strings.common.back}
+                </button>
+                <SubmissionResultView submissionId={selectedResult.submissionId} resultCollection={selectedResult.resultCollection} />
+              </div>
+            ) : (
+              <AIReportsPage
+                userReports={olqDashboard.completedTestsCount > 0 ? { olqScores: olqDashboard.olqScores, dossier: olqDashboard.dossier! } : null}
+                isGuest={!authService.getCurrentUser()}
+                onSignIn={() => authService.signInWithGoogle()}
+                onStartTest={() => handleTabChange('tests')}
+              />
+            )
           )}
           {activeTab === 'study' && <StudyMaterialPage />}
           {activeTab === 'settings' && (

@@ -54,8 +54,9 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     };
 
     mockScoringService = {
-      evaluateOIRAnswers: vi.fn().mockResolvedValue({
+      submitOIRTest: vi.fn().mockResolvedValue({
         success: true,
+        submissionId: 'sub-oir-1',
         score: 1,
         total: 2,
         percentage: 50,
@@ -96,7 +97,7 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     expect(state.currentIndex).toBe(0);
   });
 
-  it('should submit test online via the server-side evaluateOIRAnswers function and return its result', async () => {
+  it('should submit test online via the server-side submitOIRTest function and return its result', async () => {
     await viewModel.loadQuestions(0);
     viewModel.selectOption('q1', 2);
     viewModel.selectOption('q2', 0);
@@ -104,9 +105,10 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     await viewModel.submitTest('user-123', true);
     const state = viewModel.getState();
 
-    expect(mockScoringService.evaluateOIRAnswers).toHaveBeenCalledWith('oir-batch-0', {
-      q1: 2,
-      q2: 0
+    expect(mockScoringService.submitOIRTest).toHaveBeenCalledWith({
+      batchId: 'oir-batch-0',
+      userAnswers: { q1: 2, q2: 0 },
+      timeTakenSeconds: expect.any(Number)
     });
     expect(state.isCompleted).toBe(true);
     expect(state.result).not.toBeNull();
@@ -114,7 +116,9 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     expect(state.result?.score).toBe(1);
     // Phase 5 (docs/plans/CrossPlatform_SSOT): quota is only charged after the score is
     // durable server-side -- this is the first and only place web records OIR usage.
-    expect(mockEligibilityService.recordTestUsage).toHaveBeenCalledWith('OIR', expect.any(String));
+    // Regression (OIR notification/persistence parity fix): uses the real submissionId
+    // submitOIRTest returns, not a throwaway crypto.randomUUID() with nothing behind it.
+    expect(mockEligibilityService.recordTestUsage).toHaveBeenCalledWith('OIR', 'sub-oir-1');
   });
 
   it('still completes and shows the result even if recordTestUsage fails (log, do not block an already-earned score)', async () => {
@@ -134,7 +138,7 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     await viewModel.submitTest('user-123', true);
     const state = viewModel.getState();
 
-    expect(mockScoringService.evaluateOIRAnswers).not.toHaveBeenCalled();
+    expect(mockScoringService.submitOIRTest).not.toHaveBeenCalled();
     expect(state.isCompleted).toBe(false);
     expect(state.error).toBeTruthy();
   });

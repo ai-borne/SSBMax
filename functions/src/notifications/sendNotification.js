@@ -37,6 +37,33 @@ const TEST_TYPE_LABELS = {
   IO: 'Interview'
 };
 
+// Per-testType result-screen route template, keyed the same as TEST_TYPE_LABELS.
+// GTO_PGT/GOR/HGT/IO(individual obstacles)/CT have no ported result screen yet
+// (StudyContentGraph.kt's TopicScreen.onNavigateToTest routes them to the
+// NotYetPorted placeholder too), so they're intentionally absent here and fall
+// back to Routes.NOTIFICATIONS_CENTER below.
+const TEST_TYPE_RESULT_ROUTE_TEMPLATES = {
+  OIR: Routes.TEST_OIR_RESULT,
+  PPDT: Routes.TEST_PPDT_RESULT,
+  TAT: Routes.TEST_TAT_RESULT,
+  WAT: Routes.TEST_WAT_RESULT,
+  SRT: Routes.TEST_SRT_RESULT,
+  SD: Routes.TEST_SD_RESULT,
+  PIQ: Routes.TEST_PIQ_RESULT,
+  GTO_GD: Routes.TEST_GTO_GD_RESULT,
+  GTO_LECTURETTE: Routes.TEST_GTO_LECTURETTE_RESULT,
+  GTO_GPE: Routes.TEST_GTO_GPE_RESULT,
+  IO: Routes.INTERVIEW_RESULT
+};
+
+/** Builds the notification's actionUrl from testType + submissionId, falling back
+ * to the notification center itself when no result route is registered yet. */
+function buildResultActionUrl(testType, submissionId) {
+  const template = TEST_TYPE_RESULT_ROUTE_TEMPLATES[testType];
+  if (!template) return Routes.NOTIFICATIONS_CENTER;
+  return template.replace('{submissionId}', submissionId).replace('{resultId}', submissionId);
+}
+
 /**
  * @param firestoreDb injected Firestore (real `admin.firestore()` or a test fake)
  * @param userId owner of the completed submission
@@ -50,6 +77,7 @@ async function notifyEvaluationComplete({ firestoreDb, userId, testType, submiss
   const notificationRef = firestoreDb.collection(FirestorePaths.NOTIFICATIONS).doc();
   const title = 'Your result is ready';
   const message = `Your ${label} evaluation has been graded.`;
+  const actionUrl = buildResultActionUrl(testType, submissionId);
 
   await notificationRef.set({
     id: notificationRef.id,
@@ -58,7 +86,7 @@ async function notifyEvaluationComplete({ firestoreDb, userId, testType, submiss
     priority: 'NORMAL',
     title,
     message,
-    actionUrl: Routes.NOTIFICATIONS_CENTER,
+    actionUrl,
     actionData: { submissionId, testType },
     isRead: false,
     createdAt: Date.now(),
@@ -71,7 +99,7 @@ async function notifyEvaluationComplete({ firestoreDb, userId, testType, submiss
       userId,
       title,
       body: message,
-      actionUrl: Routes.NOTIFICATIONS_CENTER,
+      actionUrl,
       actionData: { submissionId, testType },
       notificationId: notificationRef.id,
       messaging: messaging || require('firebase-admin').messaging()
@@ -127,4 +155,4 @@ async function sendPush({ firestoreDb, userId, title, body, actionUrl, actionDat
   await Promise.all(staleTokenDeletes);
 }
 
-module.exports = { notifyEvaluationComplete };
+module.exports = { notifyEvaluationComplete, TEST_TYPE_LABELS };

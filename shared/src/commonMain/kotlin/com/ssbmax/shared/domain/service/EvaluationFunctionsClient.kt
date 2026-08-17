@@ -59,4 +59,18 @@ interface EvaluationFunctionsClient {
      * -- this call only ever sends `submissionId`.
      */
     suspend fun evaluateTAT(submissionId: String): Result<Unit>
+
+    /**
+     * Fires the same `notifications/{id}` "your result is ready" doc + push that
+     * `evaluate*` functions above trigger automatically via `core.js`'s `notifyEvaluationComplete`
+     * -- for legacy client-side-graded paths that finish grading entirely on-device and never call
+     * any `evaluate*` function, so nothing server-side would otherwise fire it. Currently only
+     * `TATSynthesisWorker` (Android's TAT WorkManager chain, kept deliberately separate from
+     * [evaluateTAT]'s server path for process-death resilience -- see `app/CLAUDE.md`) calls this,
+     * right after it finalizes a submission's result locally. `functions/src/notifications/
+     * notifyGradingComplete.js` re-derives `testType` from the submission doc itself and checks
+     * ownership -- this is the one call in this interface a client can invoke against data the
+     * server doesn't already trust, so it needs that check where the others don't.
+     */
+    suspend fun notifyGradingComplete(submissionId: String): Result<Unit>
 }

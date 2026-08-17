@@ -14,6 +14,8 @@ if (!admin.apps.length) {
 const { handleRazorpayWebhook } = require('./webhooks');
 const { createRazorpayOrder } = require('./payments');
 const { evaluateOIRAnswers } = require('./oirScoring');
+const { onOirSubmissionCreated } = require('./notifications/onOirSubmissionCreated');
+const { notifyGradingComplete } = require('./notifications/notifyGradingComplete');
 const { analyzeInterviewResponse, analyzeResponseInline } = require('./aiAnalysis');
 const { recordTestUsage } = require('./eligibility');
 const { geminiGenerateContent } = require('./geminiProxy');
@@ -32,12 +34,23 @@ const {
   submitSRTTest,
   submitSDTest,
   submitGTOTest,
+  submitOIRTest,
   submitInterviewResponse
 } = require('./submissions');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
 exports.evaluateOIRAnswers = evaluateOIRAnswers;
+// Fires notifyEvaluationComplete for OIR specifically -- evaluateOIRAnswers above has no
+// submissionId to notify against (it runs before the submission doc exists, see
+// SubmitOIRTestUseCase.kt); every other test type's equivalent fires from
+// evaluation/core.js::runEvaluation instead, once its (later) grading completes.
+exports.onOirSubmissionCreated = onOirSubmissionCreated;
+// Client-invoked equivalent for legacy client-side-graded paths that never call core.js/
+// onOirSubmissionCreated -- currently only TATSynthesisWorker.kt (Android's TAT WorkManager
+// chain, kept deliberately separate from the flag-gated shared orchestrator for process-death
+// resilience -- see app/CLAUDE.md).
+exports.notifyGradingComplete = notifyGradingComplete;
 exports.analyzeInterviewResponse = analyzeInterviewResponse;
 exports.analyzeResponseInline = analyzeResponseInline;
 exports.recordTestUsage = recordTestUsage;
@@ -84,4 +97,9 @@ exports.submitWATTest = submitWATTest;
 exports.submitSRTTest = submitSRTTest;
 exports.submitSDTest = submitSDTest;
 exports.submitGTOTest = submitGTOTest;
+// OIR notification/persistence parity fix: web's OIR flow previously never created a
+// submissions/{id} doc at all (unlike every other type), so onOirSubmissionCreated never fired
+// for it and there was no result history. Scores server-side via evaluateOIRSubmission (never
+// trusts a client-supplied score), matching KMP's SubmitOIRTestUseCase's score-then-persist shape.
+exports.submitOIRTest = submitOIRTest;
 exports.submitInterviewResponse = submitInterviewResponse;

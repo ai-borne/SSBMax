@@ -107,6 +107,22 @@ async function evaluateOIRSubmission(firestoreDb, batchId, userAnswers) {
  * single-batch `scoreOIRSubmission` above correctly makes for web) would
  * silently count every *other* question in that batch as wrong.
  */
+/**
+ * KMP's `GitLiveOIREvaluationClient` sends each answer wrapped as
+ * `{ selectedOptionId, selectedOptionIds }` (`OIRAnswerWire`, `selectedOptionIds` always present,
+ * possibly empty), not the bare id/array `isAnswerCorrect` compares against -- unwrap it here, the
+ * one place `scoreOIRQuestionSubset` (the KMP-only multi-batch path) reads a raw answer value.
+ * Without this every KMP OIR answer compared an object to a string/array and was always wrong.
+ */
+function unwrapOIRAnswer(raw) {
+  if (raw && typeof raw === 'object' && ('selectedOptionId' in raw || 'selectedOptionIds' in raw)) {
+    return Array.isArray(raw.selectedOptionIds) && raw.selectedOptionIds.length > 0
+      ? raw.selectedOptionIds
+      : raw.selectedOptionId;
+  }
+  return raw;
+}
+
 function scoreOIRQuestionSubset(questions, answersForBatch) {
   const byId = new Map(questions.map((q) => [q.id || `q_${q.questionNumber}`, q]));
   const results = Object.keys(answersForBatch).map((qId) => {
@@ -114,7 +130,7 @@ function scoreOIRQuestionSubset(questions, answersForBatch) {
     if (!q) {
       throw new functions.https.HttpsError('invalid-argument', `Unknown OIR question id '${qId}' for its batch`);
     }
-    return { questionId: qId, isCorrect: isAnswerCorrect(q, answersForBatch[qId]) };
+    return { questionId: qId, isCorrect: isAnswerCorrect(q, unwrapOIRAnswer(answersForBatch[qId])) };
   });
   return { score: results.filter((r) => r.isCorrect).length, total: results.length, results };
 }
@@ -189,6 +205,7 @@ exports.calculateOIRRating = calculateOIRRating;
 exports.isAnswerCorrect = isAnswerCorrect;
 exports.scoreOIRSubmission = scoreOIRSubmission;
 exports.scoreOIRQuestionSubset = scoreOIRQuestionSubset;
+exports.unwrapOIRAnswer = unwrapOIRAnswer;
 exports.evaluateOIRSubmission = evaluateOIRSubmission;
 exports.evaluateOIRMultiBatch = evaluateOIRMultiBatch;
 exports.fetchOIRBatchQuestions = fetchOIRBatchQuestions;

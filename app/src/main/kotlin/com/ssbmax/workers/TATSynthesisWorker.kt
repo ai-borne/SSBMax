@@ -19,6 +19,7 @@ import com.ssbmax.shared.domain.repository.SubmissionRepository
 import com.ssbmax.shared.domain.repository.UserProfileRepository
 import com.ssbmax.shared.domain.scoring.ScoringUtils
 import com.ssbmax.shared.domain.service.AIService
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
 import com.ssbmax.shared.domain.validation.ValidationIntegration
 import com.ssbmax.utils.ErrorLogger
@@ -52,6 +53,7 @@ class TATSynthesisWorker(context: Context, params: WorkerParameters) :
     private val aiService: AIService by inject()
     private val notificationHelper: NotificationHelper by inject()
     private val getOLQDashboard: GetOLQDashboardUseCase by inject()
+    private val evaluationFunctionsClient: EvaluationFunctionsClient by inject()
 
     companion object {
         const val KEY_SUBMISSION_ID = "submission_id"
@@ -155,6 +157,16 @@ class TATSynthesisWorker(context: Context, params: WorkerParameters) :
         } catch (e: Exception) {
             ErrorLogger.log(e, "Failed to send TAT synthesis notification")
         }
+
+        // TAT's legacy WorkManager chain grades entirely on-device (kept separate from the
+        // flag-gated server evaluateTAT path for process-death resilience -- see app/CLAUDE.md),
+        // so nothing server-side ever calls notifyEvaluationComplete for it the way core.js does
+        // for WAT/SRT/SD/PPDT/GTO/Interview. This is the client-invoked equivalent, so the
+        // centralized Notification Center (which reads notifications/{id} Firestore docs, not the
+        // local system notification above) shows TAT results too. Best-effort: the local system
+        // notification above already fired, and result data is already durable.
+        evaluationFunctionsClient.notifyGradingComplete(submissionId)
+            .onFailure { ErrorLogger.log(it, "Failed to notify centralized inbox of TAT synthesis") }
 
         val durationMs = System.currentTimeMillis() - startTime
         Log.d(TAG, "🎉 TAT synthesis complete in ${durationMs}ms for $submissionId")

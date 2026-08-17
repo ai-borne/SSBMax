@@ -7,6 +7,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { Footer } from '../legal/Footer';
 import { NotificationBell } from '../notifications/NotificationBell';
+import type { SSBMaxNotification } from '../../types/notification';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -20,6 +21,7 @@ export interface AppLayoutProps {
   isTestMode?: boolean;
   user?: UserProfile | null;
   onSignInClick?: () => void;
+  onNotificationClick?: (notification: SSBMaxNotification) => void;
 }
 
 export const AppLayout: FC<AppLayoutProps> = ({
@@ -28,7 +30,8 @@ export const AppLayout: FC<AppLayoutProps> = ({
   onTabChange,
   isTestMode = false,
   user: propUser,
-  onSignInClick
+  onSignInClick,
+  onNotificationClick
 }) => {
   const { theme, toggleTheme } = useTheme();
   const isOnline = useOnlineStatus();
@@ -160,7 +163,7 @@ export const AppLayout: FC<AppLayoutProps> = ({
                     {theme === 'dark' ? <Moon className="w-4 h-4 text-sky-400" /> : theme === 'light' ? <Sun className="w-4 h-4 text-amber-500" /> : <Monitor className="w-4 h-4 text-emerald-500" />}
                   </button>
 
-                  <NotificationBell userId={authUser?.uid} />
+                  <NotificationBell userId={authUser?.uid} onNotificationClick={onNotificationClick} />
 
                   {!authUser && (
                     <button onClick={onSignInClick} className="min-h-[44px] px-4 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white shadow-sm transition-colors flex items-center gap-1.5" data-testid="sign-in-cta-button">

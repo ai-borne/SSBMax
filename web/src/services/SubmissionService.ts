@@ -3,8 +3,8 @@
  * Single Responsibility: calls the server-side `submit*`/`evaluate*` Cloud Functions
  * (`functions/src/submissions.js`) that create `submissions/{id}` docs -- required
  * because writes go via Cloud Functions per web/CLAUDE.md's data-flow rule (unlike
- * KMP, which writes Firestore directly via the GitLive SDK). Mirrors `OIRScoringService`'s
- * shape: one thin `httpsCallable` wrapper per server function, no business logic here.
+ * KMP, which writes Firestore directly via the GitLive SDK). One thin `httpsCallable`
+ * wrapper per server function, no business logic here.
  */
 
 import { httpsCallable, Functions } from 'firebase/functions';
@@ -73,6 +73,21 @@ export interface InterviewSubmitPayload {
   responseMode?: string;
 }
 
+export interface OIRSubmitPayload {
+  batchId: string;
+  userAnswers: Record<string, number>;
+  timeTakenSeconds?: number;
+}
+
+export interface SubmitOIRResponse {
+  success: boolean;
+  submissionId: string;
+  score: number;
+  total: number;
+  percentage: number;
+  oirRating: number;
+}
+
 export class SubmissionService {
   constructor(private readonly functionsInstance: Functions = defaultFunctions) {}
 
@@ -87,6 +102,11 @@ export class SubmissionService {
   submitSRTTest = this.call<{ responses: SRTResponseItem[] }, SubmitSubmissionResponse>('submitSRTTest');
   submitSDTest = this.call<{ responses: SDResponseItem[] }, SubmitSubmissionResponse>('submitSDTest');
   submitGTOTest = this.call<GTOSubmitPayload, SubmitSubmissionResponse>('submitGTOTest');
+  /** Persistence/notification parity fix: previously OIR never wrote a submissions/{id} doc at
+   * all on web (unlike every other type), so it had no result history and never fired the
+   * centralized "your result is ready" notification. Scores server-side, same as
+   * `evaluateOIRAnswers` -- never trusts a client-supplied score. */
+  submitOIRTest = this.call<OIRSubmitPayload, SubmitOIRResponse>('submitOIRTest');
   submitInterviewResponse = this.call<InterviewSubmitPayload, SubmitInterviewResponseResult>('submitInterviewResponse');
 
   evaluatePPDT = this.call<{ submissionId: string }, { success: boolean; status: string }>('evaluatePPDT');

@@ -1,7 +1,7 @@
 import { OIRQuestion } from '../types/testContent';
 import { IContentRepository } from '../repositories/interfaces/IContentRepository';
 import { OfflineQueueService } from '../services/OfflineQueueService';
-import { OIRScoringService } from '../services/OIRScoringService';
+import { SubmissionService } from '../services/SubmissionService';
 import { EligibilityService } from '../services/EligibilityService';
 
 export interface OIRAnswerPayload {
@@ -40,7 +40,7 @@ export interface OIRTestState {
 export class OIRTestViewModel {
   private repository: IContentRepository;
   private offlineQueueService: OfflineQueueService;
-  private scoringService: OIRScoringService;
+  private submissionService: SubmissionService;
   private eligibilityService: EligibilityService;
   private state: OIRTestState;
   private listeners: Set<() => void> = new Set();
@@ -49,12 +49,12 @@ export class OIRTestViewModel {
   constructor(
     repository: IContentRepository,
     offlineQueueService: OfflineQueueService = new OfflineQueueService(),
-    scoringService: OIRScoringService = new OIRScoringService(),
+    submissionService: SubmissionService = new SubmissionService(),
     eligibilityService: EligibilityService = new EligibilityService()
   ) {
     this.repository = repository;
     this.offlineQueueService = offlineQueueService;
-    this.scoringService = scoringService;
+    this.submissionService = submissionService;
     this.eligibilityService = eligibilityService;
     this.state = {
       questions: [],
@@ -212,19 +212,26 @@ export class OIRTestViewModel {
         throw new Error('Cannot submit: no batch loaded');
       }
 
-      // Anti-cheating evaluation: answers sent to the server-side evaluateOIRAnswers
-      // Cloud Function, which holds the answer keys the client never receives.
-      const evaluation = await this.scoringService.evaluateOIRAnswers(
-        this.state.batchId,
-        this.state.answers
-      );
+      // Anti-cheating evaluation + persistence: answers sent to the server-side submitOIRTest
+      // Cloud Function, which scores server-side (the answer keys never reach the client) AND
+      // writes the submissions/{id} doc every other test type already gets -- previously OIR
+      // never persisted a submission on web at all, so it had no result history and never fired
+      // the centralized "your result is ready" notification (onOirSubmissionCreated fires off
+      // this doc's creation).
+      const evaluation = await this.submissionService.submitOIRTest({
+        batchId: this.state.batchId,
+        userAnswers: this.state.answers,
+        timeTakenSeconds: this.totalDurationSeconds - this.state.timeRemainingSeconds
+      });
 
       // Charge quota only after the score is durable server-side. A recordTestUsage failure
       // (including resource-exhausted, if the client-side eligibility check was stale) is
       // logged, not surfaced -- the evaluation already succeeded and the user has already
       // earned this result, matching the KMP submit use cases' same "log, don't block" handling.
+      // Uses the real submissionId now (previously a throwaway crypto.randomUUID(), since there
+      // was no real submission to reference).
       try {
-        await this.eligibilityService.recordTestUsage('OIR', crypto.randomUUID());
+        await this.eligibilityService.recordTestUsage('OIR', evaluation.submissionId);
       } catch (usageError) {
         console.error('Failed to record OIR test usage', usageError);
       }

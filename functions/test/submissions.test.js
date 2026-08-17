@@ -15,9 +15,11 @@ const {
   createGTOSubmission,
   createInterviewResponse,
   createPIQSubmission,
+  createOIRSubmission,
   checkInterviewPrerequisites,
   GTO_TEST_TYPES
 } = require('../src/submissions');
+const { FirestorePaths } = require('../src/generated/contracts.cjs');
 
 /**
  * Fake supporting `collection(path).add(value)`, `.doc(id).get()`, and the
@@ -164,6 +166,78 @@ test('Phase 11b: createPIQSubmission writes analysisStatus COMPLETED immediately
   assert.equal(doc.testType, 'PIQ');
   assert.equal(doc.data.analysisStatus, 'COMPLETED');
   assert.equal(doc.data.targetBoard, 'Indian Army (SSB)');
+});
+
+/**
+ * OIR notification/persistence parity fix (2026-08-17): web's OIR flow previously never created a
+ * `submissions/{id}` doc at all, unlike every other test type -- so it had no result history and
+ * never triggered `onOirSubmissionCreated`'s notification. `createOIRSubmission` closes that gap.
+ */
+test('createOIRSubmission scores server-side (never trusts a client-supplied score) and persists the result', async () => {
+  const db = makeFakeDb({
+    [`${FirestorePaths.TestContent.OIR_BATCHES}/batch1`]: {
+      questions: [
+        { id: 'q1', correctAnswerId: 'a' },
+        { id: 'q2', correctAnswerId: 'b' },
+        { id: 'q3', correctAnswerId: 'c' },
+        { id: 'q4', correctAnswerId: 'd' }
+      ]
+    }
+  });
+
+  const result = await createOIRSubmission(db, 'user1', {
+    batchId: 'batch1',
+    userAnswers: { q1: 'a', q2: 'x', q3: 'c' }, // q1/q3 correct, q2 wrong, q4 skipped
+    timeTakenSeconds: 120
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.score, 2);
+  assert.equal(result.total, 4);
+  assert.equal(typeof result.oirRating, 'number');
+
+  const doc = db._store[`submissions/${result.submissionId}`];
+  assert.equal(doc.userId, 'user1');
+  assert.equal(doc.testType, 'OIR');
+  assert.equal(doc.status, 'SUBMITTED_PENDING_REVIEW');
+  assert.equal(doc.batchId, 'batch1');
+  assert.equal(doc.data.testResult.totalQuestions, 4);
+  assert.equal(doc.data.testResult.correctAnswers, 2);
+  assert.equal(doc.data.testResult.incorrectAnswers, 1);
+  assert.equal(doc.data.testResult.skippedQuestions, 1);
+  assert.equal(doc.data.testResult.percentageScore, 50);
+  assert.equal(doc.data.testResult.timeTakenSeconds, 120);
+});
+
+test('createOIRSubmission rejects with no batchId', async () => {
+  const db = makeFakeDb();
+  await assert.rejects(() => createOIRSubmission(db, 'user1', { userAnswers: {} }));
+});
+
+test('createOIRSubmission throws not-found for a missing batch, never falling back to scoring everything correct', async () => {
+  const db = makeFakeDb();
+  await assert.rejects(
+    () => createOIRSubmission(db, 'user1', { batchId: 'batch_missing', userAnswers: {} }),
+    (err) => {
+      assert.equal(err.code, 'not-found');
+      return true;
+    }
+  );
+});
+
+test('createOIRSubmission writes a doc that checkInterviewPrerequisites\' OIR gate reads correctly (integration between the two fixes)', async () => {
+  const db = makeFakeDb({
+    [`${FirestorePaths.TestContent.OIR_BATCHES}/batch1`]: {
+      questions: [{ id: 'q1', correctAnswerId: 'a' }, { id: 'q2', correctAnswerId: 'b' }]
+    },
+    'submissions/piq1': submissionDoc({ userId: 'user1', testType: 'PIQ', submittedAt: 1 }),
+    'submissions/ppdt1': submissionDoc({ userId: 'user1', testType: 'PPDT', submittedAt: 1 }),
+    [TIER_DOC_PATH]: { tier: 'PREMIUM' }
+  });
+
+  await createOIRSubmission(db, 'user1', { batchId: 'batch1', userAnswers: { q1: 'a', q2: 'b' } }); // 100%
+
+  await assert.doesNotReject(() => checkInterviewPrerequisites(db, 'user1'));
 });
 
 /**

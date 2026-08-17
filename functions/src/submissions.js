@@ -31,6 +31,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths } = require('./generated/contracts.cjs');
 const { checkQuota } = require('./evaluation/core');
+const { evaluateOIRSubmission } = require('./oirScoring');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -126,7 +127,77 @@ async function createPIQSubmission(db, uid, fields) {
   return { success: true, submissionId: ref.id };
 }
 
+/**
+ * OIR (Phase: web OIR notification/persistence parity). Unlike every other type here, OIR's
+ * result is fully known synchronously (`evaluateOIRSubmission` scores it server-side, same
+ * anti-cheat authority `evaluateOIRAnswers` already uses -- a client-supplied score is never
+ * trusted), so this writes a `SUBMITTED_PENDING_REVIEW` doc with the result already embedded,
+ * matching KMP's `SubmitOIRTestUseCase.kt` (score first, persist once, no PENDING_ANALYSIS ->
+ * COMPLETED transition to wait for). Its creation is what `onOirSubmissionCreated` fires
+ * `notifyEvaluationComplete` from.
+ *
+ * `data`'s shape is intentionally a subset of KMP's `OIRSubmissionTestResultDto` -- only the
+ * fields something actually reads today (`percentageScore`: `submissions.js`'s own
+ * `checkInterviewPrerequisites` OIR gate, and the notification's `actionData`). Web has no OIR
+ * result screen yet to render `categoryScores`/`answeredQuestions`/`grade`, and those aren't pure
+ * passthroughs of `evaluateOIRSubmission`'s return shape -- computing them here would mean
+ * re-deriving `OIRTestScoreCalculator.kt`'s categorization/grading logic a second time in JS, a
+ * second copy to keep in sync for a shape nothing reads. Field names that ARE written match
+ * KMP's exactly, so extending this later is additive, never a rename.
+ */
+async function createOIRSubmission(db, uid, { batchId, userAnswers, timeTakenSeconds }) {
+  if (!batchId) {
+    throw new functions.https.HttpsError('invalid-argument', 'batchId is required');
+  }
+  const result = await evaluateOIRSubmission(db, batchId, userAnswers || {});
+  const totalQuestions = result.total;
+  const correctAnswers = result.score;
+  const skippedQuestions = totalQuestions - Object.keys(userAnswers || {}).length;
+  const incorrectAnswers = totalQuestions - correctAnswers - skippedQuestions;
+  const status = 'SUBMITTED_PENDING_REVIEW';
+  const submittedAt = Date.now();
+
+  const ref = await db.collection(FirestorePaths.SUBMISSIONS).add({
+    userId: uid,
+    testType: 'OIR',
+    status,
+    submittedAt,
+    batchId,
+    data: {
+      testId: batchId,
+      userId: uid,
+      status,
+      submittedAt,
+      testResult: {
+        testId: batchId,
+        totalQuestions,
+        correctAnswers,
+        incorrectAnswers,
+        skippedQuestions,
+        rawScore: correctAnswers,
+        percentageScore: result.percentage,
+        timeTakenSeconds: timeTakenSeconds || 0,
+        completedAt: submittedAt
+      }
+    }
+  });
+  return {
+    success: true,
+    submissionId: ref.id,
+    score: correctAnswers,
+    total: totalQuestions,
+    percentage: result.percentage,
+    oirRating: result.oirRating
+  };
+}
+
 const runtimeOptions = { maxInstances: 10, timeoutSeconds: 60 };
+
+exports.submitOIRTest = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
+  const uid = requireAuth(context);
+  const { batchId, userAnswers, timeTakenSeconds } = requireObject(data, 'submission data');
+  return createOIRSubmission(admin.firestore(), uid, { batchId, userAnswers, timeTakenSeconds });
+});
 
 exports.submitPIQTest = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
   const uid = requireAuth(context);
@@ -248,5 +319,6 @@ exports.GTO_TEST_TYPES = GTO_TEST_TYPES;
 exports.createStandardSubmission = createStandardSubmission;
 exports.createPIQSubmission = createPIQSubmission;
 exports.createGTOSubmission = createGTOSubmission;
+exports.createOIRSubmission = createOIRSubmission;
 exports.createInterviewResponse = createInterviewResponse;
 exports.checkInterviewPrerequisites = checkInterviewPrerequisites;

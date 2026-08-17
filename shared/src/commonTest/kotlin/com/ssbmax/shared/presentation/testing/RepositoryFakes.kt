@@ -262,6 +262,14 @@ class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
         evaluateTATCalls.add(submissionId)
         return evaluateTATResult
     }
+
+    var notifyGradingCompleteResult: Result<Unit> = Result.success(Unit)
+    val notifyGradingCompleteCalls = mutableListOf<String>()
+
+    override suspend fun notifyGradingComplete(submissionId: String): Result<Unit> {
+        notifyGradingCompleteCalls.add(submissionId)
+        return notifyGradingCompleteResult
+    }
 }
 
 class FakeDifficultyProgressionRepository(
