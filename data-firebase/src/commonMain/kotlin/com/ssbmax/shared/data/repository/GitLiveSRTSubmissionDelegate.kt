@@ -45,6 +45,7 @@ internal class GitLiveSRTSubmissionDelegate(private val store: GitLiveOlqResultS
                 totalTimeTakenMinutes = submission.totalTimeTakenMinutes,
                 submittedAt = submission.submittedAt,
                 status = submission.status.name,
+                analysisStatus = AnalysisStatus.PENDING_ANALYSIS.name,
                 instructorScore = submission.instructorScore?.toDto(),
                 gradedByInstructorId = submission.gradedByInstructorId,
                 gradingTimestamp = submission.gradingTimestamp
