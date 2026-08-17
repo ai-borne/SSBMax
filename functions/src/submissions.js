@@ -176,6 +176,7 @@ async function createOIRSubmission(db, uid, { batchId, userAnswers, timeTakenSec
         skippedQuestions,
         rawScore: correctAnswers,
         percentageScore: result.percentage,
+        oirRating: result.oirRating,
         timeTakenSeconds: timeTakenSeconds || 0,
         completedAt: submittedAt
       }

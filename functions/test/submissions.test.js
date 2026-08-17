@@ -206,6 +206,7 @@ test('createOIRSubmission scores server-side (never trusts a client-supplied sco
   assert.equal(doc.data.testResult.incorrectAnswers, 1);
   assert.equal(doc.data.testResult.skippedQuestions, 1);
   assert.equal(doc.data.testResult.percentageScore, 50);
+  assert.equal(doc.data.testResult.oirRating, result.oirRating);
   assert.equal(doc.data.testResult.timeTakenSeconds, 120);
 });
 

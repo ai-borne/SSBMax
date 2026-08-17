@@ -35,6 +35,23 @@ export class SubmissionRepository {
     }
   }
 
+  /**
+   * Reads a `submissions/{id}` doc's own nested `data` envelope directly, for test types whose
+   * result lives on the submission doc itself rather than a separate result collection -- OIR is
+   * the one type today (`functions/src/submissions.js::createOIRSubmission` embeds `testResult`
+   * at submit time, since OIR's score is known synchronously; there's no `PENDING_ANALYSIS` ->
+   * `COMPLETED` transition to poll for, unlike `getResult`'s AI-graded siblings).
+   */
+  async getSubmissionData<T>(submissionId: string): Promise<T | null> {
+    try {
+      const snap = await getDoc(doc(db, FirestorePaths.SUBMISSIONS, submissionId));
+      return snap.exists() ? (snap.data().data as T) : null;
+    } catch (error) {
+      console.warn(`Failed to fetch submission data for ${submissionId}`, error);
+      return null;
+    }
+  }
+
   /** Generic result-collection reader -- pass a `FirestorePaths.*_RESULTS` constant + doc id. */
   async getResult<T>(collectionName: string, id: string): Promise<T | null> {
     try {

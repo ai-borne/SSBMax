@@ -12,6 +12,7 @@ import { PsychologyTestRunner } from './components/testRunners/PsychologyTestRun
 import { GTOTaskGuideRunner } from './components/testRunners/GTOTaskGuideRunner';
 import { AIReportsPage } from './components/reports/AIReportsPage';
 import { SubmissionResultView } from './components/evaluation/SubmissionResultView';
+import { OIRSubmissionResultView } from './components/evaluation/OIRSubmissionResultView';
 import { useOLQDashboardViewModel } from './viewmodels/useOLQDashboardViewModel';
 import { resolveNotificationResultTarget, NotificationResultTarget } from './utils/notificationResultRoute';
 import type { SSBMaxNotification } from './types/notification';
@@ -166,7 +167,11 @@ export const App: FC = () => {
                   <ArrowLeft className="w-3.5 h-3.5" />
                   {strings.common.back}
                 </button>
-                <SubmissionResultView submissionId={selectedResult.submissionId} resultCollection={selectedResult.resultCollection} />
+                {selectedResult.kind === 'oir' ? (
+                  <OIRSubmissionResultView submissionId={selectedResult.submissionId} />
+                ) : (
+                  <SubmissionResultView submissionId={selectedResult.submissionId} resultCollection={selectedResult.resultCollection} />
+                )}
               </div>
             ) : (
               <AIReportsPage
