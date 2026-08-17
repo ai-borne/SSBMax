@@ -29,6 +29,13 @@ import platform.UIKit.UIDevice
  * `NotificationRepository.saveFCMToken` for real -- this bridge writes into
  * the same repository/collection, not a first-of-its-kind path.
  *
+ * **BLOCKED (revisit later):** APNs auth key setup deferred pending decision on
+ * Apple Developer account structure (user account vs. spouse's account). Once
+ * APNs key is uploaded to Firebase Console (Project Settings > Cloud Messaging >
+ * Apple App Configuration), this bridge + AppDelegate will automatically register
+ * the FCM token and enable push delivery to iOS (Phase 2). See
+ * `docs/plans/Centralized Result-Announcement Notifications.md` §2 "open items #2".
+ *
  * **Superseded note, kept for history:** earlier (Phase 6 KMP-migration-plan)
  * this file saved the *raw APNs device token* because GitLive's Firebase
  * Kotlin SDK has no Messaging module and no `FirebaseMessaging` SPM product
