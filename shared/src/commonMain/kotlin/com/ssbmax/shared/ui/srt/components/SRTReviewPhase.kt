@@ -23,7 +23,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,44 +46,49 @@ import ssbmax.shared.generated.resources.srt_submit_test
  * candidate can revisit and edit any prior response before a final explicit
  * submit, confirmed by reading the real Android `SRTTestViewModel`
  * (`editResponse(index)` jumps back to `IN_PROGRESS` at that index).
+ *
+ * Renders body content only -- no own `Scaffold`/top bar. [SRTTestScreen]
+ * hosts a single `Scaffold` shared by every [com.ssbmax.shared.domain.model.SRTPhase],
+ * with [SRTReviewBottomBar] supplying this phase's submit button to that
+ * Scaffold's `bottomBar` slot; nesting a second `Scaffold` here would apply
+ * `WindowInsets.safeDrawing`'s top inset a second time on top of the outer
+ * one, double-padding the content under the app bar.
  */
 @Composable
 fun SRTReviewPhase(
     responses: List<SRTSituationResponse>,
     totalSituations: Int,
-    onEdit: (Int) -> Unit,
-    onSubmit: () -> Unit
+    onEdit: (Int) -> Unit
 ) {
-    Scaffold(
-        bottomBar = {
-            Surface(tonalElevation = 3.dp) {
-                Button(onClick = onSubmit, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(stringResource(Res.string.srt_submit_test))
-                }
-            }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            SRTReviewHeader(
+                validResponseCount = responses.count { it.isValidResponse },
+                totalSituations = totalSituations
+            )
         }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                SRTReviewHeader(
-                    validResponseCount = responses.count { it.isValidResponse },
-                    totalSituations = totalSituations
-                )
-            }
-            items(responses.size) { index ->
-                val response = responses[index]
-                SRTResponseReviewCard(
-                    number = index + 1,
-                    situation = response.situation,
-                    response = response.response,
-                    isSkipped = response.isSkipped,
-                    onEdit = { onEdit(index) }
-                )
-            }
+        items(responses.size) { index ->
+            val response = responses[index]
+            SRTResponseReviewCard(
+                number = index + 1,
+                situation = response.situation,
+                response = response.response,
+                isSkipped = response.isSkipped,
+                onEdit = { onEdit(index) }
+            )
+        }
+    }
+}
+
+@Composable
+fun SRTReviewBottomBar(onSubmit: () -> Unit) {
+    Surface(tonalElevation = 3.dp) {
+        Button(onClick = onSubmit, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(stringResource(Res.string.srt_submit_test))
         }
     }
 }

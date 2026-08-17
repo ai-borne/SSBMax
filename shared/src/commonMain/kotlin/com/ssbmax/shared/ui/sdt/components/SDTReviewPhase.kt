@@ -12,13 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,7 +32,6 @@ import ssbmax.shared.generated.resources.sdt_char_count_label
 import ssbmax.shared.generated.resources.sdt_edit
 import ssbmax.shared.generated.resources.sdt_review_question_number
 import ssbmax.shared.generated.resources.sdt_review_skipped
-import ssbmax.shared.generated.resources.sdt_review_title
 
 /**
  * KMP port of `app/.../ui/tests/sdt/SDTTestScreen.kt`'s `ReviewScreen`. Same
@@ -41,28 +39,33 @@ import ssbmax.shared.generated.resources.sdt_review_title
  * can revisit and edit any prior answer before a final explicit submit,
  * confirmed by reading the real Android `SDTTestViewModel`
  * (`editQuestion(index)` jumps back to `IN_PROGRESS` at that index).
+ *
+ * Renders body content only -- no own `TopAppBar`. [SDTTestScreen] hosts a
+ * single `Scaffold`-level `TopAppBar` shared by every
+ * [com.ssbmax.shared.domain.model.SDTPhase], with [SDTReviewBottomBar]
+ * supplying this phase's submit button to that Scaffold's `bottomBar` slot
+ * (same consolidation as [com.ssbmax.shared.ui.srt.components.SRTReviewPhase]).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SDTReviewPhase(
     questions: List<SDTQuestion>,
     responses: List<SDTQuestionResponse>,
-    onEdit: (Int) -> Unit,
-    onSubmit: () -> Unit
+    onEdit: (Int) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text(stringResource(Res.string.sdt_review_title)) })
-
-        LazyColumn(
-            modifier = Modifier.weight(1f).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            itemsIndexed(questions) { index, question ->
-                val response = responses.getOrNull(index)
-                SDTReviewCard(index = index, question = question, response = response, onEdit = { onEdit(index) })
-            }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        itemsIndexed(questions) { index, question ->
+            val response = responses.getOrNull(index)
+            SDTReviewCard(index = index, question = question, response = response, onEdit = { onEdit(index) })
         }
+    }
+}
 
+@Composable
+fun SDTReviewBottomBar(onSubmit: () -> Unit) {
+    Surface(tonalElevation = 3.dp) {
         Button(onClick = onSubmit, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Text(stringResource(Res.string.sdt_action_submit_test))
         }

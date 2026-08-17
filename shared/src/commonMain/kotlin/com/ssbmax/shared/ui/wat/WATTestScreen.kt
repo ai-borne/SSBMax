@@ -4,10 +4,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import com.ssbmax.shared.ui.common.SsbBackHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.SubscriptionTier
@@ -24,13 +35,19 @@ import com.ssbmax.shared.domain.model.WATPhase
 import com.ssbmax.shared.presentation.wat.WATTestViewModel
 import com.ssbmax.shared.ui.common.TestErrorState
 import com.ssbmax.shared.ui.common.TestLimitReachedDialog
+import com.ssbmax.shared.ui.common.timerSemantics
 import com.ssbmax.shared.ui.wat.components.WATExitDialog
 import com.ssbmax.shared.ui.wat.components.WATInProgressPhase
 import com.ssbmax.shared.ui.wat.components.WATInstructionsPhase
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import ssbmax.shared.generated.resources.Res
+import ssbmax.shared.generated.resources.wat_back_cd
+import ssbmax.shared.generated.resources.wat_full_title
 import ssbmax.shared.generated.resources.wat_loading
+import ssbmax.shared.generated.resources.wat_progress_format
+import ssbmax.shared.generated.resources.wat_timer_content_description
+import ssbmax.shared.generated.resources.wat_timer_format
 
 /**
  * KMP port of `app/.../ui/tests/wat/WATTestScreen.kt`.
@@ -52,7 +69,7 @@ import ssbmax.shared.generated.resources.wat_loading
  * last word), and no profile-required gate (WAT's `loadTest` doesn't check
  * gender/profile completeness, unlike TAT).
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun WATTestScreen(
     testId: String,
@@ -93,29 +110,39 @@ fun WATTestScreen(
         return
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        when {
-            uiState.isLoading -> LoadingState(modifier = Modifier.fillMaxSize())
-            uiState.error != null -> TestErrorState(
-                error = uiState.error!!,
-                onRetry = { viewModel.loadTest(testId) },
-                modifier = Modifier.fillMaxSize()
+    Scaffold(
+        topBar = {
+            WATTopBar(
+                phase = uiState.phase,
+                wordNumber = uiState.currentWordIndex + 1,
+                totalWords = uiState.words.size,
+                timeRemaining = uiState.timeRemaining,
+                onShowExitDialog = { showExitDialog = true }
             )
-            else -> when (uiState.phase) {
-                WATPhase.INSTRUCTIONS -> WATInstructionsPhase(onStart = { viewModel.startTest() })
-                WATPhase.IN_PROGRESS -> WATInProgressPhase(
-                    word = uiState.currentWord?.word ?: "",
-                    wordNumber = uiState.currentWordIndex + 1,
-                    totalWords = uiState.words.size,
-                    timeRemaining = uiState.timeRemaining,
-                    response = uiState.currentResponse,
-                    onResponseChange = { viewModel.updateResponse(it) },
-                    onSubmit = { viewModel.submitResponse() },
-                    onSkip = { viewModel.skipWord() },
-                    onShowExitDialog = { showExitDialog = true }
+        },
+        modifier = modifier
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            when {
+                uiState.isLoading -> LoadingState(modifier = Modifier.fillMaxSize())
+                uiState.error != null -> TestErrorState(
+                    error = uiState.error!!,
+                    onRetry = { viewModel.loadTest(testId) },
+                    modifier = Modifier.fillMaxSize()
                 )
-                WATPhase.COMPLETED -> Unit // auto-submits; brief transitional state
-                WATPhase.SUBMITTED -> Unit // navigation happens in LaunchedEffect above
+                else -> when (uiState.phase) {
+                    WATPhase.INSTRUCTIONS -> WATInstructionsPhase(onStart = { viewModel.startTest() })
+                    WATPhase.IN_PROGRESS -> WATInProgressPhase(
+                        word = uiState.currentWord?.word ?: "",
+                        timeRemaining = uiState.timeRemaining,
+                        response = uiState.currentResponse,
+                        onResponseChange = { viewModel.updateResponse(it) },
+                        onSubmit = { viewModel.submitResponse() },
+                        onSkip = { viewModel.skipWord() }
+                    )
+                    WATPhase.COMPLETED -> Unit // auto-submits; brief transitional state
+                    WATPhase.SUBMITTED -> Unit // navigation happens in LaunchedEffect above
+                }
             }
         }
     }
@@ -136,4 +163,65 @@ private fun LoadingState(modifier: Modifier = Modifier) {
             Text(text = stringResource(Res.string.wat_loading), style = MaterialTheme.typography.bodyMedium)
         }
     }
+}
+
+/**
+ * Always present, across every [WATPhase] -- matching TAT/PPDT's precedent of a single
+ * `Scaffold`-level `TopAppBar` for the whole screen, rather than WAT's previous per-phase
+ * header drawn inside a plain `Row`. `TopAppBar` applies `WindowInsets.statusBars` by
+ * default; the plain `Row` it replaces didn't, which let the header and the instructions
+ * title card render underneath the status bar/notch.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WATTopBar(
+    phase: WATPhase,
+    wordNumber: Int,
+    totalWords: Int,
+    timeRemaining: Int,
+    onShowExitDialog: () -> Unit
+) {
+    TopAppBar(
+        title = {
+            if (phase == WATPhase.IN_PROGRESS) {
+                Text(
+                    stringResource(Res.string.wat_progress_format, wordNumber, totalWords),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                Text(stringResource(Res.string.wat_full_title), style = MaterialTheme.typography.titleMedium)
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onShowExitDialog) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.wat_back_cd))
+            }
+        },
+        actions = {
+            if (phase == WATPhase.IN_PROGRESS) {
+                val timerDescription = stringResource(Res.string.wat_timer_content_description, timeRemaining)
+                Card(
+                    modifier = Modifier
+                        .padding(end = 16.dp)
+                        .timerSemantics(
+                            description = timerDescription,
+                            remainingSeconds = timeRemaining,
+                            totalSeconds = 15
+                        ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (timeRemaining <= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(
+                        stringResource(Res.string.wat_timer_format, timeRemaining),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+    )
 }

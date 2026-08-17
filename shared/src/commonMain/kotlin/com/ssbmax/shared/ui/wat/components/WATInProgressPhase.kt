@@ -18,13 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -38,16 +32,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ssbmax.shared.ui.common.timerSemantics
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
-import ssbmax.shared.generated.resources.wat_back_cd
-import ssbmax.shared.generated.resources.wat_progress_format
 import ssbmax.shared.generated.resources.wat_response_placeholder
 import ssbmax.shared.generated.resources.wat_skip
 import ssbmax.shared.generated.resources.wat_submit
-import ssbmax.shared.generated.resources.wat_timer_content_description
-import ssbmax.shared.generated.resources.wat_timer_format
 
 /**
  * KMP port of `app/.../ui/tests/wat/components/WATInProgressView.kt`. Unlike
@@ -56,78 +45,32 @@ import ssbmax.shared.generated.resources.wat_timer_format
  * the real Android state machine read before porting -- there is no separate
  * viewing phase for WAT. The exit-confirmation `AlertDialog` from the Android
  * original is extracted to [WATExitDialog] (`WATDialogs.kt`) rather than
- * inlined here, matching TAT/PPDT's dialog-extraction precedent; this
- * composable renders only the header + word + response body.
+ * inlined here, matching TAT/PPDT's dialog-extraction precedent. The
+ * progress/timer header now lives in [com.ssbmax.shared.ui.wat.WATTestScreen]'s
+ * `Scaffold` topBar (so it gets proper status-bar insets, matching TAT/PPDT) --
+ * this composable renders only the word + response body.
  */
 @Composable
 fun WATInProgressPhase(
     word: String,
-    wordNumber: Int,
-    totalWords: Int,
     timeRemaining: Int,
     response: String,
     onResponseChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onSkip: () -> Unit,
-    onShowExitDialog: () -> Unit
+    onSkip: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = if (timeRemaining <= 5) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            WATHeader(wordNumber, totalWords, timeRemaining, onShowExitDialog)
-            WATActiveContent(
-                word = word,
-                response = response,
-                onResponseChange = onResponseChange,
-                onSubmit = onSubmit,
-                onSkip = onSkip,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
-@Composable
-private fun WATHeader(
-    wordNumber: Int,
-    totalWords: Int,
-    timeRemaining: Int,
-    onShowExitDialog: () -> Unit
-) {
-    val timerDescription = stringResource(Res.string.wat_timer_content_description, timeRemaining)
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onShowExitDialog) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.wat_back_cd))
-        }
-        Text(
-            stringResource(Res.string.wat_progress_format, wordNumber, totalWords),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+        WATActiveContent(
+            word = word,
+            response = response,
+            onResponseChange = onResponseChange,
+            onSubmit = onSubmit,
+            onSkip = onSkip,
+            modifier = Modifier.fillMaxSize()
         )
-        Card(
-            modifier = Modifier.timerSemantics(
-                description = timerDescription,
-                remainingSeconds = timeRemaining,
-                totalSeconds = 15
-            ),
-            colors = CardDefaults.cardColors(
-                containerColor = if (timeRemaining <= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text(
-                stringResource(Res.string.wat_timer_format, timeRemaining),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-        }
     }
 }
 
