@@ -140,7 +140,7 @@ test('evaluateGTOSubmission does not charge the usage counter when the Gemini re
 });
 
 /** Phase 1 (Centralized Result-Announcement Notifications plan): notify hook on the completion write. */
-test('evaluateGTOSubmission writes a NOTIFICATIONS doc exactly once on COMPLETED, keyed to config.resultTestType', async () => {
+test('evaluateGTOSubmission writes a NOTIFICATIONS doc exactly once on COMPLETED, keyed to the submission\'s contract testType', async () => {
   const db = makeFakeDb({
     [`submissions/${GTO_SUBMISSION_ID}`]: { userId: GTO_UID, testType: 'GTO_GD', status: 'PENDING_ANALYSIS' },
     [`users/${GTO_UID}/data/subscription`]: { tier: 'PRO' }
@@ -152,7 +152,11 @@ test('evaluateGTOSubmission writes a NOTIFICATIONS doc exactly once on COMPLETED
   const doc = db._store[notifications[0]];
   assert.equal(doc.userId, GTO_UID);
   assert.equal(doc.type, 'GRADING_COMPLETE');
-  assert.equal(doc.actionData.testType, 'GROUP_DISCUSSION');
+  // Must be the contract TestType id ('GTO_GD'), not the domain GTOTestType enum name
+  // ('GROUP_DISCUSSION') gto_results uses -- sendNotification.js's label/route lookup
+  // and both clients' notification-tap routing (resolveNotificationResultDestination.kt,
+  // notificationResultRoute.ts) are keyed on the contract id.
+  assert.equal(doc.actionData.testType, 'GTO_GD');
 });
 
 test('evaluateGTOSubmission does not write a NOTIFICATIONS doc when the Gemini response never parses (FAILED)', async () => {

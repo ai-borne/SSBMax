@@ -162,7 +162,7 @@ async function evaluateGTOSubmission(db, uid, submissionId, generateContentFn = 
   // calls it" quota-bypass gap. Idempotent by submissionId.
   await recordAndEnforce(db, uid, submission.testType, submissionId);
 
-  await notifyEvaluationComplete({ firestoreDb: db, userId: submission.userId, testType: config.resultTestType, submissionId });
+  await notifyEvaluationComplete({ firestoreDb: db, userId: submission.userId, testType: submission.testType, submissionId });
 
   return { success: true, submissionId, status: 'COMPLETED' };
 }
