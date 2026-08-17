@@ -14,6 +14,7 @@ import com.ssbmax.shared.domain.model.interview.PrerequisiteCheckResult
 import com.ssbmax.shared.domain.model.interview.QuestionCacheRepository
 import com.ssbmax.shared.domain.repository.InterviewRepository
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.firestore
@@ -24,12 +25,11 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
 /**
- * GitLive-Firebase-backed port of the Android `FirestoreInterviewRepository`. Same collections
- * (`interview_sessions`, `interview_responses`, `interview_results`, `interview_questions`,
- * `submissions`) as the Android original. Question generation delegates to
- * [InterviewQuestionGenerator], result aggregation to the top-level [aggregateInterviewResult]
- * helper — both extracted (like [GitLiveGTORepository]'s own DTO/helper split) to keep this file
- * under this repo's 300-line limit.
+ * GitLive-Firebase-backed port of the Android `FirestoreInterviewRepository`. Reads against
+ * `interview_sessions`/`interview_responses`/`interview_results`/`interview_questions` stay
+ * direct Firestore reads; writes to those same collections that used to happen client-side
+ * (question generation + result aggregation) now go through [evaluationFunctionsClient] instead
+ * (see [createSession]/[completeInterview]'s own doc).
  *
  * [checkPrerequisites] stays an unconditional `UnsupportedOperationException` stub, identical to
  * the Android original: its real check lives in `CheckInterviewPrerequisitesUseCase` (use-case
@@ -43,18 +43,25 @@ import kotlinx.datetime.toLocalDateTime
  * [com.ssbmax.shared.domain.model.TestType.IO] already maps to. `mode` is accepted (interface
  * contract) but unused -- [SubscriptionLimits]/[dev.gitlive.firebase.firestore] usage tracking
  * doesn't differentiate by interview mode, same as [getRemainingInterviews] below.
+ *
+ * [createSession]/[completeInterview] delegate to [evaluationFunctionsClient] rather than
+ * writing `interview_sessions`/`interview_questions`/`interview_results` directly --
+ * `firestore.rules` marks all three server-only (`allow write: if false`); a direct client
+ * write always returned PERMISSION_DENIED (Interview session/result server-migration plan).
+ * [questionGenerator] is still used for [generateQuestions] (unrelated preview/legacy caller)
+ * and to build the PIQ text context [evaluationFunctionsClient] hands the server.
  */
 class GitLiveInterviewRepository(
     private val questionCacheRepository: QuestionCacheRepository,
     private val questionGenerator: InterviewQuestionGenerator,
-    private val subscriptionRepository: SubscriptionRepository
+    private val subscriptionRepository: SubscriptionRepository,
+    private val evaluationFunctionsClient: EvaluationFunctionsClient
 ) : InterviewRepository {
 
     private val sessionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_SESSIONS)
     private val responsesCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_RESPONSES)
     private val resultsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_RESULTS)
     private val questionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_QUESTIONS)
-    private val submissionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
 
     override suspend fun checkPrerequisites(userId: String): Result<PrerequisiteCheckResult> =
         Result.failure(UnsupportedOperationException("Use CheckInterviewPrerequisitesUseCase"))
@@ -73,36 +80,19 @@ class GitLiveInterviewRepository(
 
     // ==================== Session Management ====================
 
+    /**
+     * `interview_sessions`/`interview_questions` are server-only in `firestore.rules`
+     * (`allow write: if false`) -- question generation, PIQ-context resolution, and the write
+     * all happen in the `createInterviewSession` Cloud Function now; this just forwards the
+     * request.
+     */
     override suspend fun createSession(
         userId: String,
         mode: InterviewMode,
         piqSnapshotId: String,
         consentGiven: Boolean
-    ): Result<InterviewSession> = try {
-        val questions = questionGenerator.generateQuestions(piqSnapshotId, InterviewConstants.TARGET_TOTAL_QUESTIONS)
-            .getOrElse { return Result.failure(it) }
-
-        val session = InterviewSession(
-            id = randomId(),
-            userId = userId,
-            mode = mode,
-            status = InterviewStatus.IN_PROGRESS,
-            startedAt = Clock.System.now(),
-            completedAt = null,
-            piqSnapshotId = piqSnapshotId,
-            consentGiven = consentGiven,
-            questionIds = questions.map { it.id },
-            currentQuestionIndex = 0,
-            estimatedDuration = InterviewConstants.DEFAULT_DURATION_MINUTES
-        )
-
-        val batch = Firebase.firestore.batch()
-        questions.forEach { question -> batch.set(questionsCollection.document(question.id), question.toDto()) }
-        batch.set(sessionsCollection.document(session.id), session.toDto())
-        batch.commit()
-
-        Result.success(session)
-    } catch (e: Exception) { Result.failure(e) }
+    ): Result<InterviewSession> =
+        evaluationFunctionsClient.createInterviewSession(mode, piqSnapshotId, consentGiven)
 
     override suspend fun getActiveSession(userId: String): Result<InterviewSession?> = try {
         val snapshot = sessionsCollection
@@ -198,32 +188,9 @@ class GitLiveInterviewRepository(
 
     // ==================== Result Management ====================
 
-    override suspend fun completeInterview(sessionId: String): Result<InterviewResult> = try {
-        val session = getSession(sessionId).getOrElse { return Result.failure(it) }
-        val responses = getResponses(sessionId).getOrDefault(emptyList())
-        val result = aggregateInterviewResult(session, responses)
-
-        resultsCollection.document(result.id).set(result.toDto())
-        updateSession(session.copy(status = InterviewStatus.COMPLETED, completedAt = Clock.System.now()))
-
-        // Progress-tracking submission record so a completed interview shows up in "Your Progress"
-        val submissionId = "interview_${result.id}"
-        submissionsCollection.document(submissionId).set(
-            InterviewProgressSubmissionDto(
-                id = submissionId,
-                userId = session.userId,
-                testId = sessionId,
-                testType = "IO",
-                status = "COMPLETED",
-                submittedAt = result.completedAt.toEpochMilliseconds(),
-                score = (10 - result.overallRating).toFloat() * 10,
-                resultId = result.id,
-                mode = result.mode.name
-            )
-        )
-
-        Result.success(result)
-    } catch (e: Exception) { Result.failure(e) }
+    /** Same server-only rule applies to `interview_results` -- see [createSession]'s doc. */
+    override suspend fun completeInterview(sessionId: String): Result<InterviewResult> =
+        evaluationFunctionsClient.completeInterviewSession(sessionId)
 
     override suspend fun getResult(sessionId: String): Result<InterviewResult> = try {
         val snapshot = resultsCollection.where { FIELD_SESSION_ID equalTo sessionId }.limit(1).get()

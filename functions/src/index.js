@@ -23,6 +23,9 @@ const { evaluateWAT } = require('./evaluation/watEvaluate');
 const { evaluateSRT } = require('./evaluation/srtEvaluate');
 const { evaluateSD } = require('./evaluation/sdEvaluate');
 const { evaluateInterviewResponse } = require('./evaluation/interviewEvaluate');
+const { createInterviewSession } = require('./interview/createInterviewSession');
+const { completeInterviewSession } = require('./interview/completeInterviewSession');
+const { archiveOldSubmissions } = require('./archival/archiveOldSubmissions');
 const { evaluateGTO } = require('./evaluation/gtoEvaluate');
 const { evaluatePPDT } = require('./evaluation/ppdtEvaluate');
 const { evaluateTAT } = require('./evaluation/tatEvaluate');
@@ -69,6 +72,18 @@ exports.evaluateSD = evaluateSD;
 // per-submission -- generalizes the legacy `analyzeInterviewResponse` above rather than
 // replacing it (legacy stays live during the canary/bake period).
 exports.evaluateInterviewResponse = evaluateInterviewResponse;
+// Interview session/result server-migration plan: `interview_sessions`/`interview_questions`/
+// `interview_results` are server-only in firestore.rules (`allow write: if false`) --
+// GitLiveInterviewRepository's client-side createSession()/completeInterview() always hit
+// PERMISSION_DENIED writing them directly. These two callables are the real write path now;
+// KMP calls them via EvaluationFunctionsClient instead.
+exports.createInterviewSession = createInterviewSession;
+exports.completeInterviewSession = completeInterviewSession;
+// Submission archival server-migration: `archived_submissions` is server-only in
+// firestore.rules -- Android's ArchivalWorker used to write to it directly and always hit
+// PERMISSION_DENIED (no data loss -- the delete-original step never ran either). This scheduled
+// function replaces that client-side WorkManager/BGTaskScheduler job entirely on both platforms.
+exports.archiveOldSubmissions = archiveOldSubmissions;
 // Phase 8 Ship (Web SSB Test Flow Parity plan): behind KMP's `gto_server_evaluation`
 // feature flag, default off -- see GTOAnalysisOrchestrator. GD/GPE/Lecturette only
 // (scope correction, confirmed with the user -- see gtoPrompts.js's class doc for why

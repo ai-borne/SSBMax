@@ -1,5 +1,9 @@
 package com.ssbmax.shared.domain.service
 
+import com.ssbmax.shared.domain.model.interview.InterviewMode
+import com.ssbmax.shared.domain.model.interview.InterviewResult
+import com.ssbmax.shared.domain.model.interview.InterviewSession
+
 /**
  * Domain interface for the Tier-2 evaluation Cloud Functions
  * (`functions/src/evaluation/{type}Evaluate.js`), the centralized-evaluation SSOT both
@@ -31,6 +35,32 @@ interface EvaluationFunctionsClient {
      * `evaluateInterviewResponse`'s ownership check.
      */
     suspend fun evaluateInterviewResponse(responseId: String, sessionId: String): Result<Unit>
+
+    /**
+     * Interview session/result server-migration: `interview_sessions`/`interview_questions`
+     * are server-only in `firestore.rules` (`allow write: if false`) -- question generation
+     * and the session write now happen entirely server-side in this callable
+     * (`functions/src/interview/createInterviewSession.js`, porting
+     * `InterviewQuestionGenerator.kt`'s cache -> AI -> static-fallback strategy). The client
+     * only supplies [piqSnapshotId]/[mode]/[consentGiven]; the returned [InterviewSession]
+     * already has `questionIds` populated. The function resolves the PIQ text context itself
+     * server-side from [piqSnapshotId] (fetches the caller's own `submissions/{id}` doc,
+     * ownership-checked, and runs `functions/src/interview/piqContextBuilder.js` -- a port of
+     * `PIQContextBuilder.kt`) rather than trusting a client-supplied context string.
+     */
+    suspend fun createInterviewSession(
+        mode: InterviewMode,
+        piqSnapshotId: String,
+        consentGiven: Boolean
+    ): Result<InterviewSession>
+
+    /**
+     * Server-side counterpart to [createInterviewSession] for `interview_results`, same
+     * `allow write: if false` rule. Aggregates OLQ scores from the session's
+     * `interview_responses` and writes the result (`functions/src/interview/
+     * completeInterviewSession.js`, porting `InterviewResultAggregation.kt`).
+     */
+    suspend fun completeInterviewSession(sessionId: String): Result<InterviewResult>
 
     /**
      * GTO evaluation (Phase 8, Web SSB Test Flow Parity plan). Covers GD/GPE/Lecturette

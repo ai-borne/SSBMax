@@ -1,5 +1,11 @@
 package com.ssbmax.shared.data.service
 
+import com.ssbmax.shared.data.repository.InterviewResultDto
+import com.ssbmax.shared.data.repository.InterviewSessionDto
+import com.ssbmax.shared.data.repository.toDomain
+import com.ssbmax.shared.domain.model.interview.InterviewMode
+import com.ssbmax.shared.domain.model.interview.InterviewResult
+import com.ssbmax.shared.domain.model.interview.InterviewSession
 import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.functions.functions
@@ -10,6 +16,22 @@ private data class EvaluateSubmissionRequest(val submissionId: String)
 
 @Serializable
 private data class EvaluateInterviewResponseRequest(val responseId: String, val sessionId: String)
+
+@Serializable
+private data class CreateInterviewSessionRequest(
+    val mode: String,
+    val piqSnapshotId: String,
+    val consentGiven: Boolean
+)
+
+@Serializable
+private data class CreateInterviewSessionResponse(val session: InterviewSessionDto)
+
+@Serializable
+private data class CompleteInterviewSessionRequest(val sessionId: String)
+
+@Serializable
+private data class CompleteInterviewSessionResponse(val result: InterviewResultDto)
 
 /**
  * [EvaluationFunctionsClient] backed by the `evaluate*` Cloud Functions
@@ -51,6 +73,25 @@ class GitLiveEvaluationFunctionsClient : EvaluationFunctionsClient {
         Firebase.functions.httpsCallable("evaluateInterviewResponse")
             .invoke(EvaluateInterviewResponseRequest(responseId, sessionId))
         Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun createInterviewSession(
+        mode: InterviewMode,
+        piqSnapshotId: String,
+        consentGiven: Boolean
+    ): Result<InterviewSession> = try {
+        val request = CreateInterviewSessionRequest(mode = mode.name, piqSnapshotId = piqSnapshotId, consentGiven = consentGiven)
+        val result = Firebase.functions.httpsCallable("createInterviewSession").invoke(request)
+        Result.success(result.data<CreateInterviewSessionResponse>().session.toDomain())
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun completeInterviewSession(sessionId: String): Result<InterviewResult> = try {
+        val result = Firebase.functions.httpsCallable("completeInterviewSession").invoke(CompleteInterviewSessionRequest(sessionId))
+        Result.success(result.data<CompleteInterviewSessionResponse>().result.toDomain())
     } catch (e: Exception) {
         Result.failure(e)
     }

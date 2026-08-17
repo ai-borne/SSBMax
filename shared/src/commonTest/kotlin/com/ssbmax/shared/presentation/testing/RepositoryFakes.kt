@@ -239,6 +239,27 @@ class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
         return evaluateInterviewResponseResult
     }
 
+    var createInterviewSessionResult: Result<com.ssbmax.shared.domain.model.interview.InterviewSession> =
+        Result.failure(UnsupportedOperationException("not stubbed"))
+    val createInterviewSessionCalls = mutableListOf<String>()
+    var completeInterviewSessionResult: Result<com.ssbmax.shared.domain.model.interview.InterviewResult> =
+        Result.failure(UnsupportedOperationException("not stubbed"))
+    val completeInterviewSessionCalls = mutableListOf<String>()
+
+    override suspend fun createInterviewSession(
+        mode: com.ssbmax.shared.domain.model.interview.InterviewMode,
+        piqSnapshotId: String,
+        consentGiven: Boolean
+    ): Result<com.ssbmax.shared.domain.model.interview.InterviewSession> {
+        createInterviewSessionCalls.add(piqSnapshotId)
+        return createInterviewSessionResult
+    }
+
+    override suspend fun completeInterviewSession(sessionId: String): Result<com.ssbmax.shared.domain.model.interview.InterviewResult> {
+        completeInterviewSessionCalls.add(sessionId)
+        return completeInterviewSessionResult
+    }
+
     var evaluateGTOResult: Result<Unit> = Result.success(Unit)
     val evaluateGTOCalls = mutableListOf<String>()
 
@@ -399,7 +420,6 @@ class FakeSubmissionRepository : SubmissionRepository {
     override fun observePPDTSubmission(submissionId: String): Flow<PPDTSubmission?> = unused("observePPDTSubmission")
     override suspend fun getPPDTResult(submissionId: String): Result<OLQAnalysisResult?> = Result.success(null)
 
-    override suspend fun archiveOldSubmissions(beforeTimestamp: Long): Result<Int> = unused("archiveOldSubmissions")
 }
 
 /**
@@ -873,11 +893,9 @@ class FakeSettings : com.russhwolf.settings.Settings {
  */
 class FakeBackgroundTaskScheduler : com.ssbmax.shared.platform.worker.BackgroundTaskScheduler {
     var cleanupScheduled = false
-    var archivalScheduled = false
     val questionGenerationRequests = mutableListOf<String>()
 
     override fun scheduleQuestionCacheCleanup() { cleanupScheduled = true }
-    override fun scheduleSubmissionArchival() { archivalScheduled = true }
     override fun scheduleInterviewQuestionGeneration(piqSubmissionId: String) {
         questionGenerationRequests += piqSubmissionId
     }
