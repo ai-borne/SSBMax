@@ -1,8 +1,13 @@
 package com.ssbmax.shared.platform.worker
 
 /**
- * Schedules the app's two periodic background jobs (previously scheduled
+ * Schedules the app's periodic background jobs (previously scheduled
  * directly from `SSBMaxApplication.onCreate` via `androidx.work.WorkManager`).
+ * Submission archival used to be a second periodic job here
+ * ([scheduleSubmissionArchival]) -- removed by the submission-archival
+ * server-migration plan in favor of a scheduled Cloud Function
+ * (`functions/src/archival/archiveOldSubmissions.js`), since the client write
+ * it depended on was server-only in `firestore.rules` and always failed.
  *
  * IMPORTANT — read before assuming iOS parity: Android's actual
  * ([WorkManager]-backed, in `shared/androidMain`) gives WorkManager's usual
@@ -31,13 +36,6 @@ interface BackgroundTaskScheduler {
      * battery on Android; best-effort on iOS (see class doc).
      */
     fun scheduleQuestionCacheCleanup()
-
-    /**
-     * Daily archival of submissions older than 6 months, moving them out of
-     * the primary collection into an archive. Requires network + charging
-     * on Android; best-effort on iOS (see class doc).
-     */
-    fun scheduleSubmissionArchival()
 
     /**
      * Pre-generates Interview-module questions from a just-submitted PIQ, so the

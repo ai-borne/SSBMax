@@ -315,16 +315,8 @@ interface SubmissionRepository {
      */
     suspend fun getPPDTResult(submissionId: String): Result<com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult?>
 
-    // ===========================
-    // Archival Methods
-    // ===========================
-
-    /**
-     * Archive submissions older than the specified timestamp
-     * Moves data to archived_submissions collection and deletes from main collection
-     *
-     * @param beforeTimestamp Unix timestamp - submissions before this will be archived
-     * @return Number of submissions successfully archived
-     */
-    suspend fun archiveOldSubmissions(beforeTimestamp: Long): Result<Int>
+    // Archival: submission archival ([archiveOldSubmissions]) was removed from this interface by
+    // the submission-archival server-migration plan. `archived_submissions` is server-only in
+    // firestore.rules, so the client write always hit PERMISSION_DENIED; a scheduled Cloud
+    // Function (`functions/src/archival/archiveOldSubmissions.js`) replaces it entirely.
 }

@@ -25,13 +25,14 @@ import kotlinx.coroutines.flow.Flow
  *
  * The raw `Map<String, Any>` methods (`getSubmission`/`getUserSubmissions`/
  * `getUserSubmissionsByTestType`/`observeSubmission`/`observeUserSubmissions`/
- * `getPendingSubmissionsForInstructor`/`archiveOldSubmissions`) and `submitPIQ`/
+ * `getPendingSubmissionsForInstructor`) and `submitPIQ`/
  * `getLatestPIQSubmission` are fully ported — see [FirestoreRawMapSerializer]'s class doc for the
  * raw-Map decode/encode fix and [GitLivePersonalTestSubmissionRepository]'s class doc for the PIQ port.
+ * `archiveOldSubmissions` (formerly delegated to `GitLiveSubmissionArchiveRepository`) was removed
+ * by the submission-archival server-migration plan — see [SubmissionRepository]'s class doc.
  */
 class GitLiveSubmissionRepository(
     private val commonRepo: GitLiveCommonSubmissionRepository = GitLiveCommonSubmissionRepository(),
-    private val archiveRepo: GitLiveSubmissionArchiveRepository = GitLiveSubmissionArchiveRepository(),
     private val gtoRepo: GitLiveGTOSubmissionRepository = GitLiveGTOSubmissionRepository(),
     private val personalRepo: GitLivePersonalTestSubmissionRepository = GitLivePersonalTestSubmissionRepository(),
     private val psychRepo: GitLivePsychTestSubmissionRepository = GitLivePsychTestSubmissionRepository()
@@ -186,8 +187,4 @@ class GitLiveSubmissionRepository(
 
     override fun observeSDTSubmission(submissionId: String): Flow<SDTSubmission?> =
         psychRepo.observeSDTSubmission(submissionId)
-
-    // Archive
-    override suspend fun archiveOldSubmissions(beforeTimestamp: Long): Result<Int> =
-        archiveRepo.archiveOldSubmissions(beforeTimestamp)
 }

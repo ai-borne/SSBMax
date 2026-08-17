@@ -7,14 +7,15 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import platform.BackgroundTasks.BGAppRefreshTaskRequest
-import platform.BackgroundTasks.BGProcessingTaskRequest
 import platform.BackgroundTasks.BGTaskScheduler
 import platform.Foundation.NSDate
 import platform.Foundation.dateByAddingTimeInterval
 
 /**
- * iOS actual, backed by `BGTaskScheduler`. Submits requests for the two
- * periodic jobs using the identifiers below.
+ * iOS actual, backed by `BGTaskScheduler`. Submits a request for the periodic cleanup job
+ * using the identifier below. (Submission archival used to be a second periodic job here --
+ * removed by the submission-archival server-migration plan; see [BackgroundTaskScheduler]'s
+ * class doc.)
  *
  * **Not equivalent to the Android actual's guarantees** — see
  * [BackgroundTaskScheduler]'s class doc. `BGTaskScheduler` only *requests*
@@ -29,9 +30,8 @@ import platform.Foundation.dateByAddingTimeInterval
  * identifiers below must be declared in the iOS app's `Info.plist` under
  * `BGTaskSchedulerPermittedIdentifiers` — neither the registration call nor
  * the Info.plist entries exist yet in `iosApp` (the Phase 0 spike shell).
- * Calling [scheduleQuestionCacheCleanup]/[scheduleSubmissionArchival]
- * before that wiring exists will fail at the OS level (submit throws / the
- * task silently never registers). This class implements the real
+ * Calling [scheduleQuestionCacheCleanup] before that wiring exists will fail
+ * at the OS level (submit throws / the task silently never registers). This class implements the real
  * `BGTaskScheduler` submit calls now so the Phase 6 shell work only needs
  * to add registration + Info.plist entries, not new Kotlin.
  *
@@ -62,18 +62,6 @@ class BGTaskSchedulerBackgroundTaskScheduler(
         }
     }
 
-    override fun scheduleSubmissionArchival() {
-        val request = BGProcessingTaskRequest(ARCHIVAL_TASK_ID)
-        request.requiresNetworkConnectivity = true
-        request.requiresExternalPower = true
-        request.earliestBeginDate = NSDate().dateByAddingTimeInterval(ARCHIVAL_INITIAL_DELAY_SECONDS)
-        try {
-            BGTaskScheduler.sharedScheduler.submitTaskRequest(request, null)
-        } catch (e: Exception) {
-            logger.e(TAG, "submitTaskRequest failed for $ARCHIVAL_TASK_ID", e)
-        }
-    }
-
     override fun scheduleInterviewQuestionGeneration(piqSubmissionId: String) {
         scope.launch {
             questionGenerator.generateQuestions(piqSubmissionId, InterviewConstants.TARGET_PIQ_QUESTION_COUNT)
@@ -85,11 +73,7 @@ class BGTaskSchedulerBackgroundTaskScheduler(
         /** Must match an entry in Info.plist's BGTaskSchedulerPermittedIdentifiers (Phase 6). */
         const val CLEANUP_TASK_ID = "com.ssbmax.questioncachecleanup"
 
-        /** Must match an entry in Info.plist's BGTaskSchedulerPermittedIdentifiers (Phase 6). */
-        const val ARCHIVAL_TASK_ID = "com.ssbmax.submissionarchival"
-
         private const val CLEANUP_INTERVAL_SECONDS = 24.0 * 60.0 * 60.0 // 24 hours, matches Android actual
-        private const val ARCHIVAL_INITIAL_DELAY_SECONDS = 60.0 * 60.0 // 1 hour, matches Android actual
         private const val TAG = "BGTaskSchedulerBackgroundTaskScheduler"
     }
 }

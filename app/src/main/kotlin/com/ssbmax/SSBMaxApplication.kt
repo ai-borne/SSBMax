@@ -49,7 +49,6 @@ class SSBMaxApplication : Application() {
 
         val scheduler = get<BackgroundTaskScheduler>(BackgroundTaskScheduler::class.java)
         scheduler.scheduleQuestionCacheCleanup()
-        scheduler.scheduleSubmissionArchival()
 
         Log.d(TAG, "✅ SSBMax Application initialized")
     }

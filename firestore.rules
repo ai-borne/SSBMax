@@ -255,18 +255,14 @@ service cloud.firestore {
     // ARCHIVED SUBMISSIONS
     // ============================================
 
-    // Deny-all for clients. GitLiveSubmissionArchiveRepository (used by
-    // app's ArchivalWorker) writes here, but it runs as a per-device
-    // WorkManager job on the ordinary client SDK and collection-group-reads
-    // ALL users' `submissions`, which the owner-scoped rule above already
-    // blocks for anything but the current user's own docs -- so the
-    // cross-user archival this worker is meant to perform is already
-    // effectively broken today. Opening this collection to client writes
-    // would fix that access pattern but would also let a compromised client
-    // delete/archive other users' submissions -- a security regression, not
-    // a fix. Tracked follow-up: move archival to a scheduled Cloud Function
-    // (Tier 2, Admin SDK) instead of widening client rules. See docs/plans/
-    // CrossPlatform_SSOT Phase 2 handoff.
+    // Deny-all for clients -- Admin SDK only. Was previously written to
+    // directly by a per-device GitLiveSubmissionArchiveRepository/ArchivalWorker
+    // WorkManager job (always PERMISSION_DENIED against this rule, so nothing was
+    // ever actually archived) and by an iOS BGTaskScheduler equivalent with no
+    // execution guarantee at all. Submission archival server-migration: both
+    // client-side paths were deleted; `functions/src/archival/archiveOldSubmissions.js`
+    // (a `pubsub.schedule` Cloud Function, Admin SDK) now sweeps every user's
+    // `submissions` collection group uniformly and is the only writer.
     match /archived_submissions/{submissionId} {
       allow read, write: if false;
     }

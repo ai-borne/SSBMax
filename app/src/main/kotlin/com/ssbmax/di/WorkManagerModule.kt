@@ -4,7 +4,6 @@ import androidx.work.WorkManager
 import com.ssbmax.shared.domain.service.SubmissionAnalysisTrigger
 import com.ssbmax.shared.platform.worker.BackgroundTaskScheduler
 import com.ssbmax.shared.platform.worker.WorkManagerBackgroundTaskScheduler
-import com.ssbmax.workers.ArchivalWorker
 import com.ssbmax.workers.InterviewQuestionGenerationWorker
 import com.ssbmax.workers.QuestionCacheCleanupWorker
 import com.ssbmax.workers.WorkManagerSubmissionAnalysisTrigger
@@ -33,7 +32,6 @@ val workManagerModule = module {
         WorkManagerBackgroundTaskScheduler(
             workManager = get(),
             cleanupWorker = QuestionCacheCleanupWorker::class,
-            archivalWorker = ArchivalWorker::class,
             questionGenerationWorker = InterviewQuestionGenerationWorker::class
         )
     }
