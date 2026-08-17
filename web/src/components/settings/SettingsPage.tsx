@@ -14,6 +14,7 @@ import { DevTierOverride } from '../../constants/ssbSelectionProcess';
 import { GridCardContainer } from '../common/GridCardContainer';
 
 export interface SettingsPageProps {
+  userId?: string;
   theme?: ThemeMode;
   onToggleTheme?: () => void;
   onClearCache?: () => void;
@@ -34,6 +35,7 @@ export interface SettingsPageProps {
 }
 
 export const SettingsPage: FC<SettingsPageProps> = ({
+  userId,
   theme: customTheme,
   onToggleTheme,
   onClearCache,
@@ -89,7 +91,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
         <AppearanceSection theme={customTheme} onToggleTheme={onToggleTheme} />
 
         {/* Section 3: Notifications & Intelligence Sync */}
-        <NotificationsSection />
+        <NotificationsSection userId={userId} />
 
         {/* Section 4: Data & Offline Cache Controls */}
         <DataCacheSection onClearCache={onClearCache} />

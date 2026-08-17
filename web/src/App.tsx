@@ -144,7 +144,12 @@ export const App: FC = () => {
           )}
           {activeTab === 'study' && <StudyMaterialPage />}
           {activeTab === 'settings' && (
-            <SettingsPage isPro={isPaidMember} devTierOverride={devTierOverride} onSelectDevTier={handleSelectDevTier} />
+            <SettingsPage
+              userId={authService.getCurrentUser()?.uid}
+              isPro={isPaidMember}
+              devTierOverride={devTierOverride}
+              onSelectDevTier={handleSelectDevTier}
+            />
           )}
           {activeTab === 'privacy' && (
             <PrivacyPolicy onBackClick={handleBackToHome} />
