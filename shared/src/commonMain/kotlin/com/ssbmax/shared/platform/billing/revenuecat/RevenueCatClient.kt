@@ -2,18 +2,44 @@ package com.ssbmax.shared.platform.billing.revenuecat
 
 import com.ssbmax.shared.domain.model.SubscriptionTier
 
+/** RevenueCat Offering identifier -- the RC dashboard's single configured Offering, holding the
+ * `basic_monthly`/`pro_monthly`/`premium_monthly` packages. */
+const val REVENUE_CAT_OFFERING_ID = "default"
+
 /**
  * RevenueCat entitlement identifiers -- defined once in the RC dashboard's Offering (not
  * store-dependent, unlike `SSBMaxProductIds`' product IDs). Cumulative by design: the
  * `premium_monthly` product is configured in RC to grant all three entitlements at once, so
  * [RevenueCatEntitlementMapper] only has to pick the highest one present, never combine tiers
- * itself.
+ * itself. Verified against the RC dashboard's Test Store configuration (entitlement mapping:
+ * basic_monthly->basic, pro_monthly->basic+pro, premium_monthly->basic+pro+premium).
  */
 object RevenueCatEntitlements {
     const val BASIC = "basic"
     const val PRO = "pro"
     const val PREMIUM = "premium"
 }
+
+/**
+ * Whether a RevenueCat [com.revenuecat.purchases.kmp.models.Package]/
+ * [com.revenuecat.purchases.kmp.models.StoreProduct] resolves to [productId] -- the pure part of
+ * package resolution, factored out so it's testable without constructing real RC SDK types.
+ * Package identifiers equal product IDs exactly in this app's RC Product Catalog
+ * (`basic_monthly`/`pro_monthly`/`premium_monthly` both ways); the `storeProductId` checks are a
+ * defensive fallback for when a real Play subscription reports its ID as
+ * "productId:basePlanId" instead of the bare product ID.
+ */
+internal fun matchesProductId(packageIdentifier: String, storeProductId: String, productId: String): Boolean =
+    packageIdentifier == productId || storeProductId == productId || storeProductId.startsWith("$productId:")
+
+/** A package's store-quoted price, for displaying real prices instead of the generated pricing
+ * contract's numbers where available (contract numbers are the fallback if RC's offering/price
+ * fetch fails, e.g. offline). */
+data class RevenueCatProductPrice(
+    val formattedPrice: String,
+    val amountMicros: Long,
+    val currencyCode: String
+)
 
 /**
  * The one place RevenueCat's active-entitlement set is turned into an app-level
@@ -60,12 +86,18 @@ interface RevenueCatClient {
      */
     fun configure(appUserId: String?)
 
-    /** Resolves [productId] against the current Offering's packages, then purchases it. */
+    /** Resolves [productId] against the [REVENUE_CAT_OFFERING_ID] Offering's packages, then
+     * purchases it. */
     suspend fun purchase(productId: String): Result<RevenueCatPurchaseOutcome>
 
     suspend fun restorePurchases(): Result<RevenueCatPurchaseOutcome>
 
     suspend fun getCustomerInfo(): Result<RevenueCatPurchaseOutcome>
+
+    /** Store-quoted prices for every package in the [REVENUE_CAT_OFFERING_ID] Offering, keyed by
+     * product ID (`SSBMaxProductIds`). Used to display real store prices instead of the generated
+     * pricing contract's numbers where available. */
+    suspend fun getOfferingPrices(): Result<Map<String, RevenueCatProductPrice>>
 
     /** Resets RevenueCat to an anonymous user -- call on sign-out. */
     fun logOut()

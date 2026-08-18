@@ -56,11 +56,10 @@ import kotlinx.coroutines.launch
  * `StoreKitBillingClient` internally (RevenueCat's own SDK talks to Play
  * Billing/StoreKit directly -- those two shims stay unbound and unused,
  * kept only until RevenueCat is verified working end-to-end in production,
- * per the RevenueCat integration decision). [SSBMaxProductIds] product IDs
- * are still PLACEHOLDERs until real Play Console/App Store Connect products
- * exist, so a real purchase attempt fails with "Product not found" until
- * then -- expected, not a bug; swapping in real IDs is the only change
- * needed to go live.
+ * per the RevenueCat integration decision). [SSBMaxProductIds] now holds
+ * RevenueCat's real Test Store identifiers -- purchases actually go through
+ * against the Test Store today; only real Play Console/App Store Connect
+ * products (a later, separate step) are still pending.
  */
 class UpgradeViewModel(
     private val observeCurrentUser: ObserveCurrentUserUseCase,
@@ -82,6 +81,25 @@ class UpgradeViewModel(
     init {
         observeCurrentSubscription()
         loadAvailablePlans()
+        loadStorePrices()
+    }
+
+    /** Fetches RevenueCat's store-quoted MONTHLY prices for [SSBMaxProductIds]' three paid
+     * products, so the UI can show real store prices instead of the generated pricing contract's
+     * numbers. Best-effort: failure (e.g. offline) just leaves [UpgradeUiState.storeFormattedPrices]
+     * empty, and every card falls back to the contract price -- no error surfaced for this. */
+    private fun loadStorePrices() {
+        viewModelScope.launch {
+            revenueCatClient.getOfferingPrices()
+                .onSuccess { pricesByProductId ->
+                    val byTier = SubscriptionTier.entries.mapNotNull { tier ->
+                        val productId = SSBMaxProductIds.forTier(tier) ?: return@mapNotNull null
+                        pricesByProductId[productId]?.let { tier to it.formattedPrice }
+                    }.toMap()
+                    _uiState.update { it.copy(storeFormattedPrices = byTier) }
+                }
+                .onFailure { logger.w(TAG, "Could not fetch RevenueCat offering prices: ${it.message}") }
+        }
     }
 
     private fun observeCurrentSubscription() {
@@ -186,6 +204,30 @@ class UpgradeViewModel(
     fun dismissPurchaseError() {
         _uiState.update { it.copy(purchaseError = null) }
     }
+
+    /** Re-derives entitlements from the store (e.g. after a reinstall, or a purchase made on
+     * another device with the same RevenueCat identity) and persists the resulting tier through
+     * [SubscriptionRepository], same as a successful [upgradeToPlan]. */
+    fun restorePurchases() {
+        val userId = currentUserId
+        if (userId == null) {
+            logger.w(TAG, "restorePurchases called with no signed-in user")
+            return
+        }
+
+        _uiState.update { it.copy(isRestoring = true, purchaseError = null) }
+        viewModelScope.launch {
+            revenueCatClient.restorePurchases()
+                .onSuccess { outcome ->
+                    subscriptionRepository.updateSubscriptionTier(userId, outcome.tier)
+                    _uiState.update { it.copy(isRestoring = false, currentTier = outcome.tier) }
+                }
+                .onFailure { error ->
+                    logger.e(TAG, "Restore purchases failed", error)
+                    _uiState.update { it.copy(isRestoring = false, purchaseError = error.message) }
+                }
+        }
+    }
 }
 
 /**
@@ -197,8 +239,13 @@ data class UpgradeUiState(
     val selectedBillingCycle: BillingCycle = BillingCycle.MONTHLY,
     val isLoading: Boolean = true,
     val isPurchasing: Boolean = false,
+    val isRestoring: Boolean = false,
     val purchaseError: String? = null,
-    val selectedPlanForUpgrade: SubscriptionTier? = null
+    val selectedPlanForUpgrade: SubscriptionTier? = null,
+    /** RevenueCat's store-quoted MONTHLY price per tier, keyed by domain tier -- see
+     * [UpgradeViewModel.loadStorePrices]. Empty (falls back to the generated pricing contract)
+     * until the fetch succeeds. */
+    val storeFormattedPrices: Map<SubscriptionTier, String> = emptyMap()
 )
 
 /**

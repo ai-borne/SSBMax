@@ -1020,6 +1020,7 @@
     <string name="premium_info_support">24/7 customer support</string>
     <string name="premium_dialog_purchase_error_title">Purchase failed</string>
     <string name="premium_dialog_action_got_it">Got it</string>
+    <string name="premium_restore_purchases">Restore Purchases</string>
 
     <!-- Marketplace screen (coaching institute directory, mock data) -->
     <string name="marketplace_cd_back">Back</string>

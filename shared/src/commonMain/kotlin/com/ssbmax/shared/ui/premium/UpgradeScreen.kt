@@ -65,10 +65,10 @@ import ssbmax.shared.generated.resources.premium_upgrade_title
  * `com.ssbmax.ui.upgrade`/`com.ssbmax.ui.payment` packages were NOT ported
  * (dead code, unreachable from any Android nav graph).
  *
- * Split across this file (screen shell + billing-cycle selector + info/footer)
- * and [UpgradePlanCard] (the per-plan animated card + coming-soon dialog) to
- * stay under this repo's 300-line-per-file Quality Limit -- the Android
- * original was a single 463-line file.
+ * Split across this file (screen shell + billing-cycle selector + info/footer),
+ * `UpgradePlanCard.kt` (the per-plan animated card), `PurchaseErrorDialog.kt`,
+ * and `RestorePurchasesRow.kt` to stay under this repo's 300-line-per-file
+ * Quality Limit -- the Android original was a single 463-line file.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,24 +108,7 @@ fun UpgradeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        stringResource(Res.string.premium_upgrade_header),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        stringResource(Res.string.premium_upgrade_subtitle),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                UpgradeHeader()
             }
 
             item {
@@ -143,8 +126,13 @@ fun UpgradeScreen(
                     selectedBillingCycle = uiState.selectedBillingCycle,
                     isVisible = isVisible,
                     isPurchasing = uiState.isPurchasing && uiState.selectedPlanForUpgrade == plan.tier,
+                    storeFormattedPrice = uiState.storeFormattedPrices[plan.tier],
                     onUpgradeClick = { viewModel.upgradeToPlan(plan.tier) }
                 )
+            }
+
+            item {
+                RestorePurchasesRow(isRestoring = uiState.isRestoring, onClick = { viewModel.restorePurchases() })
             }
 
             item {
@@ -157,6 +145,28 @@ fun UpgradeScreen(
         PurchaseErrorDialog(
             message = message,
             onDismiss = { viewModel.dismissPurchaseError() }
+        )
+    }
+}
+
+@Composable
+private fun UpgradeHeader(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            stringResource(Res.string.premium_upgrade_header),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(Res.string.premium_upgrade_subtitle),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
     }
 }

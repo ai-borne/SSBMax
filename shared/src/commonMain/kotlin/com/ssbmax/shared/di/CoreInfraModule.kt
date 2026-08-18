@@ -105,7 +105,13 @@ val coreInfraModule = module {
     // production too): on Android it needs `androidx.startup.InitializationProvider` to have
     // already wired the Application Context, which isn't guaranteed by the time Koin resolves a
     // `single`. `UpgradeViewModel.loadCurrentSubscriptionFor` calls `configure()` on first use
-    // instead, once the app is definitely running. Sandbox/Test Store key -- see
-    // `DefaultRevenueCatClient`'s doc comment.
+    // instead, once the app is definitely running.
+    //
+    // This is RevenueCat's Test Store SDK/public API key (RC dashboard -> API keys -> SDK API
+    // keys -> Test Store) -- NOT a Secret key, which must never be used client-side. Safe to
+    // embed by RC's own design either way (see `DefaultRevenueCatClient`'s doc comment). Must be
+    // swapped for a platform-specific production key once real Play Console/App Store Connect
+    // apps + products exist in RevenueCat (the plan's own explicit pre-release step) -- this key
+    // must never reach a production build.
     single<RevenueCatClient> { DefaultRevenueCatClient(sdkKey = "test_XUGFulYKOJsaPeQnVFDCzmsHQGz") }
 }

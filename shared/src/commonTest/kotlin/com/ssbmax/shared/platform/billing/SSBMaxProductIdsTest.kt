@@ -28,4 +28,14 @@ class SSBMaxProductIdsTest {
         }
         assertEquals(productIds.toSet().size, productIds.size, "each paid tier must map to a distinct product ID")
     }
+
+    @Test
+    fun `product IDs match RevenueCat's Test Store Product Catalog exactly`() {
+        // Not internal-consistency checks -- these three strings are an external contract with
+        // the RevenueCat dashboard (Offering "default"'s package/product identifiers). A
+        // mismatch here means purchases silently fail with "Product not found".
+        assertEquals("basic_monthly", SSBMaxProductIds.BASIC_MONTHLY)
+        assertEquals("pro_monthly", SSBMaxProductIds.PRO_MONTHLY)
+        assertEquals("premium_monthly", SSBMaxProductIds.PREMIUM_MONTHLY)
+    }
 }

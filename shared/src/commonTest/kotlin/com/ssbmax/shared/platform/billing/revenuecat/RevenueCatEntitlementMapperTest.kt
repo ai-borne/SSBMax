@@ -45,4 +45,22 @@ class RevenueCatEntitlementMapperTest {
         val outcome = RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("pro"))
         assertEquals(SubscriptionTier.PRO, outcome.tier)
     }
+
+    /**
+     * Downgrade/cancel/expiry verification: `CustomerInfo.entitlements.active` (what
+     * [RevenueCatPurchaseOutcome.activeEntitlementIds] is built from -- see
+     * `DefaultRevenueCatClient.toOutcome`) is RevenueCat's own live, always-freshly-queried set
+     * of entitlements that are *currently* active -- an expired/cancelled/downgraded
+     * subscription's entitlement is simply absent from it, no separate "was this revoked" check
+     * needed. This mapper has no memory of a previous call, so calling it again after any of
+     * those events with the new (smaller) active set is the entire correctness story -- pinned
+     * here for PREMIUM -> PRO (downgrade), PRO -> FREE (full cancellation/expiry), and
+     * PREMIUM -> FREE (full cancellation/expiry from the top tier).
+     */
+    @Test
+    fun `a smaller active-entitlement set on a later call derives the correct lower tier`() {
+        assertEquals(SubscriptionTier.PRO, RevenueCatEntitlementMapper.toTier(setOf("basic", "pro")), "premium -> pro downgrade")
+        assertEquals(SubscriptionTier.FREE, RevenueCatEntitlementMapper.toTier(emptySet()), "pro -> free full cancellation")
+        assertEquals(SubscriptionTier.FREE, RevenueCatEntitlementMapper.toTier(emptySet()), "premium -> free full cancellation")
+    }
 }

@@ -10,6 +10,7 @@ import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.NoOpLogger
 import com.ssbmax.shared.platform.billing.BillingCancelledException
 import com.ssbmax.shared.platform.billing.SSBMaxProductIds
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatProductPrice
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatPurchaseOutcome
 import com.ssbmax.shared.platform.settings.DeveloperSettings
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
@@ -158,6 +159,68 @@ class UpgradeViewModelTest {
         viewModel.dismissPurchaseError()
 
         assertEquals(null, viewModel.uiState.value.purchaseError)
+    }
+
+    @Test
+    fun `restorePurchases persists the restored tier and clears isRestoring`() = runTest(testDispatcher) {
+        revenueCatClient.restoreResult = Result.success(
+            RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("basic", "pro"))
+        )
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.restorePurchases()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, revenueCatClient.restoreCallCount)
+        assertEquals(testUser().id to SubscriptionTier.PRO, subscriptionRepository.lastUpdatedTierCall)
+        val state = viewModel.uiState.value
+        assertEquals(false, state.isRestoring)
+        assertEquals(SubscriptionTier.PRO, state.currentTier)
+    }
+
+    @Test
+    fun `restorePurchases surfaces a failure as purchaseError`() = runTest(testDispatcher) {
+        revenueCatClient.restoreResult = Result.failure(Exception("network down"))
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.restorePurchases()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(false, state.isRestoring)
+        assertEquals("network down", state.purchaseError)
+    }
+
+    @Test
+    fun `loads RevenueCat store prices per tier on init, keyed by domain tier not product ID`() =
+        runTest(testDispatcher) {
+            revenueCatClient.offeringPricesResult = Result.success(
+                mapOf(
+                    SSBMaxProductIds.BASIC_MONTHLY to RevenueCatProductPrice("₹299.00", 299_000_000, "INR"),
+                    SSBMaxProductIds.PRO_MONTHLY to RevenueCatProductPrice("₹499.00", 499_000_000, "INR")
+                )
+            )
+            val viewModel = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val prices = viewModel.uiState.value.storeFormattedPrices
+            assertEquals("₹299.00", prices[SubscriptionTier.BASIC])
+            assertEquals("₹499.00", prices[SubscriptionTier.PRO])
+            assertEquals(null, prices[SubscriptionTier.PREMIUM])
+            assertEquals(null, prices[SubscriptionTier.FREE])
+        }
+
+    @Test
+    fun `a failed store-price fetch leaves storeFormattedPrices empty, not an error`() = runTest(testDispatcher) {
+        revenueCatClient.offeringPricesResult = Result.failure(Exception("offline"))
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(emptyMap(), state.storeFormattedPrices)
+        assertEquals(null, state.purchaseError)
     }
 
     @Test

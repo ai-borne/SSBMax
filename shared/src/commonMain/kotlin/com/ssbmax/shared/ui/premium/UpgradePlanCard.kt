@@ -17,8 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -28,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -38,7 +35,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.domain.model.BillingCycle
 import com.ssbmax.shared.domain.model.SubscriptionTier
@@ -46,8 +42,6 @@ import com.ssbmax.shared.presentation.premium.PlanFeature
 import com.ssbmax.shared.presentation.premium.SubscriptionPlan
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
-import ssbmax.shared.generated.resources.premium_dialog_action_got_it
-import ssbmax.shared.generated.resources.premium_dialog_purchase_error_title
 import ssbmax.shared.generated.resources.premium_plan_action_current
 import ssbmax.shared.generated.resources.premium_plan_action_downgrade
 import ssbmax.shared.generated.resources.premium_plan_action_upgrade
@@ -59,8 +53,8 @@ import ssbmax.shared.generated.resources.premium_plan_period_year
 import ssbmax.shared.generated.resources.premium_plan_price_free
 
 /**
- * Per-plan animated card + purchase-error dialog for [UpgradeScreen]. Split
- * out to keep both files under this repo's 300-line Quality Limit.
+ * Per-plan animated card for [UpgradeScreen]. Split across this file, [PurchaseErrorDialog], and
+ * [UpgradeScreen]'s own composables to keep every file under this repo's 300-line Quality Limit.
  */
 @Composable
 internal fun AnimatedPlanCard(
@@ -69,6 +63,10 @@ internal fun AnimatedPlanCard(
     selectedBillingCycle: BillingCycle,
     isVisible: Boolean,
     isPurchasing: Boolean,
+    /** RevenueCat's store-quoted MONTHLY price for this plan, if fetched successfully -- shown
+     * instead of the generated pricing contract's number when present and MONTHLY is selected
+     * (RC's Test Store only has monthly products right now). Null falls back to the contract. */
+    storeFormattedPrice: String?,
     onUpgradeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -100,7 +98,7 @@ internal fun AnimatedPlanCard(
         )
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-            PlanCardHeader(plan, currentTier, selectedBillingCycle)
+            PlanCardHeader(plan, currentTier, selectedBillingCycle, storeFormattedPrice)
             Spacer(Modifier.height(16.dp))
             plan.features.forEach { feature ->
                 PlanFeatureRow(feature)
@@ -187,7 +185,8 @@ private fun UpgradeButton(
 private fun PlanCardHeader(
     plan: SubscriptionPlan,
     currentTier: SubscriptionTier,
-    selectedBillingCycle: BillingCycle
+    selectedBillingCycle: BillingCycle,
+    storeFormattedPrice: String?
 ) {
     Box(
         modifier = Modifier
@@ -235,8 +234,13 @@ private fun PlanCardHeader(
                         color = Color.White
                     )
                 } else {
+                    // RevenueCat's formatted price already includes the currency sign (e.g.
+                    // "₹299.00") -- only used for MONTHLY, RC's Test Store has no quarterly/yearly
+                    // products, so those cycles always fall back to the generated contract's number.
+                    val displayPrice = storeFormattedPrice.takeIf { selectedBillingCycle == BillingCycle.MONTHLY }
+                        ?: "₹${plan.getPriceForCycle(selectedBillingCycle).toInt()}"
                     Text(
-                        "₹${plan.getPriceForCycle(selectedBillingCycle).toInt()}",
+                        displayPrice,
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -281,28 +285,4 @@ private fun PlanBadge(text: String) {
             color = Color.White
         )
     }
-}
-
-@Composable
-internal fun PurchaseErrorDialog(
-    message: String,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(Icons.Default.Error, contentDescription = null, modifier = Modifier.size(48.dp))
-        },
-        title = {
-            Text(stringResource(Res.string.premium_dialog_purchase_error_title), fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Text(message, textAlign = TextAlign.Center)
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.premium_dialog_action_got_it))
-            }
-        }
-    )
 }

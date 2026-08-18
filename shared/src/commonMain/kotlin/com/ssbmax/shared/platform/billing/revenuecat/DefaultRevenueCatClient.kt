@@ -4,7 +4,9 @@ import com.revenuecat.purchases.kmp.LogLevel
 import com.revenuecat.purchases.kmp.Purchases
 import com.revenuecat.purchases.kmp.PurchasesConfiguration
 import com.revenuecat.purchases.kmp.models.CustomerInfo
+import com.revenuecat.purchases.kmp.models.Offering
 import com.revenuecat.purchases.kmp.models.Offerings
+import com.revenuecat.purchases.kmp.models.Package
 import com.ssbmax.shared.platform.billing.BillingCancelledException
 import com.ssbmax.shared.platform.isDebugBuild
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -16,9 +18,11 @@ import kotlin.coroutines.resumeWithException
  * public SDK key -- safe to embed client-side by RevenueCat's own design (it only authorizes
  * this SDK's calls into RC's proxy, which enforces entitlements server-side; unlike the raw
  * Gemini key this codebase deliberately keeps server-only, see `geminiProxy.js`'s doc comment).
- * This is currently the sandbox/Test Store key from RC project "SSBMax" -- swap for a
- * production key once real Play Console/App Store Connect products exist (Phase 4's
- * blocking prerequisite).
+ * This is currently the Test Store SDK key from RC project "SSBMax" (RC dashboard -> API keys ->
+ * SDK API keys -> Test Store) -- must never be a Secret key, and must never reach a production
+ * build. Before release: create real Apple/Google products attached to these same
+ * entitlements/packages, add the respective Apple/Google apps in RevenueCat, and swap this for
+ * their platform-specific production SDK keys (Phase 4's blocking prerequisite).
  */
 internal class DefaultRevenueCatClient(private val sdkKey: String) : RevenueCatClient {
     private var configured = false
@@ -50,12 +54,7 @@ internal class DefaultRevenueCatClient(private val sdkKey: String) : RevenueCatC
 
     override suspend fun purchase(productId: String): Result<RevenueCatPurchaseOutcome> = runCatching {
         ensureConfigured()
-        val offerings = awaitOfferings()
-        // Play subscriptions can report `storeProduct.id` as "productId:basePlanId" -- match on
-        // either the exact product ID or that prefix, not just equality.
-        val pkg = offerings.current?.availablePackages?.find {
-            it.storeProduct.id == productId || it.storeProduct.id.startsWith("$productId:")
-        } ?: throw RevenueCatException("Product not found in current offering: $productId")
+        val pkg = resolvePackage(productId)
         val customerInfo = suspendCancellableCoroutine { cont ->
             Purchases.sharedInstance.purchase(
                 packageToPurchase = pkg,
@@ -68,6 +67,17 @@ internal class DefaultRevenueCatClient(private val sdkKey: String) : RevenueCatC
             )
         }
         customerInfo.toOutcome()
+    }
+
+    override suspend fun getOfferingPrices(): Result<Map<String, RevenueCatProductPrice>> = runCatching {
+        ensureConfigured()
+        awaitOffering().availablePackages.associate { pkg ->
+            pkg.storeProduct.id to RevenueCatProductPrice(
+                formattedPrice = pkg.storeProduct.price.formatted,
+                amountMicros = pkg.storeProduct.price.amountMicros,
+                currencyCode = pkg.storeProduct.price.currencyCode
+            )
+        }
     }
 
     override suspend fun restorePurchases(): Result<RevenueCatPurchaseOutcome> = runCatching {
@@ -100,6 +110,14 @@ internal class DefaultRevenueCatClient(private val sdkKey: String) : RevenueCatC
             onSuccess = { offerings -> cont.resume(offerings) }
         )
     }
+
+    private suspend fun awaitOffering(): Offering =
+        awaitOfferings()[REVENUE_CAT_OFFERING_ID]
+            ?: throw RevenueCatException("RevenueCat Offering '$REVENUE_CAT_OFFERING_ID' not found")
+
+    private suspend fun resolvePackage(productId: String): Package =
+        awaitOffering().availablePackages.find { matchesProductId(it.identifier, it.storeProduct.id, productId) }
+            ?: throw RevenueCatException("Product not found in offering '$REVENUE_CAT_OFFERING_ID': $productId")
 
     private fun CustomerInfo.toOutcome(): RevenueCatPurchaseOutcome =
         RevenueCatPurchaseOutcome(activeEntitlementIds = entitlements.active.keys)

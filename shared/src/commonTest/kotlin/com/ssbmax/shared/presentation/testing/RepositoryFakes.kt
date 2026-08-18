@@ -38,6 +38,7 @@ import com.ssbmax.shared.domain.repository.UserProfileRepository
 import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.domain.util.DomainLogger
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatProductPrice
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatPurchaseOutcome
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,8 +108,12 @@ class FakeSubscriptionRepository : SubscriptionRepository {
 class FakeRevenueCatClient : RevenueCatClient {
     var purchaseResult: Result<RevenueCatPurchaseOutcome> =
         Result.success(RevenueCatPurchaseOutcome(activeEntitlementIds = emptySet()))
+    var restoreResult: Result<RevenueCatPurchaseOutcome> =
+        Result.success(RevenueCatPurchaseOutcome(activeEntitlementIds = emptySet()))
+    var offeringPricesResult: Result<Map<String, RevenueCatProductPrice>> = Result.success(emptyMap())
     var lastConfiguredAppUserId: String? = null
     var lastPurchasedProductId: String? = null
+    var restoreCallCount = 0
     var logOutCallCount = 0
 
     override fun configure(appUserId: String?) {
@@ -120,9 +125,14 @@ class FakeRevenueCatClient : RevenueCatClient {
         return purchaseResult
     }
 
-    override suspend fun restorePurchases(): Result<RevenueCatPurchaseOutcome> = purchaseResult
+    override suspend fun restorePurchases(): Result<RevenueCatPurchaseOutcome> {
+        restoreCallCount++
+        return restoreResult
+    }
 
     override suspend fun getCustomerInfo(): Result<RevenueCatPurchaseOutcome> = purchaseResult
+
+    override suspend fun getOfferingPrices(): Result<Map<String, RevenueCatProductPrice>> = offeringPricesResult
 
     override fun logOut() {
         logOutCallCount++
