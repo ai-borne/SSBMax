@@ -37,6 +37,8 @@ import com.ssbmax.shared.domain.repository.UsageInfo
 import com.ssbmax.shared.domain.repository.UserProfileRepository
 import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.domain.util.DomainLogger
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatPurchaseOutcome
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -77,6 +79,10 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     var startDateResult: Result<Long?> = Result.success(null)
     var getSubscriptionTierCallCount = 0
 
+    /** Phase 4 (RevenueCat integration): records the last [updateSubscriptionTier] call so
+     * purchase-flow tests can assert the resulting tier was persisted for the right user. */
+    var lastUpdatedTierCall: Pair<String, SubscriptionTier>? = null
+
     /** Phase 3: records the period key each [getMonthlyUsage] call was made with, so tests can
      * assert the caller computed the right billing-anniversary key. */
     var lastMonthlyUsagePeriod: String? = null
@@ -89,8 +95,38 @@ class FakeSubscriptionRepository : SubscriptionRepository {
         lastMonthlyUsagePeriod = month
         return monthlyUsageResult
     }
-    override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier) = updateTierResult
+    override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier): Result<Unit> {
+        lastUpdatedTierCall = userId to tier
+        return updateTierResult
+    }
     override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
+}
+
+/** Phase 4 (RevenueCat integration): test double for [RevenueCatClient] -- avoids pulling the
+ * real `Purchases` SDK singleton (global mutable state) into ViewModel unit tests. */
+class FakeRevenueCatClient : RevenueCatClient {
+    var purchaseResult: Result<RevenueCatPurchaseOutcome> =
+        Result.success(RevenueCatPurchaseOutcome(activeEntitlementIds = emptySet()))
+    var lastConfiguredAppUserId: String? = null
+    var lastPurchasedProductId: String? = null
+    var logOutCallCount = 0
+
+    override fun configure(appUserId: String?) {
+        lastConfiguredAppUserId = appUserId
+    }
+
+    override suspend fun purchase(productId: String): Result<RevenueCatPurchaseOutcome> {
+        lastPurchasedProductId = productId
+        return purchaseResult
+    }
+
+    override suspend fun restorePurchases(): Result<RevenueCatPurchaseOutcome> = purchaseResult
+
+    override suspend fun getCustomerInfo(): Result<RevenueCatPurchaseOutcome> = purchaseResult
+
+    override fun logOut() {
+        logOutCallCount++
+    }
 }
 
 class FakeFeatureFlagRepository(

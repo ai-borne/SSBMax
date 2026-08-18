@@ -17,6 +17,7 @@ import com.ssbmax.shared.presentation.settings.SubscriptionManagementViewModel
 import com.ssbmax.shared.presentation.settings.SubscriptionTierModel
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
 import com.ssbmax.shared.presentation.testing.FakeLogger
+import com.ssbmax.shared.presentation.testing.FakeRevenueCatClient
 import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
 import com.ssbmax.shared.presentation.testing.FakeTestProgressRepository
@@ -94,6 +95,8 @@ class SubscriptionTierSsotTest {
             val upgradeViewModel = UpgradeViewModel(
                 observeCurrentUser = observeCurrentUser,
                 getSubscriptionTier = getSubscriptionTier,
+                subscriptionRepository = subscriptionRepository,
+                revenueCatClient = FakeRevenueCatClient(),
                 developerSettings = developerSettings,
                 logger = FakeLogger()
             )

@@ -18,6 +18,8 @@ import com.ssbmax.shared.db.SharedDatabase
 import com.ssbmax.shared.domain.service.AIService
 import com.ssbmax.shared.domain.service.SubmissionAnalysisTrigger
 import com.ssbmax.shared.domain.util.ObservabilitySeam
+import com.ssbmax.shared.platform.billing.revenuecat.DefaultRevenueCatClient
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
 import com.ssbmax.shared.presentation.root.AppRootViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -97,4 +99,13 @@ val coreInfraModule = module {
     singleOf(::GTOAnalysisOrchestrator)
     singleOf(::InterviewAnalysisOrchestrator)
     singleOf(::KtorSubmissionAnalysisTrigger) bind SubmissionAnalysisTrigger::class
+
+    // Phase 4 (RevenueCat integration): NOT configured here -- calling `Purchases.configure()`
+    // eagerly inside this factory block broke `PlatformModuleCheckTest` (and would be fragile in
+    // production too): on Android it needs `androidx.startup.InitializationProvider` to have
+    // already wired the Application Context, which isn't guaranteed by the time Koin resolves a
+    // `single`. `UpgradeViewModel.loadCurrentSubscriptionFor` calls `configure()` on first use
+    // instead, once the app is definitely running. Sandbox/Test Store key -- see
+    // `DefaultRevenueCatClient`'s doc comment.
+    single<RevenueCatClient> { DefaultRevenueCatClient(sdkKey = "test_XUGFulYKOJsaPeQnVFDCzmsHQGz") }
 }

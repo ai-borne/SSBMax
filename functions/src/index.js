@@ -12,6 +12,7 @@ if (!admin.apps.length) {
 }
 
 const { handleRazorpayWebhook } = require('./webhooks');
+const { handleRevenueCatWebhook } = require('./revenueCatWebhook');
 const { createRazorpayOrder } = require('./payments');
 const { evaluateOIRAnswers } = require('./oirScoring');
 const { onOirSubmissionCreated } = require('./notifications/onOirSubmissionCreated');
@@ -42,6 +43,7 @@ const {
 } = require('./submissions');
 
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
+exports.handleRevenueCatWebhook = handleRevenueCatWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
 exports.evaluateOIRAnswers = evaluateOIRAnswers;
 // Fires notifyEvaluationComplete for OIR specifically -- evaluateOIRAnswers above has no

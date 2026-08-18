@@ -142,6 +142,7 @@ fun UpgradeScreen(
                     currentTier = uiState.currentTier,
                     selectedBillingCycle = uiState.selectedBillingCycle,
                     isVisible = isVisible,
+                    isPurchasing = uiState.isPurchasing && uiState.selectedPlanForUpgrade == plan.tier,
                     onUpgradeClick = { viewModel.upgradeToPlan(plan.tier) }
                 )
             }
@@ -152,10 +153,10 @@ fun UpgradeScreen(
         }
     }
 
-    if (uiState.showComingSoonDialog) {
-        ComingSoonDialog(
-            planName = uiState.selectedPlanForUpgrade?.displayName ?: "Premium",
-            onDismiss = { viewModel.dismissComingSoonDialog() }
+    uiState.purchaseError?.let { message ->
+        PurchaseErrorDialog(
+            message = message,
+            onDismiss = { viewModel.dismissPurchaseError() }
         )
     }
 }

@@ -8,8 +8,7 @@ describe('AccountPage Component', () => {
     uid: 'test-cadet-uid-123',
     displayName: 'Cadet Vikram Sharma',
     email: 'vikram.sharma@ssbmax.in',
-    photoURL: null,
-    isPaidMember: false
+    photoURL: null
   };
 
   it('renders account page title, user details, and free tier badge', () => {
@@ -23,8 +22,7 @@ describe('AccountPage Component', () => {
   });
 
   it('displays pro officer pass badge when user is a paid member', () => {
-    const proUser = { ...mockUser, isPaidMember: true };
-    render(<AccountPage user={proUser} />);
+    render(<AccountPage user={mockUser} isPaidMember />);
 
     expect(screen.getByTestId('membership-badge')).toHaveTextContent(strings.subscription.proPlanTitle);
   });

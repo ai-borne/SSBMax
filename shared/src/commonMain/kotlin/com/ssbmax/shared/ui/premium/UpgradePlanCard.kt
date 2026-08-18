@@ -17,12 +17,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Construction
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,12 +42,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.domain.model.BillingCycle
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.presentation.premium.PlanFeature
 import com.ssbmax.shared.presentation.premium.SubscriptionPlan
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.premium_dialog_action_got_it
-import ssbmax.shared.generated.resources.premium_dialog_coming_soon_message
-import ssbmax.shared.generated.resources.premium_dialog_coming_soon_title
+import ssbmax.shared.generated.resources.premium_dialog_purchase_error_title
 import ssbmax.shared.generated.resources.premium_plan_action_current
 import ssbmax.shared.generated.resources.premium_plan_action_downgrade
 import ssbmax.shared.generated.resources.premium_plan_action_upgrade
@@ -58,7 +59,7 @@ import ssbmax.shared.generated.resources.premium_plan_period_year
 import ssbmax.shared.generated.resources.premium_plan_price_free
 
 /**
- * Per-plan animated card + "coming soon" dialog for [UpgradeScreen]. Split
+ * Per-plan animated card + purchase-error dialog for [UpgradeScreen]. Split
  * out to keep both files under this repo's 300-line Quality Limit.
  */
 @Composable
@@ -67,6 +68,7 @@ internal fun AnimatedPlanCard(
     currentTier: SubscriptionTier,
     selectedBillingCycle: BillingCycle,
     isVisible: Boolean,
+    isPurchasing: Boolean,
     onUpgradeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -101,55 +103,82 @@ internal fun AnimatedPlanCard(
             PlanCardHeader(plan, currentTier, selectedBillingCycle)
             Spacer(Modifier.height(16.dp))
             plan.features.forEach { feature ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        if (feature.isIncluded) Icons.Default.CheckCircle else Icons.Default.Cancel,
-                        contentDescription = null,
-                        tint = if (feature.isIncluded) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        },
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        feature.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (feature.isIncluded) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        }
-                    )
-                }
+                PlanFeatureRow(feature)
             }
 
             Spacer(Modifier.height(16.dp))
 
-            Button(
-                onClick = onUpgradeClick,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = plan.tier != currentTier,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Text(
-                    stringResource(
-                        when {
-                            plan.tier == currentTier -> Res.string.premium_plan_action_current
-                            plan.tier < currentTier -> Res.string.premium_plan_action_downgrade
-                            else -> Res.string.premium_plan_action_upgrade
-                        }
-                    ),
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+            UpgradeButton(
+                plan = plan,
+                currentTier = currentTier,
+                isPurchasing = isPurchasing,
+                onClick = onUpgradeClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlanFeatureRow(feature: PlanFeature) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            if (feature.isIncluded) Icons.Default.CheckCircle else Icons.Default.Cancel,
+            contentDescription = null,
+            tint = if (feature.isIncluded) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            },
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            feature.description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (feature.isIncluded) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             }
+        )
+    }
+}
+
+@Composable
+private fun UpgradeButton(
+    plan: SubscriptionPlan,
+    currentTier: SubscriptionTier,
+    isPurchasing: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = plan.tier != currentTier && !isPurchasing,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        if (isPurchasing) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp).padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        } else {
+            Text(
+                stringResource(
+                    when {
+                        plan.tier == currentTier -> Res.string.premium_plan_action_current
+                        plan.tier < currentTier -> Res.string.premium_plan_action_downgrade
+                        else -> Res.string.premium_plan_action_upgrade
+                    }
+                ),
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
         }
     }
 }
@@ -255,23 +284,20 @@ private fun PlanBadge(text: String) {
 }
 
 @Composable
-internal fun ComingSoonDialog(
-    planName: String,
+internal fun PurchaseErrorDialog(
+    message: String,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
-            Icon(Icons.Default.Construction, contentDescription = null, modifier = Modifier.size(48.dp))
+            Icon(Icons.Default.Error, contentDescription = null, modifier = Modifier.size(48.dp))
         },
         title = {
-            Text(stringResource(Res.string.premium_dialog_coming_soon_title), fontWeight = FontWeight.Bold)
+            Text(stringResource(Res.string.premium_dialog_purchase_error_title), fontWeight = FontWeight.Bold)
         },
         text = {
-            Text(
-                stringResource(Res.string.premium_dialog_coming_soon_message, planName),
-                textAlign = TextAlign.Center
-            )
+            Text(message, textAlign = TextAlign.Center)
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {

@@ -20,6 +20,13 @@ export interface AppLayoutProps {
   onTabChange?: (tab: string) => void;
   isTestMode?: boolean;
   user?: UserProfile | null;
+  /**
+   * Whether the signed-in user is on a paid tier -- sourced from `App.tsx`'s
+   * `useSubscriptionViewModel` (the real `data/subscription.tier` read), not from
+   * `UserProfile.isPaidMember` (dead field, never populated by `AuthService.mapFirebaseUser`,
+   * see git history for the fix). Defaults to false so the badge stays hidden when unset.
+   */
+  isPaidMember?: boolean;
   onSignInClick?: () => void;
   onNotificationClick?: (notification: SSBMaxNotification) => void;
 }
@@ -30,6 +37,7 @@ export const AppLayout: FC<AppLayoutProps> = ({
   onTabChange,
   isTestMode = false,
   user: propUser,
+  isPaidMember = false,
   onSignInClick,
   onNotificationClick
 }) => {
@@ -107,7 +115,7 @@ export const AppLayout: FC<AppLayoutProps> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-base font-black tracking-wider text-slate-900 dark:text-white uppercase">{strings.header.title}</span>
-                      {authUser?.isPaidMember && (
+                      {isPaidMember && (
                         <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/30 rounded uppercase tracking-widest" data-testid="pro-membership-badge">
                           PRO
                         </span>

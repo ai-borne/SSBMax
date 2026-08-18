@@ -28,6 +28,44 @@ const TIER_PRICES = Object.fromEntries(
 );
 
 /**
+ * planId ("basic_monthly") -> tier name ("BASIC"), the inverse of the map above. Used to
+ * populate `users/{uid}/data/subscription` -- see [applySubscriptionTier]'s doc comment for why
+ * this write was missing entirely until Phase 4 (RevenueCat integration)'s amendment.
+ */
+function planIdToTier(planId) {
+  const tier = planId.split('_')[0]?.toUpperCase();
+  return tier && TIER_PRICES[planId] !== undefined ? tier : 'PRO';
+}
+
+/**
+ * Writes the tier every real gating read path actually consults --
+ * `users/{uid}/data/subscription` (`GitLiveSubscriptionRepository`/web's `SubscriptionRepository`/
+ * `eligibility.js`, see Phase 3's `SubscriptionTierDto` schema) -- inside the same transaction as
+ * the legacy `isPaidMember`/`membershipPlan` flags on the root `users/{uid}` doc.
+ *
+ * Amendment (found during Phase 3's deep check, Phase 4 RevenueCat integration plan): this
+ * write never existed before -- a real Razorpay payment updated `isPaidMember` but never
+ * `data/subscription.tier`, so a completed payment did not actually elevate the tier any real
+ * gating check reads. `startDate` only gets set on a user's *first* transition into this tier
+ * (an existing paid user's `startDate` is preserved across renewal webhooks), matching Phase 3's
+ * billing-anniversary reset semantics -- a renewal must not reset the anniversary day.
+ */
+function applySubscriptionTier(transaction, userRef, tier, existingStartDate) {
+  const subscriptionRef = userRef
+    .collection(FirestorePaths.USER_DATA_SUBCOLLECTION)
+    .doc(FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID);
+  transaction.set(
+    subscriptionRef,
+    {
+      tier,
+      startDate: existingStartDate || Date.now(),
+      billingCycle: 'MONTHLY'
+    },
+    { merge: true }
+  );
+}
+
+/**
  * Perform constant-time string comparison to prevent timing side-channel attacks
  */
 function timingSafeCompare(a, b) {
@@ -98,6 +136,9 @@ exports.handleRazorpayWebhook = functions.https.onRequest(async (req, res) => {
       const logRef = db.collection(FirestorePaths.WEBHOOK_LOGS).doc(eventId);
       const paymentRef = db.collection(FirestorePaths.PAYMENTS).doc(payment.id);
       const userRef = db.collection(FirestorePaths.USERS).doc(userId);
+      const subscriptionRef = userRef
+        .collection(FirestorePaths.USER_DATA_SUBCOLLECTION)
+        .doc(FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID);
 
       const result = await db.runTransaction(async (transaction) => {
         const logDoc = await transaction.get(logRef);
@@ -109,6 +150,10 @@ exports.handleRazorpayWebhook = functions.https.onRequest(async (req, res) => {
         if (paymentDoc.exists && paymentDoc.data().userId !== userId) {
           return { replayDetected: true };
         }
+
+        // Read before any write in this transaction (Firestore requires all reads first).
+        const subscriptionDoc = await transaction.get(subscriptionRef);
+        const existingStartDate = subscriptionDoc.exists ? subscriptionDoc.data().startDate : null;
 
         const expectedAmount = TIER_PRICES[planId] || TIER_PRICES.pro_monthly;
         if (amountPaid < expectedAmount) {
@@ -140,6 +185,8 @@ exports.handleRazorpayWebhook = functions.https.onRequest(async (req, res) => {
           orderId: payment.order_id || null,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
+
+        applySubscriptionTier(transaction, userRef, planIdToTier(planId), existingStartDate);
 
         transaction.set(logRef, {
           eventId,
@@ -181,3 +228,4 @@ exports.handleRazorpayWebhook = functions.https.onRequest(async (req, res) => {
 
 exports.timingSafeCompare = timingSafeCompare;
 exports.TIER_PRICES = TIER_PRICES;
+exports.planIdToTier = planIdToTier;

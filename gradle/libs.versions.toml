@@ -47,6 +47,12 @@ navigationComposeKmp = "2.9.0-beta02"
 coil3 = "3.0.4"
 lifecycleKmp = "2.9.0"
 
+# Phase 4 (RevenueCat integration): real KMP artifact (pure Kotlin/Native klib over
+# StoreKit/Play Billing, no CocoaPods needed -- confirmed via RevenueCat's own
+# cat-paywall-kmp sample, which declares it as a plain commonMain `implementation()`
+# dependency same as coil3/ktor-darwin above).
+purchasesKmp = "3.5.0"
+
 # AndroidX Core
 coreKtx = "1.15.0"
 lifecycleRuntimeKtx = "2.8.7"
@@ -104,6 +110,7 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 navigation-compose-kmp = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "navigationComposeKmp" }
 coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
 coil3-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil3" }
+purchases-kmp-core = { group = "com.revenuecat.purchases", name = "purchases-kmp-core", version.ref = "purchasesKmp" }
 # Separate alias (not the app module's androidx-lifecycle-*-compose, pinned at 2.8.7 which
 # has no published iOS variant) because CMP 1.8.2's ui-uikitsimarm64 + navigation-compose-kmp
 # both transitively pull androidx.lifecycle 2.9.0 for iOS -- confirmed via a real

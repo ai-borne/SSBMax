@@ -109,7 +109,7 @@ export const App: FC = () => {
   const isGTOTaskOrBoard = ['gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt', 'interview', 'conference'].includes(activeTest || '');
 
   return (
-    <AppLayout activeTab={activeTab} onTabChange={handleTabChange} onNotificationClick={handleNotificationClick} isTestMode={Boolean(activeTest)}>
+    <AppLayout activeTab={activeTab} onTabChange={handleTabChange} onNotificationClick={handleNotificationClick} isTestMode={Boolean(activeTest)} isPaidMember={isPaidMember}>
       {activeTest ? (
         activeTest === 'oir' ? (
           <OIRTestRunner

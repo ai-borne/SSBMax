@@ -7,8 +7,7 @@ const mockUser = {
   uid: 'user_123',
   email: 'cadet@ssbmax.in',
   displayName: 'Cadet Officer',
-  photoURL: null,
-  isPaidMember: true
+  photoURL: null
 };
 
 describe('AppLayout Component', () => {
@@ -52,13 +51,23 @@ describe('AppLayout Component', () => {
 
   it('renders PRO badge for authenticated paid officer member', () => {
     render(
-      <AppLayout activeTab="home" user={mockUser}>
+      <AppLayout activeTab="home" user={mockUser} isPaidMember>
         <div>Content</div>
       </AppLayout>
     );
 
     expect(screen.getByTestId('pro-membership-badge')).toBeInTheDocument();
     expect(screen.getByTestId('nav-item-home')).toBeInTheDocument();
+  });
+
+  it('does not render the PRO badge for a FREE-tier authenticated user', () => {
+    render(
+      <AppLayout activeTab="home" user={mockUser} isPaidMember={false}>
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    expect(screen.queryByTestId('pro-membership-badge')).not.toBeInTheDocument();
   });
 
   it('triggers onTabChange callback when navigation pill is clicked', () => {

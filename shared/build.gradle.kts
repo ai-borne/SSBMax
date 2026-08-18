@@ -128,6 +128,11 @@ kotlin {
 
             implementation(libs.multiplatform.settings)
             implementation(libs.multiplatform.settings.coroutines)
+
+            // Phase 4 (RevenueCat integration): replaces hand-rolled Play/StoreKit
+            // reconciliation. Pure-Kotlin KMP artifact -- no CocoaPods/SPM wiring
+            // needed on iOS, same as ktor-darwin/coil3 above.
+            implementation(libs.purchases.kmp.core)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

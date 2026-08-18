@@ -8,8 +8,12 @@ import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.NoOpLogger
+import com.ssbmax.shared.platform.billing.BillingCancelledException
+import com.ssbmax.shared.platform.billing.SSBMaxProductIds
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatPurchaseOutcome
 import com.ssbmax.shared.platform.settings.DeveloperSettings
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
+import com.ssbmax.shared.presentation.testing.FakeRevenueCatClient
 import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
 import com.ssbmax.shared.presentation.testing.testUser
@@ -23,13 +27,12 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * Characterization test for [UpgradeViewModel], written retroactively (13-VM
  * gap-closing pass, see the KMP-convergence plan's Phase 1). Pins the
- * current-tier load + static plan list + "visual only" upgrade-dialog flow
- * (no payment gateway wired, see the ViewModel's own doc comment).
+ * current-tier load + static plan list + (Phase 4, RevenueCat integration)
+ * the real purchase flow through a fake [com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient].
  */
 class UpgradeViewModelTest {
 
@@ -37,6 +40,7 @@ class UpgradeViewModelTest {
 
     private lateinit var authRepository: FakeAuthRepository
     private lateinit var subscriptionRepository: FakeSubscriptionRepository
+    private lateinit var revenueCatClient: FakeRevenueCatClient
     private lateinit var developerSettings: DeveloperSettings
 
     @BeforeTest
@@ -44,6 +48,7 @@ class UpgradeViewModelTest {
         Dispatchers.setMain(testDispatcher)
         authRepository = FakeAuthRepository(initialUser = testUser())
         subscriptionRepository = FakeSubscriptionRepository()
+        revenueCatClient = FakeRevenueCatClient()
         developerSettings = DeveloperSettings(FakeSettings())
     }
 
@@ -55,6 +60,8 @@ class UpgradeViewModelTest {
     private fun buildViewModel() = UpgradeViewModel(
         observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
         getSubscriptionTier = GetSubscriptionTierUseCase(subscriptionRepository),
+        subscriptionRepository = subscriptionRepository,
+        revenueCatClient = revenueCatClient,
         developerSettings = developerSettings,
         logger = NoOpLogger()
     )
@@ -93,28 +100,64 @@ class UpgradeViewModelTest {
     }
 
     @Test
-    fun `upgradeToPlan shows the coming-soon dialog without a real purchase flow`() = runTest(testDispatcher) {
+    fun `upgradeToPlan purchases the tier's product and persists the resulting tier`() = runTest(testDispatcher) {
+        revenueCatClient.purchaseResult = Result.success(
+            RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("basic", "pro", "premium"))
+        )
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.upgradeToPlan(SubscriptionTier.PREMIUM)
+        testDispatcher.scheduler.advanceUntilIdle()
 
+        assertEquals(SSBMaxProductIds.PREMIUM_MONTHLY, revenueCatClient.lastPurchasedProductId)
+        assertEquals(testUser().id to SubscriptionTier.PREMIUM, subscriptionRepository.lastUpdatedTierCall)
         val state = viewModel.uiState.value
-        assertTrue(state.showComingSoonDialog)
-        assertEquals(SubscriptionTier.PREMIUM, state.selectedPlanForUpgrade)
+        assertEquals(false, state.isPurchasing)
+        assertEquals(null, state.purchaseError)
+        assertEquals(SubscriptionTier.PREMIUM, state.currentTier)
     }
 
     @Test
-    fun `dismissComingSoonDialog clears the dialog state`() = runTest(testDispatcher) {
+    fun `upgradeToPlan surfaces a non-cancellation purchase failure as an error`() = runTest(testDispatcher) {
+        revenueCatClient.purchaseResult = Result.failure(Exception("Product not found in current offering"))
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.upgradeToPlan(SubscriptionTier.PRO)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(false, state.isPurchasing)
+        assertEquals("Product not found in current offering", state.purchaseError)
+        assertEquals(null, subscriptionRepository.lastUpdatedTierCall)
+    }
+
+    @Test
+    fun `upgradeToPlan treats user cancellation as a silent no-op, not an error`() = runTest(testDispatcher) {
+        revenueCatClient.purchaseResult = Result.failure(BillingCancelledException())
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.upgradeToPlan(SubscriptionTier.PRO)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(false, state.isPurchasing)
+        assertEquals(null, state.purchaseError)
+    }
+
+    @Test
+    fun `dismissPurchaseError clears the error state`() = runTest(testDispatcher) {
+        revenueCatClient.purchaseResult = Result.failure(Exception("boom"))
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.upgradeToPlan(SubscriptionTier.PRO)
+        testDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.dismissComingSoonDialog()
+        viewModel.dismissPurchaseError()
 
-        val state = viewModel.uiState.value
-        assertEquals(false, state.showComingSoonDialog)
-        assertEquals(null, state.selectedPlanForUpgrade)
+        assertEquals(null, viewModel.uiState.value.purchaseError)
     }
 
     @Test

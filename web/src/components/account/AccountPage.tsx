@@ -5,6 +5,13 @@ import { authService, UserProfile } from '../../services/AuthService';
 
 export interface AccountPageProps {
   user?: UserProfile | null;
+  /**
+   * Whether the signed-in user is on a paid tier -- must come from the real
+   * `data/subscription.tier` read (`useSubscriptionViewModel`/`SubscriptionRepository`), not
+   * from `UserProfile.isPaidMember` (dead field, never populated by `AuthService`, see git
+   * history -- the same fix `AppLayout`'s badge needed).
+   */
+  isPaidMember?: boolean;
   onSignOut?: () => void;
   onEditDiagnostic?: () => void;
   onUpgradeClick?: () => void;
@@ -12,6 +19,7 @@ export interface AccountPageProps {
 
 export const AccountPage: FC<AccountPageProps> = ({
   user: initialUser,
+  isPaidMember = false,
   onSignOut,
   onEditDiagnostic,
   onUpgradeClick
@@ -39,7 +47,7 @@ export const AccountPage: FC<AccountPageProps> = ({
     }
   };
 
-  const isPro = currentUser?.isPaidMember ?? false;
+  const isPro = isPaidMember;
   const initials = currentUser?.displayName
     ? currentUser.displayName
         .split(' ')

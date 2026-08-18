@@ -3,9 +3,13 @@ package com.ssbmax.shared.presentation.premium
 import com.ssbmax.shared.domain.model.BillingCycle
 import com.ssbmax.shared.domain.model.SSBMaxUser
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.DomainLogger
+import com.ssbmax.shared.platform.billing.BillingCancelledException
+import com.ssbmax.shared.platform.billing.SSBMaxProductIds
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
 import com.ssbmax.shared.platform.settings.DeveloperSettings
 import com.ssbmax.shared.ui.theme.TierColors
 import androidx.compose.ui.graphics.Color
@@ -44,22 +48,32 @@ import kotlinx.coroutines.launch
  * identical lookup. Same SSOT result, avoids duplicating the
  * repository-to-tier mapping in two KMP ViewModels.
  *
- * Billing gap (explicitly NOT invented here): the Android original's
- * `upgradeToPlan()` is "visual only" -- it just flips `showComingSoonDialog`
- * to true; there is no Razorpay/Stripe/Play-Billing call anywhere in this
- * flow (see the Android file's own TODO comments). This port preserves that
- * exact placeholder behavior. `PlayBillingClient`/`StoreKitBillingClient`
- * (Phase 4 shims) are NOT wired here, matching the Android original which has
- * no working purchase flow either.
+ * Billing gap (Phase 4, RevenueCat integration -- CLOSED): the Android
+ * original's `upgradeToPlan()` was "visual only" -- it just flipped
+ * `showComingSoonDialog` to true; there was no Razorpay/Stripe/Play-Billing
+ * call anywhere in this flow. `upgradeToPlan()` now drives a real purchase
+ * through [RevenueCatClient], which wraps `PlayBillingClient`/
+ * `StoreKitBillingClient` internally (RevenueCat's own SDK talks to Play
+ * Billing/StoreKit directly -- those two shims stay unbound and unused,
+ * kept only until RevenueCat is verified working end-to-end in production,
+ * per the RevenueCat integration decision). [SSBMaxProductIds] product IDs
+ * are still PLACEHOLDERs until real Play Console/App Store Connect products
+ * exist, so a real purchase attempt fails with "Product not found" until
+ * then -- expected, not a bug; swapping in real IDs is the only change
+ * needed to go live.
  */
 class UpgradeViewModel(
     private val observeCurrentUser: ObserveCurrentUserUseCase,
     private val getSubscriptionTier: GetSubscriptionTierUseCase,
+    private val subscriptionRepository: SubscriptionRepository,
+    private val revenueCatClient: RevenueCatClient,
     private val developerSettings: DeveloperSettings,
     private val logger: DomainLogger
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(UpgradeUiState())
     val uiState: StateFlow<UpgradeUiState> = _uiState.asStateFlow()
+
+    private var currentUserId: String? = null
 
     private companion object {
         const val TAG = "UpgradeViewModel"
@@ -78,6 +92,8 @@ class UpgradeViewModel(
     }
 
     private suspend fun loadCurrentSubscriptionFor(currentUser: SSBMaxUser?) {
+        currentUserId = currentUser?.id
+        revenueCatClient.configure(appUserId = currentUser?.id)
         _uiState.update { it.copy(isLoading = true) }
         try {
             if (currentUser == null) {
@@ -138,13 +154,37 @@ class UpgradeViewModel(
     }
 
     fun upgradeToPlan(tier: SubscriptionTier) {
-        // Visual only -- show coming soon dialog. No payment gateway wired
-        // (matches the Android original; see class doc above).
-        _uiState.update { it.copy(showComingSoonDialog = true, selectedPlanForUpgrade = tier) }
+        val userId = currentUserId
+        val productId = SSBMaxProductIds.forTier(tier)
+        if (userId == null || productId == null) {
+            logger.w(TAG, "upgradeToPlan called with no signed-in user or no product for $tier")
+            return
+        }
+
+        _uiState.update { it.copy(isPurchasing = true, purchaseError = null, selectedPlanForUpgrade = tier) }
+        viewModelScope.launch {
+            revenueCatClient.purchase(productId)
+                .onSuccess { outcome ->
+                    subscriptionRepository.updateSubscriptionTier(userId, outcome.tier)
+                    _uiState.update {
+                        it.copy(isPurchasing = false, currentTier = outcome.tier, selectedPlanForUpgrade = null)
+                    }
+                }
+                .onFailure { error ->
+                    if (error is BillingCancelledException) {
+                        _uiState.update { it.copy(isPurchasing = false, selectedPlanForUpgrade = null) }
+                    } else {
+                        logger.e(TAG, "Purchase failed for $tier", error)
+                        _uiState.update {
+                            it.copy(isPurchasing = false, purchaseError = error.message, selectedPlanForUpgrade = null)
+                        }
+                    }
+                }
+        }
     }
 
-    fun dismissComingSoonDialog() {
-        _uiState.update { it.copy(showComingSoonDialog = false, selectedPlanForUpgrade = null) }
+    fun dismissPurchaseError() {
+        _uiState.update { it.copy(purchaseError = null) }
     }
 }
 
@@ -156,7 +196,8 @@ data class UpgradeUiState(
     val availablePlans: List<SubscriptionPlan> = emptyList(),
     val selectedBillingCycle: BillingCycle = BillingCycle.MONTHLY,
     val isLoading: Boolean = true,
-    val showComingSoonDialog: Boolean = false,
+    val isPurchasing: Boolean = false,
+    val purchaseError: String? = null,
     val selectedPlanForUpgrade: SubscriptionTier? = null
 )
 

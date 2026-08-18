@@ -1018,8 +1018,7 @@
     <string name="premium_info_secure">Secure payment processing</string>
     <string name="premium_info_cancel">Cancel anytime, no questions asked</string>
     <string name="premium_info_support">24/7 customer support</string>
-    <string name="premium_dialog_coming_soon_title">Coming Soon!</string>
-    <string name="premium_dialog_coming_soon_message">Payment integration for the %1$s plan is coming soon! We\'re working hard to bring you seamless subscription management.</string>
+    <string name="premium_dialog_purchase_error_title">Purchase failed</string>
     <string name="premium_dialog_action_got_it">Got it</string>
 
     <!-- Marketplace screen (coaching institute directory, mock data) -->
