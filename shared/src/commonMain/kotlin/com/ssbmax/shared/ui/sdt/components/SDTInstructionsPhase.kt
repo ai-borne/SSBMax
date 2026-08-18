@@ -16,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
@@ -26,7 +25,6 @@ import ssbmax.shared.generated.resources.sdt_instruction_3
 import ssbmax.shared.generated.resources.sdt_instruction_4
 import ssbmax.shared.generated.resources.sdt_instruction_5
 import ssbmax.shared.generated.resources.sdt_instruction_6
-import ssbmax.shared.generated.resources.sdt_instructions_title
 import ssbmax.shared.generated.resources.sdt_start_test
 
 /**
@@ -43,13 +41,6 @@ fun SDTInstructionsPhase(onStart: () -> Unit) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            Text(
-                text = stringResource(Res.string.sdt_instructions_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

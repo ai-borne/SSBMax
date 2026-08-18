@@ -20,8 +20,9 @@ internal object SubmissionConstants {
 
 /**
  * `true` when [id] is safe to pass into a GitLive `.document(id)` call. GitLive's Firestore SDK
- * throws an uncatchable native `FIRInvalidArgumentException` on iOS for `.document("")` -- it
- * crashes the app instead of failing the surrounding `Result`, so every `GitLive*Repository`/
+ * throws an uncatchable native `FIRInvalidArgumentException` on iOS when `.document` is called
+ * with a blank id -- it crashes the app instead of failing the surrounding `Result`, so every
+ * `GitLive*Repository`/
  * `*Delegate`/`*Store` method that takes an id param must check this *before* calling `.document`,
  * not rely on a caller having already filtered it out (that was tried once, in
  * `GetOLQDashboardUseCase`, and only covered the two call sites it happened to touch).
