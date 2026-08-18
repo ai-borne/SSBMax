@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { Check, ShieldCheck, Zap, Crown, Award } from 'lucide-react';
+import { Check, ShieldCheck, Zap, Crown, Award, Sparkles } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { SUBSCRIPTION_TIERS, AccessTier } from '../../constants/ssbSelectionProcess';
 import { GridCardContainer } from '../common/GridCardContainer';
@@ -45,7 +45,8 @@ export const PaymentRibbon: FC<PaymentRibbonProps> = ({
           const isActive = currentTier === tier.id;
           const isOfficer = tier.id === 'PRO';
           const isCommand = tier.id === 'PREMIUM';
-          const variant = isCommand ? 'premium' : isOfficer ? 'pro' : 'free';
+          const isBasic = tier.id === 'BASIC';
+          const variant = isCommand ? 'premium' : isOfficer ? 'pro' : isBasic ? 'basic' : 'free';
 
           return (
             <GridCardContainer
@@ -65,6 +66,8 @@ export const PaymentRibbon: FC<PaymentRibbonProps> = ({
                         ? 'bg-amber-500 text-slate-950'
                         : isOfficer
                         ? 'bg-sky-500 text-white'
+                        : isBasic
+                        ? 'bg-indigo-500 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
@@ -74,6 +77,8 @@ export const PaymentRibbon: FC<PaymentRibbonProps> = ({
                     <Crown className="w-4 h-4 text-amber-400" />
                   ) : isOfficer ? (
                     <Zap className="w-4 h-4 text-sky-400" />
+                  ) : isBasic ? (
+                    <Sparkles className="w-4 h-4 text-indigo-400" />
                   ) : null}
                 </div>
 
@@ -109,6 +114,8 @@ export const PaymentRibbon: FC<PaymentRibbonProps> = ({
                     ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
                     : isOfficer
                     ? 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white shadow-md shadow-sky-600/20'
+                    : isBasic
+                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-md shadow-indigo-600/20'
                     : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                 }`}
               >

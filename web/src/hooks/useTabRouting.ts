@@ -32,12 +32,15 @@ export function useTabRouting(defaultTab: TabId = 'home') {
     const handlePopState = () => {
       const currentTab = getTabFromUrl();
       setActiveTabState(currentTab);
+      window.scrollTo(0, 0);
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // The single place tabs change (nav bar, footer, in-page CTAs) so every switch lands the
+  // reader at the top of the new page instead of wherever they'd scrolled to on the last one.
   const setActiveTab = useCallback((tab: string) => {
     const targetTab = (VALID_TABS.includes(tab as TabId)
       ? tab
@@ -53,6 +56,7 @@ export function useTabRouting(defaultTab: TabId = 'home') {
         url.searchParams.set('tab', targetTab);
       }
       window.history.pushState({ tab: targetTab }, '', url.toString());
+      window.scrollTo(0, 0);
     }
   }, []);
 

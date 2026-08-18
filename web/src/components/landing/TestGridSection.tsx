@@ -1,76 +1,34 @@
 import { FC } from 'react';
-import { Shield, FileText, Brain, Users, ArrowRight } from 'lucide-react';
+import { ArrowRight, Shield, FileText, Brain, Mic } from 'lucide-react';
 import { strings } from '../../constants/strings';
+import { SSB_5_DAY_TIMELINE, SSBDayNumber } from '../../constants/ssbSelectionProcess';
 
 export interface TestGridSectionProps {
-  onStartTestClick?: (testId: string) => void;
+  onExploreTestsClick: () => void;
 }
 
-export const TestGridSection: FC<TestGridSectionProps> = ({ onStartTestClick }) => {
-  const tests = [
-    {
-      id: 'oir',
-      stage: strings.landing.stage1,
-      title: strings.practice.oirTitle,
-      desc: strings.practice.oirDesc,
-      icon: Shield,
-      badge: strings.practice.freeBadge,
-      badgeColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-    },
-    {
-      id: 'ppdt',
-      stage: strings.landing.stage1,
-      title: strings.practice.ppdtTitle,
-      desc: strings.practice.ppdtDesc,
-      icon: FileText,
-      badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-    },
-    {
-      id: 'tat',
-      stage: strings.landing.stage2,
-      title: strings.practice.tatTitle,
-      desc: strings.practice.tatDesc,
-      icon: Brain,
-      badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-    },
-    {
-      id: 'wat',
-      stage: strings.landing.stage2,
-      title: strings.practice.watTitle,
-      desc: strings.practice.watDesc,
-      icon: Brain,
-      badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-    },
-    {
-      id: 'srt',
-      stage: strings.landing.stage2,
-      title: strings.practice.srtTitle,
-      desc: strings.practice.srtDesc,
-      icon: Brain,
-      badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-    },
-    {
-      id: 'sd',
-      stage: strings.landing.stage2,
-      title: strings.practice.sdTitle,
-      desc: strings.practice.sdDesc,
-      icon: Users,
-      badge: strings.practice.proBadge,
-      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-    }
-  ];
+const DAY_ICON: Record<SSBDayNumber, typeof Shield> = {
+  '1': Shield,
+  '2': Brain,
+  '3-4': FileText,
+  '5': Mic,
+};
 
+/**
+ * Teaser only -- the real, functional test launcher (batches, eligibility gating, PIQ wizard)
+ * lives once on PracticeTestsPage (SSB Tests tab). This section used to render its own "Launch
+ * Test" grid, which duplicated that surface without any of its eligibility checks. Card copy is
+ * derived from SSB_5_DAY_TIMELINE (the same source PracticeTestsPage's day accordions read) so
+ * this teaser can't drift from the real test catalog -- it never hand-lists test names itself.
+ */
+export const TestGridSection: FC<TestGridSectionProps> = ({ onExploreTestsClick }) => {
   return (
     <section className="w-full py-12 px-4 my-8" data-testid="test-grid-section">
       <div className="max-w-6xl mx-auto flex flex-col items-center">
         {/* Section Header */}
         <div className="text-center max-w-3xl mb-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-xs font-bold uppercase tracking-wider mb-4">
-            <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+            <FileText className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             <span>{strings.landing.gridBadge}</span>
           </div>
           <h2 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-3">
@@ -81,41 +39,40 @@ export const TestGridSection: FC<TestGridSectionProps> = ({ onStartTestClick }) 
           </p>
         </div>
 
-        {/* 6-Card Test Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full mb-8">
-          {tests.map((t) => {
-            const Icon = t.icon;
+        {/* Stage Overview (non-interactive teaser -- launching happens on the SSB Tests tab) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mb-10">
+          {SSB_5_DAY_TIMELINE.map((day) => {
+            const Icon = DAY_ICON[day.dayNumber];
             return (
               <div
-                key={t.id}
-                className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 shadow-md hover:shadow-xl dark:shadow-xl dark:shadow-slate-950/60 transition-all flex flex-col justify-between group"
-                data-testid={`grid-card-${t.id}`}
+                key={day.dayNumber}
+                className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md"
+                data-testid={`grid-stage-day-${day.dayNumber}`}
               >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 group-hover:scale-105 transition-transform">
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${t.badgeColor}`}>
-                      {t.badge}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">{t.stage}</span>
-                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">{t.title}</h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-6">{t.desc}</p>
+                <div className="p-2.5 w-fit rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 mb-4">
+                  <Icon className="w-5 h-5" />
                 </div>
-
-                <button
-                  onClick={() => onStartTestClick?.(t.id)}
-                  className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-700/60 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-600 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-2 transition-all border border-slate-200 dark:border-slate-600/50"
-                  data-testid={`start-btn-${t.id}`}
-                >
-                  <span>{strings.practice.startTest}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">{day.stageBadge}</span>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">{day.title}</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{day.subtitle}</p>
               </div>
             );
           })}
+        </div>
+
+        {/* Single funnel CTA into the real, functional test launcher */}
+        <div className="text-center space-y-3">
+          <p className="text-slate-600 dark:text-slate-400 text-sm max-w-xl mx-auto">
+            {strings.landing.gridCtaSubtitle}
+          </p>
+          <button
+            onClick={onExploreTestsClick}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-sm font-bold shadow-lg shadow-sky-600/20 transition-all"
+            data-testid="grid-cta-button"
+          >
+            <span>{strings.landing.gridCtaButton}</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </section>

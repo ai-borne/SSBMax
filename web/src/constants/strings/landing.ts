@@ -2,7 +2,7 @@ export const landingStrings = {
   heroBadge: 'Intelligent Testing Platform',
   heroTitle: 'Practise SSB with AI',
   heroSubtitle: 'Study, Practice & Master Difficult SSB Tests',
-  startFree: 'Start Free OIR Test (5 Mins) →',
+  startFree: 'Start Free OIR Test (5 Mins)',
   unlockPro: 'Unlock Pro Officer Pass',
   viewSampleDossier: 'View Sample Assessor Dossier 👁️',
   statOlq: 'Unlimited Study Material',
@@ -49,8 +49,7 @@ export const landingStrings = {
   olqCooperation: 'Cooperation (OLQ-5)',
   olqDuty: 'Sense of Duty (OLQ-7)',
   olqProactive: 'Requires Proactive Action',
-  pricingCtaTitle: 'Choose Your Preparation Tier',
-  pricingCtaSubtitle: 'Free, Basic, Pro, and Premium plans — see full pricing and features on the SSB Tests tab.',
-  pricingCtaButton: 'View Pricing & Plans →'
+  gridCtaSubtitle: 'Screening, Psychology, GTO, and Interview simulators — with live batches, eligibility tracking, and AI-scored results.',
+  gridCtaButton: 'Explore All SSB Tests'
 } as const;
 

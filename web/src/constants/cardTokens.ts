@@ -7,6 +7,7 @@ export type CardGridVariant =
   | 'hero'
   | 'pro'
   | 'premium'
+  | 'basic'
   | 'free'
   | 'day1'
   | 'day2'
@@ -26,6 +27,10 @@ export const CARD_GRID_VARIANTS: Record<CardGridVariant, { container: string; gr
   },
   premium: {
     container: 'bg-gradient-to-b from-amber-500/10 via-amber-50/40 to-white dark:from-amber-500/10 dark:via-slate-900/90 dark:via-slate-900 dark:to-slate-900 dark:bg-slate-800/90 border-2 border-amber-500/50 dark:border-amber-400/60 shadow-lg shadow-amber-500/10 shadow-[var(--card-shadow)]',
+    gridOpacity: 'opacity-40 dark:opacity-60',
+  },
+  basic: {
+    container: 'bg-gradient-to-b from-indigo-500/10 via-indigo-50/40 to-white dark:from-indigo-500/10 dark:via-slate-900/90 dark:via-slate-900 dark:to-slate-900 dark:bg-slate-800/90 border-2 border-indigo-500/50 dark:border-indigo-400/60 shadow-lg shadow-indigo-500/10 shadow-[var(--card-shadow)]',
     gridOpacity: 'opacity-40 dark:opacity-60',
   },
   free: {
