@@ -1,0 +1,15 @@
+# Subscription tier + add-on pricing, in INR. KMP-authoritative — see
+# shared/.../domain/model/SubscriptionTier.kt and
+# docs/plans/SubscriptionPricingRestructure.md for the source decision.
+# Monthly billing only for now — no quarterly/yearly contract fields.
+# See contracts/README.md for the compatibility policy before editing.
+schemaVersion: "1.0.0"
+
+tiers:
+  FREE: 0
+  BASIC: 299
+  PRO: 499
+  PREMIUM: 999
+
+addons:
+  INTERVIEW_TOPUP: 99

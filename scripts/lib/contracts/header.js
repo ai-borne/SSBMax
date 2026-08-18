@@ -2,7 +2,7 @@
 
 const GENERATED_AT_COMMAND = 'node scripts/generate-contracts.js';
 
-const ALL_SOURCE_FILES = ['firestore-paths.yaml', 'enums.yaml', 'subscription.yaml', 'test-config.yaml', 'events.yaml', 'routes.yaml', 'tokens.yaml'];
+const ALL_SOURCE_FILES = ['firestore-paths.yaml', 'enums.yaml', 'subscription.yaml', 'pricing.yaml', 'test-config.yaml', 'events.yaml', 'routes.yaml', 'tokens.yaml'];
 
 function header(commentStyle, sourceFiles) {
   const lines = [

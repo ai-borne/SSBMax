@@ -14,7 +14,7 @@ function ktColor(hex) {
 }
 
 function emitKotlin(data) {
-  const { firestorePaths, enums, subscription, testConfig, events, routes, tokens } = data;
+  const { firestorePaths, enums, subscription, pricing, testConfig, events, routes, tokens } = data;
   const out = [];
   out.push(header('kt', ALL_SOURCE_FILES));
   out.push('package com.ssbmax.shared.contracts');
@@ -58,15 +58,28 @@ function emitKotlin(data) {
   out.push('');
 
   // Subscription limits
-  out.push('    data class SubscriptionLimit(val bucket: String, val testTypes: List<String>, val free: Int, val pro: Int, val premium: Int)');
+  out.push('    data class SubscriptionLimit(val bucket: String, val testTypes: List<String>, val free: Int, val basic: Int, val pro: Int, val premium: Int)');
   out.push('    object Subscription {');
   out.push('        val LIMITS: List<SubscriptionLimit> = listOf(');
   const subRows = subscription.limits.map((l) => {
     const types = l.testTypes.map((t) => `"${t}"`).join(', ');
-    return `            SubscriptionLimit(${ktString(l.bucket)}, listOf(${types}), ${l.FREE}, ${l.PRO}, ${l.PREMIUM})`;
+    return `            SubscriptionLimit(${ktString(l.bucket)}, listOf(${types}), ${l.FREE}, ${l.BASIC}, ${l.PRO}, ${l.PREMIUM})`;
   });
   out.push(subRows.join(',\n'));
   out.push('        )');
+  out.push('    }');
+  out.push('');
+
+  // Pricing (INR, monthly)
+  out.push('    data class TierPrice(val tier: String, val monthlyInr: Int)');
+  out.push('    object Pricing {');
+  out.push('        val TIERS: List<TierPrice> = listOf(');
+  const tierRows = Object.entries(pricing.tiers).map(([tier, price]) => `            TierPrice(${ktString(tier)}, ${price})`);
+  out.push(tierRows.join(',\n'));
+  out.push('        )');
+  for (const [addon, price] of Object.entries(pricing.addons)) {
+    out.push(`        const val ${addon}_INR = ${price}`);
+  }
   out.push('    }');
   out.push('');
 

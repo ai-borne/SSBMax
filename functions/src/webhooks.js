@@ -8,18 +8,24 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
-const { FirestorePaths } = require('./generated/contracts.cjs');
+const { FirestorePaths, PricingTiers } = require('./generated/contracts.cjs');
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
 
-// Tier price map (amount in paise)
-const TIER_PRICES = {
-  pro_monthly: 49900,
-  pro_yearly: 499900,
-};
+/**
+ * planId -> expected amount in paise, sourced from the generated pricing contract
+ * (contracts/pricing.yaml) rather than a hand-typed map -- this used to be missing
+ * basic_monthly/premium_monthly entirely, so Basic/Premium purchases via Razorpay
+ * could never pass the underpayment check below (see docs/plans/
+ * SubscriptionPricingRestructure.md Phase 2). `*_yearly` planIds have no contract
+ * entry (monthly billing only, for now) and are intentionally left out here.
+ */
+const TIER_PRICES = Object.fromEntries(
+  PricingTiers.map(({ tier, monthlyInr }) => [`${tier.toLowerCase()}_monthly`, monthlyInr * 100])
+);
 
 /**
  * Perform constant-time string comparison to prevent timing side-channel attacks
@@ -174,3 +180,4 @@ exports.handleRazorpayWebhook = functions.https.onRequest(async (req, res) => {
 });
 
 exports.timingSafeCompare = timingSafeCompare;
+exports.TIER_PRICES = TIER_PRICES;

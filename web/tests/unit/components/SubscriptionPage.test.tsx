@@ -12,15 +12,17 @@ beforeEach(() => {
 });
 
 describe('SubscriptionPage Component', () => {
-  it('renders subscription page title, pricing plans, and feature lists', () => {
+  it('renders subscription page title and one card per tier (FREE/BASIC/PRO/PREMIUM)', () => {
     render(<SubscriptionPage />);
 
     expect(screen.getByTestId('subscription-page')).toBeInTheDocument();
     expect(screen.getAllByText(strings.subscription.title).length).toBeGreaterThan(0);
-    expect(screen.getByText(strings.subscription.freePlanTitle)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.proPlanTitle)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.freePlanPrice)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.proPlanPrice)).toBeInTheDocument();
+    expect(screen.getByTestId('free-tier-card')).toBeInTheDocument();
+    expect(screen.getByTestId('basic-tier-card')).toBeInTheDocument();
+    expect(screen.getByTestId('pro-tier-card')).toBeInTheDocument();
+    expect(screen.getByTestId('premium-tier-card')).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonFreePrice)).toBeInTheDocument();
+    expect(screen.getByText(strings.subscription.ribbonProPrice)).toBeInTheDocument();
   });
 
   it('triggers upgrade order flow on upgrade button click', async () => {

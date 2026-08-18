@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class SubscriptionTierDto(val tier: String = "FREE") {
     fun toDomain(): SubscriptionTier = when (tier.uppercase()) {
+        "BASIC" -> SubscriptionTier.BASIC
         "PRO" -> SubscriptionTier.PRO
         "PREMIUM" -> SubscriptionTier.PREMIUM
         else -> SubscriptionTier.FREE
@@ -54,6 +55,7 @@ object SubscriptionLimits {
         SsbContracts.Subscription.LIMITS.associate { limit ->
             limit.bucket to mapOf(
                 SubscriptionTier.FREE to limit.free,
+                SubscriptionTier.BASIC to limit.basic,
                 SubscriptionTier.PRO to limit.pro,
                 SubscriptionTier.PREMIUM to limit.premium
             )

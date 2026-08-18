@@ -57,10 +57,10 @@ describe('SSB Selection Process SSOT', () => {
   });
 
   describe('Subscription Tiers', () => {
-    it('should define 3 subscription tiers in ascending access levels', () => {
-      expect(SUBSCRIPTION_TIERS).toHaveLength(3);
-      expect(SUBSCRIPTION_TIERS.map((t) => t.id)).toEqual(['FREE', 'PRO', 'PREMIUM']);
-      expect(SUBSCRIPTION_TIERS.map((t) => t.accessLevel)).toEqual([0, 1, 2]);
+    it('should define 4 subscription tiers in ascending access levels', () => {
+      expect(SUBSCRIPTION_TIERS).toHaveLength(4);
+      expect(SUBSCRIPTION_TIERS.map((t) => t.id)).toEqual(['FREE', 'BASIC', 'PRO', 'PREMIUM']);
+      expect(SUBSCRIPTION_TIERS.map((t) => t.accessLevel)).toEqual([0, 1, 2, 3]);
     });
 
     it('should mark Pro as the most popular tier', () => {
@@ -105,8 +105,9 @@ describe('SSB Selection Process SSOT', () => {
 
     it('should correctly evaluate tier access permissions', () => {
       expect(getTierAccessLevel('FREE')).toBe(0);
-      expect(getTierAccessLevel('PRO')).toBe(1);
-      expect(getTierAccessLevel('PREMIUM')).toBe(2);
+      expect(getTierAccessLevel('BASIC')).toBe(1);
+      expect(getTierAccessLevel('PRO')).toBe(2);
+      expect(getTierAccessLevel('PREMIUM')).toBe(3);
 
       expect(hasTierAccess('FREE', 'FREE')).toBe(true);
       expect(hasTierAccess('FREE', 'PRO')).toBe(false);

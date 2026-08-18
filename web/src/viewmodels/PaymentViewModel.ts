@@ -6,6 +6,19 @@
 import { useState, useCallback } from 'react';
 import { RazorpayService } from '../services/RazorpayService';
 import { strings } from '../constants/strings';
+import { PricingTiers } from '../generated/contracts';
+
+/**
+ * Mock/offline-testing order amount, in paise, derived from the generated pricing contract
+ * (contracts/pricing.yaml) rather than a hand literal -- `planId` is `{tier}_monthly` (e.g.
+ * `pro_monthly`); real orders always go through `createOrderFn` (`functions/src/payments.js`,
+ * itself now server-computed from the same contract).
+ */
+function mockAmountInPaise(planId: string): number {
+  const tier = planId.split('_')[0]?.toUpperCase();
+  const monthlyInr = PricingTiers.find((t) => t.tier === tier)?.monthlyInr ?? PricingTiers.find((t) => t.tier === 'PRO')!.monthlyInr;
+  return monthlyInr * 100;
+}
 
 export type PaymentStatus = 'idle' | 'creating_order' | 'checkout_open' | 'verifying' | 'success' | 'error';
 
@@ -65,7 +78,7 @@ export function usePaymentViewModel(
           // Default mock order details for offline or un-wired environment testing
           orderDetails = {
             orderId: `order_mock_${Date.now()}`,
-            amount: 49900,
+            amount: mockAmountInPaise(planId),
             currency: 'INR',
             keyId: 'rzp_test_mockKey123'
           };

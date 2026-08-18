@@ -2,7 +2,7 @@
  * DO NOT EDIT. Generated file — hand edits will be overwritten and are
  * caught by `npm run contracts:check` in CI / pre-commit.
  *
- * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
+ * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, pricing.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
  * Regenerate: node scripts/generate-contracts.js
  *
  * SRP justification for exceeding the project 300-LOC limit: this file has
@@ -97,6 +97,7 @@ const Enums = {
   ],
   "SubscriptionTier": [
     "FREE",
+    "BASIC",
     "PRO",
     "PREMIUM"
   ],
@@ -213,8 +214,9 @@ const SubscriptionLimits = [
       "OIR"
     ],
     "free": 1,
-    "pro": 5,
-    "premium": -1
+    "basic": 5,
+    "pro": 8,
+    "premium": 15
   },
   {
     "bucket": "PPDT",
@@ -222,8 +224,9 @@ const SubscriptionLimits = [
       "PPDT"
     ],
     "free": 1,
-    "pro": 5,
-    "premium": -1
+    "basic": 5,
+    "pro": 8,
+    "premium": 15
   },
   {
     "bucket": "PIQ",
@@ -231,7 +234,8 @@ const SubscriptionLimits = [
       "PIQ"
     ],
     "free": 1,
-    "pro": -1,
+    "basic": 5,
+    "pro": 8,
     "premium": -1
   },
   {
@@ -240,8 +244,9 @@ const SubscriptionLimits = [
       "TAT"
     ],
     "free": 0,
-    "pro": 3,
-    "premium": -1
+    "basic": 5,
+    "pro": 8,
+    "premium": 15
   },
   {
     "bucket": "WAT",
@@ -249,8 +254,9 @@ const SubscriptionLimits = [
       "WAT"
     ],
     "free": 0,
-    "pro": 3,
-    "premium": -1
+    "basic": 5,
+    "pro": 8,
+    "premium": 15
   },
   {
     "bucket": "SRT",
@@ -258,8 +264,9 @@ const SubscriptionLimits = [
       "SRT"
     ],
     "free": 0,
-    "pro": 3,
-    "premium": -1
+    "basic": 5,
+    "pro": 8,
+    "premium": 15
   },
   {
     "bucket": "SD",
@@ -267,8 +274,9 @@ const SubscriptionLimits = [
       "SD"
     ],
     "free": 0,
-    "pro": 3,
-    "premium": -1
+    "basic": 5,
+    "pro": 8,
+    "premium": 15
   },
   {
     "bucket": "GTO",
@@ -283,8 +291,9 @@ const SubscriptionLimits = [
       "GTO_CT"
     ],
     "free": 0,
-    "pro": 3,
-    "premium": -1
+    "basic": 5,
+    "pro": 8,
+    "premium": 15
   },
   {
     "bucket": "INTERVIEW",
@@ -292,10 +301,34 @@ const SubscriptionLimits = [
       "IO"
     ],
     "free": 0,
-    "pro": 1,
-    "premium": 3
+    "basic": 1,
+    "pro": 3,
+    "premium": 10
   }
 ];
+
+const PricingTiers = [
+  {
+    "tier": "FREE",
+    "monthlyInr": 0
+  },
+  {
+    "tier": "BASIC",
+    "monthlyInr": 299
+  },
+  {
+    "tier": "PRO",
+    "monthlyInr": 499
+  },
+  {
+    "tier": "PREMIUM",
+    "monthlyInr": 999
+  }
+];
+
+const PricingAddons = {
+  "INTERVIEW_TOPUP": 99
+};
 
 const TestConfig = [
   {
@@ -527,4 +560,4 @@ const DesignTokens = {
   }
 };
 
-module.exports = { FirestorePaths, Enums, SubscriptionLimits, TestConfig, SecurityEvents, Routes, DesignTokens };
+module.exports = { FirestorePaths, Enums, SubscriptionLimits, PricingTiers, PricingAddons, TestConfig, SecurityEvents, Routes, DesignTokens };

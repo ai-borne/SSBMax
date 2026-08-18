@@ -39,8 +39,8 @@ export const PaymentRibbon: FC<PaymentRibbonProps> = ({
         </p>
       </div>
 
-      {/* Responsive 3-Tier Grid / Mobile Snap-Scroll */}
-      <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 md:grid md:grid-cols-3 md:gap-4 md:overflow-visible no-scrollbar">
+      {/* Responsive 4-Tier Grid (FREE/BASIC/PRO/PREMIUM) / Mobile Snap-Scroll */}
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 md:grid md:grid-cols-4 md:gap-4 md:overflow-visible no-scrollbar">
         {SUBSCRIPTION_TIERS.map((tier) => {
           const isActive = currentTier === tier.id;
           const isOfficer = tier.id === 'PRO';

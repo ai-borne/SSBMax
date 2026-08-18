@@ -1,5 +1,6 @@
 package com.ssbmax.shared.presentation.settings
 
+import com.ssbmax.shared.data.repository.SubscriptionLimits
 import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetMonthlyUsageUseCase
@@ -128,98 +129,35 @@ data class SubscriptionManagementUiState(
 /**
  * UI model for subscription tier with display properties.
  * Maps from domain [SubscriptionTier] to UI-specific display model.
+ *
+ * All prices/limits/features are read through [domainTier] from the generated
+ * contract ([com.ssbmax.shared.contracts.SsbContracts]) rather than hand-typed here --
+ * this enum previously duplicated those numbers and had already drifted once
+ * (see git history). Only the enum identity (for `.entries`/`when`-exhaustiveness
+ * in Compose UI) stays here.
  */
-enum class SubscriptionTierModel(
-    val displayName: String,
-    val price: String,
-    val oirTestLimit: Int,
-    val tatTestLimit: Int,
-    val watTestLimit: Int,
-    val srtTestLimit: Int,
-    val ppdtTestLimit: Int,
-    val piqTestLimit: Int,
-    val sdTestLimit: Int,
-    val gtoTestLimit: Int,
-    val interviewTestLimit: Int,
-    val features: List<String>
-) {
-    FREE(
-        displayName = "Free",
-        price = "₹0/month",
-        oirTestLimit = 1,
-        tatTestLimit = 0,
-        watTestLimit = 0,
-        srtTestLimit = 0,
-        ppdtTestLimit = 1,
-        piqTestLimit = 1,
-        sdTestLimit = 0,
-        gtoTestLimit = 0,
-        interviewTestLimit = 0,
-        features = listOf(
-            "1 OIR test per month",
-            "1 PPDT test per month",
-            "1 PIQ form (required)",
-            "Access to all study materials",
-            "Basic progress tracking",
-            "Community support"
-        )
-    ),
-    PRO(
-        displayName = "Pro",
-        price = "₹99/month",
-        oirTestLimit = 5,
-        tatTestLimit = 3,
-        watTestLimit = 3,
-        srtTestLimit = 3,
-        ppdtTestLimit = 5,
-        piqTestLimit = -1,
-        sdTestLimit = 3,
-        gtoTestLimit = 3,
-        interviewTestLimit = 1,
-        features = listOf(
-            "5 OIR tests per month",
-            "5 PPDT tests per month",
-            "3 TAT, WAT, SRT, SD tests each",
-            "3 attempts per GTO test (8 tests)",
-            "1 Interview practice",
-            "Unlimited PIQ updates",
-            "Advanced analytics",
-            "Priority support",
-            "Download study materials"
-        )
-    ),
-    PREMIUM(
-        displayName = "Premium",
-        price = "₹999/month",
-        oirTestLimit = -1,
-        tatTestLimit = -1,
-        watTestLimit = -1,
-        srtTestLimit = -1,
-        ppdtTestLimit = -1,
-        piqTestLimit = -1,
-        sdTestLimit = -1,
-        gtoTestLimit = -1,
-        // 3/month, not unlimited -- matches SubscriptionLimits's "Interview" row (the enforcement
-        // SSOT, dev-subscription-override plan Phase 2), which this UI-only enum had drifted from.
-        interviewTestLimit = 3,
-        features = listOf(
-            "Unlimited all tests",
-            "AI-powered feedback",
-            "Personalized study plans",
-            "Expert mentor sessions",
-            "SSB Marketplace access",
-            "Premium content library",
-            "Certificate of completion",
-            "Lifetime access to materials"
-        )
-    );
+enum class SubscriptionTierModel(val domainTier: SubscriptionTier) {
+    FREE(SubscriptionTier.FREE),
+    BASIC(SubscriptionTier.BASIC),
+    PRO(SubscriptionTier.PRO),
+    PREMIUM(SubscriptionTier.PREMIUM);
+
+    val displayName: String get() = domainTier.displayName
+    val price: String get() = domainTier.monthlyPrice
+    val features: List<String> get() = domainTier.features
+
+    val oirTestLimit: Int get() = SubscriptionLimits.limitFor("OIR", domainTier)
+    val tatTestLimit: Int get() = SubscriptionLimits.limitFor("TAT", domainTier)
+    val watTestLimit: Int get() = SubscriptionLimits.limitFor("WAT", domainTier)
+    val srtTestLimit: Int get() = SubscriptionLimits.limitFor("SRT", domainTier)
+    val ppdtTestLimit: Int get() = SubscriptionLimits.limitFor("PPDT", domainTier)
+    val piqTestLimit: Int get() = SubscriptionLimits.limitFor("PIQ", domainTier)
+    val sdTestLimit: Int get() = SubscriptionLimits.limitFor("SD", domainTier)
+    val gtoTestLimit: Int get() = SubscriptionLimits.limitFor("GTO", domainTier)
+    val interviewTestLimit: Int get() = SubscriptionLimits.limitFor("INTERVIEW", domainTier)
 
     companion object {
-        fun from(tier: SubscriptionTier): SubscriptionTierModel = when (tier) {
-            SubscriptionTier.FREE -> FREE
-            SubscriptionTier.PRO -> PRO
-            SubscriptionTier.PREMIUM -> PREMIUM
-        }
+        fun from(tier: SubscriptionTier): SubscriptionTierModel = entries.first { it.domainTier == tier }
     }
 }
 

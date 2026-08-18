@@ -1,54 +1,55 @@
 package com.ssbmax.shared.domain.model
 
+import com.ssbmax.shared.contracts.SsbContracts
+
 /**
  * Subscription tiers available in SSBMax
- * IMPORTANT: This is the SINGLE SOURCE OF TRUTH for pricing
- * 
+ * Pricing/limits SSOT is [SsbContracts.Pricing]/[SsbContracts.Subscription] (contracts/pricing.yaml,
+ * contracts/subscription.yaml — see contracts/README.md) — this enum reads from it, it does not
+ * define the numbers itself.
+ *
  * Platform-independent enum - serialization handled in presentation layer
  */
 enum class SubscriptionTier {
     FREE,
+    BASIC,
     PRO,
     PREMIUM;
-    
+
     val displayName: String
         get() = when (this) {
             FREE -> "Free"
+            BASIC -> "Basic"
             PRO -> "Pro"
             PREMIUM -> "Premium"
         }
-    
+
     val description: String
         get() = when (this) {
             FREE -> "Full access to study materials"
-            PRO -> "Study materials + practice tests"
+            BASIC -> "Study materials + starter practice tests"
+            PRO -> "Study materials + more practice tests"
             PREMIUM -> "Unlimited tests + AI analysis + Marketplace"
         }
-    
-    val monthlyPrice: String
-        get() = when (this) {
-            FREE -> "₹0/month"
-            PRO -> "₹99/month"
-            PREMIUM -> "₹999/month"
-        }
-    
+
     val monthlyPriceInt: Int
-        get() = when (this) {
-            FREE -> 0
-            PRO -> 99
-            PREMIUM -> 999
-        }
-    
+        get() = SsbContracts.Pricing.TIERS.first { it.tier == name }.monthlyInr
+
+    val monthlyPrice: String
+        get() = "₹$monthlyPriceInt/month"
+
     val yearlyPrice: String?
         get() = when (this) {
             FREE -> null
+            BASIC -> null
             PRO -> "₹999/year"  // ~16% savings
             PREMIUM -> "₹9,999/year" // ~17% savings
         }
-    
+
     val yearlyPriceInt: Int?
         get() = when (this) {
             FREE -> null
+            BASIC -> null
             PRO -> 999
             PREMIUM -> 9999
         }
@@ -56,6 +57,7 @@ enum class SubscriptionTier {
     val quarterlyPrice: String?
         get() = when (this) {
             FREE -> null
+            BASIC -> null
             PRO -> "₹249/quarter"  // ~16% savings
             PREMIUM -> "₹2,699/quarter" // ~10% savings
         }
@@ -63,6 +65,7 @@ enum class SubscriptionTier {
     val quarterlyPriceInt: Int?
         get() = when (this) {
             FREE -> null
+            BASIC -> null
             PRO -> 249
             PREMIUM -> 2699
         }
@@ -84,6 +87,16 @@ enum class SubscriptionTier {
      */
     val hasTestAccess: Boolean
         get() = this != FREE
+
+    private fun limitFor(bucket: String): Int {
+        val limit = SsbContracts.Subscription.LIMITS.first { it.bucket == bucket }
+        return when (this) {
+            FREE -> limit.free
+            BASIC -> limit.basic
+            PRO -> limit.pro
+            PREMIUM -> limit.premium
+        }
+    }
     
     /**
      * Check if this tier has AI-based test result analysis
@@ -105,31 +118,43 @@ enum class SubscriptionTier {
         get() = this == PREMIUM
     
     /**
-     * Get list of features available in this tier
+     * Get list of features available in this tier.
+     *
+     * Quota lines are generated from [SsbContracts.Subscription.LIMITS] (never hand-typed —
+     * see contracts/README.md) so this list can't drift from the contract that also drives
+     * [com.ssbmax.shared.data.repository.SubscriptionLimits] enforcement. Qualitative
+     * (non-numeric) perks aren't in the contract and stay hand-written here.
      */
     val features: List<String>
+        get() {
+            val quotaLines = BUCKET_LABELS.mapNotNull { (bucket, label) ->
+                when (val n = limitFor(bucket)) {
+                    0 -> null
+                    -1 -> "Unlimited ${label}s"
+                    else -> "$n $label${if (n == 1) "" else "s"} per month"
+                }
+            }
+            return quotaLines + qualitativeFeatures
+        }
+
+    private val qualitativeFeatures: List<String>
         get() = when (this) {
             FREE -> listOf(
-                "1 OIR test per month",
-                "1 PPDT test per month",
-                "1 PIQ form (required)",
                 "Access to all study materials",
                 "Basic progress tracking",
                 "Community support"
             )
+            BASIC -> listOf(
+                "Access to all study materials",
+                "Progress tracking",
+                "Email support"
+            )
             PRO -> listOf(
-                "5 OIR tests per month",
-                "5 PPDT tests per month",
-                "3 TAT, WAT, SRT, SD tests each",
-                "3 attempts per GTO test (8 tests)",
-                "1 Interview practice",
-                "Unlimited PIQ updates",
                 "Advanced analytics",
                 "Priority support",
                 "Download study materials"
             )
             PREMIUM -> listOf(
-                "Unlimited all tests",
                 "AI-powered feedback",
                 "Personalized study plans",
                 "Expert mentor sessions",
@@ -139,6 +164,20 @@ enum class SubscriptionTier {
                 "Lifetime access to materials"
             )
         }
+
+    private companion object {
+        val BUCKET_LABELS = listOf(
+            "OIR" to "OIR test",
+            "PPDT" to "PPDT test",
+            "PIQ" to "PIQ form update",
+            "TAT" to "TAT test",
+            "WAT" to "WAT test",
+            "SRT" to "SRT test",
+            "SD" to "SD test",
+            "GTO" to "GTO test attempt",
+            "INTERVIEW" to "Interview practice"
+        )
+    }
 }
 
 /**

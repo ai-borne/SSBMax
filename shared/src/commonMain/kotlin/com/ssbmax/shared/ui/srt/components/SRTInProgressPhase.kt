@@ -44,19 +44,24 @@ import ssbmax.shared.generated.resources.srt_your_response
  * extracted to [SRTExitDialog] (`SRTDialogs.kt`), matching TAT/WAT/PPDT's
  * dialog-extraction precedent.
  */
+/** Groups the read-only display values so [SRTInProgressPhase] stays under the parameter-count limit. */
+data class SRTInProgressState(
+    val situation: String,
+    val timeRemaining: Int,
+    val response: String,
+    val minChars: Int,
+    val maxChars: Int,
+    val canMoveNext: Boolean
+)
+
 @Composable
 fun SRTInProgressPhase(
-    situation: String,
-    timeRemaining: Int,
-    response: String,
+    state: SRTInProgressState,
     onResponseChange: (String) -> Unit,
-    minChars: Int,
-    maxChars: Int,
-    canMoveNext: Boolean,
     onNext: () -> Unit,
     onSkip: () -> Unit
 ) {
-    val backgroundColor = if (timeRemaining <= 60) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface
+    val backgroundColor = if (state.timeRemaining <= 60) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface
 
     Surface(color = backgroundColor, modifier = Modifier.fillMaxSize()) {
         Column(
@@ -68,14 +73,14 @@ fun SRTInProgressPhase(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Spacer(modifier = Modifier.height(16.dp))
-            SRTSituationCard(situation = situation)
+            SRTSituationCard(situation = state.situation)
             SRTResponseInput(
-                response = response,
+                response = state.response,
                 onResponseChange = onResponseChange,
-                minChars = minChars,
-                maxChars = maxChars
+                minChars = state.minChars,
+                maxChars = state.maxChars
             )
-            SRTButtons(canMoveNext = canMoveNext, onNext = onNext, onSkip = onSkip)
+            SRTButtons(canMoveNext = state.canMoveNext, onNext = onNext, onSkip = onSkip)
             Spacer(modifier = Modifier.height(16.dp))
         }
     }

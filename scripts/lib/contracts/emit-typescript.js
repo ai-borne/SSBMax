@@ -7,7 +7,7 @@ function tsString(s) {
 }
 
 function emitTypeScript(data) {
-  const { firestorePaths, enums, subscription, testConfig, events, routes, tokens } = data;
+  const { firestorePaths, enums, subscription, pricing, testConfig, events, routes, tokens } = data;
   const out = [];
   out.push(header('ts', ALL_SOURCE_FILES));
 
@@ -42,12 +42,25 @@ function emitTypeScript(data) {
     out.push('');
   }
 
-  out.push('export interface SubscriptionLimit { bucket: string; testTypes: string[]; free: number; pro: number; premium: number; }');
+  out.push('export interface SubscriptionLimit { bucket: string; testTypes: string[]; free: number; basic: number; pro: number; premium: number; }');
   out.push('export const SubscriptionLimits: SubscriptionLimit[] = [');
   for (const l of subscription.limits) {
-    out.push(`  { bucket: ${tsString(l.bucket)}, testTypes: [${l.testTypes.map((t) => tsString(t)).join(', ')}], free: ${l.FREE}, pro: ${l.PRO}, premium: ${l.PREMIUM} },`);
+    out.push(`  { bucket: ${tsString(l.bucket)}, testTypes: [${l.testTypes.map((t) => tsString(t)).join(', ')}], free: ${l.FREE}, basic: ${l.BASIC}, pro: ${l.PRO}, premium: ${l.PREMIUM} },`);
   }
   out.push('];');
+  out.push('');
+
+  out.push('export interface TierPrice { tier: string; monthlyInr: number; }');
+  out.push('export const PricingTiers: TierPrice[] = [');
+  for (const [tier, price] of Object.entries(pricing.tiers)) {
+    out.push(`  { tier: ${tsString(tier)}, monthlyInr: ${price} },`);
+  }
+  out.push('];');
+  out.push('export const PricingAddons = {');
+  for (const [addon, price] of Object.entries(pricing.addons)) {
+    out.push(`  ${addon}: ${price},`);
+  }
+  out.push('} as const;');
   out.push('');
 
   out.push('export interface TestConfigEntry { testType: string; values: Record<string, unknown>; }');

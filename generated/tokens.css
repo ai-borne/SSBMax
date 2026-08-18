@@ -2,7 +2,7 @@
  * DO NOT EDIT. Generated file — hand edits will be overwritten and are
  * caught by `npm run contracts:check` in CI / pre-commit.
  *
- * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
+ * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, pricing.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
  * Regenerate: node scripts/generate-contracts.js
  *
  * SRP justification for exceeding the project 300-LOC limit: this file has

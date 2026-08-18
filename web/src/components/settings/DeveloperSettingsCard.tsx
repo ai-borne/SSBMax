@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { Wrench, RotateCcw, ShieldOff, Award, Crown, AlertTriangle } from 'lucide-react';
+import { Wrench, RotateCcw, ShieldOff, Star, Award, Crown, AlertTriangle } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { DevTierOverride } from '../../constants/ssbSelectionProcess';
 import { GridCardContainer } from '../common/GridCardContainer';
@@ -16,6 +16,7 @@ const OVERRIDE_CHIPS: {
 }[] = [
   { value: 'FOLLOW_REAL', labelKey: 'realLabel', icon: RotateCcw },
   { value: 'FORCE_FREE', labelKey: 'freeLabel', icon: ShieldOff },
+  { value: 'FORCE_BASIC', labelKey: 'basicLabel', icon: Star },
   { value: 'FORCE_PRO', labelKey: 'proLabel', icon: Award },
   { value: 'FORCE_PREMIUM', labelKey: 'premiumLabel', icon: Crown },
 ];

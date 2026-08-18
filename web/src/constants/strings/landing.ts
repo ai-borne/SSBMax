@@ -48,6 +48,9 @@ export const landingStrings = {
   olqOrganizing: 'Organizing Ability (OLQ-3)',
   olqCooperation: 'Cooperation (OLQ-5)',
   olqDuty: 'Sense of Duty (OLQ-7)',
-  olqProactive: 'Requires Proactive Action'
+  olqProactive: 'Requires Proactive Action',
+  pricingCtaTitle: 'Choose Your Preparation Tier',
+  pricingCtaSubtitle: 'Free, Basic, Pro, and Premium plans — see full pricing and features on the SSB Tests tab.',
+  pricingCtaButton: 'View Pricing & Plans →'
 } as const;
 

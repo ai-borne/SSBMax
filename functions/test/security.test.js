@@ -75,6 +75,16 @@ test('Phase 6A Payment Security: Mock order fallback restricted to emulator', as
   process.env.FUNCTIONS_EMULATOR = 'true';
 });
 
+test('Phase 2 (SubscriptionPricingRestructure): webhook TIER_PRICES covers basic/pro/premium monthly planIds', async (t) => {
+  const { TIER_PRICES } = require('../src/webhooks');
+  // Previously only pro_monthly/pro_yearly existed -- basic_monthly/premium_monthly were
+  // missing entirely, so Basic/Premium Razorpay purchases could never pass the underpayment
+  // check (expectedAmount === undefined). Values come from contracts/pricing.yaml.
+  assert.equal(TIER_PRICES.basic_monthly, 29900);
+  assert.equal(TIER_PRICES.pro_monthly, 49900);
+  assert.equal(TIER_PRICES.premium_monthly, 99900);
+});
+
 test('Phase 6A Payment Security: Webhook mandatory secret check & currency validation', async (t) => {
   const { handleRazorpayWebhook } = require('../src/webhooks');
 

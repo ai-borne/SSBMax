@@ -62,6 +62,7 @@ internal fun CurrentPlanCard(
         colors = CardDefaults.cardColors(
             containerColor = when (tier) {
                 SubscriptionTierModel.FREE -> MaterialTheme.colorScheme.surface
+                SubscriptionTierModel.BASIC -> MaterialTheme.colorScheme.secondaryContainer
                 SubscriptionTierModel.PRO -> MaterialTheme.colorScheme.primaryContainer
                 SubscriptionTierModel.PREMIUM -> MaterialTheme.colorScheme.tertiaryContainer
             }
@@ -78,6 +79,7 @@ internal fun CurrentPlanCard(
                 Icon(
                     imageVector = when (tier) {
                         SubscriptionTierModel.FREE -> Icons.Default.AccountCircle
+                        SubscriptionTierModel.BASIC -> Icons.Default.Star
                         SubscriptionTierModel.PRO -> Icons.Default.Star
                         SubscriptionTierModel.PREMIUM -> Icons.Default.Diamond
                     },

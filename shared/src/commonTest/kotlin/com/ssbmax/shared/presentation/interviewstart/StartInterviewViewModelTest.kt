@@ -129,7 +129,7 @@ class StartInterviewViewModelTest {
     fun `checkEligibility surfaces limitReached when a genuine interview limit is hit`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(com.ssbmax.shared.domain.model.SubscriptionTier.PRO)
         interviewRepository.interviewStatsResult = Result.success(
-            mapOf(InterviewMode.VOICE_BASED to 1)
+            mapOf(InterviewMode.VOICE_BASED to 3)
         )
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -140,8 +140,8 @@ class StartInterviewViewModelTest {
         val state = viewModel.uiState.value
         val limitReached = state.getLimitReached()
         assertEquals(com.ssbmax.shared.domain.model.SubscriptionTier.PRO, limitReached?.tier)
-        assertEquals(1, limitReached?.limit)
-        assertEquals(1, limitReached?.usedCount)
+        assertEquals(3, limitReached?.limit)
+        assertEquals(3, limitReached?.usedCount)
         assertTrue(state.getFailureReasons().none { it.contains("Interview limit reached") })
     }
 

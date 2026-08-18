@@ -72,7 +72,7 @@ data class InterviewLimits(
         fun getTTSService(subscriptionType: SubscriptionTier): TTSServiceType {
             return when (subscriptionType) {
                 SubscriptionTier.FREE -> TTSServiceType.ANDROID
-                SubscriptionTier.PRO, SubscriptionTier.PREMIUM -> TTSServiceType.QWEN_TTS
+                SubscriptionTier.BASIC, SubscriptionTier.PRO, SubscriptionTier.PREMIUM -> TTSServiceType.QWEN_TTS
             }
         }
     }

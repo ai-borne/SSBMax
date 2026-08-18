@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.domain.model.SubscriptionTier
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
+import ssbmax.shared.generated.resources.subscription_badge_basic
 import ssbmax.shared.generated.resources.subscription_badge_free
 import ssbmax.shared.generated.resources.subscription_badge_premium
 import ssbmax.shared.generated.resources.subscription_badge_pro
@@ -29,6 +30,11 @@ fun SubscriptionBadge(
     val (label, containerColor, contentColor) = when (subscriptionType) {
         SubscriptionTier.FREE -> Triple(
             stringResource(Res.string.subscription_badge_free),
+            MaterialTheme.colorScheme.secondaryContainer,
+            MaterialTheme.colorScheme.onSecondaryContainer
+        )
+        SubscriptionTier.BASIC -> Triple(
+            stringResource(Res.string.subscription_badge_basic),
             MaterialTheme.colorScheme.secondaryContainer,
             MaterialTheme.colorScheme.onSecondaryContainer
         )

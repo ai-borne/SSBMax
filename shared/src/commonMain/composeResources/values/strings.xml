@@ -851,6 +851,7 @@
     <string name="developer_section_description">Dev-only subscription tier override, for testing without a real upgrade</string>
     <string name="developer_override_follow_real">Follow Real</string>
     <string name="developer_override_force_free">Force Free</string>
+    <string name="developer_override_force_basic">Force Basic</string>
     <string name="developer_override_force_pro">Force Pro</string>
     <string name="developer_override_force_premium">Force Premium</string>
     <string name="developer_override_offline_note">Unlike the old bypass flag, an active override still requires network -- it exercises the real eligibility lookup instead of skipping it, so it won\'t work offline.</string>
@@ -1177,6 +1178,7 @@
     <string name="drawer_header_edit_profile">Edit Profile</string>
     <string name="drawer_header_create_profile">Create Profile</string>
     <string name="subscription_badge_free">Free</string>
+    <string name="subscription_badge_basic">Basic</string>
     <string name="subscription_badge_pro">Pro</string>
     <string name="subscription_badge_premium">Premium</string>
 

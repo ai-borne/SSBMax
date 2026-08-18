@@ -5,52 +5,65 @@
 # itself onto the generated TestType enum; this file is already keyed
 # correctly so Phase 3 only has to change the KMP consumer, not this contract.
 # See contracts/README.md for the compatibility policy before editing.
-schemaVersion: "1.0.0"
+#
+# BASIC tier added in Phase 2 of the pricing restructure (additive column —
+# see contracts/README.md's compatibility policy). Values are monotonic
+# FREE <= BASIC <= PRO <= PREMIUM per bucket (unlimited/-1 always wins).
+schemaVersion: "1.1.0"
 
 limits:
   - bucket: OIR
     testTypes: [OIR]
     FREE: 1
-    PRO: 5
-    PREMIUM: -1
+    BASIC: 5
+    PRO: 8
+    PREMIUM: 15
   - bucket: PPDT
     testTypes: [PPDT]
     FREE: 1
-    PRO: 5
-    PREMIUM: -1
+    BASIC: 5
+    PRO: 8
+    PREMIUM: 15
   - bucket: PIQ
     testTypes: [PIQ]
     FREE: 1
-    PRO: -1
+    BASIC: 5
+    PRO: 8
     PREMIUM: -1
   - bucket: TAT
     testTypes: [TAT]
     FREE: 0
-    PRO: 3
-    PREMIUM: -1
+    BASIC: 5
+    PRO: 8
+    PREMIUM: 15
   - bucket: WAT
     testTypes: [WAT]
     FREE: 0
-    PRO: 3
-    PREMIUM: -1
+    BASIC: 5
+    PRO: 8
+    PREMIUM: 15
   - bucket: SRT
     testTypes: [SRT]
     FREE: 0
-    PRO: 3
-    PREMIUM: -1
+    BASIC: 5
+    PRO: 8
+    PREMIUM: 15
   - bucket: SD
     testTypes: [SD]
     FREE: 0
-    PRO: 3
-    PREMIUM: -1
+    BASIC: 5
+    PRO: 8
+    PREMIUM: 15
   - bucket: GTO
     testTypes: [GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT]
     note: all 8 GTO sub-tests share one monthly bucket in KMP today
     FREE: 0
-    PRO: 3
-    PREMIUM: -1
+    BASIC: 5
+    PRO: 8
+    PREMIUM: 15
   - bucket: INTERVIEW
     testTypes: [IO]
     FREE: 0
-    PRO: 1
-    PREMIUM: 3
+    BASIC: 1
+    PRO: 3
+    PREMIUM: 10

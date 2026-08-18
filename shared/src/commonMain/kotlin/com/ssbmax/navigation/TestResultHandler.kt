@@ -48,6 +48,7 @@ object TestResultHandler {
         when (subscriptionTier) {
             SubscriptionTier.PREMIUM -> navigateToResult(submissionId, testType, navController)
             SubscriptionTier.PRO,
+            SubscriptionTier.BASIC,
             SubscriptionTier.FREE -> navigateToPendingReview(submissionId, navController)
         }
     }

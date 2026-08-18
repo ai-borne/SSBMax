@@ -3,6 +3,7 @@ package com.ssbmax.shared.ui.srt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.SRTPhase
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.presentation.srt.SRTTestUiState
 import com.ssbmax.shared.presentation.srt.SRTTestViewModel
 import com.ssbmax.shared.ui.common.TestErrorState
 import com.ssbmax.shared.ui.common.TestLimitReachedDialog
@@ -38,6 +40,7 @@ import com.ssbmax.shared.ui.common.progressSemantics
 import com.ssbmax.shared.ui.common.timerSemantics
 import com.ssbmax.shared.ui.srt.components.SRTExitDialog
 import com.ssbmax.shared.ui.srt.components.SRTInProgressPhase
+import com.ssbmax.shared.ui.srt.components.SRTInProgressState
 import com.ssbmax.shared.ui.srt.components.SRTInstructionsPhase
 import com.ssbmax.shared.ui.srt.components.SRTReviewBottomBar
 import com.ssbmax.shared.ui.srt.components.SRTReviewPhase
@@ -130,51 +133,87 @@ fun SRTTestScreen(
         },
         modifier = modifier
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when {
-                uiState.isLoading -> LoadingState(modifier = Modifier.fillMaxSize())
-                uiState.error != null -> TestErrorState(
-                    error = uiState.error!!,
-                    onRetry = { viewModel.loadTest(testId) },
-                    modifier = Modifier.fillMaxSize()
-                )
-                else -> when (uiState.phase) {
-                    SRTPhase.INSTRUCTIONS -> SRTInstructionsPhase(onStart = { viewModel.startTest() })
-                    SRTPhase.IN_PROGRESS -> SRTInProgressPhase(
-                        situation = uiState.currentSituation?.situation ?: "",
-                        timeRemaining = uiState.timeRemaining,
-                        response = uiState.currentResponse,
-                        onResponseChange = { viewModel.updateResponse(it) },
-                        minChars = uiState.config?.minResponseLength ?: 0,
-                        maxChars = uiState.config?.maxResponseLength ?: 200,
-                        canMoveNext = uiState.canMoveToNext,
-                        onNext = { viewModel.moveToNext() },
-                        onSkip = { viewModel.skipSituation() }
-                    )
-                    SRTPhase.REVIEW -> SRTReviewPhase(
-                        responses = uiState.responses,
-                        totalSituations = uiState.situations.size,
-                        onEdit = { index -> viewModel.editResponse(index) }
-                    )
-                    SRTPhase.COMPLETED, SRTPhase.SUBMITTED -> Unit // navigation happens in LaunchedEffect above
-                }
-            }
-        }
+        SRTScreenBody(uiState = uiState, paddingValues = paddingValues, viewModel = viewModel, testId = testId)
     }
 
-    if (showExitDialog) {
-        SRTExitDialog(
-            onDismiss = { showExitDialog = false },
-            onExit = { showExitDialog = false; viewModel.pauseTest(); onNavigateBack() }
+    SRTScreenDialogs(
+        showExitDialog = showExitDialog,
+        showSubmitDialog = showSubmitDialog,
+        uiState = uiState,
+        onDismissExitDialog = { showExitDialog = false },
+        onExit = { showExitDialog = false; viewModel.pauseTest(); onNavigateBack() },
+        onDismissSubmitDialog = { showSubmitDialog = false },
+        onConfirmSubmit = { showSubmitDialog = false; viewModel.submitTest() }
+    )
+}
+
+/** The Scaffold body content -- extracted so [SRTTestScreen] itself stays within the LOC/complexity limits. */
+@Composable
+private fun SRTScreenBody(
+    uiState: SRTTestUiState,
+    paddingValues: PaddingValues,
+    viewModel: SRTTestViewModel,
+    testId: String
+) {
+    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        when {
+            uiState.isLoading -> LoadingState(modifier = Modifier.fillMaxSize())
+            uiState.error != null -> TestErrorState(
+                error = uiState.error!!,
+                onRetry = { viewModel.loadTest(testId) },
+                modifier = Modifier.fillMaxSize()
+            )
+            else -> SRTPhaseContent(uiState, viewModel)
+        }
+    }
+}
+
+@Composable
+private fun SRTPhaseContent(uiState: SRTTestUiState, viewModel: SRTTestViewModel) {
+    when (uiState.phase) {
+        SRTPhase.INSTRUCTIONS -> SRTInstructionsPhase(onStart = { viewModel.startTest() })
+        SRTPhase.IN_PROGRESS -> SRTInProgressPhase(
+            state = SRTInProgressState(
+                situation = uiState.currentSituation?.situation ?: "",
+                timeRemaining = uiState.timeRemaining,
+                response = uiState.currentResponse,
+                minChars = uiState.config?.minResponseLength ?: 0,
+                maxChars = uiState.config?.maxResponseLength ?: 200,
+                canMoveNext = uiState.canMoveToNext
+            ),
+            onResponseChange = { viewModel.updateResponse(it) },
+            onNext = { viewModel.moveToNext() },
+            onSkip = { viewModel.skipSituation() }
         )
+        SRTPhase.REVIEW -> SRTReviewPhase(
+            responses = uiState.responses,
+            totalSituations = uiState.situations.size,
+            onEdit = { index -> viewModel.editResponse(index) }
+        )
+        SRTPhase.COMPLETED, SRTPhase.SUBMITTED -> Unit // navigation happens in LaunchedEffect above
+    }
+}
+
+@Composable
+private fun SRTScreenDialogs(
+    showExitDialog: Boolean,
+    showSubmitDialog: Boolean,
+    uiState: SRTTestUiState,
+    onDismissExitDialog: () -> Unit,
+    onExit: () -> Unit,
+    onDismissSubmitDialog: () -> Unit,
+    onConfirmSubmit: () -> Unit
+) {
+    if (showExitDialog) {
+        SRTExitDialog(onDismiss = onDismissExitDialog, onExit = onExit)
     }
 
     if (showSubmitDialog) {
         SRTSubmitDialog(
             validResponseCount = uiState.validResponseCount,
             totalSituations = uiState.situations.size,
-            onDismiss = { showSubmitDialog = false },
-            onConfirm = { showSubmitDialog = false; viewModel.submitTest() }
+            onDismiss = onDismissSubmitDialog,
+            onConfirm = onConfirmSubmit
         )
     }
 

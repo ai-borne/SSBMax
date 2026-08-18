@@ -103,9 +103,9 @@ describe('PracticeTestsPage Component', () => {
   });
 
   it('locks a test whose monthly quota is exhausted even though the tier otherwise qualifies (real usage, not just a tier gate)', () => {
-    render(<PracticeTestsPage userTier="PRO" usage={{ oirTestsUsed: 5, ppdtTestsUsed: 0, piqTestsUsed: 0, tatTestsUsed: 0, watTestsUsed: 0, srtTestsUsed: 0, sdTestsUsed: 0, gtoTestsUsed: 0, interviewTestsUsed: 0 }} />);
+    render(<PracticeTestsPage userTier="PRO" usage={{ oirTestsUsed: 8, ppdtTestsUsed: 0, piqTestsUsed: 0, tatTestsUsed: 0, watTestsUsed: 0, srtTestsUsed: 0, sdTestsUsed: 0, gtoTestsUsed: 0, interviewTestsUsed: 0 }} />);
 
-    // PRO's OIR bucket limit is 5 (contracts/subscription.yaml) — fully consumed.
+    // PRO's OIR bucket limit is 8 (contracts/subscription.yaml) — fully consumed.
     const launchOirBtn = screen.getByTestId('launch-button-oir');
     expect(launchOirBtn).toHaveTextContent(strings.gto.limitReached);
   });
@@ -114,7 +114,7 @@ describe('PracticeTestsPage Component', () => {
     render(<PracticeTestsPage userTier="PRO" usage={{ oirTestsUsed: 2, ppdtTestsUsed: 0, piqTestsUsed: 0, tatTestsUsed: 0, watTestsUsed: 0, srtTestsUsed: 0, sdTestsUsed: 0, gtoTestsUsed: 0, interviewTestsUsed: 0 }} />);
 
     const oirCard = screen.getByTestId('test-simulator-card-oir');
-    expect(oirCard).toHaveTextContent('3 left');
+    expect(oirCard).toHaveTextContent('6 left');
   });
 });
 

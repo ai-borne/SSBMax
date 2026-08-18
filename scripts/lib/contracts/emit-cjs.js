@@ -3,7 +3,7 @@
 const { header, ALL_SOURCE_FILES } = require('./header');
 
 function emitCjs(data) {
-  const { firestorePaths, enums, subscription, testConfig, events, routes, tokens } = data;
+  const { firestorePaths, enums, subscription, pricing, testConfig, events, routes, tokens } = data;
   const out = [];
   out.push(header('cjs', ALL_SOURCE_FILES));
 
@@ -27,7 +27,10 @@ function emitCjs(data) {
     }
   }
 
-  const SubscriptionLimits = subscription.limits.map((l) => ({ bucket: l.bucket, testTypes: l.testTypes, free: l.FREE, pro: l.PRO, premium: l.PREMIUM }));
+  const SubscriptionLimits = subscription.limits.map((l) => ({ bucket: l.bucket, testTypes: l.testTypes, free: l.FREE, basic: l.BASIC, pro: l.PRO, premium: l.PREMIUM }));
+
+  const PricingTiers = Object.entries(pricing.tiers).map(([tier, monthlyInr]) => ({ tier, monthlyInr }));
+  const PricingAddons = { ...pricing.addons };
 
   const TestConfig = testConfig.tests.map((t) => {
     const values = {};
@@ -55,6 +58,10 @@ function emitCjs(data) {
   out.push('');
   out.push(`const SubscriptionLimits = ${JSON.stringify(SubscriptionLimits, null, 2)};`);
   out.push('');
+  out.push(`const PricingTiers = ${JSON.stringify(PricingTiers, null, 2)};`);
+  out.push('');
+  out.push(`const PricingAddons = ${JSON.stringify(PricingAddons, null, 2)};`);
+  out.push('');
   out.push(`const TestConfig = ${JSON.stringify(TestConfig, null, 2)};`);
   out.push('');
   out.push(`const SecurityEvents = ${JSON.stringify(SecurityEvents, null, 2)};`);
@@ -63,7 +70,7 @@ function emitCjs(data) {
   out.push('');
   out.push(`const DesignTokens = ${JSON.stringify(DesignTokens, null, 2)};`);
   out.push('');
-  out.push('module.exports = { FirestorePaths, Enums, SubscriptionLimits, TestConfig, SecurityEvents, Routes, DesignTokens };');
+  out.push('module.exports = { FirestorePaths, Enums, SubscriptionLimits, PricingTiers, PricingAddons, TestConfig, SecurityEvents, Routes, DesignTokens };');
   out.push('');
 
   return out.join('\n');

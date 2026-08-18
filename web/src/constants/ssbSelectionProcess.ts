@@ -8,7 +8,7 @@ export type AccessTier = SubscriptionTier;
  * Mirrors `com.ssbmax.shared.domain.model.SubscriptionOverride` (both platforms use the same
  * four states, per docs/plans/CrossPlatform_SSOT Phase 4 §"Align the dev override").
  */
-export type DevTierOverride = 'FOLLOW_REAL' | 'FORCE_FREE' | 'FORCE_PRO' | 'FORCE_PREMIUM';
+export type DevTierOverride = 'FOLLOW_REAL' | 'FORCE_FREE' | 'FORCE_BASIC' | 'FORCE_PRO' | 'FORCE_PREMIUM';
 export type GTOTaskCategory = 'indoor' | 'outdoor' | 'individual' | 'group';
 
 export interface GTOTask {
@@ -195,6 +195,21 @@ export const SUBSCRIPTION_TIERS: SubscriptionTierInfo[] = [
     accessLevel: 0,
   },
   {
+    id: 'BASIC',
+    title: strings.subscription.ribbonBasicTitle,
+    price: strings.subscription.ribbonBasicPrice,
+    badge: strings.subscription.ribbonBasicBadge,
+    isPopular: false,
+    features: [
+      strings.subscription.ribbonBasicFeature1,
+      strings.subscription.ribbonBasicFeature2,
+      strings.subscription.ribbonBasicFeature3,
+      strings.subscription.ribbonBasicFeature4,
+    ],
+    buttonText: strings.subscription.ribbonBasicButton,
+    accessLevel: 1,
+  },
+  {
     id: 'PRO',
     title: strings.subscription.ribbonProTitle,
     price: strings.subscription.ribbonProPrice,
@@ -207,7 +222,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTierInfo[] = [
       strings.subscription.ribbonProFeature4,
     ],
     buttonText: strings.subscription.ribbonProButton,
-    accessLevel: 1,
+    accessLevel: 2,
   },
   {
     id: 'PREMIUM',
@@ -222,7 +237,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTierInfo[] = [
       strings.subscription.ribbonPremiumFeature4,
     ],
     buttonText: strings.subscription.ribbonPremiumButton,
-    accessLevel: 2,
+    accessLevel: 3,
   },
 ];
 
@@ -242,8 +257,10 @@ export function getDayOverview(dayNumber: SSBDayNumber): SSBDayOverview | undefi
 export function getTierAccessLevel(tier: AccessTier): number {
   switch (tier) {
     case 'PREMIUM':
-      return 2;
+      return 3;
     case 'PRO':
+      return 2;
+    case 'BASIC':
       return 1;
     case 'FREE':
     default:
@@ -257,6 +274,7 @@ export function hasTierAccess(userTier: AccessTier, requiredTier: AccessTier): b
 
 export function getEffectiveTier(override: DevTierOverride, realTier: AccessTier): AccessTier {
   if (override === 'FORCE_FREE') return 'FREE';
+  if (override === 'FORCE_BASIC') return 'BASIC';
   if (override === 'FORCE_PRO') return 'PRO';
   if (override === 'FORCE_PREMIUM') return 'PREMIUM';
   return realTier;

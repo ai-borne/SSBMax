@@ -23,22 +23,23 @@ import com.ssbmax.shared.domain.model.SSBMaxNotification
  * placeholder) have no branch here and fall through to `null`, same as an unrecognized/missing
  * `testType`.
  */
+/** Table-driven rather than a `when` so this stays a single branch point as test types are added. */
+private val RESULT_DESTINATION_FACTORIES: Map<String, (String) -> SSBMaxDestinations> = mapOf(
+    "OIR" to { id -> SSBMaxDestinations.OIRTestResult(id) },
+    "PPDT" to { id -> SSBMaxDestinations.PPDTSubmissionResult(id) },
+    "TAT" to { id -> SSBMaxDestinations.TATSubmissionResult(id) },
+    "WAT" to { id -> SSBMaxDestinations.WATSubmissionResult(id) },
+    "SRT" to { id -> SSBMaxDestinations.SRTSubmissionResult(id) },
+    "SD" to { id -> SSBMaxDestinations.SDSubmissionResult(id) },
+    "PIQ" to { id -> SSBMaxDestinations.PIQSubmissionResult(id) },
+    "GTO_GD" to { id -> SSBMaxDestinations.GTOGDResult(id) },
+    "GTO_LECTURETTE" to { id -> SSBMaxDestinations.GTOLecturetteResult(id) },
+    "GTO_GPE" to { id -> SSBMaxDestinations.GTOGPEResult(id) },
+    "IO" to { id -> SSBMaxDestinations.InterviewResult(id) }
+)
+
 fun resolveNotificationResultDestination(notification: SSBMaxNotification): SSBMaxDestinations? {
     val submissionId = notification.actionData?.get("submissionId") ?: return null
     val testType = notification.actionData?.get("testType") ?: return null
-
-    return when (testType) {
-        "OIR" -> SSBMaxDestinations.OIRTestResult(submissionId)
-        "PPDT" -> SSBMaxDestinations.PPDTSubmissionResult(submissionId)
-        "TAT" -> SSBMaxDestinations.TATSubmissionResult(submissionId)
-        "WAT" -> SSBMaxDestinations.WATSubmissionResult(submissionId)
-        "SRT" -> SSBMaxDestinations.SRTSubmissionResult(submissionId)
-        "SD" -> SSBMaxDestinations.SDSubmissionResult(submissionId)
-        "PIQ" -> SSBMaxDestinations.PIQSubmissionResult(submissionId)
-        "GTO_GD" -> SSBMaxDestinations.GTOGDResult(submissionId)
-        "GTO_LECTURETTE" -> SSBMaxDestinations.GTOLecturetteResult(submissionId)
-        "GTO_GPE" -> SSBMaxDestinations.GTOGPEResult(submissionId)
-        "IO" -> SSBMaxDestinations.InterviewResult(submissionId)
-        else -> null
-    }
+    return RESULT_DESTINATION_FACTORIES[testType]?.invoke(submissionId)
 }

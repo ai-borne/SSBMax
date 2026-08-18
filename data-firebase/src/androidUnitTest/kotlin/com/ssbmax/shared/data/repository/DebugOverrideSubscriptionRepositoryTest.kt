@@ -79,9 +79,9 @@ class DebugOverrideSubscriptionRepositoryTest {
         val usage = repository.getMonthlyUsage("user-1", "2026-08").getOrThrow()
 
         assertEquals(1, usage.getValue("OIR").used)
-        assertEquals(-1, usage.getValue("OIR").limit)
+        assertEquals(15, usage.getValue("OIR").limit)
         assertEquals(2, usage.getValue("INTERVIEW").used)
-        assertEquals(3, usage.getValue("INTERVIEW").limit)
+        assertEquals(10, usage.getValue("INTERVIEW").limit)
     }
 
     @Test

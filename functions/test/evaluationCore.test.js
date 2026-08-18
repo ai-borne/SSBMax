@@ -118,7 +118,7 @@ test('Phase 1: runEvaluation rejects failed-precondition when the user is alread
   const db = makeFakeDb({
     [`submissions/${SUBMISSION_ID}`]: { userId: UID, data: { analysisStatus: 'PENDING_ANALYSIS' } },
     [`users/${UID}/data/subscription`]: { tier: 'PRO' },
-    [`users/${UID}/subscription/usage_${month}`]: { watTestsUsed: 3 }
+    [`users/${UID}/subscription/usage_${month}`]: { watTestsUsed: 8 }
   });
   await assert.rejects(
     () => runEvaluation({ firestoreDb: db, generateContent: async () => 'irrelevant', ...baseArgs() }),

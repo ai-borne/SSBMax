@@ -97,88 +97,38 @@ class UpgradeViewModel(
         }
     }
 
+    /**
+     * One card per [SubscriptionTier] (FREE/BASIC/PRO/PREMIUM) -- previously this listed
+     * "Premium (AI)" and "Premium" as two separate cards for the same tier, an SSOT violation
+     * flagged during the pricing restructure. Feature bullets come from [SubscriptionTier.features]
+     * (itself generated from the contract, see `SubscriptionTier.kt`) rather than a fourth
+     * hand-written copy, so this can't drift from the tier's real limits again.
+     */
     private fun loadAvailablePlans() {
-        // Prices sourced from SubscriptionTier domain model (single source of truth).
-        val plans = listOf(
-            SubscriptionPlan(
-                tier = SubscriptionTier.FREE,
-                name = "Basic",
-                tagline = "Get Started with SSB Prep",
-                priceMonthly = SubscriptionTier.FREE.monthlyPriceInt.toDouble(),
-                priceQuarterly = SubscriptionTier.FREE.quarterlyPriceInt?.toDouble() ?: 0.0,
-                priceAnnually = SubscriptionTier.FREE.yearlyPriceInt?.toDouble() ?: 0.0,
-                features = listOf(
-                    PlanFeature("Overview of SSB process", true),
-                    PlanFeature("Full access to all study materials", true),
-                    PlanFeature("Basic progress tracking", true),
-                    PlanFeature("Community access", true),
-                    PlanFeature("Practice tests", false),
-                    PlanFeature("AI-powered assessment", false),
-                    PlanFeature("SSB Marketplace access", false)
-                ),
-                isRecommended = false,
-                gradient = listOf("#6366f1", "#8b5cf6")
-            ),
-            SubscriptionPlan(
-                tier = SubscriptionTier.PRO,
-                name = "Pro",
-                tagline = "Accelerate Your Preparation",
-                priceMonthly = SubscriptionTier.PRO.monthlyPriceInt.toDouble(),
-                priceQuarterly = SubscriptionTier.PRO.quarterlyPriceInt?.toDouble() ?: 0.0,
-                priceAnnually = SubscriptionTier.PRO.yearlyPriceInt?.toDouble() ?: 0.0,
-                features = listOf(
-                    PlanFeature("Everything in Basic", true),
-                    PlanFeature("Unlimited practice tests", true),
-                    PlanFeature("Advanced analytics", true),
-                    PlanFeature("Test history & comparisons", true),
-                    PlanFeature("Priority support", true),
-                    PlanFeature("AI-powered assessment", false),
-                    PlanFeature("SSB Marketplace access", false)
-                ),
-                isRecommended = true,
-                gradient = listOf("#8b5cf6", "#a855f7")
-            ),
-            SubscriptionPlan(
-                tier = SubscriptionTier.PREMIUM,
-                name = "Premium (AI)",
-                tagline = "AI-Powered Excellence",
-                priceMonthly = SubscriptionTier.PREMIUM.monthlyPriceInt.toDouble(),
-                priceQuarterly = SubscriptionTier.PREMIUM.quarterlyPriceInt?.toDouble() ?: 0.0,
-                priceAnnually = SubscriptionTier.PREMIUM.yearlyPriceInt?.toDouble() ?: 0.0,
-                features = listOf(
-                    PlanFeature("Everything in Pro", true),
-                    PlanFeature("AI-based test result analysis", true),
-                    PlanFeature("Personalized feedback & tips", true),
-                    PlanFeature("Predictive success scoring", true),
-                    PlanFeature("Custom study plans", true),
-                    PlanFeature("24/7 AI mentor support", true),
-                    PlanFeature("SSB Marketplace access", false)
-                ),
-                isRecommended = false,
-                gradient = listOf("#a855f7", "#c026d3")
-            ),
-            SubscriptionPlan(
-                tier = SubscriptionTier.PREMIUM,
-                name = "Premium",
-                tagline = "Complete SSB Solution",
-                priceMonthly = SubscriptionTier.PREMIUM.monthlyPriceInt.toDouble(),
-                priceQuarterly = SubscriptionTier.PREMIUM.quarterlyPriceInt?.toDouble() ?: 0.0,
-                priceAnnually = SubscriptionTier.PREMIUM.yearlyPriceInt?.toDouble() ?: 0.0,
-                features = listOf(
-                    PlanFeature("Everything in Pro", true),
-                    PlanFeature("SSB Marketplace access", true),
-                    PlanFeature("Connect with verified assessors", true),
-                    PlanFeature("Online 1-on-1 sessions", true),
-                    PlanFeature("Enroll in physical classes", true),
-                    PlanFeature("Exclusive webinars & workshops", true),
-                    PlanFeature("Mock interview sessions", true)
-                ),
-                isRecommended = false,
-                gradient = listOf("#c026d3", "#db2777")
-            )
-        )
-
+        val plans = SubscriptionTier.entries.map(::planFor)
         _uiState.update { it.copy(availablePlans = plans) }
+    }
+
+    private data class PlanMeta(val name: String, val tagline: String, val gradient: List<String>, val isRecommended: Boolean)
+
+    private fun planFor(tier: SubscriptionTier): SubscriptionPlan {
+        val meta = when (tier) {
+            SubscriptionTier.FREE -> PlanMeta("Free", "Get Started with SSB Prep", listOf("#6366f1", "#8b5cf6"), isRecommended = false)
+            SubscriptionTier.BASIC -> PlanMeta("Basic", "Build Your Foundation", listOf("#0ea5e9", "#6366f1"), isRecommended = false)
+            SubscriptionTier.PRO -> PlanMeta("Pro", "Accelerate Your Preparation", listOf("#8b5cf6", "#a855f7"), isRecommended = true)
+            SubscriptionTier.PREMIUM -> PlanMeta("Premium", "Complete SSB Solution", listOf("#a855f7", "#c026d3"), isRecommended = false)
+        }
+        return SubscriptionPlan(
+            tier = tier,
+            name = meta.name,
+            tagline = meta.tagline,
+            priceMonthly = tier.monthlyPriceInt.toDouble(),
+            priceQuarterly = tier.quarterlyPriceInt?.toDouble() ?: 0.0,
+            priceAnnually = tier.yearlyPriceInt?.toDouble() ?: 0.0,
+            features = tier.features.map { PlanFeature(it, isIncluded = true) },
+            isRecommended = meta.isRecommended,
+            gradient = meta.gradient
+        )
     }
 
     fun selectBillingCycle(cycle: BillingCycle) {

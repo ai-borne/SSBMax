@@ -2,7 +2,7 @@
  * DO NOT EDIT. Generated file — hand edits will be overwritten and are
  * caught by `npm run contracts:check` in CI / pre-commit.
  *
- * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
+ * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, pricing.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
  * Regenerate: node scripts/generate-contracts.js
  *
  * SRP justification for exceeding the project 300-LOC limit: this file has
@@ -76,7 +76,7 @@ object SsbContracts {
         enum class TestType { OIR, PPDT, PIQ, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, IO }
         enum class TestPhase { PHASE_1, PHASE_2 }
         enum class TestStatus { NOT_ATTEMPTED, IN_PROGRESS, SUBMITTED_PENDING_REVIEW, GRADED, COMPLETED }
-        enum class SubscriptionTier { FREE, PRO, PREMIUM }
+        enum class SubscriptionTier { FREE, BASIC, PRO, PREMIUM }
         enum class OIRQuestionType { VERBAL_REASONING, NON_VERBAL_REASONING, NUMERICAL_ABILITY, SPATIAL_REASONING }
         enum class OLQ(val displayName: String, val category: String, val critical: Boolean) {
             EFFECTIVE_INTELLIGENCE("Effective Intelligence", "INTELLECTUAL", false),
@@ -98,19 +98,30 @@ object SsbContracts {
         enum class OLQCategory { INTELLECTUAL, SOCIAL, DYNAMIC, CHARACTER }
     }
 
-    data class SubscriptionLimit(val bucket: String, val testTypes: List<String>, val free: Int, val pro: Int, val premium: Int)
+    data class SubscriptionLimit(val bucket: String, val testTypes: List<String>, val free: Int, val basic: Int, val pro: Int, val premium: Int)
     object Subscription {
         val LIMITS: List<SubscriptionLimit> = listOf(
-            SubscriptionLimit("OIR", listOf("OIR"), 1, 5, -1),
-            SubscriptionLimit("PPDT", listOf("PPDT"), 1, 5, -1),
-            SubscriptionLimit("PIQ", listOf("PIQ"), 1, -1, -1),
-            SubscriptionLimit("TAT", listOf("TAT"), 0, 3, -1),
-            SubscriptionLimit("WAT", listOf("WAT"), 0, 3, -1),
-            SubscriptionLimit("SRT", listOf("SRT"), 0, 3, -1),
-            SubscriptionLimit("SD", listOf("SD"), 0, 3, -1),
-            SubscriptionLimit("GTO", listOf("GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT"), 0, 3, -1),
-            SubscriptionLimit("INTERVIEW", listOf("IO"), 0, 1, 3)
+            SubscriptionLimit("OIR", listOf("OIR"), 1, 5, 8, 15),
+            SubscriptionLimit("PPDT", listOf("PPDT"), 1, 5, 8, 15),
+            SubscriptionLimit("PIQ", listOf("PIQ"), 1, 5, 8, -1),
+            SubscriptionLimit("TAT", listOf("TAT"), 0, 5, 8, 15),
+            SubscriptionLimit("WAT", listOf("WAT"), 0, 5, 8, 15),
+            SubscriptionLimit("SRT", listOf("SRT"), 0, 5, 8, 15),
+            SubscriptionLimit("SD", listOf("SD"), 0, 5, 8, 15),
+            SubscriptionLimit("GTO", listOf("GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT"), 0, 5, 8, 15),
+            SubscriptionLimit("INTERVIEW", listOf("IO"), 0, 1, 3, 10)
         )
+    }
+
+    data class TierPrice(val tier: String, val monthlyInr: Int)
+    object Pricing {
+        val TIERS: List<TierPrice> = listOf(
+            TierPrice("FREE", 0),
+            TierPrice("BASIC", 299),
+            TierPrice("PRO", 499),
+            TierPrice("PREMIUM", 999)
+        )
+        const val INTERVIEW_TOPUP_INR = 99
     }
 
     data class TestConfigEntry(val testType: String, val values: Map<String, Any>)

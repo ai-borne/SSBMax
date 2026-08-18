@@ -160,7 +160,7 @@ test('evaluateInterviewResponseCore rejects with resource-exhausted when a NEW s
   try {
     const db = makeFakeDb(
       baseFixtures({
-        [`users/${UID}/subscription/usage_${month}`]: { interviewTestsUsed: 1, recordedSubmissionIds: ['other-session'] }
+        [`users/${UID}/subscription/usage_${month}`]: { interviewTestsUsed: 3, recordedSubmissionIds: ['s1', 's2', 's3'] }
       })
     );
     await assert.rejects(

@@ -88,15 +88,18 @@ test('Phase 5: fieldNameFor derives the SubscriptionUsageDto field name from the
 test('Phase 5: limitFor reads the right tier column, -1 means unlimited', () => {
   const bucket = bucketFor('OIR');
   assert.equal(limitFor(bucket, 'FREE'), 1);
-  assert.equal(limitFor(bucket, 'PRO'), 5);
-  assert.equal(limitFor(bucket, 'PREMIUM'), -1);
+  assert.equal(limitFor(bucket, 'BASIC'), 5);
+  assert.equal(limitFor(bucket, 'PRO'), 8);
+  assert.equal(limitFor(bucket, 'PREMIUM'), 15);
+  const piqBucket = bucketFor('PIQ');
+  assert.equal(limitFor(piqBucket, 'PREMIUM'), -1);
 });
 
 test('Phase 5: exceeding quota rejects with resource-exhausted', async () => {
   process.env.ENFORCE_QUOTA = 'true';
-  const db = makeFakeDb({ tier: 'PRO', usageDoc: { userId: 'u1', month: '2026-08', tatTestsUsed: 3, recordedSubmissionIds: ['s1', 's2', 's3'] } });
+  const db = makeFakeDb({ tier: 'PRO', usageDoc: { userId: 'u1', month: '2026-08', tatTestsUsed: 8, recordedSubmissionIds: ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'] } });
   await assert.rejects(
-    () => recordAndEnforce(db, 'u1', 'TAT', 's4'),
+    () => recordAndEnforce(db, 'u1', 'TAT', 's9'),
     (err) => {
       assert.equal(err.code, 'resource-exhausted');
       return true;
@@ -134,9 +137,12 @@ test('Phase 5: ENFORCE_QUOTA=false logs but still allows the over-quota write th
 });
 
 test('Phase 5: GTO sub-types share one bucket -- GTO_GD usage counts against GTO_CT quota', async () => {
-  const db = makeFakeDb({ tier: 'PRO', usageDoc: { userId: 'u4', month: '2026-08', gtoTestsUsed: 3, recordedSubmissionIds: ['g1', 'g2', 'g3'] } });
+  const db = makeFakeDb({
+    tier: 'PRO',
+    usageDoc: { userId: 'u4', month: '2026-08', gtoTestsUsed: 8, recordedSubmissionIds: ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8'] }
+  });
   await assert.rejects(
-    () => recordAndEnforce(db, 'u4', 'GTO_CT', 'g4'),
+    () => recordAndEnforce(db, 'u4', 'GTO_CT', 'g9'),
     (err) => {
       assert.equal(err.code, 'resource-exhausted');
       return true;

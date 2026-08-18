@@ -51,15 +51,15 @@ class CheckInterviewPrerequisitesUseCaseTest {
     @Test
     fun `genuine limit populates limitReached without duplicating a failure-reason sentence`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
-        interviewRepository.interviewStatsResult = Result.success(mapOf(InterviewMode.VOICE_BASED to 1))
+        interviewRepository.interviewStatsResult = Result.success(mapOf(InterviewMode.VOICE_BASED to 3))
         val useCase = buildUseCase()
 
         val result = useCase(userId = "user-1").getOrThrow()
 
         val limitReached = assertNotNull(result.limitReached)
         assertEquals(SubscriptionTier.PRO, limitReached.tier)
-        assertEquals(1, limitReached.limit)
-        assertEquals(1, limitReached.usedCount)
+        assertEquals(3, limitReached.limit)
+        assertEquals(3, limitReached.usedCount)
         assertTrue(result.failureReasons.none { it.contains("Interview limit reached") })
         assertFalse(result.isEligible)
     }
@@ -79,7 +79,7 @@ class CheckInterviewPrerequisitesUseCaseTest {
     @Test
     fun `non-limit failures are unaffected when the subscription has headroom`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
-        // Default FakeInterviewRepository.interviewStatsResult is empty -> used = 0, under PRO's limit of 1.
+        // Default FakeInterviewRepository.interviewStatsResult is empty -> used = 0, under PRO's limit of 3.
         val useCase = buildUseCase()
 
         val result = useCase(userId = "user-1").getOrThrow()

@@ -25,19 +25,19 @@ describe('subscriptionEligibility', () => {
 
   it('is eligible below the limit and reports remaining count', () => {
     const result = checkTestEligibility('OIR', 'PRO', { ...EMPTY_USAGE, oirTestsUsed: 2 });
-    expect(result).toEqual({ status: 'ELIGIBLE', remainingTests: 3 });
+    expect(result).toEqual({ status: 'ELIGIBLE', remainingTests: 6 });
   });
 
   it('reaches the limit exactly at the boundary, not one before it', () => {
-    const atLimit = checkTestEligibility('TAT', 'PRO', { ...EMPTY_USAGE, tatTestsUsed: 3 });
+    const atLimit = checkTestEligibility('TAT', 'PRO', { ...EMPTY_USAGE, tatTestsUsed: 8 });
     expect(atLimit.status).toBe('LIMIT_REACHED');
 
-    const oneBelow = checkTestEligibility('TAT', 'PRO', { ...EMPTY_USAGE, tatTestsUsed: 2 });
+    const oneBelow = checkTestEligibility('TAT', 'PRO', { ...EMPTY_USAGE, tatTestsUsed: 7 });
     expect(oneBelow.status).toBe('ELIGIBLE');
   });
 
-  it('treats -1 as unlimited regardless of usage', () => {
-    const result = checkTestEligibility('OIR', 'PREMIUM', { ...EMPTY_USAGE, oirTestsUsed: 9999 });
+  it('treats -1 as unlimited regardless of usage (PIQ, the one bucket still uncapped at PREMIUM)', () => {
+    const result = checkTestEligibility('PIQ', 'PREMIUM', { ...EMPTY_USAGE, piqTestsUsed: 9999 });
     expect(result).toEqual({ status: 'ELIGIBLE', remainingTests: Number.MAX_SAFE_INTEGER });
   });
 
@@ -48,10 +48,10 @@ describe('subscriptionEligibility', () => {
     });
   });
 
-  it('caps Interview at 3 even for PREMIUM — the one deliberate non-unlimited exception', () => {
-    const result = checkTestEligibility('IO', 'PREMIUM', { ...EMPTY_USAGE, interviewTestsUsed: 3 });
+  it('caps Interview at 10 even for PREMIUM — the one deliberate non-unlimited exception', () => {
+    const result = checkTestEligibility('IO', 'PREMIUM', { ...EMPTY_USAGE, interviewTestsUsed: 10 });
     expect(result.status).toBe('LIMIT_REACHED');
-    const oneBelow = checkTestEligibility('IO', 'PREMIUM', { ...EMPTY_USAGE, interviewTestsUsed: 2 });
+    const oneBelow = checkTestEligibility('IO', 'PREMIUM', { ...EMPTY_USAGE, interviewTestsUsed: 9 });
     expect(oneBelow.status).toBe('ELIGIBLE');
   });
 
@@ -60,7 +60,7 @@ describe('subscriptionEligibility', () => {
       SubscriptionTierValues.forEach((tier) => {
         const bucketKey = bucketKeyFor(testType);
         const bucket = SubscriptionLimits.find((l) => l.bucket === bucketKey)!;
-        const limit = tier === 'FREE' ? bucket.free : tier === 'PRO' ? bucket.pro : bucket.premium;
+        const limit = tier === 'FREE' ? bucket.free : tier === 'BASIC' ? bucket.basic : tier === 'PRO' ? bucket.pro : bucket.premium;
 
         const zeroUsage = checkTestEligibility(testType, tier, EMPTY_USAGE);
         if (limit === -1 || limit > 0) {

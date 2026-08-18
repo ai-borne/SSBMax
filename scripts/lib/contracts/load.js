@@ -33,6 +33,7 @@ function loadAllContracts() {
     firestorePaths: loadContract('firestore-paths.yaml'),
     enums: loadContract('enums.yaml'),
     subscription: loadContract('subscription.yaml'),
+    pricing: loadContract('pricing.yaml'),
     testConfig: loadContract('test-config.yaml'),
     events: loadContract('events.yaml'),
     routes: loadContract('routes.yaml'),

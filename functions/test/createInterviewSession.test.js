@@ -206,7 +206,7 @@ test('createInterviewSessionCore rejects with resource-exhausted when the user i
   const month = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}`;
   process.env.ENFORCE_QUOTA = 'true';
   try {
-    const db = makeFakeDb(baseFixtures({ [`users/${UID}/subscription/usage_${month}`]: { interviewTestsUsed: 1, recordedSubmissionIds: ['other-session'] } }));
+    const db = makeFakeDb(baseFixtures({ [`users/${UID}/subscription/usage_${month}`]: { interviewTestsUsed: 3, recordedSubmissionIds: ['s1', 's2', 's3'] } }));
     await assert.rejects(
       () => createInterviewSessionCore(db, UID, { mode: 'VOICE_BASED', piqSnapshotId: 'piq1', consentGiven: true }, noCacheNoAiDeps()),
       (err) => {

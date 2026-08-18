@@ -145,6 +145,7 @@ export const App: FC = () => {
             <LandingPage
               onStartFreeClick={() => handleStartTest('oir')}
               onStartTestClick={handleStartTest}
+              onViewPricingClick={() => setActiveTab('tests')}
             />
           )}
           {activeTab === 'tests' && (

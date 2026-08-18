@@ -53,23 +53,28 @@ import ssbmax.shared.generated.resources.sdt_question_header
  * is extracted to [SDTExitDialog] (`SDTDialogs.kt`), matching TAT/WAT/SRT/PPDT's
  * dialog-extraction precedent.
  */
+/** Groups the read-only display values so [SDTInProgressPhase] stays under the parameter-count limit. */
+data class SDTInProgressState(
+    val question: String,
+    val questionNumber: Int,
+    val totalQuestions: Int,
+    val answer: String,
+    val charCount: Int,
+    val minChars: Int,
+    val maxChars: Int,
+    val canMoveNext: Boolean
+)
+
 @Composable
 fun SDTInProgressPhase(
-    question: String,
-    questionNumber: Int,
-    totalQuestions: Int,
-    answer: String,
+    state: SDTInProgressState,
     onAnswerChange: (String) -> Unit,
-    charCount: Int,
-    minChars: Int,
-    maxChars: Int,
-    canMoveNext: Boolean,
     onNext: () -> Unit,
     onSkip: () -> Unit
 ) {
     val progressDescription = stringResource(
         Res.string.sdt_progress_content_description,
-        (questionNumber * 100 / totalQuestions).coerceIn(0, 100)
+        (state.questionNumber * 100 / state.totalQuestions).coerceIn(0, 100)
     )
     Column(
         modifier = Modifier
@@ -81,35 +86,35 @@ fun SDTInProgressPhase(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         LinearProgressIndicator(
-            progress = { questionNumber.toFloat() / totalQuestions },
+            progress = { state.questionNumber.toFloat() / state.totalQuestions },
             modifier = Modifier
                 .fillMaxWidth()
                 .progressSemantics(
                     description = progressDescription,
-                    current = questionNumber.toFloat(),
-                    maximum = totalQuestions.toFloat()
+                    current = state.questionNumber.toFloat(),
+                    maximum = state.totalQuestions.toFloat()
                 )
         )
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(question, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(state.question, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
         }
 
         OutlinedTextField(
-            value = answer,
+            value = state.answer,
             onValueChange = onAnswerChange,
             modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 180.dp),
             label = { Text(stringResource(Res.string.sdt_answer_label)) },
             supportingText = {
-                val isError = charCount < minChars || charCount > maxChars
+                val isError = state.charCount < state.minChars || state.charCount > state.maxChars
                 Text(
-                    stringResource(Res.string.sdt_char_count, charCount, maxChars, minChars),
+                    stringResource(Res.string.sdt_char_count, state.charCount, state.maxChars, state.minChars),
                     color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
             },
-            isError = charCount < minChars || charCount > maxChars,
+            isError = state.charCount < state.minChars || state.charCount > state.maxChars,
             maxLines = Int.MAX_VALUE
         )
 
@@ -117,10 +122,15 @@ fun SDTInProgressPhase(
             OutlinedButton(onClick = onSkip, modifier = Modifier.weight(1f)) {
                 Text(stringResource(Res.string.sdt_action_skip))
             }
-            Button(onClick = onNext, enabled = canMoveNext, modifier = Modifier.weight(1f)) {
+            Button(onClick = onNext, enabled = state.canMoveNext, modifier = Modifier.weight(1f)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(if (questionNumber < totalQuestions) Res.string.sdt_action_next else Res.string.sdt_action_review))
+                val nextLabel = if (state.questionNumber < state.totalQuestions) {
+                    Res.string.sdt_action_next
+                } else {
+                    Res.string.sdt_action_review
+                }
+                Text(stringResource(nextLabel))
             }
         }
 

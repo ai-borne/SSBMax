@@ -2,7 +2,7 @@
 # SCREAMING_SNAKE_CASE everywhere; a platform's idiomatic casing (e.g. web
 # camelCase for local variables) is a rendering choice, never a wire choice.
 # See contracts/README.md for the compatibility policy before editing.
-schemaVersion: "1.0.0"
+schemaVersion: "1.1.0"
 
 enums:
   - name: TestType
@@ -44,6 +44,7 @@ enums:
     source: shared/.../domain/model/SubscriptionTier.kt
     members:
       - FREE
+      - BASIC
       - PRO
       - PREMIUM
 

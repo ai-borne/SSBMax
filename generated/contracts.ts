@@ -2,7 +2,7 @@
  * DO NOT EDIT. Generated file — hand edits will be overwritten and are
  * caught by `npm run contracts:check` in CI / pre-commit.
  *
- * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
+ * Source: firestore-paths.yaml, enums.yaml, subscription.yaml, pricing.yaml, test-config.yaml, events.yaml, routes.yaml, tokens.yaml (contracts/README.md documents the SSOT policy)
  * Regenerate: node scripts/generate-contracts.js
  *
  * SRP justification for exceeding the project 300-LOC limit: this file has
@@ -74,8 +74,8 @@ export const TestPhaseValues: TestPhase[] = ["PHASE_1", "PHASE_2"];
 export type TestStatus = "NOT_ATTEMPTED" | "IN_PROGRESS" | "SUBMITTED_PENDING_REVIEW" | "GRADED" | "COMPLETED";
 export const TestStatusValues: TestStatus[] = ["NOT_ATTEMPTED", "IN_PROGRESS", "SUBMITTED_PENDING_REVIEW", "GRADED", "COMPLETED"];
 
-export type SubscriptionTier = "FREE" | "PRO" | "PREMIUM";
-export const SubscriptionTierValues: SubscriptionTier[] = ["FREE", "PRO", "PREMIUM"];
+export type SubscriptionTier = "FREE" | "BASIC" | "PRO" | "PREMIUM";
+export const SubscriptionTierValues: SubscriptionTier[] = ["FREE", "BASIC", "PRO", "PREMIUM"];
 
 export type OIRQuestionType = "VERBAL_REASONING" | "NON_VERBAL_REASONING" | "NUMERICAL_ABILITY" | "SPATIAL_REASONING";
 export const OIRQuestionTypeValues: OIRQuestionType[] = ["VERBAL_REASONING", "NON_VERBAL_REASONING", "NUMERICAL_ABILITY", "SPATIAL_REASONING"];
@@ -102,18 +102,29 @@ export const OLQ: Record<string, OLQDef> = {
 export type OLQCategory = "INTELLECTUAL" | "SOCIAL" | "DYNAMIC" | "CHARACTER";
 export const OLQCategoryValues: OLQCategory[] = ["INTELLECTUAL", "SOCIAL", "DYNAMIC", "CHARACTER"];
 
-export interface SubscriptionLimit { bucket: string; testTypes: string[]; free: number; pro: number; premium: number; }
+export interface SubscriptionLimit { bucket: string; testTypes: string[]; free: number; basic: number; pro: number; premium: number; }
 export const SubscriptionLimits: SubscriptionLimit[] = [
-  { bucket: "OIR", testTypes: ["OIR"], free: 1, pro: 5, premium: -1 },
-  { bucket: "PPDT", testTypes: ["PPDT"], free: 1, pro: 5, premium: -1 },
-  { bucket: "PIQ", testTypes: ["PIQ"], free: 1, pro: -1, premium: -1 },
-  { bucket: "TAT", testTypes: ["TAT"], free: 0, pro: 3, premium: -1 },
-  { bucket: "WAT", testTypes: ["WAT"], free: 0, pro: 3, premium: -1 },
-  { bucket: "SRT", testTypes: ["SRT"], free: 0, pro: 3, premium: -1 },
-  { bucket: "SD", testTypes: ["SD"], free: 0, pro: 3, premium: -1 },
-  { bucket: "GTO", testTypes: ["GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT"], free: 0, pro: 3, premium: -1 },
-  { bucket: "INTERVIEW", testTypes: ["IO"], free: 0, pro: 1, premium: 3 },
+  { bucket: "OIR", testTypes: ["OIR"], free: 1, basic: 5, pro: 8, premium: 15 },
+  { bucket: "PPDT", testTypes: ["PPDT"], free: 1, basic: 5, pro: 8, premium: 15 },
+  { bucket: "PIQ", testTypes: ["PIQ"], free: 1, basic: 5, pro: 8, premium: -1 },
+  { bucket: "TAT", testTypes: ["TAT"], free: 0, basic: 5, pro: 8, premium: 15 },
+  { bucket: "WAT", testTypes: ["WAT"], free: 0, basic: 5, pro: 8, premium: 15 },
+  { bucket: "SRT", testTypes: ["SRT"], free: 0, basic: 5, pro: 8, premium: 15 },
+  { bucket: "SD", testTypes: ["SD"], free: 0, basic: 5, pro: 8, premium: 15 },
+  { bucket: "GTO", testTypes: ["GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT"], free: 0, basic: 5, pro: 8, premium: 15 },
+  { bucket: "INTERVIEW", testTypes: ["IO"], free: 0, basic: 1, pro: 3, premium: 10 },
 ];
+
+export interface TierPrice { tier: string; monthlyInr: number; }
+export const PricingTiers: TierPrice[] = [
+  { tier: "FREE", monthlyInr: 0 },
+  { tier: "BASIC", monthlyInr: 299 },
+  { tier: "PRO", monthlyInr: 499 },
+  { tier: "PREMIUM", monthlyInr: 999 },
+];
+export const PricingAddons = {
+  INTERVIEW_TOPUP: 99,
+} as const;
 
 export interface TestConfigEntry { testType: string; values: Record<string, unknown>; }
 export const TestConfig: TestConfigEntry[] = [

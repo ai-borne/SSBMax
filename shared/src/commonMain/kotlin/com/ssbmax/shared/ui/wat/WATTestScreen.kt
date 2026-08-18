@@ -3,6 +3,7 @@ package com.ssbmax.shared.ui.wat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import com.ssbmax.shared.ui.common.SsbBackHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.model.WATPhase
+import com.ssbmax.shared.presentation.wat.WATTestUiState
 import com.ssbmax.shared.presentation.wat.WATTestViewModel
 import com.ssbmax.shared.ui.common.TestErrorState
 import com.ssbmax.shared.ui.common.TestLimitReachedDialog
@@ -122,29 +124,7 @@ fun WATTestScreen(
         },
         modifier = modifier
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when {
-                uiState.isLoading -> LoadingState(modifier = Modifier.fillMaxSize())
-                uiState.error != null -> TestErrorState(
-                    error = uiState.error!!,
-                    onRetry = { viewModel.loadTest(testId) },
-                    modifier = Modifier.fillMaxSize()
-                )
-                else -> when (uiState.phase) {
-                    WATPhase.INSTRUCTIONS -> WATInstructionsPhase(onStart = { viewModel.startTest() })
-                    WATPhase.IN_PROGRESS -> WATInProgressPhase(
-                        word = uiState.currentWord?.word ?: "",
-                        timeRemaining = uiState.timeRemaining,
-                        response = uiState.currentResponse,
-                        onResponseChange = { viewModel.updateResponse(it) },
-                        onSubmit = { viewModel.submitResponse() },
-                        onSkip = { viewModel.skipWord() }
-                    )
-                    WATPhase.COMPLETED -> Unit // auto-submits; brief transitional state
-                    WATPhase.SUBMITTED -> Unit // navigation happens in LaunchedEffect above
-                }
-            }
-        }
+        WATScreenBody(uiState = uiState, paddingValues = paddingValues, viewModel = viewModel, testId = testId)
     }
 
     if (showExitDialog) {
@@ -152,6 +132,44 @@ fun WATTestScreen(
             onDismiss = { showExitDialog = false },
             onExit = { showExitDialog = false; viewModel.pauseTest(); onNavigateBack() }
         )
+    }
+}
+
+/** The Scaffold body content -- extracted so [WATTestScreen] itself stays under the complexity limit. */
+@Composable
+private fun WATScreenBody(
+    uiState: WATTestUiState,
+    paddingValues: PaddingValues,
+    viewModel: WATTestViewModel,
+    testId: String
+) {
+    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        when {
+            uiState.isLoading -> LoadingState(modifier = Modifier.fillMaxSize())
+            uiState.error != null -> TestErrorState(
+                error = uiState.error!!,
+                onRetry = { viewModel.loadTest(testId) },
+                modifier = Modifier.fillMaxSize()
+            )
+            else -> WATPhaseContent(uiState, viewModel)
+        }
+    }
+}
+
+@Composable
+private fun WATPhaseContent(uiState: WATTestUiState, viewModel: WATTestViewModel) {
+    when (uiState.phase) {
+        WATPhase.INSTRUCTIONS -> WATInstructionsPhase(onStart = { viewModel.startTest() })
+        WATPhase.IN_PROGRESS -> WATInProgressPhase(
+            word = uiState.currentWord?.word ?: "",
+            timeRemaining = uiState.timeRemaining,
+            response = uiState.currentResponse,
+            onResponseChange = { viewModel.updateResponse(it) },
+            onSubmit = { viewModel.submitResponse() },
+            onSkip = { viewModel.skipWord() }
+        )
+        WATPhase.COMPLETED -> Unit // auto-submits; brief transitional state
+        WATPhase.SUBMITTED -> Unit // navigation happens in LaunchedEffect above
     }
 }
 

@@ -61,6 +61,8 @@ function limitFor(bucketKey: string, tier: SubscriptionTier): number {
   const bucket = SubscriptionLimits.find((limit) => limit.bucket === bucketKey);
   if (!bucket) return 0;
   switch (tier) {
+    case 'BASIC':
+      return bucket.basic;
     case 'PRO':
       return bucket.pro;
     case 'PREMIUM':

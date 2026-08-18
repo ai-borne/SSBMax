@@ -143,7 +143,7 @@ export const PracticeTestsPage: FC<PracticeTestsPageProps> = ({
       {/* 15 OLQ Radar Graph Primitive */}
       <OLQFactorRadarSVG />
 
-      {/* 3-Tier Subscription Payment Ribbon */}
+      {/* 4-Tier Subscription Payment Ribbon (FREE/BASIC/PRO/PREMIUM) */}
       <PaymentRibbon
         currentTier={effectiveTier}
         onSelectTier={(tier) => {

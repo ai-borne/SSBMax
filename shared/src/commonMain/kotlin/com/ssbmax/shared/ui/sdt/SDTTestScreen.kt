@@ -3,6 +3,7 @@ package com.ssbmax.shared.ui.sdt
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -30,12 +31,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.SDTPhase
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.presentation.sdt.SDTTestUiState
 import com.ssbmax.shared.presentation.sdt.SDTTestViewModel
 import com.ssbmax.shared.ui.common.TestErrorState
 import com.ssbmax.shared.ui.common.TestLimitReachedDialog
 import com.ssbmax.shared.ui.common.timerSemantics
 import com.ssbmax.shared.ui.sdt.components.SDTExitDialog
 import com.ssbmax.shared.ui.sdt.components.SDTInProgressPhase
+import com.ssbmax.shared.ui.sdt.components.SDTInProgressState
 import com.ssbmax.shared.ui.sdt.components.SDTInstructionsPhase
 import com.ssbmax.shared.ui.sdt.components.SDTReviewBottomBar
 import com.ssbmax.shared.ui.sdt.components.SDTReviewPhase
@@ -127,53 +130,94 @@ fun SDTTestScreen(
         },
         modifier = modifier
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when {
-                uiState.isLoading -> LoadingState(modifier = Modifier.fillMaxSize())
-                uiState.error != null -> TestErrorState(
-                    error = uiState.error!!,
-                    onRetry = { viewModel.loadTest(testId) },
-                    modifier = Modifier.fillMaxSize()
-                )
-                else -> when (uiState.phase) {
-                    SDTPhase.INSTRUCTIONS -> SDTInstructionsPhase(onStart = { viewModel.startTest() })
-                    SDTPhase.IN_PROGRESS -> SDTInProgressPhase(
-                        question = uiState.currentQuestion?.question ?: "",
-                        questionNumber = uiState.currentQuestionIndex + 1,
-                        totalQuestions = uiState.questions.size,
-                        answer = uiState.currentAnswer,
-                        onAnswerChange = { viewModel.updateAnswer(it) },
-                        charCount = uiState.currentCharCount,
-                        minChars = uiState.config?.minCharsPerQuestion ?: 50,
-                        maxChars = uiState.config?.maxCharsPerQuestion ?: 1500,
-                        canMoveNext = uiState.canMoveToNext,
-                        onNext = { viewModel.moveToNext() },
-                        onSkip = { viewModel.skipQuestion() }
-                    )
-                    SDTPhase.REVIEW -> SDTReviewPhase(
-                        questions = uiState.questions,
-                        responses = uiState.responses,
-                        onEdit = { index -> viewModel.editQuestion(index) }
-                    )
-                    SDTPhase.COMPLETED, SDTPhase.SUBMITTED -> Unit // navigation happens in LaunchedEffect above
-                }
-            }
-        }
+        SDTScreenBody(
+            uiState = uiState,
+            paddingValues = paddingValues,
+            viewModel = viewModel,
+            testId = testId
+        )
     }
 
-    if (showExitDialog) {
-        SDTExitDialog(
-            onDismiss = { showExitDialog = false },
-            onExit = { showExitDialog = false; viewModel.pauseTest(); onNavigateBack() }
+    SDTScreenDialogs(
+        showExitDialog = showExitDialog,
+        showSubmitDialog = showSubmitDialog,
+        uiState = uiState,
+        onDismissExitDialog = { showExitDialog = false },
+        onExit = { showExitDialog = false; viewModel.pauseTest(); onNavigateBack() },
+        onDismissSubmitDialog = { showSubmitDialog = false },
+        onConfirmSubmit = { showSubmitDialog = false; viewModel.submitTest() }
+    )
+}
+
+/** The Scaffold body content -- extracted so [SDTTestScreen] itself stays within the LOC/complexity limits. */
+@Composable
+private fun SDTScreenBody(
+    uiState: SDTTestUiState,
+    paddingValues: PaddingValues,
+    viewModel: SDTTestViewModel,
+    testId: String
+) {
+    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        when {
+            uiState.isLoading -> LoadingState(modifier = Modifier.fillMaxSize())
+            uiState.error != null -> TestErrorState(
+                error = uiState.error!!,
+                onRetry = { viewModel.loadTest(testId) },
+                modifier = Modifier.fillMaxSize()
+            )
+            else -> SDTPhaseContent(uiState, viewModel)
+        }
+    }
+}
+
+@Composable
+private fun SDTPhaseContent(uiState: SDTTestUiState, viewModel: SDTTestViewModel) {
+    when (uiState.phase) {
+        SDTPhase.INSTRUCTIONS -> SDTInstructionsPhase(onStart = { viewModel.startTest() })
+        SDTPhase.IN_PROGRESS -> SDTInProgressPhase(
+            state = SDTInProgressState(
+                question = uiState.currentQuestion?.question ?: "",
+                questionNumber = uiState.currentQuestionIndex + 1,
+                totalQuestions = uiState.questions.size,
+                answer = uiState.currentAnswer,
+                charCount = uiState.currentCharCount,
+                minChars = uiState.config?.minCharsPerQuestion ?: 50,
+                maxChars = uiState.config?.maxCharsPerQuestion ?: 1500,
+                canMoveNext = uiState.canMoveToNext
+            ),
+            onAnswerChange = { viewModel.updateAnswer(it) },
+            onNext = { viewModel.moveToNext() },
+            onSkip = { viewModel.skipQuestion() }
         )
+        SDTPhase.REVIEW -> SDTReviewPhase(
+            questions = uiState.questions,
+            responses = uiState.responses,
+            onEdit = { index -> viewModel.editQuestion(index) }
+        )
+        SDTPhase.COMPLETED, SDTPhase.SUBMITTED -> Unit // navigation happens in LaunchedEffect above
+    }
+}
+
+@Composable
+private fun SDTScreenDialogs(
+    showExitDialog: Boolean,
+    showSubmitDialog: Boolean,
+    uiState: SDTTestUiState,
+    onDismissExitDialog: () -> Unit,
+    onExit: () -> Unit,
+    onDismissSubmitDialog: () -> Unit,
+    onConfirmSubmit: () -> Unit
+) {
+    if (showExitDialog) {
+        SDTExitDialog(onDismiss = onDismissExitDialog, onExit = onExit)
     }
 
     if (showSubmitDialog) {
         SDTSubmitDialog(
             validResponseCount = uiState.validResponseCount,
             totalQuestions = uiState.questions.size,
-            onDismiss = { showSubmitDialog = false },
-            onConfirm = { showSubmitDialog = false; viewModel.submitTest() }
+            onDismiss = onDismissSubmitDialog,
+            onConfirm = onConfirmSubmit
         )
     }
 }
