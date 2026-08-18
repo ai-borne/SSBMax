@@ -56,3 +56,24 @@ test('createRazorpayOrder computes the correct amount for every real planId', as
     delete process.env.FUNCTIONS_EMULATOR;
   }
 });
+
+// Phase 5 (cost & scale guardrails): App Check isn't wired client-side yet (Phase 1b), so this
+// mirrors geminiProxy.js's warn-only stance -- a missing context.app must not block a real
+// payment flow today.
+test('createRazorpayOrder does not reject a call missing an App Check token (warn-only until Phase 1b)', async () => {
+  process.env.FUNCTIONS_EMULATOR = 'true';
+  try {
+    const result = await createRazorpayOrder.run(
+      { planId: 'pro_monthly' },
+      { auth: { uid: 'user-1' } } // no `app` field, same shape App Check omission takes today
+    );
+    assert.equal(result.success, true);
+  } finally {
+    delete process.env.FUNCTIONS_EMULATOR;
+  }
+});
+
+test('createRazorpayOrder has a maxInstances cap set (Phase 5, DoW defense)', () => {
+  // v1 CloudFunction objects expose their runWith() options here.
+  assert.equal(createRazorpayOrder.__trigger?.maxInstances ?? createRazorpayOrder.__endpoint?.maxInstances, 10);
+});

@@ -21,15 +21,26 @@ const PLAN_AMOUNTS_PAISE = Object.fromEntries(
   PricingTiers.filter((t) => t.tier !== 'FREE').map(({ tier, monthlyInr }) => [`${tier.toLowerCase()}_monthly`, monthlyInr * 100])
 );
 
+// Same DoW-defense shape as geminiProxy.js/aiAnalysis.js's runtimeOptions -- order creation
+// had no instance cap before this (Phase 5, cost & scale guardrails).
+const runtimeOptions = {
+  maxInstances: 10
+};
+
 /**
  * Create Razorpay Order Callable Function
  */
-exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
+exports.createRazorpayOrder = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError(
       'unauthenticated',
       'User must be authenticated to create a payment order'
     );
+  }
+  if (!context.app) {
+    // Same warn-only stance as geminiProxy.js's identical check -- App Check isn't wired
+    // client-side yet (Phase 1b). Flip both to a hard failed-precondition together once it is.
+    console.warn(`createRazorpayOrder: no App Check token, uid=${context.auth.uid}`);
   }
 
   const userId = context.auth.uid;

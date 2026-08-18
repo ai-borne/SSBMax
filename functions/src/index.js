@@ -27,6 +27,7 @@ const { evaluateInterviewResponse } = require('./evaluation/interviewEvaluate');
 const { createInterviewSession } = require('./interview/createInterviewSession');
 const { completeInterviewSession } = require('./interview/completeInterviewSession');
 const { archiveOldSubmissions } = require('./archival/archiveOldSubmissions');
+const { scheduledFirestoreBackup } = require('./archival/scheduledFirestoreBackup');
 const { evaluateGTO } = require('./evaluation/gtoEvaluate');
 const { evaluatePPDT } = require('./evaluation/ppdtEvaluate');
 const { evaluateTAT } = require('./evaluation/tatEvaluate');
@@ -86,6 +87,10 @@ exports.completeInterviewSession = completeInterviewSession;
 // PERMISSION_DENIED (no data loss -- the delete-original step never ran either). This scheduled
 // function replaces that client-side WorkManager/BGTaskScheduler job entirely on both platforms.
 exports.archiveOldSubmissions = archiveOldSubmissions;
+// Phase 5 (cost & scale guardrails): daily full-database export to GCS -- there was no
+// Firestore backup of any kind before this. Requires FIRESTORE_BACKUP_BUCKET + IAM setup,
+// see scheduledFirestoreBackup.js's doc comment.
+exports.scheduledFirestoreBackup = scheduledFirestoreBackup;
 // Phase 8 Ship (Web SSB Test Flow Parity plan): behind KMP's `gto_server_evaluation`
 // feature flag, default off -- see GTOAnalysisOrchestrator. GD/GPE/Lecturette only
 // (scope correction, confirmed with the user -- see gtoPrompts.js's class doc for why
