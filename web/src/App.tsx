@@ -5,6 +5,8 @@ import { LandingPage } from './components/landing/LandingPage';
 import { PracticeTestsPage } from './components/practice/PracticeTestsPage';
 import { StudyMaterialPage } from './components/study/StudyMaterialPage';
 import { SettingsPage } from './components/settings/SettingsPage';
+import { SubscriptionPage } from './components/subscription/SubscriptionPage';
+import { PaymentService } from './services/PaymentService';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { TermsAndRefunds } from './components/legal/TermsAndRefunds';
 import { OIRTestRunner } from './components/testRunners/OIRTestRunner';
@@ -45,6 +47,7 @@ export const App: FC = () => {
   };
 
   const { tier: realTier, usage } = useSubscriptionViewModel(authService.getCurrentUser()?.uid, devTierOverride);
+  const paymentService = useMemo(() => new PaymentService(), []);
   const olqDashboard = useOLQDashboardViewModel(authService.getCurrentUser()?.uid, undefined, activeTab === 'reports');
   const isPaidMember = realTier !== 'FREE';
   const effectiveTier: AccessTier = import.meta.env.DEV
@@ -153,7 +156,7 @@ export const App: FC = () => {
               userTier={effectiveTier}
               usage={usage}
               onStartTest={handleStartTest}
-              onUpgrade={() => setActiveTab('settings')}
+              onUpgrade={() => setActiveTab('subscription')}
             />
           )}
           {activeTab === 'reports' && (
@@ -183,11 +186,19 @@ export const App: FC = () => {
             )
           )}
           {activeTab === 'study' && <StudyMaterialPage />}
+          {activeTab === 'subscription' && (
+            <SubscriptionPage
+              userId={authService.getCurrentUser()?.uid}
+              createOrderFn={paymentService.createOrder}
+              onPaymentSuccess={() => setActiveTab('tests')}
+            />
+          )}
           {activeTab === 'settings' && (
             <SettingsPage
               userId={authService.getCurrentUser()?.uid}
               isPro={isPaidMember}
               devTierOverride={devTierOverride}
+              onUpgrade={() => setActiveTab('subscription')}
               onSelectDevTier={handleSelectDevTier}
             />
           )}

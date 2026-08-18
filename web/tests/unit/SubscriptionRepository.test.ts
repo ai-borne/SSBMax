@@ -85,4 +85,38 @@ describe('SubscriptionRepository', () => {
       expect(await repository.getStartDate('user_1')).toBe(1_700_000_000_000);
     });
   });
+
+  /**
+   * Phase 4 amendment (dual-purchase gate): neither `webhooks.js` (Razorpay/web) nor
+   * `revenueCatWebhook.js` (RevenueCat/mobile) reconciles against what the other already wrote to
+   * `data/subscription` -- last write wins. `getOwnership` is what `SubscriptionPage.tsx` reads to
+   * block a second, separate web purchase while an active mobile subscription exists.
+   */
+  describe('getOwnership (Phase 4 amendment)', () => {
+    it('returns null source/expiryDate when the tier document does not exist', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as any);
+      expect(await repository.getOwnership('user_1')).toEqual({ source: null, expiryDate: null });
+    });
+
+    it('fails open (no restriction) when Firestore read throws -- unlike getTier/getStartDate', async () => {
+      vi.mocked(getDoc).mockRejectedValueOnce(new Error('offline'));
+      expect(await repository.getOwnership('user_1')).toEqual({ source: null, expiryDate: null });
+    });
+
+    it('reads source and expiryDate verbatim when present', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ tier: 'PRO', source: 'REVENUECAT', expiryDate: 1_700_000_000_000 })
+      } as any);
+      expect(await repository.getOwnership('user_1')).toEqual({ source: 'REVENUECAT', expiryDate: 1_700_000_000_000 });
+    });
+
+    it('treats a non-string source or non-number expiryDate as absent, not a trusted value', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ tier: 'PRO', source: 123, expiryDate: 'not-a-number' })
+      } as any);
+      expect(await repository.getOwnership('user_1')).toEqual({ source: null, expiryDate: null });
+    });
+  });
 });

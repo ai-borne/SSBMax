@@ -3,6 +3,7 @@ package com.ssbmax.shared.data.repository
 import com.russhwolf.settings.Settings
 import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.model.TestType
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
 import com.ssbmax.shared.domain.repository.UsageInfo
@@ -17,6 +18,7 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     var tierResult: Result<SubscriptionTier> = Result.success(SubscriptionTier.FREE)
     var monthlyUsageResult: Result<Map<String, UsageInfo>> = Result.success(emptyMap())
     var startDateResult: Result<Long?> = Result.success(null)
+    var ownershipResult: Result<SubscriptionOwnership> = Result.success(SubscriptionOwnership(source = null, expiryDate = null))
     val updateCalls = mutableListOf<SubscriptionTier>()
 
     override suspend fun getSubscriptionTier(userId: String): Result<SubscriptionTier> = tierResult
@@ -30,6 +32,8 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     }
 
     override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
+
+    override suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership> = ownershipResult
 }
 
 class FakeTestUsageRecorder : TestUsageRecorder {

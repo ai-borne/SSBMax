@@ -2,6 +2,7 @@ package com.ssbmax.shared.data.repository
 
 import com.ssbmax.shared.domain.model.SubscriptionOverride
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.repository.UsageInfo
 import com.ssbmax.shared.platform.settings.DeveloperSettings
 import kotlinx.coroutines.test.runTest
@@ -105,6 +106,20 @@ class DebugOverrideSubscriptionRepositoryTest {
         developerSettings.setOverride(SubscriptionOverride.FORCE_PREMIUM)
 
         assertEquals(Result.success(1_700_000_000_000L), repository.getSubscriptionStartDate("user-1"))
+    }
+
+    /** Same rationale as `getSubscriptionStartDate` above -- a forced tier has no real webhook
+     * behind it, so there's no ownership to fake; the dual-purchase gate must only react to a
+     * real Razorpay/RevenueCat write, never a debug override. */
+    @Test
+    fun `getSubscriptionOwnership always passes through regardless of override`() = runTest {
+        delegate.ownershipResult = Result.success(SubscriptionOwnership(source = "RAZORPAY", expiryDate = null))
+        developerSettings.setOverride(SubscriptionOverride.FORCE_PREMIUM)
+
+        assertEquals(
+            Result.success(SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)),
+            repository.getSubscriptionOwnership("user-1")
+        )
     }
 
     @Test

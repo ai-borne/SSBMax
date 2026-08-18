@@ -1,6 +1,7 @@
 package com.ssbmax.shared.data.repository
 
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.UsageInfo
 import com.ssbmax.shared.platform.settings.DeveloperSettings
@@ -53,4 +54,10 @@ class DebugOverrideSubscriptionRepository(
     // logic already falls back to calendar-month for a null startDate regardless of tier.
     override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> =
         delegate.getSubscriptionStartDate(userId)
+
+    // Always the real value, same rationale as updateSubscriptionTier/getSubscriptionStartDate --
+    // a forced tier has no real purchase behind it, so there's nothing to fake ownership of; the
+    // dual-purchase gate should only ever react to a real Razorpay/RevenueCat webhook write.
+    override suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership> =
+        delegate.getSubscriptionOwnership(userId)
 }

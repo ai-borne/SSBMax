@@ -29,6 +29,7 @@ import com.ssbmax.shared.domain.repository.OIREvaluationClient
 import com.ssbmax.shared.domain.repository.OIREvaluationResult
 import com.ssbmax.shared.domain.repository.OIRSubmittedAnswer
 import com.ssbmax.shared.domain.repository.SubmissionRepository
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.TestContentRepository
 import com.ssbmax.shared.domain.repository.TestSessionRepository
@@ -78,6 +79,7 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     var monthlyUsageResult: Result<Map<String, UsageInfo>> = Result.success(emptyMap())
     var updateTierResult: Result<Unit> = Result.success(Unit)
     var startDateResult: Result<Long?> = Result.success(null)
+    var ownershipResult: Result<SubscriptionOwnership> = Result.success(SubscriptionOwnership(source = null, expiryDate = null))
     var getSubscriptionTierCallCount = 0
 
     /** Phase 4 (RevenueCat integration): records the last [updateSubscriptionTier] call so
@@ -101,6 +103,7 @@ class FakeSubscriptionRepository : SubscriptionRepository {
         return updateTierResult
     }
     override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
+    override suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership> = ownershipResult
 }
 
 /** Phase 4 (RevenueCat integration): test double for [RevenueCatClient] -- avoids pulling the

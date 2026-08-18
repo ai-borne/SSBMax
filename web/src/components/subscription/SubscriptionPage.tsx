@@ -1,16 +1,19 @@
 import { FC } from 'react';
-import { Check, ShieldCheck, Zap, AlertCircle, Award } from 'lucide-react';
+import { Check, ShieldCheck, Zap, AlertCircle, Award, Info } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { usePaymentViewModel, PaymentState } from '../../viewmodels/PaymentViewModel';
+import { useSubscriptionOwnership, isActiveMobileSubscription } from '../../viewmodels/useSubscriptionOwnership';
 import { SUBSCRIPTION_TIERS } from '../../constants/ssbSelectionProcess';
 
 export interface SubscriptionPageProps {
+  userId?: string;
   initialState?: Partial<PaymentState>;
   onPaymentSuccess?: () => void;
   createOrderFn?: (planId: string) => Promise<{ orderId: string; amount: number; currency: string; keyId: string }>;
 }
 
 export const SubscriptionPage: FC<SubscriptionPageProps> = ({
+  userId,
   onPaymentSuccess,
   createOrderFn
 }) => {
@@ -18,7 +21,14 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
   const { status, errorMessage, isPaidMember, initiatePayment } = paymentVM;
   const isLoading = status === 'creating_order' || status === 'checkout_open' || status === 'verifying';
 
+  // Phase 4 amendment (dual-purchase gate): neither payment webhook reconciles against what the
+  // other already wrote to `data/subscription` -- see `SubscriptionRepository.getOwnership`'s doc
+  // comment. Block a second, separate web purchase while an active mobile subscription exists.
+  const ownership = useSubscriptionOwnership(userId);
+  const blockedByMobileSubscription = isActiveMobileSubscription(ownership);
+
   const handleUpgradeClick = async (tierId: string) => {
+    if (blockedByMobileSubscription) return;
     await initiatePayment(`${tierId.toLowerCase()}_monthly`);
     if (onPaymentSuccess && status === 'success') {
       onPaymentSuccess();
@@ -49,6 +59,14 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
             <p className="font-bold text-sm">Membership Active</p>
             <p className="text-xs text-emerald-700 dark:text-emerald-400">You have unlocked full access to your plan's Stage-I & Stage-II simulators and AI assessments.</p>
           </div>
+        </div>
+      )}
+
+      {/* Mobile Subscription Active Banner (Phase 4 amendment, dual-purchase gate) */}
+      {blockedByMobileSubscription && (
+        <div className="p-4 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-300 dark:border-sky-500/40 text-sky-800 dark:text-sky-300 flex items-center gap-3" data-testid="mobile-subscription-active-banner">
+          <Info className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0" />
+          <p className="text-xs font-medium">{strings.subscription.mobileSubscriptionActiveBanner}</p>
         </div>
       )}
 
@@ -116,7 +134,7 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
               ) : (
                 <button
                   onClick={() => handleUpgradeClick(tier.id)}
-                  disabled={isLoading || isPaidMember}
+                  disabled={isLoading || isPaidMember || blockedByMobileSubscription}
                   className={`w-full py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
                     isPaidMember
                       ? 'bg-emerald-600 text-white cursor-default'

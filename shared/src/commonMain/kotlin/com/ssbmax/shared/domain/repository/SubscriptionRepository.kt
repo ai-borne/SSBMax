@@ -38,6 +38,30 @@ interface SubscriptionRepository {
      * key -- see [com.ssbmax.shared.domain.usecase.subscription.currentPeriodKey].
      */
     suspend fun getSubscriptionStartDate(userId: String): Result<Long?>
+
+    /**
+     * Which payment path last granted the user's current tier, plus its expiry -- used by
+     * [com.ssbmax.shared.presentation.premium.UpgradeViewModel]'s dual-purchase gate. Neither
+     * `webhooks.js` (Razorpay/web) nor `revenueCatWebhook.js` (RevenueCat/mobile) reconciles
+     * against what the other already wrote to `data/subscription` -- last write wins -- so a user
+     * who is already paying through one path is blocked from starting a second, separate
+     * subscription through the other rather than silently risking one webhook stomping the other.
+     */
+    suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership>
+}
+
+/**
+ * @param source `"RAZORPAY"`/`"REVENUECAT"`/null (never purchased, or a doc predating this field).
+ * @param expiryDate Epoch millis, or null (Razorpay's one-time-order path never tracks an expiry --
+ * a null expiry from that source means "perpetual until the next webhook," not "unknown").
+ */
+data class SubscriptionOwnership(
+    val source: String?,
+    val expiryDate: Long?
+) {
+    /** @param nowMillis epoch millis to compare against -- passed in rather than read internally
+     * so this stays a pure function testable without mocking a clock. */
+    fun isActive(nowMillis: Long): Boolean = expiryDate == null || expiryDate > nowMillis
 }
 
 /**

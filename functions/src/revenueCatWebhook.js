@@ -68,7 +68,9 @@ function verifySignature(req, secret) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-exports.handleRevenueCatWebhook = functions.https.onRequest(async (req, res) => {
+// DoW-defense cap (Phase 5, cost & scale guardrails) -- same rationale as webhooks.js's
+// identical addition: an unauthenticated-by-nature endpoint with no prior instance ceiling.
+exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }, async (req, res) => {
   const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
 
   if (!secret) {
@@ -125,7 +127,10 @@ exports.handleRevenueCatWebhook = functions.https.onRequest(async (req, res) => 
           tier,
           startDate: GRANT_EVENT_TYPES.has(eventType) ? existingStartDate || Date.now() : existingStartDate || 0,
           expiryDate: event.expiration_at_ms || null,
-          billingCycle: 'MONTHLY'
+          billingCycle: 'MONTHLY',
+          // Marks this doc as owned by the mobile/RevenueCat path -- see `webhooks.js`'s
+          // `applySubscriptionTier` doc comment for why this exists (dual-purchase gate).
+          source: 'REVENUECAT'
         },
         { merge: true }
       );

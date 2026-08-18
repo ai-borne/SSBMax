@@ -1,6 +1,7 @@
 package com.ssbmax.shared.data.repository
 
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.UsageInfo
 import com.ssbmax.shared.contracts.SsbContracts
@@ -96,6 +97,24 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
             Result.success(startDate)
         } catch (e: Exception) {
             Result.success(null)
+        }
+    }
+
+    override suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership> {
+        return try {
+            val snapshot = tierDoc(userId).get()
+            val ownership = if (snapshot.exists) {
+                val dto = snapshot.data(SubscriptionTierDto.serializer())
+                SubscriptionOwnership(source = dto.source, expiryDate = dto.expiryDate)
+            } else {
+                SubscriptionOwnership(source = null, expiryDate = null)
+            }
+            Result.success(ownership)
+        } catch (e: Exception) {
+            // Fail open (no restriction), not closed -- unlike tier reads, blocking a purchase on
+            // a transient read error is worse than occasionally allowing one this gate would have
+            // caught; the two payment paths still can't corrupt each other's core tier data.
+            Result.success(SubscriptionOwnership(source = null, expiryDate = null))
         }
     }
 

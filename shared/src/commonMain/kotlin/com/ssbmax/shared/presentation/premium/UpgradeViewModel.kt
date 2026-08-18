@@ -3,6 +3,7 @@ package com.ssbmax.shared.presentation.premium
 import com.ssbmax.shared.domain.model.BillingCycle
 import com.ssbmax.shared.domain.model.SSBMaxUser
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
@@ -15,6 +16,7 @@ import com.ssbmax.shared.ui.theme.TierColors
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlin.time.Clock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,6 +78,8 @@ class UpgradeViewModel(
 
     private companion object {
         const val TAG = "UpgradeViewModel"
+        /** `applySubscriptionTier`'s `source` value in `functions/src/webhooks.js` (Razorpay/web). */
+        const val WEB_PAYMENT_SOURCE = "RAZORPAY"
     }
 
     init {
@@ -126,7 +130,11 @@ class UpgradeViewModel(
                 SubscriptionTier.FREE
             }
 
-            _uiState.update { it.copy(currentTier = tier, isLoading = false) }
+            val blockedByWeb = subscriptionRepository.getSubscriptionOwnership(currentUser.id)
+                .getOrElse { SubscriptionOwnership(source = null, expiryDate = null) }
+                .let { it.source == WEB_PAYMENT_SOURCE && it.isActive(Clock.System.now().toEpochMilliseconds()) }
+
+            _uiState.update { it.copy(currentTier = tier, isLoading = false, activeOnWebInstead = blockedByWeb) }
         } catch (e: Exception) {
             logger.e(TAG, "Error in loadCurrentSubscription", e)
             _uiState.update { it.copy(currentTier = SubscriptionTier.FREE, isLoading = false) }
@@ -176,6 +184,13 @@ class UpgradeViewModel(
         val productId = SSBMaxProductIds.forTier(tier)
         if (userId == null || productId == null) {
             logger.w(TAG, "upgradeToPlan called with no signed-in user or no product for $tier")
+            return
+        }
+        if (_uiState.value.activeOnWebInstead) {
+            // Neither webhook reconciles against what the other already wrote (see
+            // `SubscriptionOwnership`'s doc comment) -- block a second, separate mobile purchase
+            // rather than risk one silently stomping the web-purchased tier/expiry.
+            logger.w(TAG, "upgradeToPlan blocked: user already has an active web (Razorpay) subscription")
             return
         }
 
@@ -242,6 +257,11 @@ data class UpgradeUiState(
     val isRestoring: Boolean = false,
     val purchaseError: String? = null,
     val selectedPlanForUpgrade: SubscriptionTier? = null,
+    /** True when the user already has an active tier from a Razorpay/web purchase (Phase 4
+     * amendment, dual-purchase gate) -- [UpgradeScreen] should disable purchase buttons and show
+     * `Res.string.premium_dialog_web_subscription_active` instead of letting them start a second,
+     * separate mobile subscription. See [UpgradeViewModel.upgradeToPlan]. */
+    val activeOnWebInstead: Boolean = false,
     /** RevenueCat's store-quoted MONTHLY price per tier, keyed by domain tier -- see
      * [UpgradeViewModel.loadStorePrices]. Empty (falls back to the generated pricing contract)
      * until the fetch succeeds. */

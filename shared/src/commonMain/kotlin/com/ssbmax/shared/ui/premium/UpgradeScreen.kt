@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SupportAgent
@@ -57,6 +58,7 @@ import ssbmax.shared.generated.resources.premium_info_support
 import ssbmax.shared.generated.resources.premium_upgrade_header
 import ssbmax.shared.generated.resources.premium_upgrade_subtitle
 import ssbmax.shared.generated.resources.premium_upgrade_title
+import ssbmax.shared.generated.resources.premium_web_subscription_active
 
 /**
  * KMP port of the Android `app/.../ui/premium/UpgradeScreen.kt` -- the LIVE
@@ -119,14 +121,23 @@ fun UpgradeScreen(
                 )
             }
 
+            if (uiState.activeOnWebInstead) {
+                item {
+                    WebSubscriptionActiveBanner()
+                }
+            }
+
             items(uiState.availablePlans) { plan ->
                 AnimatedPlanCard(
                     plan = plan,
                     currentTier = uiState.currentTier,
                     selectedBillingCycle = uiState.selectedBillingCycle,
                     isVisible = isVisible,
-                    isPurchasing = uiState.isPurchasing && uiState.selectedPlanForUpgrade == plan.tier,
-                    storeFormattedPrice = uiState.storeFormattedPrices[plan.tier],
+                    purchaseState = PlanCardPurchaseState(
+                        isPurchasing = uiState.isPurchasing && uiState.selectedPlanForUpgrade == plan.tier,
+                        storeFormattedPrice = uiState.storeFormattedPrices[plan.tier],
+                        purchaseBlocked = uiState.activeOnWebInstead
+                    ),
                     onUpgradeClick = { viewModel.upgradeToPlan(plan.tier) }
                 )
             }
@@ -146,6 +157,33 @@ fun UpgradeScreen(
             message = message,
             onDismiss = { viewModel.dismissPurchaseError() }
         )
+    }
+}
+
+/** Shown above the plan grid when [UpgradeUiState.activeOnWebInstead] is true -- see
+ * [UpgradeViewModel.upgradeToPlan]'s dual-purchase gate. */
+@Composable
+private fun WebSubscriptionActiveBanner(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Filled.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(Res.string.premium_web_subscription_active),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
     }
 }
 

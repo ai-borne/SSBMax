@@ -1021,6 +1021,7 @@
     <string name="premium_dialog_purchase_error_title">Purchase failed</string>
     <string name="premium_dialog_action_got_it">Got it</string>
     <string name="premium_restore_purchases">Restore Purchases</string>
+    <string name="premium_web_subscription_active">You already have an active subscription purchased on ssbmax.in (web). Manage or cancel it there before starting a new one here.</string>
 
     <!-- Marketplace screen (coaching institute directory, mock data) -->
     <string name="marketplace_cd_back">Back</string>

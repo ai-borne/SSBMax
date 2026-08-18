@@ -21,12 +21,16 @@ describe('useTabRouting Hook', () => {
   it('maps legacy tab aliases to core tabs', () => {
     expect(getTabFromUrl('?tab=practice')).toBe('tests');
     expect(getTabFromUrl('?tab=dashboard')).toBe('home');
-    expect(getTabFromUrl('?tab=pricing')).toBe('settings');
+    expect(getTabFromUrl('?tab=pricing')).toBe('subscription');
     expect(getTabFromUrl('?tab=account')).toBe('settings');
   });
 
   it('routes reports as its own real tab -- Phase 11e wires AIReportsPage into it, no longer a redirect to tests', () => {
     expect(getTabFromUrl('?tab=reports')).toBe('reports');
+  });
+
+  it('routes subscription as its own real tab -- Phase 4 amendment wires SubscriptionPage into it, no longer a dead end at settings', () => {
+    expect(getTabFromUrl('?tab=subscription')).toBe('subscription');
   });
 
   it('defaults to home tab when query param is missing or unknown', () => {

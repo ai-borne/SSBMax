@@ -5,6 +5,7 @@ package com.ssbmax.shared.presentation.premium
 import com.ssbmax.shared.domain.model.BillingCycle
 import com.ssbmax.shared.domain.model.SubscriptionOverride
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.NoOpLogger
@@ -261,5 +262,62 @@ class UpgradeViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(SubscriptionTier.PREMIUM, viewModel.uiState.value.currentTier)
+    }
+
+    /**
+     * Phase 4 amendment (dual-purchase gate): neither `webhooks.js` (Razorpay/web) nor
+     * `revenueCatWebhook.js` (RevenueCat/mobile) reconciles against what the other already wrote
+     * to `data/subscription` -- last write wins. A user who bought PRO on web via Razorpay and
+     * then triggers a mobile RC purchase would have one webhook silently stomp the other's
+     * tier/expiry. `activeOnWebInstead` must reflect an active Razorpay-sourced tier so the UI can
+     * block the second purchase before it happens.
+     */
+    @Test
+    fun `flags activeOnWebInstead when an active Razorpay subscription already exists`() = runTest(testDispatcher) {
+        subscriptionRepository.ownershipResult = Result.success(
+            SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
+        )
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(true, viewModel.uiState.value.activeOnWebInstead)
+    }
+
+    @Test
+    fun `does not flag activeOnWebInstead for an expired Razorpay subscription`() = runTest(testDispatcher) {
+        subscriptionRepository.ownershipResult = Result.success(
+            SubscriptionOwnership(source = "RAZORPAY", expiryDate = 1L)
+        )
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(false, viewModel.uiState.value.activeOnWebInstead)
+    }
+
+    @Test
+    fun `does not flag activeOnWebInstead when the active tier is already RevenueCat-sourced`() = runTest(testDispatcher) {
+        subscriptionRepository.ownershipResult = Result.success(
+            SubscriptionOwnership(source = "REVENUECAT", expiryDate = null)
+        )
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(false, viewModel.uiState.value.activeOnWebInstead)
+    }
+
+    @Test
+    fun `upgradeToPlan is blocked and never calls purchase when activeOnWebInstead`() = runTest(testDispatcher) {
+        subscriptionRepository.ownershipResult = Result.success(
+            SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
+        )
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.upgradeToPlan(SubscriptionTier.PRO)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(null, revenueCatClient.lastPurchasedProductId)
+        assertEquals(null, subscriptionRepository.lastUpdatedTierCall)
+        assertEquals(false, viewModel.uiState.value.isPurchasing)
     }
 }

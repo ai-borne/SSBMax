@@ -18,7 +18,10 @@ data class SubscriptionTierDto(
     val tier: String = "FREE",
     val startDate: Long = 0,
     val expiryDate: Long? = null,
-    val billingCycle: String? = null
+    val billingCycle: String? = null,
+    /** "RAZORPAY"/"REVENUECAT"/null -- which webhook last wrote this doc (Phase 4 amendment,
+     * dual-purchase gate). Null for a doc predating this field, or a user who never purchased. */
+    val source: String? = null
 ) {
     fun toDomain(): SubscriptionTier = when (tier.uppercase()) {
         "BASIC" -> SubscriptionTier.BASIC

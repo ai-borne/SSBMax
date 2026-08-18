@@ -49,6 +49,11 @@ function planIdToTier(planId) {
  * gating check reads. `startDate` only gets set on a user's *first* transition into this tier
  * (an existing paid user's `startDate` is preserved across renewal webhooks), matching Phase 3's
  * billing-anniversary reset semantics -- a renewal must not reset the anniversary day.
+ *
+ * `source: 'RAZORPAY'` marks this doc as owned by the web/Razorpay payment path -- read by
+ * `SubscriptionPage.tsx`'s dual-purchase gate (and `UpgradeViewModel.kt`'s KMP-side mirror) to
+ * block a purchase on the *other* platform while a Razorpay-sourced tier is still active, since
+ * neither webhook reconciles against what the other already wrote (last write wins otherwise).
  */
 function applySubscriptionTier(transaction, userRef, tier, existingStartDate) {
   const subscriptionRef = userRef
@@ -59,7 +64,8 @@ function applySubscriptionTier(transaction, userRef, tier, existingStartDate) {
     {
       tier,
       startDate: existingStartDate || Date.now(),
-      billingCycle: 'MONTHLY'
+      billingCycle: 'MONTHLY',
+      source: 'RAZORPAY'
     },
     { merge: true }
   );
@@ -79,7 +85,9 @@ function timingSafeCompare(a, b) {
 /**
  * Handle Razorpay Webhooks (payment.captured)
  */
-exports.handleRazorpayWebhook = functions.https.onRequest(async (req, res) => {
+// DoW-defense cap (Phase 5, cost & scale guardrails) -- this endpoint is unauthenticated by
+// nature (Razorpay calls it directly), so it had no instance ceiling at all before this.
+exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10 }, async (req, res) => {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
   if (!secret) {
