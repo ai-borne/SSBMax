@@ -241,6 +241,3 @@ private fun UsageRow(
         }
     }
 }
-
-// PlanComparisonCards/PlanCard moved to SubscriptionPlanComparisonCards.kt
-// to keep this file under this repo's 300-line Quality Limit.

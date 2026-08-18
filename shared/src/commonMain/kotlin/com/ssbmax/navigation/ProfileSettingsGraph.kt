@@ -65,11 +65,9 @@ fun NavGraphBuilder.profileSettingsGraph(navController: NavHostController) {
     }
 
     // Subscription Management. onUpgrade routes to the real UpgradeScreen
-    // below -- note this loses the `tier` argument (the Android original's
-    // `com.ssbmax.ui.settings.SubscriptionManagementScreen` does the exact
-    // same thing: `onUpgrade = { tier -> navController.navigate(...UpgradeScreen.route) }`
-    // in `SharedNavGraph.kt`, ignoring `tier` too -- not a port regression).
-    // [UpgradeScreen] itself is "visual only" (see its own class doc):
+    // below, the single tier-comparison surface (SubscriptionManagementScreen
+    // no longer renders its own comparison grid -- see that screen's class
+    // doc). [UpgradeScreen] itself is "visual only" (see its own class doc):
     // PlayBillingClient/StoreKitBillingClient exist as Phase 4 shims but
     // are NOT wired into SubscriptionManager -- a known, separately-tracked
     // gap that matches the Android original having no working purchase
@@ -77,9 +75,7 @@ fun NavGraphBuilder.profileSettingsGraph(navController: NavHostController) {
     composable<SSBMaxDestinations.SubscriptionManagement> {
         SubscriptionManagementScreen(
             onNavigateBack = { navController.navigateUp() },
-            onUpgrade = { _ ->
-                navController.navigate(SSBMaxDestinations.UpgradeScreen)
-            }
+            onUpgrade = { navController.navigate(SSBMaxDestinations.UpgradeScreen) }
         )
     }
 

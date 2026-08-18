@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,15 +51,18 @@ import ssbmax.shared.generated.resources.subscription_mgmt_title
  * — shows current plan, monthly usage, and plan-comparison/upgrade options.
  *
  * Split across this file (screen shell + error/loading states) and
- * [SubscriptionPlanCards] (current-plan card, monthly-usage card,
- * plan-comparison cards, FAQ) to stay under this repo's 300-line-per-file
- * Quality Limit — the Android original was a single 573-line file.
+ * [SubscriptionPlanCards] (current-plan card, monthly-usage card, FAQ) to
+ * stay under this repo's 300-line-per-file Quality Limit — the Android
+ * original was a single 573-line file. Plan comparison itself lives only in
+ * [com.ssbmax.shared.ui.premium.UpgradeScreen] (this screen's "Compare Plans"
+ * button navigates there) — kept as the single tier-comparison surface
+ * instead of duplicating it here.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubscriptionManagementScreen(
     onNavigateBack: () -> Unit,
-    onUpgrade: (SubscriptionTierModel) -> Unit,
+    onUpgrade: () -> Unit,
     viewModel: SubscriptionManagementViewModel = koinViewModel(),
     modifier: Modifier = Modifier
 ) {
@@ -123,7 +126,7 @@ fun SubscriptionManagementScreen(
 @Composable
 private fun SubscriptionContent(
     uiState: SubscriptionManagementUiState,
-    onUpgrade: (SubscriptionTierModel) -> Unit,
+    onUpgrade: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -139,17 +142,12 @@ private fun SubscriptionContent(
             MonthlyUsageCard(usage = uiState.monthlyUsage)
         }
 
-        Text(
-            text = stringResource(Res.string.subscription_mgmt_compare_plans),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-
-        PlanComparisonCards(
-            currentTier = uiState.currentTier,
-            onUpgrade = onUpgrade
-        )
+        Button(
+            onClick = onUpgrade,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+        ) {
+            Text(text = stringResource(Res.string.subscription_mgmt_compare_plans))
+        }
 
         SubscriptionFAQ()
     }

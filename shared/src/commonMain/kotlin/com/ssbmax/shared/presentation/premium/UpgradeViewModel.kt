@@ -7,6 +7,8 @@ import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.DomainLogger
 import com.ssbmax.shared.platform.settings.DeveloperSettings
+import com.ssbmax.shared.ui.theme.TierColors
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,14 +111,14 @@ class UpgradeViewModel(
         _uiState.update { it.copy(availablePlans = plans) }
     }
 
-    private data class PlanMeta(val name: String, val tagline: String, val gradient: List<String>, val isRecommended: Boolean)
+    private data class PlanMeta(val name: String, val tagline: String, val isRecommended: Boolean)
 
     private fun planFor(tier: SubscriptionTier): SubscriptionPlan {
         val meta = when (tier) {
-            SubscriptionTier.FREE -> PlanMeta("Free", "Get Started with SSB Prep", listOf("#6366f1", "#8b5cf6"), isRecommended = false)
-            SubscriptionTier.BASIC -> PlanMeta("Basic", "Build Your Foundation", listOf("#0ea5e9", "#6366f1"), isRecommended = false)
-            SubscriptionTier.PRO -> PlanMeta("Pro", "Accelerate Your Preparation", listOf("#8b5cf6", "#a855f7"), isRecommended = true)
-            SubscriptionTier.PREMIUM -> PlanMeta("Premium", "Complete SSB Solution", listOf("#a855f7", "#c026d3"), isRecommended = false)
+            SubscriptionTier.FREE -> PlanMeta("Free", "Get Started with SSB Prep", isRecommended = false)
+            SubscriptionTier.BASIC -> PlanMeta("Basic", "Build Your Foundation", isRecommended = false)
+            SubscriptionTier.PRO -> PlanMeta("Pro", "Accelerate Your Preparation", isRecommended = true)
+            SubscriptionTier.PREMIUM -> PlanMeta("Premium", "Complete SSB Solution", isRecommended = false)
         }
         return SubscriptionPlan(
             tier = tier,
@@ -127,7 +129,7 @@ class UpgradeViewModel(
             priceAnnually = tier.yearlyPriceInt?.toDouble() ?: 0.0,
             features = tier.features.map { PlanFeature(it, isIncluded = true) },
             isRecommended = meta.isRecommended,
-            gradient = meta.gradient
+            gradient = TierColors.gradient(tier)
         )
     }
 
@@ -173,7 +175,7 @@ data class SubscriptionPlan(
     val priceAnnually: Double,
     val features: List<PlanFeature>,
     val isRecommended: Boolean,
-    val gradient: List<String>
+    val gradient: List<Color>
 ) {
     fun getPriceForCycle(cycle: BillingCycle): Double {
         return when (cycle) {

@@ -13,6 +13,7 @@ import com.ssbmax.shared.presentation.testing.FakeAuthRepository
 import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
 import com.ssbmax.shared.presentation.testing.testUser
+import com.ssbmax.shared.ui.theme.TierColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -114,6 +115,18 @@ class UpgradeViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(false, state.showComingSoonDialog)
         assertEquals(null, state.selectedPlanForUpgrade)
+    }
+
+    @Test
+    fun `each available plan's gradient comes from TierColors, not a hand-typed literal`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val plans = viewModel.uiState.value.availablePlans
+        for (tier in SubscriptionTier.entries) {
+            val plan = plans.first { it.tier == tier }
+            assertEquals(TierColors.gradient(tier), plan.gradient)
+        }
     }
 
     @Test

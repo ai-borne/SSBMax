@@ -164,7 +164,7 @@ private fun PlanCardHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                brush = Brush.horizontalGradient(colors = plan.gradient.map { parseColor(it) }),
+                brush = Brush.horizontalGradient(colors = plan.gradient),
                 shape = RoundedCornerShape(12.dp)
             )
             .padding(16.dp)
@@ -279,22 +279,4 @@ internal fun ComingSoonDialog(
             }
         }
     )
-}
-
-/**
- * Parse hex color string to Compose Color. KMP-safe replacement for the
- * Android original's `android.graphics.Color.parseColor` (Android-only) --
- * these gradient hex strings are always 6-digit `#RRGGBB`, hardcoded in
- * [com.ssbmax.shared.presentation.premium.UpgradeViewModel]'s plan list.
- */
-private fun parseColor(hex: String): Color = try {
-    val colorLong = hex.removePrefix("#").toLong(16)
-    Color(
-        red = (colorLong shr 16 and 0xFF) / 255f,
-        green = (colorLong shr 8 and 0xFF) / 255f,
-        blue = (colorLong and 0xFF) / 255f,
-        alpha = 1f
-    )
-} catch (e: Exception) {
-    Color.Gray
 }
