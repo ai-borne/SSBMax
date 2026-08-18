@@ -69,10 +69,33 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
 
     override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier): Result<Unit> {
         return try {
-            tierDoc(userId).set(SubscriptionTierDto(tier = tier.name))
+            val doc = tierDoc(userId)
+            // Field-only update, not a full-document set(): a set() (merge or not) of a
+            // SubscriptionTierDto would serialize startDate/expiryDate/billingCycle at their
+            // defaults (0/null) and silently wipe out whatever a RevenueCat/Razorpay webhook
+            // (Phase 3/4) already wrote for this user.
+            if (doc.get().exists) {
+                doc.update("tier" to tier.name)
+            } else {
+                doc.set(SubscriptionTierDto(tier = tier.name))
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> {
+        return try {
+            val snapshot = tierDoc(userId).get()
+            val startDate = if (snapshot.exists) {
+                snapshot.data(SubscriptionTierDto.serializer()).startDate.takeIf { it > 0 }
+            } else {
+                null
+            }
+            Result.success(startDate)
+        } catch (e: Exception) {
+            Result.success(null)
         }
     }
 

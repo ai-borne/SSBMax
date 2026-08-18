@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { bucketKeyFor, checkTestEligibility, EMPTY_USAGE } from '../../../src/domain/subscriptionEligibility';
+import { describe, it, expect, vi } from 'vitest';
+import { bucketKeyFor, checkTestEligibility, currentPeriodKey, currentYearMonth, EMPTY_USAGE } from '../../../src/domain/subscriptionEligibility';
 import { SubscriptionLimits, SubscriptionTierValues, TestTypeValues } from '../../../src/generated/contracts';
 
 /**
@@ -85,5 +85,50 @@ describe('subscriptionEligibility', () => {
         }
       });
     });
+  });
+});
+
+/**
+ * Phase 3 (`docs/plans/SubscriptionPricingRestructure.md` step 5): pins `currentPeriodKey` --
+ * must stay byte-for-byte identical to KMP's `currentPeriodKey` (`CheckTestEligibilityUseCase`
+ * package) and `functions/src/eligibility.js`'s `currentPeriodKey`, all three UTC-based.
+ */
+describe('currentPeriodKey', () => {
+  it('FREE tier always uses the legacy calendar-month key regardless of startDate', () => {
+    const startDate = Date.UTC(2026, 0, 25); // Jan 25, 2026
+    expect(currentPeriodKey('FREE', startDate)).toBe(currentYearMonth());
+  });
+
+  it('null startDate falls back to the legacy calendar-month key', () => {
+    expect(currentPeriodKey('PRO', null)).toBe(currentYearMonth());
+  });
+
+  it('paid tier resets on the anniversary day, not the 1st', () => {
+    const startDate = Date.UTC(2026, 5, 25); // Jun 25, 2026
+    const onOrAfterAnniversary = Date.UTC(2026, 7, 25); // Aug 25, 2026
+    const beforeAnniversary = Date.UTC(2026, 7, 24); // Aug 24, 2026
+
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(onOrAfterAnniversary);
+      expect(currentPeriodKey('PRO', startDate)).toBe('2026-08-25');
+
+      vi.setSystemTime(beforeAnniversary);
+      expect(currentPeriodKey('PRO', startDate)).toBe('2026-07-25');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a day-31 anchor clamps to Feb 28 in a non-leap year', () => {
+    const startDate = Date.UTC(2026, 0, 31); // Jan 31, 2026
+
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(Date.UTC(2026, 1, 28)); // Feb 28, 2026
+      expect(currentPeriodKey('PRO', startDate)).toBe('2026-02-28');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

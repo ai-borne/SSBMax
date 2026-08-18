@@ -92,3 +92,45 @@ export function checkTestEligibility(
   }
   return { status: 'LIMIT_REACHED', tier, limit, usedCount: used };
 }
+
+/** Legacy global calendar-month key (UTC), e.g. "2026-08". FREE tier's permanent fallback. */
+export function currentYearMonth(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function daysInMonth(year: number, month: number): number {
+  // Date.UTC's day-of-month is 1-indexed; day 0 of `month` is the last day of `month - 1`,
+  // i.e. the last day of `month` (still 1-indexed here) itself.
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/**
+ * Billing-anniversary period key (Phase 3, `docs/plans/SubscriptionPricingRestructure.md` step
+ * 5) — mirrors KMP's `CheckTestEligibilityUseCase.currentPeriodKey` and
+ * `functions/src/eligibility.js`'s `currentPeriodKey` byte-for-byte (same UTC-based algorithm);
+ * the three must agree or a client shows a stale "remaining tests" count before syncing with the
+ * server, which is the real gate at submission time. A paid tier with a known `startDate` resets
+ * on that day-of-month (clamped for short months); FREE tier / no `startDate` keeps the legacy
+ * calendar-month key.
+ */
+export function currentPeriodKey(tier: SubscriptionTier, startDate: number | null): string {
+  if (tier === 'FREE' || !startDate) {
+    return currentYearMonth();
+  }
+  const now = new Date();
+  const start = new Date(startDate);
+  const anchorDay = start.getUTCDate();
+  let year = now.getUTCFullYear();
+  let month = now.getUTCMonth() + 1;
+  let clampedDay = Math.min(anchorDay, daysInMonth(year, month));
+  if (now.getUTCDate() < clampedDay) {
+    month -= 1;
+    if (month === 0) {
+      month = 12;
+      year -= 1;
+    }
+    clampedDay = Math.min(anchorDay, daysInMonth(year, month));
+  }
+  return `${year}-${String(month).padStart(2, '0')}-${String(clampedDay).padStart(2, '0')}`;
+}

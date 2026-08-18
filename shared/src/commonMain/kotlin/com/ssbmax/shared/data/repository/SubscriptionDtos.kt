@@ -5,9 +5,21 @@ import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.model.TestType
 import kotlinx.serialization.Serializable
 
-/** Wire-format DTO for users/{userId}/data/subscription. */
+/**
+ * Wire-format DTO for users/{userId}/data/subscription.
+ *
+ * `startDate`/`expiryDate`/`billingCycle` are new in Phase 3 (`docs/plans/
+ * SubscriptionPricingRestructure.md` steps 4/5) -- the schema RevenueCat's webhooks (Phase 4)
+ * will populate for real purchases. `startDate` (0 = unset) also drives the billing-anniversary
+ * usage-reset key, see [com.ssbmax.shared.domain.usecase.subscription.currentPeriodKey].
+ */
 @Serializable
-data class SubscriptionTierDto(val tier: String = "FREE") {
+data class SubscriptionTierDto(
+    val tier: String = "FREE",
+    val startDate: Long = 0,
+    val expiryDate: Long? = null,
+    val billingCycle: String? = null
+) {
     fun toDomain(): SubscriptionTier = when (tier.uppercase()) {
         "BASIC" -> SubscriptionTier.BASIC
         "PRO" -> SubscriptionTier.PRO

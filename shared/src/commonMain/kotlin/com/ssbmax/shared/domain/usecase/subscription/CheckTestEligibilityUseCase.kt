@@ -8,9 +8,6 @@ import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.util.AnalyticsTracker
 import com.ssbmax.shared.domain.util.SecurityEvents
 import com.ssbmax.shared.platform.settings.DeveloperSettings
-import kotlin.time.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 /**
  * KMP port of the eligibility half of the Android `core:data`
@@ -53,8 +50,12 @@ class CheckTestEligibilityUseCase(
         val tier = subscriptionRepository.getSubscriptionTier(userId).getOrElse {
             return TestEligibility.NetworkError
         }
-        val month = currentYearMonth()
-        val usage = subscriptionRepository.getMonthlyUsage(userId, month).getOrElse {
+        // Fails open to null (not NetworkError) -- this is an optimistic client-side pre-check,
+        // and a missing/unreadable startDate should just fall back to the calendar-month key
+        // (currentPeriodKey's own FREE-tier fallback), not block eligibility outright.
+        val startDate = subscriptionRepository.getSubscriptionStartDate(userId).getOrNull()
+        val period = currentPeriodKey(tier, startDate)
+        val usage = subscriptionRepository.getMonthlyUsage(userId, period).getOrElse {
             return TestEligibility.NetworkError
         }
         val key = SubscriptionLimits.keyFor(testType)
@@ -79,13 +80,8 @@ class CheckTestEligibilityUseCase(
                 tier = tier,
                 limit = limit,
                 usedCount = used,
-                resetsAt = nextMonthResetLabel()
+                resetsAt = nextResetLabel(tier, startDate)
             )
         }
-    }
-
-    private fun currentYearMonth(): String {
-        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-        return "${now.year}-${(now.month.ordinal + 1).toString().padStart(2, '0')}"
     }
 }

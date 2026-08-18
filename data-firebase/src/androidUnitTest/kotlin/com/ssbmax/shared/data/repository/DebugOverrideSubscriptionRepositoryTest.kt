@@ -93,6 +93,20 @@ class DebugOverrideSubscriptionRepositoryTest {
         assertEquals(listOf(SubscriptionTier.FREE), delegate.updateCalls)
     }
 
+    /**
+     * Phase 3 (`docs/plans/SubscriptionPricingRestructure.md`): `startDate` is never faked by an
+     * override -- a dev forcing PREMIUM with no real purchase has no real start date, and
+     * `currentPeriodKey` already falls back to the calendar-month key for a null `startDate`
+     * regardless of tier, so there's nothing for this decorator to remap here.
+     */
+    @Test
+    fun `getSubscriptionStartDate always passes through regardless of override`() = runTest {
+        delegate.startDateResult = Result.success(1_700_000_000_000L)
+        developerSettings.setOverride(SubscriptionOverride.FORCE_PREMIUM)
+
+        assertEquals(Result.success(1_700_000_000_000L), repository.getSubscriptionStartDate("user-1"))
+    }
+
     @Test
     fun `toggling the setting changes behavior without reconstruction`() = runTest {
         delegate.tierResult = Result.success(SubscriptionTier.FREE)

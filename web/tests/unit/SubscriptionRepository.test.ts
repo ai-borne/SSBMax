@@ -35,7 +35,12 @@ describe('SubscriptionRepository', () => {
     expect(await repository.getTier('user_1')).toBe('FREE');
   });
 
-  it('reads PRO and PREMIUM tiers verbatim (case-insensitively)', async () => {
+  it('reads BASIC, PRO and PREMIUM tiers verbatim (case-insensitively)', async () => {
+    // BASIC (added Phase 2) was previously dropped to FREE here -- a real regression fixed as
+    // part of Phase 3, since this file's getTier is now also relied on for the anniversary reset.
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'basic' }) } as any);
+    expect(await repository.getTier('user_1')).toBe('BASIC');
+
     vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'pro' }) } as any);
     expect(await repository.getTier('user_1')).toBe('PRO');
 
@@ -54,5 +59,30 @@ describe('SubscriptionRepository', () => {
     vi.mocked(getDoc).mockRejectedValueOnce(new Error('offline'));
     const usage = await repository.getMonthlyUsage('user_1', '2026-08');
     expect(usage.oirTestsUsed).toBe(0);
+  });
+
+  describe('getStartDate (Phase 3)', () => {
+    it('returns null when the tier document does not exist', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as any);
+      expect(await repository.getStartDate('user_1')).toBeNull();
+    });
+
+    it('returns null when Firestore read throws (falls back to calendar-month reset)', async () => {
+      vi.mocked(getDoc).mockRejectedValueOnce(new Error('offline'));
+      expect(await repository.getStartDate('user_1')).toBeNull();
+    });
+
+    it('returns null when startDate is absent or zero, not a falsy-but-wrong value', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'FREE' }) } as any);
+      expect(await repository.getStartDate('user_1')).toBeNull();
+
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'PRO', startDate: 0 }) } as any);
+      expect(await repository.getStartDate('user_1')).toBeNull();
+    });
+
+    it('returns the real startDate when present', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'PRO', startDate: 1_700_000_000_000 }) } as any);
+      expect(await repository.getStartDate('user_1')).toBe(1_700_000_000_000);
+    });
   });
 });

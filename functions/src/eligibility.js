@@ -6,8 +6,12 @@
  * exceed the tier's quota. Clients (KMP + web) keep their existing optimistic
  * read of `SubscriptionLimits`/`SubscriptionUsageDto` for instant UX, but this
  * function is the real gate at submission time -- firestore.rules denies direct
- * client writes to `users/{uid}/subscription/usage_{month}` entirely, so the
+ * client writes to `users/{uid}/subscription/usage_{period}` entirely, so the
  * Admin SDK write below (which bypasses rules) is the only path left.
+ *
+ * Phase 3 (`docs/plans/SubscriptionPricingRestructure.md` step 5): the usage doc's period key
+ * is no longer always the global calendar month -- a paid tier with a known `startDate` resets
+ * on that day-of-month instead (`usage_2026-08-25`, not `usage_2026-08`). See [currentPeriodKey].
  */
 
 // Pinned to v1: the handler below uses the v1 two-arg `(data, context)` onCall signature
@@ -35,6 +39,54 @@ function enforceQuota() {
   return process.env.ENFORCE_QUOTA !== 'false';
 }
 
+/**
+ * `true` unless explicitly disabled -- Phase 3 (`docs/plans/SubscriptionPricingRestructure.md`
+ * step 5) kill switch for the billing-anniversary reset, same live-read-not-cached pattern as
+ * [enforceQuota]. Flagged in the plan as "the riskiest single change" -- three platforms must
+ * compute an identical period key -- so this exists purely as a rollback lever; setting it to
+ * 'false' reverts every user (paid or not) back to the legacy global calendar-month key without
+ * a redeploy.
+ */
+function enforceAnniversaryReset() {
+  return process.env.ENFORCE_ANNIVERSARY_RESET !== 'false';
+}
+
+function daysInMonth(year, month) {
+  // Date.UTC's day-of-month is 1-indexed; day 0 of `month` is the last day of `month - 1`,
+  // i.e. the last day of `month` (still 1-indexed here) itself.
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/**
+ * Billing-anniversary period key -- paid tiers with a known `startDate` reset on that
+ * day-of-month (clamped for short months, e.g. a Jan 31 start resets on Feb 28/29) instead of
+ * the legacy global calendar-month key. FREE tier (no purchase, no `startDate`) and the
+ * `ENFORCE_ANNIVERSARY_RESET=false` kill switch both fall back to [currentYearMonth]. Must stay
+ * byte-for-byte identical to `CheckTestEligibilityUseCase.kt`'s `currentPeriodKey` and web's
+ * `subscriptionEligibility.ts`'s `currentPeriodKey` -- all three compute in UTC for exactly this
+ * reason.
+ */
+function currentPeriodKey(tier, startDate) {
+  if (tier === 'FREE' || !startDate || !enforceAnniversaryReset()) {
+    return currentYearMonth();
+  }
+  const now = new Date();
+  const start = new Date(startDate);
+  const anchorDay = start.getUTCDate();
+  let year = now.getUTCFullYear();
+  let month = now.getUTCMonth() + 1;
+  let clampedDay = Math.min(anchorDay, daysInMonth(year, month));
+  if (now.getUTCDate() < clampedDay) {
+    month -= 1;
+    if (month === 0) {
+      month = 12;
+      year -= 1;
+    }
+    clampedDay = Math.min(anchorDay, daysInMonth(year, month));
+  }
+  return `${year}-${String(month).padStart(2, '0')}-${String(clampedDay).padStart(2, '0')}`;
+}
+
 function bucketFor(testType) {
   const entry = SubscriptionLimits.find((l) => l.testTypes.includes(testType));
   if (!entry) {
@@ -58,17 +110,26 @@ function currentYearMonth() {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-async function readTier(firestoreDb, userId) {
+/**
+ * Reads both `tier` and `startDate` (Phase 3) off the same doc in one read -- `startDate` drives
+ * [currentPeriodKey]. Fails closed to `{ tier: 'FREE', startDate: null }` on any missing/malformed
+ * doc, matching GitLiveSubscriptionRepository/web SubscriptionRepository's existing read-side
+ * contract.
+ */
+async function readSubscriptionDoc(firestoreDb, userId) {
   const doc = await firestoreDb
     .collection(FirestorePaths.USERS)
     .doc(userId)
     .collection(FirestorePaths.USER_DATA_SUBCOLLECTION)
     .doc(FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
     .get();
-  // Fail closed to FREE on any missing/malformed doc -- matches
-  // GitLiveSubscriptionRepository/web SubscriptionRepository's existing read-side contract.
-  const tier = doc.exists ? doc.data().tier : 'FREE';
-  return Enums.SubscriptionTier.includes(tier) ? tier : 'FREE';
+  if (!doc.exists) {
+    return { tier: 'FREE', startDate: null };
+  }
+  const data = doc.data();
+  const tier = Enums.SubscriptionTier.includes(data.tier) ? data.tier : 'FREE';
+  const startDate = typeof data.startDate === 'number' && data.startDate > 0 ? data.startDate : null;
+  return { tier, startDate };
 }
 
 /**
@@ -83,15 +144,15 @@ async function readTier(firestoreDb, userId) {
 async function recordAndEnforce(firestoreDb, userId, testType, submissionId) {
   const bucket = bucketFor(testType);
   const fieldName = fieldNameFor(bucket.bucket);
-  const month = currentYearMonth();
-  const tier = await readTier(firestoreDb, userId);
+  const { tier, startDate } = await readSubscriptionDoc(firestoreDb, userId);
+  const period = currentPeriodKey(tier, startDate);
   const limit = limitFor(bucket, tier);
 
   const docRef = firestoreDb
     .collection(FirestorePaths.USERS)
     .doc(userId)
     .collection(FirestorePaths.USER_SUBSCRIPTION_SUBCOLLECTION)
-    .doc(`usage_${month}`);
+    .doc(`usage_${period}`);
 
   return firestoreDb.runTransaction(async (tx) => {
     const snapshot = await tx.get(docRef);
@@ -120,7 +181,7 @@ async function recordAndEnforce(firestoreDb, userId, testType, submissionId) {
       docRef,
       {
         userId,
-        month,
+        month: period,
         ...existing,
         [fieldName]: newUsed,
         recordedSubmissionIds: newRecordedIds,
@@ -160,4 +221,8 @@ exports.recordTestUsage = functions.https.onCall(async (data, context) => {
 exports.bucketFor = bucketFor;
 exports.fieldNameFor = fieldNameFor;
 exports.limitFor = limitFor;
+exports.currentYearMonth = currentYearMonth;
+exports.currentPeriodKey = currentPeriodKey;
+exports.daysInMonth = daysInMonth;
+exports.readSubscriptionDoc = readSubscriptionDoc;
 exports.recordAndEnforce = recordAndEnforce;

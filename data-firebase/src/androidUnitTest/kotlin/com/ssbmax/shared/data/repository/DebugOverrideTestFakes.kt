@@ -16,6 +16,7 @@ import com.ssbmax.shared.domain.repository.UsageInfo
 class FakeSubscriptionRepository : SubscriptionRepository {
     var tierResult: Result<SubscriptionTier> = Result.success(SubscriptionTier.FREE)
     var monthlyUsageResult: Result<Map<String, UsageInfo>> = Result.success(emptyMap())
+    var startDateResult: Result<Long?> = Result.success(null)
     val updateCalls = mutableListOf<SubscriptionTier>()
 
     override suspend fun getSubscriptionTier(userId: String): Result<SubscriptionTier> = tierResult
@@ -27,6 +28,8 @@ class FakeSubscriptionRepository : SubscriptionRepository {
         updateCalls.add(tier)
         return Result.success(Unit)
     }
+
+    override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
 }
 
 class FakeTestUsageRecorder : TestUsageRecorder {

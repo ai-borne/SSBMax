@@ -14,6 +14,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { runEvaluation } = require('../src/evaluation/core');
+const { currentPeriodKey } = require('../src/eligibility');
 
 /** Applies a dotted-path partial update (`'data.analysisStatus'`) onto a plain object, Firestore-style. */
 function applyDottedUpdate(target, value) {
@@ -119,6 +120,28 @@ test('Phase 1: runEvaluation rejects failed-precondition when the user is alread
     [`submissions/${SUBMISSION_ID}`]: { userId: UID, data: { analysisStatus: 'PENDING_ANALYSIS' } },
     [`users/${UID}/data/subscription`]: { tier: 'PRO' },
     [`users/${UID}/subscription/usage_${month}`]: { watTestsUsed: 8 }
+  });
+  await assert.rejects(
+    () => runEvaluation({ firestoreDb: db, generateContent: async () => 'irrelevant', ...baseArgs() }),
+    (err) => {
+      assert.equal(err.code, 'failed-precondition');
+      return true;
+    }
+  );
+  delete process.env.ENFORCE_QUOTA;
+});
+
+test('Phase 3: checkQuota re-check reads the anniversary-keyed usage doc for a paid tier with a startDate, not the legacy calendar-month doc', async () => {
+  process.env.ENFORCE_QUOTA = 'true';
+  const startDate = Date.UTC(2026, 5, 25); // Jun 25, 2026
+  const period = currentPeriodKey('PRO', startDate);
+  const db = makeFakeDb({
+    [`submissions/${SUBMISSION_ID}`]: { userId: UID, data: { analysisStatus: 'PENDING_ANALYSIS' } },
+    [`users/${UID}/data/subscription`]: { tier: 'PRO', startDate },
+    // Usage doc is under the anniversary key, not `usage_${currentYearMonth()}` -- if checkQuota
+    // still read the legacy calendar-month doc (which doesn't exist here), it would find 0 usage
+    // and fail the re-check open regardless of the real 8/8 quota below.
+    [`users/${UID}/subscription/usage_${period}`]: { watTestsUsed: 8 }
   });
   await assert.rejects(
     () => runEvaluation({ firestoreDb: db, generateContent: async () => 'irrelevant', ...baseArgs() }),

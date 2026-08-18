@@ -47,4 +47,10 @@ class DebugOverrideSubscriptionRepository(
 
     override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier): Result<Unit> =
         delegate.updateSubscriptionTier(userId, tier)
+
+    // Always the real value, same rationale as updateSubscriptionTier -- a forced tier with no
+    // real purchase has no real start date to fake, and CheckTestEligibilityUseCase's period-key
+    // logic already falls back to calendar-month for a null startDate regardless of tier.
+    override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> =
+        delegate.getSubscriptionStartDate(userId)
 }

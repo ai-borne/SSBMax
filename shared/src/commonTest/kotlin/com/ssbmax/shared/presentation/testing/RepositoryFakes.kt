@@ -74,14 +74,23 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     var tierResult: Result<SubscriptionTier> = Result.success(SubscriptionTier.FREE)
     var monthlyUsageResult: Result<Map<String, UsageInfo>> = Result.success(emptyMap())
     var updateTierResult: Result<Unit> = Result.success(Unit)
+    var startDateResult: Result<Long?> = Result.success(null)
     var getSubscriptionTierCallCount = 0
+
+    /** Phase 3: records the period key each [getMonthlyUsage] call was made with, so tests can
+     * assert the caller computed the right billing-anniversary key. */
+    var lastMonthlyUsagePeriod: String? = null
 
     override suspend fun getSubscriptionTier(userId: String): Result<SubscriptionTier> {
         getSubscriptionTierCallCount++
         return tierResult
     }
-    override suspend fun getMonthlyUsage(userId: String, month: String) = monthlyUsageResult
+    override suspend fun getMonthlyUsage(userId: String, month: String): Result<Map<String, UsageInfo>> {
+        lastMonthlyUsagePeriod = month
+        return monthlyUsageResult
+    }
     override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier) = updateTierResult
+    override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
 }
 
 class FakeFeatureFlagRepository(

@@ -27,9 +27,9 @@
  */
 
 const functions = require('firebase-functions');
-const { FirestorePaths, SubscriptionLimits, Enums } = require('../generated/contracts.cjs');
+const { FirestorePaths, SubscriptionLimits } = require('../generated/contracts.cjs');
 const { withRetry } = require('./retry');
-const { recordAndEnforce } = require('../eligibility');
+const { recordAndEnforce, readSubscriptionDoc, currentPeriodKey, currentYearMonth } = require('../eligibility');
 const { notifyEvaluationComplete } = require('../notifications/sendNotification');
 
 function enforceQuota() {
@@ -53,42 +53,32 @@ function limitFor(bucketEntry, tier) {
   return bucketEntry[key] ?? 0;
 }
 
-function currentYearMonth() {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
-async function readTier(firestoreDb, userId) {
-  const doc = await firestoreDb
-    .collection(FirestorePaths.USERS)
-    .doc(userId)
-    .collection(FirestorePaths.USER_DATA_SUBCOLLECTION)
-    .doc(FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
-    .get();
-  const tier = doc.exists ? doc.data().tier : 'FREE';
-  return Enums.SubscriptionTier.includes(tier) ? tier : 'FREE';
-}
-
 /**
  * Read-only quota re-check -- submission-time usage recording already happened
  * (`eligibility.js::recordAndEnforce`); this only guards against a client
  * calling an `evaluate*` callable directly to get a free Gemini call outside
- * that flow. Rejects `FAILED_PRECONDITION` if the current month's usage for
+ * that flow. Rejects `FAILED_PRECONDITION` if the current period's usage for
  * this test's bucket is already at/over the tier's limit.
+ *
+ * Phase 3 (`docs/plans/SubscriptionPricingRestructure.md` step 5): must read the same
+ * `usage_{period}` doc `recordAndEnforce` writes to, via the exact same `readSubscriptionDoc`/
+ * `currentPeriodKey` `eligibility.js` uses -- this used to have its own local `readTier`/
+ * `currentYearMonth` copies, which would have silently read the wrong (never-written) doc for
+ * any paid-tier user with a `startDate`, always finding 0 usage and failing this re-check open.
  */
 async function checkQuota(firestoreDb, uid, testType) {
   const bucket = bucketFor(testType);
-  const tier = await readTier(firestoreDb, uid);
+  const { tier, startDate } = await readSubscriptionDoc(firestoreDb, uid);
   const limit = limitFor(bucket, tier);
   if (limit === -1) return;
 
   const fieldName = fieldNameFor(bucket.bucket);
-  const month = currentYearMonth();
+  const period = currentPeriodKey(tier, startDate);
   const usageDoc = await firestoreDb
     .collection(FirestorePaths.USERS)
     .doc(uid)
     .collection(FirestorePaths.USER_SUBSCRIPTION_SUBCOLLECTION)
-    .doc(`usage_${month}`)
+    .doc(`usage_${period}`)
     .get();
   const used = usageDoc.exists ? usageDoc.data()[fieldName] || 0 : 0;
 
@@ -172,6 +162,5 @@ module.exports = {
   bucketFor,
   fieldNameFor,
   limitFor,
-  readTier,
   currentYearMonth
 };

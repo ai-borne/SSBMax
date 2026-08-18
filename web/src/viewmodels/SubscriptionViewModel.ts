@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { SubscriptionRepository, currentYearMonth } from '../repositories/SubscriptionRepository';
-import { checkTestEligibility, EMPTY_USAGE, SubscriptionUsage, TestEligibility } from '../domain/subscriptionEligibility';
+import { SubscriptionRepository } from '../repositories/SubscriptionRepository';
+import { checkTestEligibility, currentPeriodKey, EMPTY_USAGE, SubscriptionUsage, TestEligibility } from '../domain/subscriptionEligibility';
 import { SubscriptionTier, TestType } from '../generated/contracts';
-import { DevTierOverride } from '../constants/ssbSelectionProcess';
+import { DevTierOverride, getEffectiveTier } from '../constants/ssbSelectionProcess';
 
 export interface UseSubscriptionViewModelReturn {
   tier: SubscriptionTier;
@@ -35,28 +35,26 @@ export function useSubscriptionViewModel(
       return;
     }
     setIsLoading(true);
-    const month = currentYearMonth();
-    Promise.all([repository.getTier(userId), repository.getMonthlyUsage(userId, month)]).then(([fetchedTier, fetchedUsage]) => {
+    // Sequential, not Promise.all: the period key (Phase 3 billing-anniversary reset) depends on
+    // tier + startDate, so usage can't be fetched until both are known.
+    (async () => {
+      const [fetchedTier, startDate] = await Promise.all([repository.getTier(userId), repository.getStartDate(userId)]);
+      const period = currentPeriodKey(fetchedTier, startDate);
+      const fetchedUsage = await repository.getMonthlyUsage(userId, period);
       if (!isMounted) return;
       setRealTier(fetchedTier);
       setUsage(fetchedUsage);
       setIsLoading(false);
-    });
+    })();
     return () => {
       isMounted = false;
     };
   }, [userId, repository]);
 
-  const overrideTier: SubscriptionTier | null = import.meta.env.DEV
-    ? devOverride === 'FORCE_FREE'
-      ? 'FREE'
-      : devOverride === 'FORCE_PRO'
-      ? 'PRO'
-      : devOverride === 'FORCE_PREMIUM'
-      ? 'PREMIUM'
-      : null
-    : null;
-  const tier = overrideTier ?? realTier;
+  // getEffectiveTier is the same lookup PaymentRibbon/SubscriptionPage use for the dev-override
+  // tier -- this hook previously duplicated it as a local ternary that never got a FORCE_BASIC
+  // case added in Phase 2, so a dev override to BASIC silently fell through to the real tier here.
+  const tier: SubscriptionTier = import.meta.env.DEV ? getEffectiveTier(devOverride, realTier) : realTier;
 
   const checkEligibility = useCallback((testType: TestType) => checkTestEligibility(testType, tier, usage), [tier, usage]);
 

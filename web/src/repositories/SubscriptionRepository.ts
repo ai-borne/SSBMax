@@ -1,7 +1,9 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { FirestorePaths, SubscriptionTier } from '../generated/contracts';
+import { FirestorePaths, SubscriptionTier, SubscriptionTierValues } from '../generated/contracts';
 import { EMPTY_USAGE, SubscriptionUsage } from '../domain/subscriptionEligibility';
+
+export { currentYearMonth } from '../domain/subscriptionEligibility';
 
 /**
  * Web port of `GitLiveSubscriptionRepository` (docs/plans/CrossPlatform_SSOT Phase 4) — reads
@@ -17,10 +19,32 @@ export class SubscriptionRepository {
         doc(db, FirestorePaths.USERS, userId, FirestorePaths.USER_DATA_SUBCOLLECTION, FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
       );
       const tier = snap.exists() ? String(snap.data().tier ?? 'FREE').toUpperCase() : 'FREE';
-      return tier === 'PRO' || tier === 'PREMIUM' ? tier : 'FREE';
+      // Was `tier === 'PRO' || tier === 'PREMIUM' ? tier : 'FREE'` -- silently dropped BASIC
+      // (added in Phase 2) to FREE. Fixed to check against the generated contract's tier set
+      // instead of a hand-typed list, so a future tier addition can't repeat this gap.
+      return SubscriptionTierValues.includes(tier as SubscriptionTier) ? (tier as SubscriptionTier) : 'FREE';
     } catch (error) {
       console.warn(`Failed to fetch subscription tier for ${userId}, failing closed to FREE`, error);
       return 'FREE';
+    }
+  }
+
+  /**
+   * Subscription start date (epoch millis), if known -- Phase 3
+   * (`docs/plans/SubscriptionPricingRestructure.md` step 4/5). Null for FREE tier or before a
+   * purchase webhook has populated it. Drives `currentPeriodKey`'s billing-anniversary reset.
+   */
+  async getStartDate(userId: string): Promise<number | null> {
+    try {
+      const snap = await getDoc(
+        doc(db, FirestorePaths.USERS, userId, FirestorePaths.USER_DATA_SUBCOLLECTION, FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
+      );
+      if (!snap.exists()) return null;
+      const startDate = snap.data().startDate;
+      return typeof startDate === 'number' && startDate > 0 ? startDate : null;
+    } catch (error) {
+      console.warn(`Failed to fetch subscription start date for ${userId}, falling back to calendar-month reset`, error);
+      return null;
     }
   }
 
@@ -45,9 +69,4 @@ export class SubscriptionRepository {
       return EMPTY_USAGE;
     }
   }
-}
-
-export function currentYearMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }

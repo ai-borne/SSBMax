@@ -30,6 +30,14 @@ interface SubscriptionRepository {
      * @return Result indicating success or failure
      */
     suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier): Result<Unit>
+
+    /**
+     * The user's subscription start date (epoch millis), if known. Null for FREE tier (never
+     * purchased) or before a purchase webhook has populated it (Phase 3/4,
+     * `docs/plans/SubscriptionPricingRestructure.md`). Drives the billing-anniversary usage-reset
+     * key -- see [com.ssbmax.shared.domain.usecase.subscription.currentPeriodKey].
+     */
+    suspend fun getSubscriptionStartDate(userId: String): Result<Long?>
 }
 
 /**
