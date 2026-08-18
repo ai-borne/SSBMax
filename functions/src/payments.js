@@ -22,9 +22,13 @@ const PLAN_AMOUNTS_PAISE = Object.fromEntries(
 );
 
 // Same DoW-defense shape as geminiProxy.js/aiAnalysis.js's runtimeOptions -- order creation
-// had no instance cap before this (Phase 5, cost & scale guardrails).
+// had no instance cap before this (Phase 5, cost & scale guardrails). `secrets` mirrors
+// geminiProxy.js's GEMINI_API_KEY pattern -- values come from Secret Manager
+// (`firebase functions:secrets:set RAZORPAY_KEY_ID`), never from a committed .env file,
+// since unlike ENFORCE_QUOTA/FIRESTORE_BACKUP_BUCKET these are real credentials.
 const runtimeOptions = {
-  maxInstances: 10
+  maxInstances: 10,
+  secrets: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET']
 };
 
 /**

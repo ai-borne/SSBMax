@@ -87,7 +87,8 @@ function timingSafeCompare(a, b) {
  */
 // DoW-defense cap (Phase 5, cost & scale guardrails) -- this endpoint is unauthenticated by
 // nature (Razorpay calls it directly), so it had no instance ceiling at all before this.
-exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10 }, async (req, res) => {
+// `secrets` pulls RAZORPAY_WEBHOOK_SECRET from Secret Manager, same as payments.js.
+exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10, secrets: ['RAZORPAY_WEBHOOK_SECRET'] }, async (req, res) => {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
   if (!secret) {
