@@ -23,10 +23,12 @@ class GitLiveOirResultRepository(
 
     override suspend fun getOirResult(submissionId: String): Result<OIRTestResult?> {
         if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
-        cache.get(submissionId)?.let { cached ->
-            return Result.success(cached.toDomain())
-        }
+        val cached = cache.get(submissionId)
+        if (cached != null) return Result.success(cached.toDomain())
+        return fetchAndCacheFromFirestore(submissionId)
+    }
 
+    private suspend fun fetchAndCacheFromFirestore(submissionId: String): Result<OIRTestResult?> {
         return try {
             val snapshot = Firebase.firestore
                 .collection(SsbContracts.FirestorePaths.SUBMISSIONS)
@@ -47,5 +49,4 @@ class GitLiveOirResultRepository(
             Result.failure(e)
         }
     }
-
 }

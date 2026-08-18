@@ -144,6 +144,10 @@ kotlin {
 
         androidMain.dependencies {
             implementation(project.dependencies.platform(libs.firebase.bom))
+            // SSBMaxFirebaseMessagingService (moved here from `app` so Firebase imports stay
+            // out of the app layer -- see that file's class doc).
+            implementation(libs.firebase.messaging)
+            implementation(libs.androidx.core.ktx)
         }
 
         // The iOS entry points Swift calls into (AppBootstrap's

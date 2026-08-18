@@ -1,4 +1,4 @@
-package com.ssbmax.notifications
+package com.ssbmax.shared.notifications
 
 import com.ssbmax.shared.domain.model.NotificationType
 import org.junit.Assert.assertEquals
@@ -11,6 +11,9 @@ import org.junit.Test
  * pure payload -> SSBMaxNotification mapping `onMessageReceived` uses to fix the
  * "never writes to the in-app inbox" bug. Kept Android-framework-free so it's testable without
  * Robolectric (the existing Robolectric suite here is `@Ignore`d for an SDK-35 mismatch).
+ *
+ * Moved here from `app/src/test/...` alongside `SSBMaxFirebaseMessagingService` itself, when the
+ * service moved to `:data-firebase` to get Firebase imports out of the `app` layer.
  */
 class SSBMaxFirebaseMessagingServiceTest {
 
@@ -22,9 +25,7 @@ class SSBMaxFirebaseMessagingServiceTest {
             type = NotificationType.GRADING_COMPLETE,
             title = "Your result is ready",
             message = "Your WAT evaluation has been graded.",
-            actionUrl = "/notifications",
-            submissionId = "sub-42",
-            testType = "WAT"
+            action = InboxNotificationAction(actionUrl = "/notifications", submissionId = "sub-42", testType = "WAT")
         )
 
         assertEquals("server-doc-id", notification.id)
@@ -38,9 +39,7 @@ class SSBMaxFirebaseMessagingServiceTest {
             type = NotificationType.GENERAL_ANNOUNCEMENT,
             title = "Announcement",
             message = "Hello",
-            actionUrl = null,
-            submissionId = null,
-            testType = null
+            action = InboxNotificationAction(actionUrl = null, submissionId = null, testType = null)
         )
 
         assertTrue(notification.id.isNotBlank())
@@ -54,9 +53,7 @@ class SSBMaxFirebaseMessagingServiceTest {
             type = NotificationType.GRADING_COMPLETE,
             title = "Your result is ready",
             message = "Your SRT evaluation has been graded.",
-            actionUrl = "/notifications",
-            submissionId = "sub-99",
-            testType = "SRT"
+            action = InboxNotificationAction(actionUrl = "/notifications", submissionId = "sub-99", testType = "SRT")
         )
 
         assertEquals("user-1", notification.userId)
@@ -77,9 +74,7 @@ class SSBMaxFirebaseMessagingServiceTest {
                 type = type,
                 title = "Title",
                 message = "Message",
-                actionUrl = null,
-                submissionId = null,
-                testType = null
+                action = InboxNotificationAction(actionUrl = null, submissionId = null, testType = null)
             )
 
             assertEquals(type, notification.type)
@@ -94,9 +89,7 @@ class SSBMaxFirebaseMessagingServiceTest {
             type = NotificationType.GENERAL_ANNOUNCEMENT,
             title = "Announcement",
             message = "Hello",
-            actionUrl = null,
-            submissionId = null,
-            testType = null
+            action = InboxNotificationAction(actionUrl = null, submissionId = null, testType = null)
         )
 
         assertNull(notification.actionData)

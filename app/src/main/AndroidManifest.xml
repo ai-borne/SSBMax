@@ -48,7 +48,7 @@
         
         <!-- Firebase Cloud Messaging Service -->
         <service
-            android:name=".notifications.SSBMaxFirebaseMessagingService"
+            android:name="com.ssbmax.shared.notifications.SSBMaxFirebaseMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

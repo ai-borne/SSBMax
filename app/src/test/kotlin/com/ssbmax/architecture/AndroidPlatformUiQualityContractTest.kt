@@ -10,9 +10,11 @@ class AndroidPlatformUiQualityContractTest {
     private val projectRoot = locateProjectRoot()
     private val appSource = read("app/src/main/kotlin/com/ssbmax/MainActivity.kt")
     private val notificationSource = read("app/src/main/kotlin/com/ssbmax/notifications/NotificationHelper.kt")
-    private val fcmSource = read("app/src/main/kotlin/com/ssbmax/notifications/SSBMaxFirebaseMessagingService.kt")
+    private val fcmSource = read("data-firebase/src/androidMain/kotlin/com/ssbmax/shared/notifications/SSBMaxFirebaseMessagingService.kt")
     private val gtoSource = read("app/src/main/kotlin/com/ssbmax/notifications/GtoNotificationHelper.kt")
     private val strings = read("app/src/main/res/values/strings.xml")
+    // SSBMaxFirebaseMessagingService's own strings moved with it -- see that file's class doc.
+    private val fcmStrings = read("data-firebase/src/androidMain/res/values/strings.xml")
 
     @Test
     fun `android entry point provides platform bridges to shared root`() {
@@ -37,8 +39,8 @@ class AndroidPlatformUiQualityContractTest {
         assertFalse(fcmSource.contains("View Results"))
         assertFalse(fcmSource.contains("View Invitation"))
         assertTrue(strings.contains("notification_gto_results_body"))
-        assertTrue(strings.contains("notification_action_view_results"))
-        assertTrue(strings.contains("notification_action_view_invitation"))
+        assertTrue(fcmStrings.contains("notification_action_view_results"))
+        assertTrue(fcmStrings.contains("notification_action_view_invitation"))
     }
 
     @Test
@@ -53,8 +55,8 @@ class AndroidPlatformUiQualityContractTest {
 
     @Test
     fun `platform error and fallback text is resource backed`() {
-        assertTrue(strings.contains("notification_default_title"))
-        assertTrue(strings.contains("notification_channel_description"))
+        assertTrue(fcmStrings.contains("notification_default_title"))
+        assertTrue(fcmStrings.contains("notification_channel_description"))
         assertTrue(notificationSource.contains("notification_interview_channel_description"))
         assertTrue(strings.contains("notification_gto_results_body"))
         assertTrue(gtoSource.contains("notification_gto_results_title"))
