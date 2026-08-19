@@ -18,11 +18,12 @@
 // resolves to v2 by default on this project's installed firebase-functions@7.
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
-const { PricingTiers } = require('./generated/contracts.cjs');
+const { FirestorePaths, PricingTiers } = require('./generated/contracts.cjs');
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
+const db = admin.firestore();
 
 /** Only `{tier}_monthly` planIds exist (monthly billing only, for now) -- same set `payments.js`
  * validates client-supplied planIds against. */
@@ -39,6 +40,59 @@ const runtimeOptions = {
   maxInstances: 10,
   secrets: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_PLAN_IDS']
 };
+
+/**
+ * Phase C (Dual-Platform Subscription Billing Hardening plan): server-side purchase gate --
+ * rejects Razorpay subscription creation while the caller holds a still-active
+ * RevenueCat-sourced subscription. A plain `.get()` pre-check (not a transaction) since nothing
+ * is written here; the write-time cross-platform guard is the reconciliation logic already in
+ * `webhooks.js`/`revenueCatWebhook.js` (`resolveReconciliation`).
+ *
+ * Only closes the Razorpay-blocks-RevenueCat direction. The reverse has no server-side
+ * equivalent -- RevenueCat's flow charges the user via the store before any of our server code
+ * runs, so it cannot be pre-blocked the way a Razorpay order/subscription creation can (see the
+ * plan's "Structural constraint" note in its Context section). `UpgradeViewModel.kt`'s
+ * `restorePurchases()` gate plus webhook-to-webhook reconciliation are the best available
+ * mitigation for that direction -- see the comment on `activeOnWebInstead` there.
+ *
+ * Fails CLOSED on any read error -- the *opposite* policy from `GitLiveSubscriptionRepository`/
+ * `SubscriptionRepository.ts`'s client-side ownership reads, which deliberately fail open since
+ * they're UI-advisory only. A server-side purchase gate is not the place to fail open; do not
+ * "fix" this back to fail-open by copy-pasting the client pattern.
+ */
+async function assertNoActiveRevenueCatSubscription(firestoreDb, userId) {
+  let doc;
+  try {
+    doc = await firestoreDb
+      .collection(FirestorePaths.USERS)
+      .doc(userId)
+      .collection(FirestorePaths.USER_DATA_SUBCOLLECTION)
+      .doc(FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
+      .get();
+  } catch (readError) {
+    console.error('createRazorpaySubscription: ownership pre-check read failed, rejecting (fail-closed)', readError);
+    throw new functions.https.HttpsError('internal', 'Unable to verify subscription ownership, please try again');
+  }
+
+  if (!doc.exists) {
+    return;
+  }
+  const existing = doc.data() || {};
+  if (existing.source !== 'REVENUECAT') {
+    return;
+  }
+
+  // `expiryDate == null` on a REVENUECAT-sourced doc fails closed (treated as still-active) --
+  // RC always writes a real `expiryDate` on grant, so null here means a transient partial write
+  // or a pre-Phase-4 doc, not "no expiry".
+  const stillActive = existing.expiryDate == null || existing.expiryDate > Date.now();
+  if (stillActive) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'An active subscription already exists on the mobile app -- cancel it there before purchasing on web'
+    );
+  }
+}
 
 /**
  * Create Razorpay Subscription Callable Function
@@ -62,6 +116,10 @@ exports.createRazorpaySubscription = functions.runWith(runtimeOptions).https.onC
   if (!VALID_PLAN_IDS.has(planId)) {
     throw new functions.https.HttpsError('invalid-argument', `Unknown planId '${planId}'`);
   }
+
+  // Same rule regardless of the emulator/mock fallback below -- this gate is about cross-source
+  // ownership, not Razorpay connectivity.
+  await assertNoActiveRevenueCatSubscription(db, userId);
 
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -135,3 +193,4 @@ exports.createRazorpaySubscription = functions.runWith(runtimeOptions).https.onC
 });
 
 exports.VALID_PLAN_IDS = VALID_PLAN_IDS;
+exports.assertNoActiveRevenueCatSubscription = assertNoActiveRevenueCatSubscription;

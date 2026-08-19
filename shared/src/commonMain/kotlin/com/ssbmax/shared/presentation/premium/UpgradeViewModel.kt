@@ -130,6 +130,15 @@ class UpgradeViewModel(
                 SubscriptionTier.FREE
             }
 
+            // Client-side-only check, mirrored by web's own `SubscriptionPage.tsx` gate. Phase C
+            // (Dual-Platform Subscription Billing Hardening plan) added a *server-side* purchase
+            // gate in `razorpaySubscriptions.js`'s `createRazorpaySubscription`, but only in this
+            // direction (Razorpay creation rejects an active RevenueCat subscription) --
+            // RevenueCat purchases can't be pre-blocked server-side at all, since the store
+            // charges the user before any of our server code runs (see the plan's "Structural
+            // constraint" note). This `activeOnWebInstead` check plus `restorePurchases()`'s gate
+            // and webhook-to-webhook reconciliation are the best available mitigation for that
+            // reverse (RevenueCat-blocks-Razorpay) direction -- there is no equivalent hard block.
             val blockedByWeb = subscriptionRepository.getSubscriptionOwnership(currentUser.id)
                 .getOrElse { SubscriptionOwnership(source = null, expiryDate = null) }
                 .let { it.source == WEB_PAYMENT_SOURCE && it.isActive(Clock.System.now().toEpochMilliseconds()) }
