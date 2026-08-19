@@ -26,6 +26,7 @@ import { useTabRouting } from './hooks/useTabRouting';
 import { authService } from './services/AuthService';
 import { useSubscriptionViewModel } from './viewmodels/SubscriptionViewModel';
 import { useAppVersionGateViewModel } from './viewmodels/useAppVersionGateViewModel';
+import { useFeatureFlag } from './viewmodels/useFeatureFlag';
 import { UpdateRequiredScreen } from './components/common/UpdateRequiredScreen';
 import { AccessTier, DevTierOverride, getEffectiveTier } from './constants/ssbSelectionProcess';
 
@@ -48,6 +49,9 @@ export const App: FC = () => {
 
   const { tier: realTier, usage } = useSubscriptionViewModel(authService.getCurrentUser()?.uid, devTierOverride);
   const paymentService = useMemo(() => new PaymentService(), []);
+  // Phase B checkout-cutover kill switch (senior-review fix #8) -- defaults false (old
+  // order-based Razorpay checkout) until this Firestore flag is explicitly flipped on.
+  const razorpaySubscriptionsCheckoutEnabled = useFeatureFlag('razorpay_subscriptions_checkout');
   const olqDashboard = useOLQDashboardViewModel(authService.getCurrentUser()?.uid, undefined, activeTab === 'reports');
   const isPaidMember = realTier !== 'FREE';
   const effectiveTier: AccessTier = import.meta.env.DEV
@@ -191,6 +195,8 @@ export const App: FC = () => {
               userId={authService.getCurrentUser()?.uid}
               isPaidMember={isPaidMember}
               createOrderFn={paymentService.createOrder}
+              createSubscriptionFn={paymentService.createSubscription}
+              useSubscriptionCheckout={razorpaySubscriptionsCheckoutEnabled}
               onPaymentSuccess={() => setActiveTab('tests')}
             />
           )}

@@ -894,6 +894,7 @@
     <string name="subscription_mgmt_cd_back">Back</string>
     <string name="subscription_mgmt_current_plan_label">Current Plan</string>
     <string name="subscription_mgmt_renews_on">Renews on %1$s</string>
+    <string name="subscription_mgmt_expires_no_renew">Expires %1$s (won\'t auto-renew)</string>
     <string name="subscription_mgmt_usage_title">This Month\'s Usage</string>
     <string name="subscription_mgmt_expand_cd">Expand</string>
     <string name="subscription_mgmt_collapse_cd">Collapse</string>

@@ -2,6 +2,7 @@ package com.ssbmax.shared.presentation.settings
 
 import com.ssbmax.shared.data.repository.SubscriptionLimits
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetMonthlyUsageUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
@@ -49,6 +50,7 @@ class SubscriptionManagementViewModel(
     private val observeCurrentUser: ObserveCurrentUserUseCase,
     private val getSubscriptionTier: GetSubscriptionTierUseCase,
     private val getMonthlyUsage: GetMonthlyUsageUseCase,
+    private val subscriptionRepository: SubscriptionRepository,
     private val logger: DomainLogger
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SubscriptionManagementUiState())
@@ -80,8 +82,18 @@ class SubscriptionManagementViewModel(
                 val uiTier = SubscriptionTierModel.from(tier)
                 val uiUsage = domainUsage.mapValues { (_, value) -> UsageInfo.from(value) }
 
+                // Real `expiryDate`/`willRenew` (Phase B, Razorpay Subscriptions API migration) --
+                // falls back to the mock +1-calendar-month estimate only for a legacy/grandfathered
+                // doc with no `expiryDate` (e.g. a pre-Phase-3 one-time-order Razorpay payer),
+                // matching this plan's "never revoke or re-gate based on absence alone" rule.
+                val ownership = if (tier != SubscriptionTier.FREE) {
+                    subscriptionRepository.getSubscriptionOwnership(userId).getOrNull()
+                } else {
+                    null
+                }
                 val expiresAt = if (tier != SubscriptionTier.FREE) {
-                    formatFullDate(nextBillingCycleExpiry(Clock.System.now()).toEpochMilliseconds())
+                    val realExpiry = ownership?.expiryDate
+                    formatFullDate(realExpiry ?: nextBillingCycleExpiry(Clock.System.now()).toEpochMilliseconds())
                 } else {
                     null
                 }
@@ -90,7 +102,8 @@ class SubscriptionManagementViewModel(
                     isLoading = false,
                     currentTier = uiTier,
                     monthlyUsage = uiUsage,
-                    subscriptionExpiresAt = expiresAt
+                    subscriptionExpiresAt = expiresAt,
+                    subscriptionWillRenew = ownership?.willRenew ?: true
                 )
             } catch (e: Exception) {
                 logger.e(TAG, "Failed to load subscription data", e)
@@ -123,7 +136,12 @@ data class SubscriptionManagementUiState(
     val error: String? = null,
     val currentTier: SubscriptionTierModel = SubscriptionTierModel.FREE,
     val monthlyUsage: Map<String, UsageInfo> = emptyMap(),
-    val subscriptionExpiresAt: String? = null
+    val subscriptionExpiresAt: String? = null,
+    /** Whether the subscription auto-renews at [subscriptionExpiresAt] (Phase B, Razorpay
+     * Subscriptions API migration) -- `false` once a `subscription.cancelled`/`paused` webhook has
+     * fired. Defaults `true` (matches [com.ssbmax.shared.domain.repository.SubscriptionOwnership]'s
+     * default) so a still-loading/legacy state never shows a false "won't renew" warning. */
+    val subscriptionWillRenew: Boolean = true
 )
 
 /**

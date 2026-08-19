@@ -15,15 +15,23 @@ export interface SubscriptionPageProps {
   isPaidMember?: boolean;
   onPaymentSuccess?: () => void;
   createOrderFn?: (planId: string) => Promise<{ orderId: string; amount: number; currency: string; keyId: string }>;
+  /** Phase B (Razorpay Subscriptions API migration): real-subscription checkout path, isolated
+   * from `createOrderFn`'s one-time-Order path -- see `usePaymentViewModel`'s doc comment. */
+  createSubscriptionFn?: (planId: string) => Promise<{ subscriptionId: string; keyId: string }>;
+  /** Checkout-cutover kill switch (`razorpay_subscriptions_checkout` feature flag) -- defaults
+   * `false` (old order-based path) when the caller doesn't pass a live flag value. */
+  useSubscriptionCheckout?: boolean;
 }
 
 export const SubscriptionPage: FC<SubscriptionPageProps> = ({
   userId,
   isPaidMember = false,
   onPaymentSuccess,
-  createOrderFn
+  createOrderFn,
+  createSubscriptionFn,
+  useSubscriptionCheckout = false
 }) => {
-  const paymentVM = usePaymentViewModel(createOrderFn);
+  const paymentVM = usePaymentViewModel(createOrderFn, createSubscriptionFn, useSubscriptionCheckout);
   const { status, errorMessage, initiatePayment } = paymentVM;
   const isLoading = status === 'creating_order' || status === 'checkout_open' || status === 'verifying';
 
@@ -64,6 +72,16 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
           <div>
             <p className="font-bold text-sm">Membership Active</p>
             <p className="text-xs text-emerald-700 dark:text-emerald-400">You have unlocked full access to your plan's Stage-I & Stage-II simulators and AI assessments.</p>
+            {/* Phase B (Razorpay Subscriptions API migration): real renewal status, once a
+                lifecycle webhook has populated expiryDate -- legacy/grandfathered docs with no
+                expiryDate show nothing here rather than a fabricated date. */}
+            {ownership.expiryDate !== null && (
+              <p className="text-xs text-emerald-700 dark:text-emerald-400" data-testid="subscription-renewal-status">
+                {ownership.willRenew
+                  ? strings.subscription.renewsOn(new Date(ownership.expiryDate).toLocaleDateString())
+                  : strings.subscription.expiresNoRenew(new Date(ownership.expiryDate).toLocaleDateString())}
+              </p>
+            )}
           </div>
         </div>
       )}

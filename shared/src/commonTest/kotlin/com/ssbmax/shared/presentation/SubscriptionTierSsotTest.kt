@@ -104,6 +104,7 @@ class SubscriptionTierSsotTest {
                 observeCurrentUser = observeCurrentUser,
                 getSubscriptionTier = getSubscriptionTier,
                 getMonthlyUsage = GetMonthlyUsageUseCase(subscriptionRepository),
+                subscriptionRepository = subscriptionRepository,
                 logger = FakeLogger()
             )
             testDispatcher.scheduler.advanceUntilIdle()

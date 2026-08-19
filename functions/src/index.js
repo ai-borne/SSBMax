@@ -14,6 +14,7 @@ if (!admin.apps.length) {
 const { handleRazorpayWebhook } = require('./webhooks');
 const { handleRevenueCatWebhook } = require('./revenueCatWebhook');
 const { createRazorpayOrder } = require('./payments');
+const { createRazorpaySubscription } = require('./razorpaySubscriptions');
 const { evaluateOIRAnswers } = require('./oirScoring');
 const { onOirSubmissionCreated } = require('./notifications/onOirSubmissionCreated');
 const { notifyGradingComplete } = require('./notifications/notifyGradingComplete');
@@ -46,6 +47,12 @@ const {
 exports.handleRazorpayWebhook = handleRazorpayWebhook;
 exports.handleRevenueCatWebhook = handleRevenueCatWebhook;
 exports.createRazorpayOrder = createRazorpayOrder;
+// Phase B (Dual-Platform Subscription Billing Hardening plan): real Razorpay Subscription
+// (not a one-time Order) so `webhooks.js` can derive `expiryDate`/`willRenew` from lifecycle
+// webhooks the same way RevenueCat does for mobile. Deployed alongside `createRazorpayOrder`
+// (deprecated-but-live) -- web's checkout cutover is feature-flag gated, not atomic with this
+// function's deploy.
+exports.createRazorpaySubscription = createRazorpaySubscription;
 exports.evaluateOIRAnswers = evaluateOIRAnswers;
 // Fires notifyEvaluationComplete for OIR specifically -- evaluateOIRAnswers above has no
 // submissionId to notify against (it runs before the submission doc exists, see

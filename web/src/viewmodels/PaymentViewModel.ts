@@ -37,7 +37,14 @@ export interface UsePaymentViewModelReturn extends PaymentState {
 }
 
 export function usePaymentViewModel(
-  createOrderFn?: (planId: string) => Promise<{ orderId: string; amount: number; currency: string; keyId: string }>
+  createOrderFn?: (planId: string) => Promise<{ orderId: string; amount: number; currency: string; keyId: string }>,
+  createSubscriptionFn?: (planId: string) => Promise<{ subscriptionId: string; keyId: string }>,
+  /** Phase B checkout-cutover kill switch (senior-review fix #8): the two checkout code paths
+   * stay fully isolated (`RazorpayService.openCheckout` vs `openSubscriptionCheckout`) -- this
+   * flag decides upfront which one runs, never inferred from a response shape. Defaults `false`
+   * so every caller that hasn't been updated to pass the live feature-flag value keeps using the
+   * existing, verified order-based path. */
+  useSubscriptionCheckout: boolean = false
 ): UsePaymentViewModelReturn {
   const [state, setState] = useState<PaymentState>({
     status: 'idle',
@@ -70,6 +77,42 @@ export function usePaymentViewModel(
       }));
 
       try {
+        const razorpayService = new RazorpayService();
+        const onSuccess = (paymentId: string) => {
+          setState((prev) => ({
+            ...prev,
+            status: 'success',
+            paymentId,
+            isPaidMember: true,
+            errorMessage: null
+          }));
+        };
+        const onFailure = (error: { description?: string }) => {
+          setState((prev) => ({
+            ...prev,
+            status: 'error',
+            errorMessage: error.description || strings.payment.paymentFailed
+          }));
+        };
+
+        if (useSubscriptionCheckout && createSubscriptionFn) {
+          const subscriptionDetails = await createSubscriptionFn(planId);
+          setState((prev) => ({
+            ...prev,
+            status: 'checkout_open',
+            orderId: subscriptionDetails.subscriptionId
+          }));
+          await razorpayService.openSubscriptionCheckout({
+            subscriptionId: subscriptionDetails.subscriptionId,
+            keyId: subscriptionDetails.keyId,
+            userEmail,
+            userName,
+            onSuccess,
+            onFailure
+          });
+          return;
+        }
+
         let orderDetails: { orderId: string; amount: number; currency: string; keyId: string };
 
         if (createOrderFn) {
@@ -90,7 +133,6 @@ export function usePaymentViewModel(
           orderId: orderDetails.orderId
         }));
 
-        const razorpayService = new RazorpayService();
         await razorpayService.openCheckout({
           orderId: orderDetails.orderId,
           amount: orderDetails.amount,
@@ -98,22 +140,8 @@ export function usePaymentViewModel(
           keyId: orderDetails.keyId,
           userEmail,
           userName,
-          onSuccess: (paymentId: string) => {
-            setState((prev) => ({
-              ...prev,
-              status: 'success',
-              paymentId,
-              isPaidMember: true,
-              errorMessage: null
-            }));
-          },
-          onFailure: (error) => {
-            setState((prev) => ({
-              ...prev,
-              status: 'error',
-              errorMessage: error.description || strings.payment.paymentFailed
-            }));
-          }
+          onSuccess,
+          onFailure
         });
       } catch (err: any) {
         setState((prev) => ({
@@ -123,7 +151,7 @@ export function usePaymentViewModel(
         }));
       }
     },
-    [createOrderFn]
+    [createOrderFn, createSubscriptionFn, useSubscriptionCheckout]
   );
 
   return {

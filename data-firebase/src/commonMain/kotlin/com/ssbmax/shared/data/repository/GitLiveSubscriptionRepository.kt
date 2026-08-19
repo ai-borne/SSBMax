@@ -107,7 +107,7 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
             val snapshot = tierDoc(userId).get()
             val ownership = if (snapshot.exists) {
                 val dto = snapshot.data(SubscriptionTierDto.serializer())
-                SubscriptionOwnership(source = dto.source, expiryDate = dto.expiryDate)
+                SubscriptionOwnership(source = dto.source, expiryDate = dto.expiryDate, willRenew = dto.willRenew)
             } else {
                 SubscriptionOwnership(source = null, expiryDate = null)
             }

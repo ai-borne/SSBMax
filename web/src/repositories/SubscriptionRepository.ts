@@ -8,6 +8,11 @@ export { currentYearMonth } from '../domain/subscriptionEligibility';
 export interface SubscriptionOwnership {
   source: string | null;
   expiryDate: number | null;
+  /** Whether the subscription auto-renews at `expiryDate` (Phase B, Razorpay Subscriptions API
+   * migration -- `functions/src/webhooks.js`'s `subscription.cancelled`/`paused`/`resumed`
+   * handlers flip this without touching `tier`/`expiryDate`). Defaults `true`, additive-safe for
+   * docs predating this field. */
+  willRenew: boolean;
 }
 
 /**
@@ -83,14 +88,15 @@ export class SubscriptionRepository {
       const snap = await getDoc(
         doc(db, FirestorePaths.USERS, userId, FirestorePaths.USER_DATA_SUBCOLLECTION, FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
       );
-      if (!snap.exists()) return { source: null, expiryDate: null };
+      if (!snap.exists()) return { source: null, expiryDate: null, willRenew: true };
       const data = snap.data();
       const source = typeof data.source === 'string' ? data.source : null;
       const expiryDate = typeof data.expiryDate === 'number' ? data.expiryDate : null;
-      return { source, expiryDate };
+      const willRenew = typeof data.willRenew === 'boolean' ? data.willRenew : true;
+      return { source, expiryDate, willRenew };
     } catch (error) {
       console.warn(`Failed to fetch subscription ownership for ${userId}, failing open to no restriction`, error);
-      return { source: null, expiryDate: null };
+      return { source: null, expiryDate: null, willRenew: true };
     }
   }
 

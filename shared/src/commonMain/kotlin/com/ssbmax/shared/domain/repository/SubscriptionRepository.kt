@@ -54,10 +54,13 @@ interface SubscriptionRepository {
  * @param source `"RAZORPAY"`/`"REVENUECAT"`/null (never purchased, or a doc predating this field).
  * @param expiryDate Epoch millis, or null (Razorpay's one-time-order path never tracks an expiry --
  * a null expiry from that source means "perpetual until the next webhook," not "unknown").
+ * @param willRenew Whether the subscription auto-renews at `expiryDate` (Phase B, Razorpay
+ * Subscriptions API migration). Defaults `true` -- see [com.ssbmax.shared.data.repository.SubscriptionTierDto.willRenew].
  */
 data class SubscriptionOwnership(
     val source: String?,
-    val expiryDate: Long?
+    val expiryDate: Long?,
+    val willRenew: Boolean = true
 ) {
     /** @param nowMillis epoch millis to compare against -- passed in rather than read internally
      * so this stays a pure function testable without mocking a clock. */

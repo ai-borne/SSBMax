@@ -76,6 +76,8 @@ export const commonStrings = {
     guarantee: '100% Refund Policy & Secure 256-Bit Razorpay Encryption',
     mobileSubscriptionActiveBanner:
       'You already have an active subscription purchased through the mobile app. Manage or cancel it there before starting a new one here.',
+    renewsOn: (date: string) => `Renews on ${date}`,
+    expiresNoRenew: (date: string) => `Expires ${date} (won't auto-renew)`,
     ribbonTitle: 'Select Your Preparation Tier',
     ribbonSubtitle: 'Choose Free, Basic, Pro, or Premium to unlock authentic SSB test simulators & AI evaluations.',
     ribbonFreeTitle: 'Free',

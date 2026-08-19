@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SubscriptionRepository, SubscriptionOwnership } from '../repositories/SubscriptionRepository';
 
-const EMPTY_OWNERSHIP: SubscriptionOwnership = { source: null, expiryDate: null };
+const EMPTY_OWNERSHIP: SubscriptionOwnership = { source: null, expiryDate: null, willRenew: true };
 
 /**
  * Web port of `UpgradeViewModel.kt`'s ownership load (Phase 4 amendment, dual-purchase gate) --

@@ -135,7 +135,8 @@ private fun SubscriptionContent(
     ) {
         CurrentPlanCard(
             tier = uiState.currentTier,
-            expiresAt = uiState.subscriptionExpiresAt
+            expiresAt = uiState.subscriptionExpiresAt,
+            willRenew = uiState.subscriptionWillRenew
         )
 
         if (uiState.currentTier != SubscriptionTierModel.PREMIUM) {

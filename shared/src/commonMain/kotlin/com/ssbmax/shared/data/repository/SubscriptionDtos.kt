@@ -21,7 +21,13 @@ data class SubscriptionTierDto(
     val billingCycle: String? = null,
     /** "RAZORPAY"/"REVENUECAT"/null -- which webhook last wrote this doc (Phase 4 amendment,
      * dual-purchase gate). Null for a doc predating this field, or a user who never purchased. */
-    val source: String? = null
+    val source: String? = null,
+    /** Whether the subscription auto-renews at `expiryDate` (Phase B, Razorpay Subscriptions API
+     * migration -- `functions/src/webhooks.js`'s `subscription.cancelled`/`paused`/`resumed`
+     * handlers flip this without touching `tier`/`expiryDate`). Defaults `true`, additive-safe
+     * for docs predating this field -- a legacy doc with no lifecycle-webhook data is assumed
+     * still auto-renewing until proven otherwise. */
+    val willRenew: Boolean = true
 ) {
     fun toDomain(): SubscriptionTier = when (tier.uppercase()) {
         "BASIC" -> SubscriptionTier.BASIC

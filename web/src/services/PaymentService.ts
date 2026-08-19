@@ -22,6 +22,19 @@ export interface CreateOrderResponse {
   keyId: string;
 }
 
+/** Phase B (Dual-Platform Subscription Billing Hardening plan): `createRazorpaySubscription`
+ * (`functions/src/razorpaySubscriptions.js`) creates a real recurring Subscription instead of a
+ * one-time Order -- see that file's doc comment for why. */
+export interface CreateSubscriptionPayload {
+  planId: string;
+}
+
+export interface CreateSubscriptionResponse {
+  success: boolean;
+  subscriptionId: string;
+  keyId: string;
+}
+
 export class PaymentService {
   constructor(private readonly functionsInstance: Functions = defaultFunctions) {}
 
@@ -29,5 +42,11 @@ export class PaymentService {
     httpsCallable<CreateOrderPayload, CreateOrderResponse>(
       this.functionsInstance,
       'createRazorpayOrder'
+    )({ planId }).then((r) => r.data);
+
+  createSubscription = (planId: string): Promise<CreateSubscriptionResponse> =>
+    httpsCallable<CreateSubscriptionPayload, CreateSubscriptionResponse>(
+      this.functionsInstance,
+      'createRazorpaySubscription'
     )({ planId }).then((r) => r.data);
 }
