@@ -198,6 +198,13 @@ class UpgradeViewModel(
         viewModelScope.launch {
             revenueCatClient.purchase(productId)
                 .onSuccess { outcome ->
+                    // Best-effort optimistic write, racing the async RC webhook -- deliberately not
+                    // removed (regresses UX) and not backed by a polling/re-fetch mechanism.
+                    // GitLiveSubscriptionRepository.updateSubscriptionTier is a field-only update
+                    // (only "tier" is written; source/expiryDate/startDate are untouched), so the
+                    // worst case here is a few seconds of stale `source`, never a corrupted doc --
+                    // and with Phase 0's read-time expiryDate derivation live, that stale window
+                    // can't even produce a wrong *effective* tier.
                     subscriptionRepository.updateSubscriptionTier(userId, outcome.tier)
                     _uiState.update {
                         it.copy(isPurchasing = false, currentTier = outcome.tier, selectedPlanForUpgrade = null)
@@ -229,11 +236,19 @@ class UpgradeViewModel(
             logger.w(TAG, "restorePurchases called with no signed-in user")
             return
         }
+        if (_uiState.value.activeOnWebInstead) {
+            // Same gate as upgradeToPlan -- restoring RC entitlements would otherwise silently
+            // overwrite an active Razorpay-sourced tier just like a fresh purchase would.
+            logger.w(TAG, "restorePurchases blocked: user already has an active web (Razorpay) subscription")
+            return
+        }
 
         _uiState.update { it.copy(isRestoring = true, purchaseError = null) }
         viewModelScope.launch {
             revenueCatClient.restorePurchases()
                 .onSuccess { outcome ->
+                    // Best-effort optimistic write, racing the async RC webhook -- see the identical
+                    // comment in upgradeToPlan for why this is safe to leave as-is.
                     subscriptionRepository.updateSubscriptionTier(userId, outcome.tier)
                     _uiState.update { it.copy(isRestoring = false, currentTier = outcome.tier) }
                 }

@@ -320,4 +320,26 @@ class UpgradeViewModelTest {
         assertEquals(null, subscriptionRepository.lastUpdatedTierCall)
         assertEquals(false, viewModel.uiState.value.isPurchasing)
     }
+
+    /**
+     * Phase D (dual-platform billing hardening plan): restorePurchases had no dual-purchase gate
+     * at all, unlike upgradeToPlan -- a user with an active Razorpay-sourced tier could restore RC
+     * entitlements and silently overwrite it. Same gate, same rationale as the upgradeToPlan test
+     * above.
+     */
+    @Test
+    fun `restorePurchases is blocked and never calls restore when activeOnWebInstead`() = runTest(testDispatcher) {
+        subscriptionRepository.ownershipResult = Result.success(
+            SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
+        )
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.restorePurchases()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, revenueCatClient.restoreCallCount)
+        assertEquals(null, subscriptionRepository.lastUpdatedTierCall)
+        assertEquals(false, viewModel.uiState.value.isRestoring)
+    }
 }
