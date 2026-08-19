@@ -77,14 +77,14 @@ class FakeAuthRepository(
 class FakeSubscriptionRepository : SubscriptionRepository {
     var tierResult: Result<SubscriptionTier> = Result.success(SubscriptionTier.FREE)
     var monthlyUsageResult: Result<Map<String, UsageInfo>> = Result.success(emptyMap())
-    var updateTierResult: Result<Unit> = Result.success(Unit)
     var startDateResult: Result<Long?> = Result.success(null)
     var ownershipResult: Result<SubscriptionOwnership> = Result.success(SubscriptionOwnership(source = null, expiryDate = null))
     var getSubscriptionTierCallCount = 0
 
-    /** Phase 4 (RevenueCat integration): records the last [updateSubscriptionTier] call so
-     * purchase-flow tests can assert the resulting tier was persisted for the right user. */
-    var lastUpdatedTierCall: Pair<String, SubscriptionTier>? = null
+    // No tier-write recorder here any more: `updateSubscriptionTier` was removed from
+    // [SubscriptionRepository] in Phase 1 of the Payment Ecosystem Hardening plan (finding C1).
+    // "A purchase performs no client-side tier write" is now guaranteed by the type -- production
+    // code calling one would not compile -- rather than asserted at runtime.
 
     /** Phase 3: records the period key each [getMonthlyUsage] call was made with, so tests can
      * assert the caller computed the right billing-anniversary key. */
@@ -97,10 +97,6 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     override suspend fun getMonthlyUsage(userId: String, month: String): Result<Map<String, UsageInfo>> {
         lastMonthlyUsagePeriod = month
         return monthlyUsageResult
-    }
-    override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier): Result<Unit> {
-        lastUpdatedTierCall = userId to tier
-        return updateTierResult
     }
     override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
     override suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership> = ownershipResult

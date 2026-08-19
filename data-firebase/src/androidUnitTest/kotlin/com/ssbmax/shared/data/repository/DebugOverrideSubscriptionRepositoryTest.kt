@@ -12,9 +12,12 @@ import kotlin.test.assertEquals
 /**
  * Pins the Phase 3 (KMP-convergence plan) invariants this decorator exists for: overriding tier
  * alone would leave enforced limits untouched (`getMonthlyUsage` bakes tier into each `limit`), so
- * both reads must move together; `updateSubscriptionTier` must always reach the delegate regardless
- * of override (Rule 5 -- the override changes what's *read*, never what's *written*); and toggling
- * the setting must change behavior without reconstructing the repository (it's a Koin single).
+ * both reads must move together; and toggling the setting must change behavior without
+ * reconstructing the repository (it's a Koin single).
+ *
+ * The two `updateSubscriptionTier` pass-through tests that used to live here went away with the
+ * method itself in Phase 1 of the Payment Ecosystem Hardening plan (finding C1) -- there is no
+ * client-side tier write left for this decorator to pass through.
  */
 class DebugOverrideSubscriptionRepositoryTest {
 
@@ -34,13 +37,6 @@ class DebugOverrideSubscriptionRepositoryTest {
         delegate.monthlyUsageResult = Result.success(mapOf("OIR" to UsageInfo(used = 1, limit = 1)))
 
         assertEquals(delegate.monthlyUsageResult, repository.getMonthlyUsage("user-1", "2026-08"))
-    }
-
-    @Test
-    fun `FOLLOW_REAL passes updateSubscriptionTier through unchanged`() = runTest {
-        repository.updateSubscriptionTier("user-1", SubscriptionTier.PREMIUM)
-
-        assertEquals(listOf(SubscriptionTier.PREMIUM), delegate.updateCalls)
     }
 
     @Test
@@ -83,15 +79,6 @@ class DebugOverrideSubscriptionRepositoryTest {
         assertEquals(15, usage.getValue("OIR").limit)
         assertEquals(2, usage.getValue("INTERVIEW").used)
         assertEquals(10, usage.getValue("INTERVIEW").limit)
-    }
-
-    @Test
-    fun `updateSubscriptionTier always reaches the delegate regardless of override`() = runTest {
-        developerSettings.setOverride(SubscriptionOverride.FORCE_PREMIUM)
-
-        repository.updateSubscriptionTier("user-1", SubscriptionTier.FREE)
-
-        assertEquals(listOf(SubscriptionTier.FREE), delegate.updateCalls)
     }
 
     /**

@@ -15,6 +15,11 @@ import kotlin.time.Clock
  * users/{userId}/subscription/usage_{month} for usage counts); the per-test
  * limit table moves to SubscriptionLimits (SubscriptionDtos.kt) instead of
  * being re-inlined here.
+ *
+ * Read-only with respect to `data/subscription`: the old `updateSubscriptionTier` write was
+ * removed in Phase 1 of the Payment Ecosystem Hardening plan (finding C1) and firestore.rules now
+ * denies client writes to that document outright -- see [SubscriptionRepository] for the full
+ * rationale. Only the payment webhooks (Admin SDK) write tier.
  */
 class GitLiveSubscriptionRepository : SubscriptionRepository {
 
@@ -67,24 +72,6 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
             Result.success(usageMap)
         } catch (e: Exception) {
             Result.failure(Exception("Failed to load monthly usage: ${e.message}", e))
-        }
-    }
-
-    override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier): Result<Unit> {
-        return try {
-            val doc = tierDoc(userId)
-            // Field-only update, not a full-document set(): a set() (merge or not) of a
-            // SubscriptionTierDto would serialize startDate/expiryDate/billingCycle at their
-            // defaults (0/null) and silently wipe out whatever a RevenueCat/Razorpay webhook
-            // (Phase 3/4) already wrote for this user.
-            if (doc.get().exists) {
-                doc.update("tier" to tier.name)
-            } else {
-                doc.set(SubscriptionTierDto(tier = tier.name))
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
         }
     }
 

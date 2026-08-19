@@ -1,3 +1,8 @@
+// SRP exemption to the repo's 300-LOC cap (root CLAUDE.md "Quality Limits"): Firestore security
+// rules have no import/include mechanism -- a project deploys exactly one rules file, and it must
+// contain every match block for every collection. Splitting is not possible, only simulated by
+// concatenation at build time, which would put the deployed artifact out of step with the file the
+// firestore-tests/ suite reads. Single responsibility here is "access control for this database".
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -59,8 +64,18 @@ service cloud.firestore {
       // 🔥 THIS IS THE CRITICAL FIX FOR YOUR PROFILE ERROR
       // User data subcollection (for profile, settings, etc.)
       match /data/{document} {
-        // Users can read/write their own data subcollection
-        allow read, write: if isOwner(userId);
+        // Users can read their own data subcollection...
+        allow read: if isOwner(userId);
+
+        // ...but NOT write `subscription`. Rules are ADDITIVE: a request is allowed if any
+        // matching rule allows it, so the more specific subscription-document block below
+        // cannot revoke a write this block already granted -- its `allow write: if false` was
+        // decorative, and until this exclusion landed any signed-in user could grant themselves
+        // PREMIUM with one client-SDK write (finding C1). The exclusion must stay HERE, on the
+        // broad rule. `profile` and every other doc in this subcollection remain client-written
+        // (GitLiveUserProfileRepository) -- do not widen this to lock the whole subcollection.
+        // Pinned by firestore-tests/user_data.rules.test.mjs.
+        allow write: if isOwner(userId) && document != 'subscription';
       }
       
       // Subscription usage tracking (server-side persistence)

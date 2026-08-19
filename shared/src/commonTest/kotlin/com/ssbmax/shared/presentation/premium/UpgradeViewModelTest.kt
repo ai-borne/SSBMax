@@ -102,7 +102,7 @@ class UpgradeViewModelTest {
     }
 
     @Test
-    fun `upgradeToPlan purchases the tier's product and persists the resulting tier`() = runTest(testDispatcher) {
+    fun `upgradeToPlan purchases the tier's product and updates the resulting tier`() = runTest(testDispatcher) {
         revenueCatClient.purchaseResult = Result.success(
             RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("basic", "pro", "premium"))
         )
@@ -113,7 +113,6 @@ class UpgradeViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(SSBMaxProductIds.PREMIUM_MONTHLY, revenueCatClient.lastPurchasedProductId)
-        assertEquals(testUser().id to SubscriptionTier.PREMIUM, subscriptionRepository.lastUpdatedTierCall)
         val state = viewModel.uiState.value
         assertEquals(false, state.isPurchasing)
         assertEquals(null, state.purchaseError)
@@ -132,7 +131,6 @@ class UpgradeViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(false, state.isPurchasing)
         assertEquals("Product not found in current offering", state.purchaseError)
-        assertEquals(null, subscriptionRepository.lastUpdatedTierCall)
     }
 
     @Test
@@ -163,7 +161,7 @@ class UpgradeViewModelTest {
     }
 
     @Test
-    fun `restorePurchases persists the restored tier and clears isRestoring`() = runTest(testDispatcher) {
+    fun `restorePurchases updates the restored tier and clears isRestoring`() = runTest(testDispatcher) {
         revenueCatClient.restoreResult = Result.success(
             RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("basic", "pro"))
         )
@@ -174,7 +172,6 @@ class UpgradeViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(1, revenueCatClient.restoreCallCount)
-        assertEquals(testUser().id to SubscriptionTier.PRO, subscriptionRepository.lastUpdatedTierCall)
         val state = viewModel.uiState.value
         assertEquals(false, state.isRestoring)
         assertEquals(SubscriptionTier.PRO, state.currentTier)
@@ -317,7 +314,6 @@ class UpgradeViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(null, revenueCatClient.lastPurchasedProductId)
-        assertEquals(null, subscriptionRepository.lastUpdatedTierCall)
         assertEquals(false, viewModel.uiState.value.isPurchasing)
     }
 
@@ -339,7 +335,6 @@ class UpgradeViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(0, revenueCatClient.restoreCallCount)
-        assertEquals(null, subscriptionRepository.lastUpdatedTierCall)
         assertEquals(false, viewModel.uiState.value.isRestoring)
     }
 }

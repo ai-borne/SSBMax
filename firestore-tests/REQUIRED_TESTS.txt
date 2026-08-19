@@ -35,5 +35,20 @@ subscription_usage.rules.test.mjs|a client cannot create a usage doc directly, e
 subscription_usage.rules.test.mjs|a client cannot update an existing usage doc, even by exactly one attempt
 subscription_usage.rules.test.mjs|a client cannot delete a usage doc
 subscription_usage.rules.test.mjs|a user can still read their own usage doc (optimistic UX check survives the lockdown)
+# Phase 1 (docs/plans -- Payment Ecosystem Hardening, finding C1). Firestore rules are ADDITIVE:
+# a request is allowed if ANY matching rule allows it, and a more specific `match` block can only
+# grant more, never revoke. So `match /data/subscription`'s `allow write: if false` never denied
+# anything -- the enclosing `match /data/{document}`'s `allow read, write: if isOwner(userId)`
+# already allowed the very same write, and any signed-in user could set tier: 'PREMIUM' on their
+# own subscription doc for free. The fix narrows the BROAD rule (`document != 'subscription'`).
+# These pins exist because the mistake is invisible on inspection -- the deny rule reads correct --
+# and because the opposite over-correction (making all of /data/ read-only) silently breaks every
+# profile save, which is why the profile test is pinned alongside the denials.
+user_data.rules.test.mjs|a client cannot create their own subscription doc, even a well-formed one
+user_data.rules.test.mjs|a client cannot update tier on their own subscription doc (the C1 privilege-escalation exploit)
+user_data.rules.test.mjs|a client cannot update expiryDate on their own subscription doc
+user_data.rules.test.mjs|a user can still read their own subscription doc
+user_data.rules.test.mjs|a user can still write their own profile doc (the narrowing must not break profile saves)
+user_data.rules.test.mjs|another user cannot read or write someone else's subscription doc
 submissions.rules.test.mjs|a first OIR submission under a fresh, session-decoupled id succeeds under the create rule
 submissions.rules.test.mjs|a retake creates a second, distinct OIR submission doc against the same test_sessions doc

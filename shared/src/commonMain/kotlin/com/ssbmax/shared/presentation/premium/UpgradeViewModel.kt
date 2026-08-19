@@ -13,7 +13,6 @@ import com.ssbmax.shared.platform.billing.SSBMaxProductIds
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
 import com.ssbmax.shared.platform.settings.DeveloperSettings
 import com.ssbmax.shared.ui.theme.TierColors
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlin.time.Clock
@@ -207,14 +206,13 @@ class UpgradeViewModel(
         viewModelScope.launch {
             revenueCatClient.purchase(productId)
                 .onSuccess { outcome ->
-                    // Best-effort optimistic write, racing the async RC webhook -- deliberately not
-                    // removed (regresses UX) and not backed by a polling/re-fetch mechanism.
-                    // GitLiveSubscriptionRepository.updateSubscriptionTier is a field-only update
-                    // (only "tier" is written; source/expiryDate/startDate are untouched), so the
-                    // worst case here is a few seconds of stale `source`, never a corrupted doc --
-                    // and with Phase 0's read-time expiryDate derivation live, that stale window
-                    // can't even produce a wrong *effective* tier.
-                    subscriptionRepository.updateSubscriptionTier(userId, outcome.tier)
+                    // Local UiState only -- deliberately NOT persisted. The optimistic
+                    // `updateSubscriptionTier` write that used to sit here was deleted in Phase 1 of
+                    // the Payment Ecosystem Hardening plan (finding C1): it depended on a Firestore
+                    // rule that let any signed-in user write their own subscription doc, i.e. grant
+                    // themselves PREMIUM for free. That rule is closed now, so the write would fail
+                    // anyway. `revenueCatWebhook.js` (Admin SDK) is the writer; this keeps the screen
+                    // feeling instant in the meantime.
                     _uiState.update {
                         it.copy(isPurchasing = false, currentTier = outcome.tier, selectedPlanForUpgrade = null)
                     }
@@ -237,8 +235,8 @@ class UpgradeViewModel(
     }
 
     /** Re-derives entitlements from the store (e.g. after a reinstall, or a purchase made on
-     * another device with the same RevenueCat identity) and persists the resulting tier through
-     * [SubscriptionRepository], same as a successful [upgradeToPlan]. */
+     * another device with the same RevenueCat identity) and reflects the resulting tier in local
+     * state, same as a successful [upgradeToPlan]. */
     fun restorePurchases() {
         val userId = currentUserId
         if (userId == null) {
@@ -256,9 +254,8 @@ class UpgradeViewModel(
         viewModelScope.launch {
             revenueCatClient.restorePurchases()
                 .onSuccess { outcome ->
-                    // Best-effort optimistic write, racing the async RC webhook -- see the identical
-                    // comment in upgradeToPlan for why this is safe to leave as-is.
-                    subscriptionRepository.updateSubscriptionTier(userId, outcome.tier)
+                    // Local UiState only -- see the identical note in upgradeToPlan for why there is
+                    // no client-side tier write here any more.
                     _uiState.update { it.copy(isRestoring = false, currentTier = outcome.tier) }
                 }
                 .onFailure { error ->
@@ -268,74 +265,3 @@ class UpgradeViewModel(
         }
     }
 }
-
-/**
- * UI State for Upgrade Screen
- */
-data class UpgradeUiState(
-    val currentTier: SubscriptionTier = SubscriptionTier.FREE,
-    val availablePlans: List<SubscriptionPlan> = emptyList(),
-    val selectedBillingCycle: BillingCycle = BillingCycle.MONTHLY,
-    val isLoading: Boolean = true,
-    val isPurchasing: Boolean = false,
-    val isRestoring: Boolean = false,
-    val purchaseError: String? = null,
-    val selectedPlanForUpgrade: SubscriptionTier? = null,
-    /** True when the user already has an active tier from a Razorpay/web purchase (Phase 4
-     * amendment, dual-purchase gate) -- [UpgradeScreen] should disable purchase buttons and show
-     * `Res.string.premium_dialog_web_subscription_active` instead of letting them start a second,
-     * separate mobile subscription. See [UpgradeViewModel.upgradeToPlan]. */
-    val activeOnWebInstead: Boolean = false,
-    /** RevenueCat's store-quoted MONTHLY price per tier, keyed by domain tier -- see
-     * [UpgradeViewModel.loadStorePrices]. Empty (falls back to the generated pricing contract)
-     * until the fetch succeeds. */
-    val storeFormattedPrices: Map<SubscriptionTier, String> = emptyMap()
-)
-
-/**
- * Subscription plan details, as displayed on the upgrade screen.
- * (Distinct from `com.ssbmax.shared.domain.model.SubscriptionPlan`, the
- * simpler domain-layer plan shape used elsewhere -- this UI-only shape needs
- * per-billing-cycle pricing + gradient colors the domain model doesn't carry.)
- */
-data class SubscriptionPlan(
-    val tier: SubscriptionTier,
-    val name: String,
-    val tagline: String,
-    val priceMonthly: Double,
-    val priceQuarterly: Double,
-    val priceAnnually: Double,
-    val features: List<PlanFeature>,
-    val isRecommended: Boolean,
-    val gradient: List<Color>
-) {
-    fun getPriceForCycle(cycle: BillingCycle): Double {
-        return when (cycle) {
-            BillingCycle.MONTHLY -> priceMonthly
-            BillingCycle.QUARTERLY -> priceQuarterly
-            BillingCycle.ANNUALLY -> priceAnnually
-        }
-    }
-
-    fun getSavingsForCycle(cycle: BillingCycle): String? {
-        return when (cycle) {
-            BillingCycle.MONTHLY -> null
-            BillingCycle.QUARTERLY -> {
-                val savings = (priceMonthly * 3) - priceQuarterly
-                if (savings > 0) "Save ₹${savings.toInt()}" else null
-            }
-            BillingCycle.ANNUALLY -> {
-                val savings = (priceMonthly * 12) - priceAnnually
-                if (savings > 0) "Save ₹${savings.toInt()}" else null
-            }
-        }
-    }
-}
-
-/**
- * Individual feature in a plan
- */
-data class PlanFeature(
-    val description: String,
-    val isIncluded: Boolean
-)

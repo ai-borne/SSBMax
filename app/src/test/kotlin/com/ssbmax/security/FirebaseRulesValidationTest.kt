@@ -102,14 +102,26 @@ class FirebaseRulesValidationTest {
             userRules.contains("allow read: if isOwner(userId)"))
     }
 
+    /**
+     * Phase 1 (Payment Ecosystem Hardening plan, finding C1): this used to assert
+     * `allow read, write: if isOwner(userId)` -- i.e. it pinned the vulnerable shape. Firestore
+     * rules are ADDITIVE, so that broad grant silently overrode the `allow write: if false` on the
+     * subscription document further down, letting any signed-in user grant themselves PREMIUM.
+     * The exclusion has to live on THIS broad rule, because a more specific block can only ever
+     * grant more, never revoke. Read stays owner-wide, and every other document here (notably
+     * `profile`, written by GitLiveUserProfileRepository) stays client-writable -- locking the
+     * whole subcollection down would break profile saves app-wide.
+     */
     @Test
-    fun `users data subcollection is protected`() {
+    fun `users data subcollection is writable by its owner except the subscription document`() {
         val content = getRulesContent()
         val dataSubcollection = content.substringAfter("match /data/{document}")
             .substringBefore("}")
 
-        assertTrue("Data subcollection should require ownership",
-            dataSubcollection.contains("allow read, write: if isOwner(userId)"))
+        assertTrue("Data subcollection should require ownership for read",
+            dataSubcollection.contains("allow read: if isOwner(userId)"))
+        assertTrue("Data subcollection write should require ownership and exclude subscription",
+            dataSubcollection.contains("allow write: if isOwner(userId) && document != 'subscription'"))
     }
 
     @Test
@@ -143,7 +155,7 @@ class FirebaseRulesValidationTest {
     fun `usage docs are readable by their owner`() {
         val content = getRulesContent()
         val usageRules = content.substringAfter("match /subscription/{document}")
-            .substringBefore("match /data/subscription")
+            .substringBefore("// User subscription data")
 
         assertTrue("Users should read own usage",
             usageRules.contains("allow read: if isOwner(userId)"))
@@ -159,7 +171,7 @@ class FirebaseRulesValidationTest {
     fun `usage docs cannot be written by a client, of any shape`() {
         val content = getRulesContent()
         val usageRules = content.substringAfter("match /subscription/{document}")
-            .substringBefore("match /data/subscription")
+            .substringBefore("// User subscription data")
 
         assertTrue("Clients cannot write usage docs",
             usageRules.contains("allow write: if false"))
@@ -170,7 +182,8 @@ class FirebaseRulesValidationTest {
     @Test
     fun `subscription data is read-only from client`() {
         val content = getRulesContent()
-        val subscriptionRules = content.substringAfter("match /data/subscription")
+        val subscriptionRules = content.substringAfter("// User subscription data")
+            .substringAfter("match /data/subscription")
             .substringBefore("}")
 
         assertTrue("Clients can read subscription",

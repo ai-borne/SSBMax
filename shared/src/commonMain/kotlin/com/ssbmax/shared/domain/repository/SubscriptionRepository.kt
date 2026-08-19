@@ -23,13 +23,14 @@ interface SubscriptionRepository {
      */
     suspend fun getMonthlyUsage(userId: String, month: String): Result<Map<String, UsageInfo>>
 
-    /**
-     * Update the user's subscription tier
-     * @param userId The user ID
-     * @param tier The new subscription tier
-     * @return Result indicating success or failure
-     */
-    suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier): Result<Unit>
+    // There is deliberately NO client-side tier write here. `updateSubscriptionTier` was removed in
+    // Phase 1 of the Payment Ecosystem Hardening plan (finding C1): it depended on a Firestore rule
+    // that let any signed-in user write their own `users/{uid}/data/subscription` doc -- i.e. grant
+    // themselves PREMIUM for free. The rule is now closed (firestore.rules, pinned by
+    // firestore-tests/user_data.rules.test.mjs), so any such write would fail at runtime anyway.
+    // Tier is written by the payment webhooks ONLY (functions/src/webhooks.js for Razorpay,
+    // functions/src/revenueCatWebhook.js for RevenueCat), both via the Admin SDK. If a UI needs to
+    // feel instant after a purchase, update its own local UiState -- do not reintroduce a write path.
 
     /**
      * The user's subscription start date (epoch millis), if known. Null for FREE tier (never

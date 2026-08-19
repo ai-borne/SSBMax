@@ -19,17 +19,11 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     var monthlyUsageResult: Result<Map<String, UsageInfo>> = Result.success(emptyMap())
     var startDateResult: Result<Long?> = Result.success(null)
     var ownershipResult: Result<SubscriptionOwnership> = Result.success(SubscriptionOwnership(source = null, expiryDate = null))
-    val updateCalls = mutableListOf<SubscriptionTier>()
 
     override suspend fun getSubscriptionTier(userId: String): Result<SubscriptionTier> = tierResult
 
     override suspend fun getMonthlyUsage(userId: String, month: String): Result<Map<String, UsageInfo>> =
         monthlyUsageResult
-
-    override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier): Result<Unit> {
-        updateCalls.add(tier)
-        return Result.success(Unit)
-    }
 
     override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
 
