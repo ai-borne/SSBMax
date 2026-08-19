@@ -185,7 +185,14 @@ async function evaluateInterviewResponseCore(db, uid, responseId, sessionId, gen
   const prompt = buildInterviewPrompt(questionText, candidateText, expectedOLQs, responseData.responseMode || 'VOICE_BASED');
 
   const result = await withRetry({
-    call: async () => buildInterviewResult(await generateContentFn(prompt)),
+    call: async () =>
+      buildInterviewResult(
+        await generateContentFn(prompt, undefined, undefined, {
+          testType: INTERVIEW_TEST_TYPE,
+          submissionId: sessionId,
+          callTag: responseId
+        })
+      ),
     isAcceptable: (r) => r !== null && r !== undefined,
     fillDefaults: (r) => r,
     ...(retryDelayFn ? { delayFn: retryDelayFn } : {})

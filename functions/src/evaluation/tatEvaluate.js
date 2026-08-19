@@ -115,7 +115,7 @@ async function fetchImageBytes(imageUrl) {
  * `MIN_STORY_THRESHOLD`, matching `TATAnalysisOrchestrator.kt::analyzeStory`'s
  * "skip failed stories, keep going" behavior).
  */
-async function analyzeStory(story, storyIndex, totalStories, imageMap) {
+async function analyzeStory(story, storyIndex, totalStories, imageMap, submissionId) {
   const image = imageMap.get(story.questionId);
   const imageBytes = image ? await fetchImageBytes(image.imageUrl) : Buffer.alloc(0);
   const imageContext = image ? image.imageContext : {};
@@ -133,7 +133,15 @@ async function analyzeStory(story, storyIndex, totalStories, imageMap) {
         storyText.length,
         imageGenderTag
       );
-      return finalizeOlqScores(parseEvaluationResponse(await generateContent(prompt, imageBytes)));
+      return finalizeOlqScores(
+        parseEvaluationResponse(
+          await generateContent(prompt, imageBytes, undefined, {
+            testType: TAT_TEST_TYPE,
+            submissionId,
+            callTag: `story_${storyIndex}`
+          })
+        )
+      );
     },
     isAcceptable: (r) => r !== null && r !== undefined,
     fillDefaults: (r) => r
@@ -252,7 +260,7 @@ exports.evaluateTAT = functions.runWith(runtimeOptions).https.onCall(async (data
 
   const assessments = (
     await mapWithConcurrency(stories, STORY_CONCURRENCY, (story, index) =>
-      analyzeStory(story, index, stories.length, imageMap)
+      analyzeStory(story, index, stories.length, imageMap, submissionId)
     )
   ).filter((a) => a !== null && a !== undefined);
 
@@ -263,7 +271,16 @@ exports.evaluateTAT = functions.runWith(runtimeOptions).https.onCall(async (data
 
   const failedCount = stories.length - assessments.length;
   const result = await withRetry({
-    call: async () => buildTATResult(await generateContent(buildTATSynthesisPrompt(assessments)), assessments, failedCount),
+    call: async () =>
+      buildTATResult(
+        await generateContent(buildTATSynthesisPrompt(assessments), undefined, undefined, {
+          testType: TAT_TEST_TYPE,
+          submissionId,
+          callTag: 'synthesis'
+        }),
+        assessments,
+        failedCount
+      ),
     isAcceptable: (r) => r !== null && r !== undefined,
     fillDefaults: (r) => r
   });

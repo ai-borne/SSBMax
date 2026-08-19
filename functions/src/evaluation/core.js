@@ -128,7 +128,8 @@ async function runEvaluation({ firestoreDb, generateContent, uid, submissionId, 
   await submissionRef.update({ 'data.analysisStatus': 'ANALYZING' });
 
   const result = await withRetry({
-    call: async () => parseAndValidate(await generateContent(buildPrompt(submission))),
+    call: async () =>
+      parseAndValidate(await generateContent(buildPrompt(submission), undefined, undefined, { testType, submissionId })),
     isAcceptable: (r) => r !== null && r !== undefined,
     fillDefaults: (r) => r,
     ...(retryDelayFn ? { delayFn: retryDelayFn } : {})

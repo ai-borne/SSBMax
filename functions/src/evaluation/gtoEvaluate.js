@@ -134,7 +134,13 @@ async function evaluateGTOSubmission(db, uid, submissionId, generateContentFn = 
   await submissionRef.update({ status: 'ANALYZING' });
 
   const result = await withRetry({
-    call: async () => buildGTOResult(await generateContentFn(config.buildPrompt(submission))),
+    call: async () =>
+      buildGTOResult(
+        await generateContentFn(config.buildPrompt(submission), undefined, undefined, {
+          testType: submission.testType,
+          submissionId
+        })
+      ),
     isAcceptable: (r) => r !== null && r !== undefined,
     fillDefaults: (r) => r,
     ...(retryDelayFn ? { delayFn: retryDelayFn } : {})

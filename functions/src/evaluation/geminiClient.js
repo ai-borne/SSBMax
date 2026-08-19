@@ -20,6 +20,7 @@
  */
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const functions = require('firebase-functions');
 
 const MODEL_NAME = 'gemini-2.5-flash';
 const DEFAULT_TEMPERATURE = 0.0;
@@ -43,8 +44,11 @@ function getGenAI() {
  * @param imageBytes optional `Buffer`/`Uint8Array` -- when present, attached as an
  *   inline image part alongside the text
  * @param imageMimeType defaults to `image/jpeg`, matching the KMP client's default
+ * @param meta optional `{ testType, submissionId, callTag }` -- purely for cost
+ *   observability (see `logGeminiUsage`). Never affects the Gemini call itself, so
+ *   every existing caller that omits it keeps working unchanged.
  */
-async function generateContent(prompt, imageBytes, imageMimeType = DEFAULT_IMAGE_MIME_TYPE) {
+async function generateContent(prompt, imageBytes, imageMimeType = DEFAULT_IMAGE_MIME_TYPE, meta) {
   const genAI = getGenAI();
   const model = genAI.getGenerativeModel({
     model: MODEL_NAME,
@@ -63,11 +67,57 @@ async function generateContent(prompt, imageBytes, imageMimeType = DEFAULT_IMAGE
     });
   }
   const result = await model.generateContent(parts);
+  logGeminiUsage(result.response.usageMetadata, meta);
   const text = result.response.text();
   if (!text) {
     throw new Error('No response text from Gemini');
   }
   return text;
+}
+
+// gemini-2.5-flash rate card, USD per 1M tokens (text). APPROXIMATE -- verify against
+// https://ai.google.dev/gemini-api/docs/pricing before trusting the cost figures in
+// reports; this is a rough dashboard estimate, not a billing-accurate figure (actual
+// Gemini billing also varies by cached-vs-uncached input and any image/audio token
+// surcharge, neither of which this estimate accounts for).
+const USD_PER_1M_INPUT_TOKENS = 0.3;
+const USD_PER_1M_OUTPUT_TOKENS = 2.5;
+const INR_PER_USD = 88; // approximate -- update periodically, or drop cost fields and compute in a sheet from raw tokens instead
+
+function estimateCostInr(promptTokenCount, candidatesTokenCount) {
+  const usd =
+    (promptTokenCount / 1_000_000) * USD_PER_1M_INPUT_TOKENS +
+    (candidatesTokenCount / 1_000_000) * USD_PER_1M_OUTPUT_TOKENS;
+  return Math.round(usd * INR_PER_USD * 10000) / 10000;
+}
+
+/**
+ * Structured Cloud Logging entry per Gemini call, tagged with `testType`/`submissionId`
+ * so cost-per-test-type can be queried later without any extra Firestore writes (see
+ * `docs/plans/...` cost-guardrails discussion -- there was previously no per-call
+ * token/cost record anywhere, only the aggregate GCP bill). `jsonPayload.event ==
+ * 'gemini_usage'` is the filter to use in Logs Explorer / a log-based metric.
+ * Never throws -- a logging failure must not fail the evaluation it's observing.
+ */
+function logGeminiUsage(usageMetadata, meta = {}) {
+  try {
+    const promptTokenCount = usageMetadata?.promptTokenCount || 0;
+    const candidatesTokenCount = usageMetadata?.candidatesTokenCount || 0;
+    const totalTokenCount = usageMetadata?.totalTokenCount || promptTokenCount + candidatesTokenCount;
+    functions.logger.info('gemini_usage', {
+      event: 'gemini_usage',
+      model: MODEL_NAME,
+      testType: meta.testType || null,
+      submissionId: meta.submissionId || null,
+      callTag: meta.callTag || null,
+      promptTokenCount,
+      candidatesTokenCount,
+      totalTokenCount,
+      estimatedCostInr: estimateCostInr(promptTokenCount, candidatesTokenCount)
+    });
+  } catch (e) {
+    console.warn(`gemini_usage logging failed (non-fatal): ${e.message}`);
+  }
 }
 
 module.exports = {

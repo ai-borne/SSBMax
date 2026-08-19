@@ -75,10 +75,13 @@ Respond ONLY with a JSON array, no markdown, each item shaped exactly as:
 Valid OLQ_ENUM_NAME values: ${Array.from(OLQ_NAMES).join(', ')}`;
 }
 
-async function generateAIQuestions(piqContext, count, generateContentFn) {
+async function generateAIQuestions(piqContext, count, generateContentFn, piqSnapshotId) {
   if (!piqContext || count <= 0) return [];
   try {
-    const raw = await generateContentFn(buildQuestionGenerationPrompt(piqContext, count));
+    const raw = await generateContentFn(buildQuestionGenerationPrompt(piqContext, count), undefined, undefined, {
+      testType: 'INTERVIEW_QUESTION_GEN',
+      submissionId: piqSnapshotId
+    });
     const cleaned = raw
       .replace(/```json/gi, '')
       .replace(/```/g, '')
@@ -134,7 +137,7 @@ async function generateQuestions(db, piqSnapshotId, count, piqContext, deps = {}
 
   if (all.length < count) {
     const missing = count - all.length;
-    const aiQuestions = await generateAIQuestions(piqContext, missing, generateContentFn);
+    const aiQuestions = await generateAIQuestions(piqContext, missing, generateContentFn, piqSnapshotId);
     if (aiQuestions.length > 0) {
       await cachePIQQuestionsFn(db, piqSnapshotId, aiQuestions);
     }

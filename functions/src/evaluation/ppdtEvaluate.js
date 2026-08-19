@@ -198,7 +198,9 @@ exports.evaluatePPDT = functions.runWith(runtimeOptions).https.onCall(async (dat
   const result = await withRetry({
     call: async () => {
       const prompt = generatePPDTMultimodalPrompt(story, imageContext);
-      return buildPPDTResult(await generateContent(prompt, imageBytes));
+      return buildPPDTResult(
+        await generateContent(prompt, imageBytes, undefined, { testType: PPDT_TEST_TYPE, submissionId })
+      );
     },
     isAcceptable: (r) => r !== null && r !== undefined,
     fillDefaults: (r) => r
