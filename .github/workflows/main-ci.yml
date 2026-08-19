@@ -6,7 +6,7 @@ name: SSBMax CI
 'on':
   pull_request:
   push:
-    branches: [ main, develop, 'feature/*', 'feature/**', 'fix/*', 'fix/**', 'tech-debt/*', 'tech-debt/**', PsyTests ]
+    branches: [ main, develop, 'feature/*', 'feature/**', 'fix/*', 'fix/**', 'tech-debt/*', 'tech-debt/**', 'chore/*', 'chore/**', 'ci/*', 'ci/**', PsyTests ]
   merge_group:
   workflow_dispatch:
 
@@ -204,23 +204,34 @@ jobs:
   # assembleSharedKitXCFramework is deliberately NOT run here (release
   # framework assembly is a release-pipeline concern, not a PR gate).
   #
-  # Xcode version pinned: `shared`'s cocoapods integration (Firebase pods,
-  # needed because GitLive's Kotlin/Native Firebase artifacts are published
-  # as CocoaPods-shaped cinterops -- SPM's Firebase integration never
-  # produces the .framework bundles they link against) requires a Kotlin
-  # Native compiler whose bundled Clang can parse the target SDK's headers.
+  # This job is the ONLY thing that compiles Kotlin for Apple targets. It is
+  # therefore the only gate that can catch a klib ABI mismatch, a Kotlin/Native
+  # source rejection (e.g. commas in backticked test names), or a missing
+  # linker search path. Keep the device-target compile below alongside the
+  # simulator one: an iosArm64-only break is otherwise invisible.
   #
-  # Kotlin 2.2.20 added Xcode 26 support (see the 2.2.20 release notes), so
-  # this job uses Xcode 26.2. That is the floor for the Swift package graph
-  # too: the resolved firebase-ios-sdk pulls swift-protobuf 1.38.x, whose
-  # Package.swift requires Swift tools 6.2.0 -- Xcode 16.x ships Swift 6.0
-  # and fails xcodebuild with "using Swift tools version 6.2.0 but the
-  # installed version is 6.0.0". Do NOT drop back to Xcode 16.x without
-  # also pinning swift-protobuf to a Swift-6.0-compatible version.
+  # Xcode version pinned: the Kotlin/Native compiler's bundled Clang has to be
+  # able to parse the target SDK's headers, and Kotlin 2.2.20 was the release
+  # that added Xcode 26 support (retained in 2.3.20), so this job uses Xcode
+  # 26.2. That is the floor for the Swift package graph too: the resolved
+  # firebase-ios-sdk pulls swift-protobuf 1.38.x, whose Package.swift requires
+  # Swift tools 6.2.0 -- Xcode 16.x ships Swift 6.0 and fails xcodebuild with
+  # "using Swift tools version 6.2.0 but the installed version is 6.0.0". Do
+  # NOT drop back to Xcode 16.x without also pinning swift-protobuf to a
+  # Swift-6.0-compatible version.
+  # (This block used to describe a CocoaPods/Firebase-pods integration. That is
+  # long gone -- iOS dependency management is SPM only, see root CLAUDE.md.)
   ios-tests:
     name: iOS (shared tests + Xcode build)
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 45
+    # Overrides the workflow-level GRADLE_OPTS, which pins -Xmx4g. The
+    # Kotlin/Native compiler runs inside the Gradle daemon and needs more than
+    # that to link Compose Multiplatform + skiko + GitLive + RevenueCat; 4g
+    # dies with "e: Compilation failed: Java heap space". Keep this in step with
+    # org.gradle.jvmargs in gradle.properties.
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.jvmargs=-Xmx8g"
     steps:
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -265,7 +276,18 @@ jobs:
         if: ${{ env.IOS_GOOGLE_SERVICES_PLIST != '' }}
         run: printf '%s' "$IOS_GOOGLE_SERVICES_PLIST" > iosApp/iosApp/GoogleService-Info.plist
 
+      - name: Compile shared for the iOS device target
+        # iosSimulatorArm64Test below never touches iosArm64, so a
+        # device-only compile break would ship unnoticed.
+        run: |
+          ./gradlew :shared:compileKotlinIosArm64 \
+            --build-cache \
+            --stacktrace
+
       - name: Run shared's Kotlin/Native tests
+        # Implies :shared:linkDebugTestIosSimulatorArm64 -- the link step is
+        # where missing frameworks and linker search paths surface, and it is
+        # the reason this step must never be reduced to a compile-only check.
         run: |
           ./gradlew :shared:iosSimulatorArm64Test \
             --build-cache \
@@ -525,7 +547,11 @@ jobs:
     name: CI Success
     runs-on: ubuntu-latest
     if: always()
-    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, build, firestore-rules, contracts, functions, validate-security-script, web-ci]
+    # ios-tests belongs here. It was omitted, so the aggregate gate reported
+    # success while the iOS job was red -- the second half of why a broken iOS
+    # target survived five commits (the first half being the machine-specific
+    # org.gradle.java.home in gradle.properties, which failed every job).
+    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, ios-tests, build, firestore-rules, contracts, functions, validate-security-script, web-ci]
     steps:
       - name: Verify all jobs succeeded
         run: |
@@ -534,6 +560,7 @@ jobs:
           echo "lint:                    ${{ needs.lint.result }}"
           echo "detekt:                  ${{ needs.detekt.result }}"
           echo "unit-tests:              ${{ needs.unit-tests.result }}"
+          echo "ios-tests:               ${{ needs.ios-tests.result }}"
           echo "build:                   ${{ needs.build.result }}"
           echo "firestore-rules:         ${{ needs.firestore-rules.result }}"
           echo "contracts:               ${{ needs.contracts.result }}"
@@ -545,6 +572,7 @@ jobs:
              [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.detekt.result }}" != "success" ] || \
              [ "${{ needs.unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.ios-tests.result }}" != "success" ] || \
              [ "${{ needs.build.result }}" != "success" ] || \
              [ "${{ needs.firestore-rules.result }}" != "success" ] || \
              [ "${{ needs.contracts.result }}" != "success" ] || \
