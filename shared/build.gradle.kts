@@ -57,11 +57,21 @@ kotlin {
     // only surfaced now because nothing had ever linked the iOS test binary.
     // NOT a CocoaPods reintroduction: the Swift objects themselves ship inside the
     // klib, only the platform Swift runtime shims need locating.
-    val swiftRuntimeSearchPath: (String) -> String = { sdk ->
-        val developerDir = providers.exec {
-            commandLine("xcode-select", "-p")
-        }.standardOutput.asText.get().trim()
-        "-L$developerDir/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$sdk"
+    // Host-guarded: `xcode-select` only exists on macOS, and Apple targets can only
+    // be built there anyway. Without this guard the exec runs at CONFIGURATION time
+    // on every platform and fails the whole Gradle build on Linux CI with
+    // `java.io.IOException: Cannot run program "xcode-select"` -- which takes out
+    // :lint, :detekt and :unit-tests too, none of which touch iOS.
+    val isMacOsHost = System.getProperty("os.name").startsWith("Mac")
+    val swiftRuntimeSearchPath: (String) -> List<String> = { sdk ->
+        if (!isMacOsHost) {
+            emptyList()
+        } else {
+            val developerDir = providers.exec {
+                commandLine("xcode-select", "-p")
+            }.standardOutput.asText.get().trim()
+            listOf("-L$developerDir/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$sdk")
+        }
     }
 
     iosArm64 {
