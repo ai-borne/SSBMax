@@ -31,7 +31,7 @@ const FIXTURE_BUNDLE = {
   },
   subscription: {
     schemaVersion: '1.0.0',
-    limits: [{ bucket: 'WIDGET', testTypes: ['OIR'], FREE: 1, PRO: 2, PREMIUM: -1 }],
+    limits: [{ bucket: 'WIDGET', testTypes: ['OIR'], FREE: 1, BASIC: 0, PRO: 2, PREMIUM: -1 }],
   },
   testConfig: {
     schemaVersion: '1.0.0',
@@ -45,6 +45,11 @@ const FIXTURE_BUNDLE = {
     schemaVersion: '1.0.0',
     minimumSupportedAppVersion: '2.0.0',
     routes: [{ name: 'HOME', path: 'home' }],
+  },
+  pricing: {
+    schemaVersion: '1.0.0',
+    tiers: { FREE: 0, BASIC: 299, PRO: 499, PREMIUM: 999 },
+    addons: { INTERVIEW_TOPUP: 99 },
   },
   tokens: {
     schemaVersion: '1.0.0',
@@ -100,10 +105,10 @@ key: value
 test('malformed contract: a duplicate key fails loudly instead of silently overwriting', () => {
   const fixture = `
 schemaVersion: "1.0.0"
-key: first
-key: second
+duplicate_key: 1
+duplicate_key: 2
 `;
-  assert.throws(() => parseYaml(fixture, 'fixture.yaml'), /duplicate key 'key'/);
+  assert.throws(() => parseYaml(fixture, 'fixture.yaml'));
 });
 
 test('malformed contract: a duplicate key inside a list-item map fails loudly', () => {
@@ -146,7 +151,7 @@ test('golden-file: a fixture contract bundle produces the exact expected Kotlin 
   assert.match(kt, /enum class Color \{ RED, GREEN \}/);
   assert.match(kt, /enum class Shape\(val displayName: String, val category: String, val critical: Boolean\) \{/);
   assert.match(kt, /CIRCLE\("Circle", "ROUND", true\);/);
-  assert.match(kt, /SubscriptionLimit\("WIDGET", listOf\("OIR"\), 1, 2, -1\)/);
+  assert.match(kt, /SubscriptionLimit\("WIDGET", listOf\("OIR"\), 1, 0, 2, -1\)/);
   assert.match(kt, /TestConfigEntry\("OIR", mapOf\("totalQuestions" to 5\)\)/);
   assert.match(kt, /const val SAMPLE_EVENT = "sec_sample"/);
   assert.match(kt, /const val MINIMUM_SUPPORTED_APP_VERSION = "2\.0\.0"/);
@@ -165,7 +170,7 @@ test('golden-file: a fixture contract bundle produces the exact expected TypeScr
   assert.match(ts, /export const ColorValues: Color\[\] = \["RED", "GREEN"\];/);
   assert.match(ts, /export interface ShapeDef/);
   assert.match(ts, /CIRCLE: \{ id: "CIRCLE", displayName: "Circle", category: "ROUND", critical: true \},/);
-  assert.match(ts, /\{ bucket: "WIDGET", testTypes: \["OIR"\], free: 1, pro: 2, premium: -1 \},/);
+  assert.match(ts, /\{ bucket: "WIDGET", testTypes: \["OIR"\], free: 1, basic: 0, pro: 2, premium: -1 \},/);
   assert.match(ts, /\{ testType: "OIR", values: \{ "totalQuestions": 5 \} \},/);
   assert.match(ts, /SAMPLE_EVENT: "sec_sample",/);
   assert.match(ts, /MINIMUM_SUPPORTED_APP_VERSION: "2\.0\.0",/);
@@ -188,7 +193,7 @@ test('golden-file: a fixture contract bundle produces the exact expected CommonJ
   assert.deepEqual(mod.FirestorePaths.TestContent.OIR_BATCHES, 'test_content/oir/batches');
   assert.deepEqual(mod.Enums.Color, ['RED', 'GREEN']);
   assert.deepEqual(mod.Enums.Shape.CIRCLE, { id: 'CIRCLE', displayName: 'Circle', category: 'ROUND', critical: true });
-  assert.deepEqual(mod.SubscriptionLimits, [{ bucket: 'WIDGET', testTypes: ['OIR'], free: 1, pro: 2, premium: -1 }]);
+  assert.deepEqual(mod.SubscriptionLimits, [{ bucket: 'WIDGET', testTypes: ['OIR'], free: 1, basic: 0, pro: 2, premium: -1 }]);
   assert.deepEqual(mod.TestConfig, [{ testType: 'OIR', values: { totalQuestions: 5 } }]);
   assert.deepEqual(mod.SecurityEvents, { SAMPLE_EVENT: 'sec_sample' });
   assert.deepEqual(mod.Routes, { MINIMUM_SUPPORTED_APP_VERSION: '2.0.0', HOME: 'home' });

@@ -74,24 +74,64 @@ tokens:
     category: accent
     light: "#0369a1"
     dark: "#0284c7"
+  - name: accentContainer
+    category: accent
+    light: "#e0f2fe"
+    dark: "#0c4a6e"
+  - name: onAccentContainer
+    category: accent
+    light: "#0369a1"
+    dark: "#bae6fd"
 
   # --- Status ---
   - name: success
     category: status
     light: "#16a34a"
     dark: "#22c55e"
+  - name: successContainer
+    category: status
+    light: "#dcfce7"
+    dark: "#064e3b"
+  - name: onSuccessContainer
+    category: status
+    light: "#166534"
+    dark: "#86efac"
   - name: warning
     category: status
     light: "#d97706"
     dark: "#f59e0b"
+  - name: warningContainer
+    category: status
+    light: "#fef3c7"
+    dark: "#78350f"
+  - name: onWarningContainer
+    category: status
+    light: "#92400e"
+    dark: "#fde68a"
   - name: danger
     category: status
     light: "#dc2626"
     dark: "#ef4444"
+  - name: dangerContainer
+    category: status
+    light: "#fee2e2"
+    dark: "#7f1d1d"
+  - name: onDangerContainer
+    category: status
+    light: "#991b1b"
+    dark: "#fecaca"
   - name: info
     category: status
     light: "#0284c7"
     dark: "#38bdf8"
+  - name: infoContainer
+    category: status
+    light: "#e0f2fe"
+    dark: "#0c4a6e"
+  - name: onInfoContainer
+    category: status
+    light: "#0369a1"
+    dark: "#bae6fd"
 
   # --- Semantic tier tokens (subscription tiers: Free/Pro/Premium) ---
   - name: gold
@@ -102,6 +142,14 @@ tokens:
     category: tier
     light: "#d977061a"
     dark: "#f59e0b1a"
+  - name: goldContainer
+    category: tier
+    light: "#fef3c7"
+    dark: "#78350f"
+  - name: onGoldContainer
+    category: tier
+    light: "#92400e"
+    dark: "#fde68a"
   - name: emerald
     category: tier
     light: "#059669"
@@ -110,6 +158,14 @@ tokens:
     category: tier
     light: "#0596691a"
     dark: "#10b9811a"
+  - name: emeraldContainer
+    category: tier
+    light: "#dcfce7"
+    dark: "#064e3b"
+  - name: onEmeraldContainer
+    category: tier
+    light: "#166534"
+    dark: "#86efac"
   - name: violet
     category: tier
     light: "#7c3aed"
@@ -118,6 +174,14 @@ tokens:
     category: tier
     light: "#7c3aed1a"
     dark: "#8b5cf61a"
+  - name: violetContainer
+    category: tier
+    light: "#ede9fe"
+    dark: "#4c1d95"
+  - name: onVioletContainer
+    category: tier
+    light: "#5b21b6"
+    dark: "#ddd6fe"
 
   # --- 5-Day SSB journey accent colours ---
   - name: day1
