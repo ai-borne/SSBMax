@@ -189,6 +189,7 @@ export const App: FC = () => {
           {activeTab === 'subscription' && (
             <SubscriptionPage
               userId={authService.getCurrentUser()?.uid}
+              isPaidMember={isPaidMember}
               createOrderFn={paymentService.createOrder}
               onPaymentSuccess={() => setActiveTab('tests')}
             />

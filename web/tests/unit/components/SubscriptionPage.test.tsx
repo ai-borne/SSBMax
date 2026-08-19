@@ -103,6 +103,27 @@ describe('SubscriptionPage Component', () => {
     expect(screen.getByTestId('upgrade-pro-button')).not.toBeDisabled();
   });
 
+  /**
+   * Phase E (dual-platform billing hardening plan): this page used to read `usePaymentViewModel`'s
+   * own session-local `isPaidMember` (only ever true right after a checkout success in the same
+   * session) instead of `App.tsx`'s real Firestore-backed tier -- so a hard reload of a genuinely
+   * paid user showed the unpaid state until they purchased again in that session. The real value
+   * must now come from the `isPaidMember` prop, regardless of `usePaymentViewModel`'s own state.
+   */
+  it('shows Membership Active and disables upgrade buttons on first render when isPaidMember prop is true', () => {
+    render(<SubscriptionPage isPaidMember={true} />);
+
+    expect(screen.getByTestId('subscription-success-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('upgrade-pro-button')).toBeDisabled();
+  });
+
+  it('does not show Membership Active when isPaidMember prop is false, even with no other state', () => {
+    render(<SubscriptionPage isPaidMember={false} />);
+
+    expect(screen.queryByTestId('subscription-success-banner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('upgrade-pro-button')).not.toBeDisabled();
+  });
+
   it('applies Level 2 elevation styling to free-tier-card and pro-tier-card', () => {
     render(<SubscriptionPage />);
 

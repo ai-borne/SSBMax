@@ -1,24 +1,30 @@
 import { FC } from 'react';
 import { Check, ShieldCheck, Zap, AlertCircle, Award, Info } from 'lucide-react';
 import { strings } from '../../constants/strings';
-import { usePaymentViewModel, PaymentState } from '../../viewmodels/PaymentViewModel';
+import { usePaymentViewModel } from '../../viewmodels/PaymentViewModel';
 import { useSubscriptionOwnership, isActiveMobileSubscription } from '../../viewmodels/useSubscriptionOwnership';
 import { SUBSCRIPTION_TIERS } from '../../constants/ssbSelectionProcess';
 
 export interface SubscriptionPageProps {
   userId?: string;
-  initialState?: Partial<PaymentState>;
+  /** Real Firestore-backed tier, computed once in `App.tsx` (`isPaidMember = realTier !== 'FREE'`)
+   * and passed down -- NOT `usePaymentViewModel`'s own `isPaidMember`, which is session-local and
+   * only ever flips true immediately after a successful checkout in this same session, defaulting
+   * false otherwise. Using the real value means "Membership Active" / disabled buttons show
+   * correctly on a hard reload, not just right after a purchase. */
+  isPaidMember?: boolean;
   onPaymentSuccess?: () => void;
   createOrderFn?: (planId: string) => Promise<{ orderId: string; amount: number; currency: string; keyId: string }>;
 }
 
 export const SubscriptionPage: FC<SubscriptionPageProps> = ({
   userId,
+  isPaidMember = false,
   onPaymentSuccess,
   createOrderFn
 }) => {
   const paymentVM = usePaymentViewModel(createOrderFn);
-  const { status, errorMessage, isPaidMember, initiatePayment } = paymentVM;
+  const { status, errorMessage, initiatePayment } = paymentVM;
   const isLoading = status === 'creating_order' || status === 'checkout_open' || status === 'verifying';
 
   // Phase 4 amendment (dual-purchase gate): neither payment webhook reconciles against what the
