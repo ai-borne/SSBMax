@@ -10,7 +10,12 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { reconcileStaleSubscriptions, shouldReconcile } = require('../src/subscriptions/scheduledSubscriptionReconciliation');
+const {
+  reconcileStaleSubscriptions,
+  shouldReconcile,
+  BATCH_SIZE,
+  MAX_BATCHES_PER_RUN
+} = require('../src/subscriptions/scheduledSubscriptionReconciliation');
 
 function applyWhere(docs, field, op, value) {
   return docs.filter(([, data]) => {
@@ -39,15 +44,23 @@ function makeFakeDb(seedDocs) {
     collectionGroup(name) {
       if (name !== 'data') throw new Error(`unexpected collectionGroup: ${name}`);
       const filters = [];
+      let limitCount = null;
       const query = {
         where(field, op, value) {
           filters.push([field, op, value]);
+          return query;
+        },
+        limit(n) {
+          limitCount = n;
           return query;
         },
         async get() {
           let matches = Array.from(docs.entries());
           for (const [field, op, value] of filters) {
             matches = applyWhere(matches, field, op, value);
+          }
+          if (limitCount != null) {
+            matches = matches.slice(0, limitCount);
           }
           return {
             docs: matches.map(([id, data]) => ({ id, data: () => data, ref: docRef(id) }))
@@ -149,4 +162,69 @@ test('reconcileStaleSubscriptions sweeps multiple stale docs across different us
   assert.equal(db._docs.get('users/u1/data/subscription').tier, 'FREE');
   assert.equal(db._docs.get('users/u2/data/subscription').tier, 'FREE');
   assert.equal(db._docs.get('users/u3/data/subscription').tier, 'PREMIUM');
+});
+
+test('BATCH_SIZE and MAX_BATCHES_PER_RUN are sane, bounded production defaults', () => {
+  assert.ok(Number.isInteger(BATCH_SIZE) && BATCH_SIZE > 0);
+  assert.ok(Number.isInteger(MAX_BATCHES_PER_RUN) && MAX_BATCHES_PER_RUN > 0);
+});
+
+test('reconcileStaleSubscriptions queries in pages bounded by batchSize (no unbounded single query)', async () => {
+  // 5 stale docs, batchSize 2 -- must take 3 pages (2 + 2 + 1) to drain, not one big query.
+  const seed = {};
+  for (let i = 0; i < 5; i++) {
+    seed[`users/u${i}/data/subscription`] = { tier: 'PRO', billingCycle: 'MONTHLY', expiryDate: NOW - 1 };
+  }
+  const db = makeFakeDb(seed);
+
+  const result = await reconcileStaleSubscriptions(db, NOW, { batchSize: 2, maxBatches: 10 });
+
+  assert.equal(result.reconciledCount, 5);
+  assert.equal(result.completed, true);
+  for (let i = 0; i < 5; i++) {
+    assert.equal(db._docs.get(`users/u${i}/data/subscription`).tier, 'FREE');
+  }
+});
+
+test('reconcileStaleSubscriptions stops after maxBatches and reports completed: false when more stale docs remain', async () => {
+  // 6 stale docs, batchSize 2, maxBatches 2 -- caps this invocation's work at 4 docs, leaving 2
+  // stale docs unprocessed rather than risking an unbounded single-invocation sweep that could
+  // time out or OOM under an extended webhook-outage backlog of thousands of users.
+  const seed = {};
+  for (let i = 0; i < 6; i++) {
+    seed[`users/u${i}/data/subscription`] = { tier: 'PRO', billingCycle: 'MONTHLY', expiryDate: NOW - 1 };
+  }
+  const db = makeFakeDb(seed);
+
+  const result = await reconcileStaleSubscriptions(db, NOW, { batchSize: 2, maxBatches: 2 });
+
+  assert.equal(result.reconciledCount, 4, 'bounded to batchSize * maxBatches this invocation');
+  assert.equal(result.completed, false);
+  const remainingStale = Array.from(db._docs.values()).filter((d) => d.tier === 'PRO').length;
+  assert.equal(remainingStale, 2);
+});
+
+test('reconcileStaleSubscriptions self-resumes on the next invocation without re-scanning already-fixed docs (implicit checkpoint)', async () => {
+  // Simulates two consecutive scheduled cron ticks against a backlog too large for one run.
+  // No explicit checkpoint doc/cursor state is needed: docs fixed in run 1 flip to tier=FREE,
+  // which drops them out of the `tier != 'FREE'` filter, so run 2's query naturally picks up
+  // only what's left -- this is the "checkpointing" behavior, implemented via the write itself
+  // rather than separate cursor state.
+  const seed = {};
+  for (let i = 0; i < 6; i++) {
+    seed[`users/u${i}/data/subscription`] = { tier: 'PRO', billingCycle: 'MONTHLY', expiryDate: NOW - 1 };
+  }
+  const db = makeFakeDb(seed);
+
+  const run1 = await reconcileStaleSubscriptions(db, NOW, { batchSize: 2, maxBatches: 2 });
+  assert.equal(run1.completed, false);
+  assert.equal(run1.reconciledCount, 4);
+
+  const run2 = await reconcileStaleSubscriptions(db, NOW, { batchSize: 2, maxBatches: 2 });
+  assert.equal(run2.completed, true);
+  assert.equal(run2.reconciledCount, 2, 'only the remaining 2 docs left over from run 1');
+
+  for (let i = 0; i < 6; i++) {
+    assert.equal(db._docs.get(`users/u${i}/data/subscription`).tier, 'FREE');
+  }
 });
