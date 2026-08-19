@@ -23,12 +23,12 @@ class RevenueCatEntitlementMapperTest {
     }
 
     @Test
-    fun `basic plus pro maps to PRO, the highest present`() {
+    fun `basic plus pro maps to PRO the highest present`() {
         assertEquals(SubscriptionTier.PRO, RevenueCatEntitlementMapper.toTier(setOf("basic", "pro")))
     }
 
     @Test
-    fun `basic plus pro plus premium maps to PREMIUM, the highest present`() {
+    fun `basic plus pro plus premium maps to PREMIUM the highest present`() {
         assertEquals(
             SubscriptionTier.PREMIUM,
             RevenueCatEntitlementMapper.toTier(setOf("basic", "pro", "premium"))
@@ -36,7 +36,7 @@ class RevenueCatEntitlementMapperTest {
     }
 
     @Test
-    fun `an unrecognized entitlement identifier alone maps to FREE, not a crash`() {
+    fun `an unrecognized entitlement identifier alone maps to FREE not a crash`() {
         assertEquals(SubscriptionTier.FREE, RevenueCatEntitlementMapper.toTier(setOf("interview_topup")))
     }
 

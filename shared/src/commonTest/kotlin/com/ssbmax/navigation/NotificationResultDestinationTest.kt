@@ -48,7 +48,7 @@ class NotificationResultDestinationTest {
     }
 
     @Test
-    fun `ignores actionUrl entirely, even when it is the self-referential notifications-center bug value`() {
+    fun `ignores actionUrl entirely even when it is the self-referential notifications-center bug value`() {
         // Every fixture above already sets actionUrl = "notifications/center" (the undeployed-fix
         // value) and still resolves correctly -- this test just makes that intent explicit so a
         // future edit that reintroduces an actionUrl dependency fails loudly here, not silently
@@ -58,7 +58,7 @@ class NotificationResultDestinationTest {
     }
 
     @Test
-    fun `unported GTO sub-types fall through to null, not a crash`() {
+    fun `unported GTO sub-types fall through to null not a crash`() {
         for (unported in listOf("GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_IO", "GTO_CT")) {
             assertNull(resolveNotificationResultDestination(notification(unported)), "expected null for $unported")
         }

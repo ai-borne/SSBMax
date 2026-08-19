@@ -35,7 +35,7 @@ class BillingPeriodTest {
     }
 
     @Test
-    fun `paid tier resets on the anniversary day, not the 1st`() {
+    fun `paid tier resets on the anniversary day not the 1st`() {
         val startDate = epochMillisUtc(LocalDate(2026, 6, 25))
         // Same month, on or after the anniversary day -- current period started this month.
         assertEquals("2026-08-25", currentPeriodKey(SubscriptionTier.PRO, startDate, now = LocalDate(2026, 8, 25)))

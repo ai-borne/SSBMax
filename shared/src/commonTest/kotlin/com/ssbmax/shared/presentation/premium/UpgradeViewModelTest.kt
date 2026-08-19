@@ -134,7 +134,7 @@ class UpgradeViewModelTest {
     }
 
     @Test
-    fun `upgradeToPlan treats user cancellation as a silent no-op, not an error`() = runTest(testDispatcher) {
+    fun `upgradeToPlan treats user cancellation as a silent no-op not an error`() = runTest(testDispatcher) {
         revenueCatClient.purchaseResult = Result.failure(BillingCancelledException())
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -192,7 +192,7 @@ class UpgradeViewModelTest {
     }
 
     @Test
-    fun `loads RevenueCat store prices per tier on init, keyed by domain tier not product ID`() =
+    fun `loads RevenueCat store prices per tier on init keyed by domain tier not product ID`() =
         runTest(testDispatcher) {
             revenueCatClient.offeringPricesResult = Result.success(
                 mapOf(
@@ -211,7 +211,7 @@ class UpgradeViewModelTest {
         }
 
     @Test
-    fun `a failed store-price fetch leaves storeFormattedPrices empty, not an error`() = runTest(testDispatcher) {
+    fun `a failed store-price fetch leaves storeFormattedPrices empty not an error`() = runTest(testDispatcher) {
         revenueCatClient.offeringPricesResult = Result.failure(Exception("offline"))
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -222,7 +222,7 @@ class UpgradeViewModelTest {
     }
 
     @Test
-    fun `each available plan's gradient comes from TierColors, not a hand-typed literal`() = runTest(testDispatcher) {
+    fun `each available plan's gradient comes from TierColors not a hand-typed literal`() = runTest(testDispatcher) {
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 

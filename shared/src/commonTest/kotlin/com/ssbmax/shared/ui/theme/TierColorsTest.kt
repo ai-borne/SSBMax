@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
 class TierColorsTest {
 
     @Test
-    fun `FREE gradient is neutral gray, matching web's non-gradient Free treatment`() {
+    fun `FREE gradient is neutral gray matching web's non-gradient Free treatment`() {
         assertEquals(
             listOf(Color(0xFF64748B), Color(0xFF94A3B8)),
             TierColors.gradient(SubscriptionTier.FREE)
@@ -22,7 +22,7 @@ class TierColorsTest {
     }
 
     @Test
-    fun `BASIC gradient is indigo to violet, matching web's basic button gradient`() {
+    fun `BASIC gradient is indigo to violet matching web's basic button gradient`() {
         assertEquals(
             listOf(Color(0xFF4F46E5), Color(0xFF7C3AED)),
             TierColors.gradient(SubscriptionTier.BASIC)
@@ -30,7 +30,7 @@ class TierColorsTest {
     }
 
     @Test
-    fun `PRO gradient is sky to blue, matching web's pro button gradient`() {
+    fun `PRO gradient is sky to blue matching web's pro button gradient`() {
         assertEquals(
             listOf(Color(0xFF0284C7), Color(0xFF2563EB)),
             TierColors.gradient(SubscriptionTier.PRO)
@@ -38,7 +38,7 @@ class TierColorsTest {
     }
 
     @Test
-    fun `PREMIUM gradient is amber, matching web's premium button gradient`() {
+    fun `PREMIUM gradient is amber matching web's premium button gradient`() {
         assertEquals(
             listOf(Color(0xFFD97706), Color(0xFFF59E0B)),
             TierColors.gradient(SubscriptionTier.PREMIUM)

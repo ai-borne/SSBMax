@@ -145,7 +145,7 @@ class CheckTestEligibilityUseCaseTest {
 
     /** A `getSubscriptionStartDate` failure must fail open to the calendar-month fallback, not `NetworkError`. */
     @Test
-    fun `startDate read failure falls back to calendar-month key, not NetworkError`() = runTest {
+    fun `startDate read failure falls back to calendar-month key not NetworkError`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
         subscriptionRepository.startDateResult = Result.failure(Exception("offline"))
         subscriptionRepository.monthlyUsageResult = Result.success(mapOf("TAT" to UsageInfo(used = 0, limit = 3)))

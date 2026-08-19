@@ -67,7 +67,7 @@ class SubscriptionLimitsTest {
     }
 
     @Test
-    fun `limits are monotonic non-decreasing across FREE, BASIC, PRO, PREMIUM for every bucket`() {
+    fun `limits are monotonic non-decreasing across FREE BASIC PRO PREMIUM for every bucket`() {
         SubscriptionLimits.testTypeKeys.forEach { key ->
             val free = SubscriptionLimits.limitFor(key, SubscriptionTier.FREE)
             val basic = SubscriptionLimits.limitFor(key, SubscriptionTier.BASIC)

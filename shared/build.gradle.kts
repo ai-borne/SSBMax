@@ -44,12 +44,36 @@ kotlin {
     // carries the Firebase-backed repository implementations AND this module's
     // UI/ViewModels; a framework built here would link an app whose Koin graph
     // has no repository bindings at all.
-    iosArm64()
-    iosSimulatorArm64()
+    // RevenueCat's purchases-kmp klibs (kn-core Cinterop-RevenueCat*) record a
+    // linkerOpts `-L` pointing at the BUILD MACHINE's Xcode --
+    // `/Applications/Xcode-16.4.app/.../usr/lib/swift/iphonesimulator/` -- which
+    // does not exist here, so `ld` silently drops the search path and then fails
+    // the Kotlin/Native test executable with `Undefined symbols: _swift_FORCE_LOAD
+    // _$_swiftCompatibility56 / ...Concurrency / _swift_getFunctionTypeMetadata
+    // GlobalActorBackDeploy`. Those are Swift back-deployment shims force-loaded by
+    // RevenueCat's bundled Swift objects. Re-add the same search path resolved from
+    // THIS machine's active toolchain (`xcode-select -p`) so the libs are found.
+    // This is an upstream packaging bug, independent of the Kotlin version -- it
+    // only surfaced now because nothing had ever linked the iOS test binary.
+    // NOT a CocoaPods reintroduction: the Swift objects themselves ship inside the
+    // klib, only the platform Swift runtime shims need locating.
+    val swiftRuntimeSearchPath: (String) -> String = { sdk ->
+        val developerDir = providers.exec {
+            commandLine("xcode-select", "-p")
+        }.standardOutput.asText.get().trim()
+        "-L$developerDir/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$sdk"
+    }
+
+    iosArm64 {
+        binaries.all { linkerOpts(swiftRuntimeSearchPath("iphoneos")) }
+    }
+    iosSimulatorArm64 {
+        binaries.all { linkerOpts(swiftRuntimeSearchPath("iphonesimulator")) }
+    }
 
     applyDefaultHierarchyTemplate()
 
-    // Kotlin 2.2.20 (bumped for Xcode 26 SDK support, see gradle/libs.versions.toml)
+    // Kotlin 2.3.20 (see gradle/libs.versions.toml for why)
     // ships kotlin.time.Clock/Instant as @ExperimentalTime -- kotlinx-datetime 0.7.1's
     // kotlinx.datetime.Clock/Instant are now deprecated typealiases for those stdlib
     // types, so every pre-existing `Clock.System.now()` / `Instant.fromEpochMilliseconds()`
