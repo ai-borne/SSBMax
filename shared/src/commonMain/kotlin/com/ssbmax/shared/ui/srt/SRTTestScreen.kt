@@ -159,7 +159,7 @@ private fun SRTScreenBody(
         when {
             uiState.isLoading -> LoadingState(modifier = Modifier.fillMaxSize())
             uiState.error != null -> TestErrorState(
-                error = uiState.error!!,
+                error = uiState.error,
                 onRetry = { viewModel.loadTest(testId) },
                 modifier = Modifier.fillMaxSize()
             )

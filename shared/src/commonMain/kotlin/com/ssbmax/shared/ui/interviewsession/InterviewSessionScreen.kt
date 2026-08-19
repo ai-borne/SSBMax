@@ -221,7 +221,7 @@ private fun ErrorContent(error: String?, onRetry: () -> Unit) = Column(
 private fun InterviewContent(uiState: InterviewSessionUiState, viewModel: InterviewSessionViewModel) {
     val progressDescription = stringResource(
         Res.string.interview_progress_content_description,
-        uiState.getProgressPercentage().toInt().coerceIn(0, 100)
+        uiState.getProgressPercentage().coerceIn(0, 100)
     )
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),

@@ -96,7 +96,7 @@ internal fun TestProgressItem(
                         stringResource(Res.string.progress_result_compiling)
                     testProgress.lastAttemptDate != null -> stringResource(
                         Res.string.progress_completed_on,
-                        formatFullDate(testProgress.lastAttemptDate!!)
+                        formatFullDate(testProgress.lastAttemptDate)
                     )
                     else -> stringResource(Res.string.progress_not_attempted)
                 },

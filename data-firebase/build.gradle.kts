@@ -79,8 +79,16 @@ kotlin {
     // Kotlin 2.2.20 / kotlinx-datetime Clock typealias rationale.
     sourceSets.all {
         languageSettings.optIn("kotlin.time.ExperimentalTime")
-        languageSettings.optIn("kotlinx.cinterop.ExperimentalForeignApi")
     }
+    // ExperimentalForeignApi only exists in Kotlin/Native. Opting in from
+    // `sourceSets.all` also hit the Android/JVM source sets, where the annotation
+    // class is not on the classpath, producing "w: Opt-in requirement marker
+    // 'kotlinx.cinterop.ExperimentalForeignApi' is unresolved" on every
+    // compile*KotlinAndroid task. Scope it to the native tree instead.
+    sourceSets.matching { it.name.startsWith("ios") || it.name.startsWith("apple") || it.name.startsWith("native") }
+        .configureEach {
+            languageSettings.optIn("kotlinx.cinterop.ExperimentalForeignApi")
+        }
 
     sourceSets {
         commonMain.dependencies {

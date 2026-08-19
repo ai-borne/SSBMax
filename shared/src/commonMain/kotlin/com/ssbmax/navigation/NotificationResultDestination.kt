@@ -40,6 +40,6 @@ private val RESULT_DESTINATION_FACTORIES: Map<String, (String) -> SSBMaxDestinat
 
 fun resolveNotificationResultDestination(notification: SSBMaxNotification): SSBMaxDestinations? {
     val submissionId = notification.actionData?.get("submissionId") ?: return null
-    val testType = notification.actionData?.get("testType") ?: return null
+    val testType = notification.actionData.get("testType") ?: return null
     return RESULT_DESTINATION_FACTORIES[testType]?.invoke(submissionId)
 }

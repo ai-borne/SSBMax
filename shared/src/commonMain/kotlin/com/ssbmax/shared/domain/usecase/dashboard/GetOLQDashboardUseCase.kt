@@ -321,7 +321,7 @@ class GetOLQDashboardUseCase constructor(
             userId = userId,
             phase1Results = OLQDashboardData.Phase1Results(
                 // CRITICAL: Ensure sessionId matches document ID for navigation consistency
-                oirResult = oirResult?.copy(sessionId = oirSubmission?.id ?: ""),
+                oirResult = oirResult?.copy(sessionId = oirSubmission.id),
                 ppdtResult = ppdtSubmission,
                 ppdtOLQResult = ppdtOLQResult
             ),
