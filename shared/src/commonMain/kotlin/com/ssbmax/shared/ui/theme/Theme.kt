@@ -34,17 +34,17 @@ import com.ssbmax.shared.domain.model.AppTheme
  */
 private val DarkColorScheme = darkColorScheme(
     primary = SsbContracts.DesignTokens.Dark.accent,
-    onPrimary = Color.Black,
-    primaryContainer = SsbContracts.DesignTokens.Dark.accentHover,
-    onPrimaryContainer = Color.Black,
+    onPrimary = Color(0xFF082F49),
+    primaryContainer = SsbContracts.DesignTokens.Dark.accentContainer,
+    onPrimaryContainer = SsbContracts.DesignTokens.Dark.onAccentContainer,
     secondary = SsbContracts.DesignTokens.Dark.emerald,
-    onSecondary = Color.Black,
-    secondaryContainer = SsbContracts.DesignTokens.Dark.emerald,
-    onSecondaryContainer = Color.Black,
+    onSecondary = Color(0xFF022C22),
+    secondaryContainer = SsbContracts.DesignTokens.Dark.emeraldContainer,
+    onSecondaryContainer = SsbContracts.DesignTokens.Dark.onEmeraldContainer,
     tertiary = SsbContracts.DesignTokens.Dark.gold,
-    onTertiary = Color.Black,
-    tertiaryContainer = SsbContracts.DesignTokens.Dark.gold,
-    onTertiaryContainer = Color.Black,
+    onTertiary = Color(0xFF451A03),
+    tertiaryContainer = SsbContracts.DesignTokens.Dark.warningContainer,
+    onTertiaryContainer = SsbContracts.DesignTokens.Dark.onWarningContainer,
     background = SsbContracts.DesignTokens.Dark.bgPrimary,
     onBackground = SsbContracts.DesignTokens.Dark.textPrimary,
     surface = SsbContracts.DesignTokens.Dark.bgCard,
@@ -53,8 +53,8 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = SsbContracts.DesignTokens.Dark.textSecondary,
     error = SsbContracts.DesignTokens.Dark.danger,
     onError = Color.Black,
-    errorContainer = SsbContracts.DesignTokens.Dark.danger,
-    onErrorContainer = Color.Black
+    errorContainer = SsbContracts.DesignTokens.Dark.dangerContainer,
+    onErrorContainer = SsbContracts.DesignTokens.Dark.onDangerContainer
 )
 
 /**
@@ -63,16 +63,16 @@ private val DarkColorScheme = darkColorScheme(
 private val LightColorScheme = lightColorScheme(
     primary = SsbContracts.DesignTokens.Light.accent,
     onPrimary = Color.Black,
-    primaryContainer = SsbContracts.DesignTokens.Light.accentHover,
-    onPrimaryContainer = Color.White,
+    primaryContainer = SsbContracts.DesignTokens.Light.accentContainer,
+    onPrimaryContainer = SsbContracts.DesignTokens.Light.onAccentContainer,
     secondary = SsbContracts.DesignTokens.Light.emerald,
     onSecondary = Color.Black,
-    secondaryContainer = SsbContracts.DesignTokens.Light.emerald,
-    onSecondaryContainer = Color.Black,
+    secondaryContainer = SsbContracts.DesignTokens.Light.emeraldContainer,
+    onSecondaryContainer = SsbContracts.DesignTokens.Light.onEmeraldContainer,
     tertiary = SsbContracts.DesignTokens.Light.gold,
     onTertiary = Color.Black,
-    tertiaryContainer = SsbContracts.DesignTokens.Light.gold,
-    onTertiaryContainer = Color.Black,
+    tertiaryContainer = SsbContracts.DesignTokens.Light.warningContainer,
+    onTertiaryContainer = SsbContracts.DesignTokens.Light.onWarningContainer,
     background = SsbContracts.DesignTokens.Light.bgPrimary,
     onBackground = SsbContracts.DesignTokens.Light.textPrimary,
     surface = SsbContracts.DesignTokens.Light.bgCard,
@@ -81,8 +81,8 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = SsbContracts.DesignTokens.Light.textSecondary,
     error = SsbContracts.DesignTokens.Light.danger,
     onError = Color.White,
-    errorContainer = SsbContracts.DesignTokens.Light.danger,
-    onErrorContainer = Color.White
+    errorContainer = SsbContracts.DesignTokens.Light.dangerContainer,
+    onErrorContainer = SsbContracts.DesignTokens.Light.onDangerContainer
 )
 
 /**
