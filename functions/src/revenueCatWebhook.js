@@ -45,8 +45,57 @@ function entitlementIdsToTier(entitlementIds) {
 const GRANT_EVENT_TYPES = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'UNCANCELLATION']);
 
 /** Event types that end an entitlement -- downgrades to FREE (single cumulative product per tier,
- * so an expiring subscription always expires the whole tier, not a partial entitlement set). */
-const REVOKE_EVENT_TYPES = new Set(['EXPIRATION']);
+ * so an expiring subscription always expires the whole tier, not a partial entitlement set).
+ * REFUND gets identical treatment to EXPIRATION -- both are "this entitlement is gone now". */
+const REVOKE_EVENT_TYPES = new Set(['EXPIRATION', 'REFUND']);
+
+/** RC's grace-period signal -- entitlement isn't revoked yet (EXPIRATION follows automatically
+ * if the billing problem isn't resolved), but worth surfacing so a reconciliation cron/dashboard
+ * can flag it. Handled in its own branch rather than the generic grant/revoke sets. */
+const BILLING_ISSUE_EVENT_TYPE = 'BILLING_ISSUE';
+
+/** Tier ranking for cross-platform reconciliation (higher wins on conflict). */
+const TIER_RANK = { FREE: 0, BASIC: 1, PRO: 2, PREMIUM: 3 };
+
+/** A subscription with no expiry (fails closed to "still active", matching the RC-always-writes-
+ * expiryDate-on-grant assumption used elsewhere) or a future expiry is still in force. */
+function isSubscriptionActive(expiryDate, nowMillis) {
+  return expiryDate == null || expiryDate > nowMillis;
+}
+
+/**
+ * Cross-cutting webhook-to-webhook reconciliation (see `shimmying-roaming-crane.md`'s "Webhook-
+ * to-webhook reconciliation" section): neither this webhook nor `webhooks.js`'s Razorpay handler
+ * knows what the other already wrote, so without this a race/stale-tab/direct-API-call scenario
+ * lets whichever webhook fires last silently clobber an active subscription from the other
+ * platform. If the existing doc was written by a different, still-active source, keep whichever
+ * side has the higher tier (or, tied, the later expiryDate) instead of blindly taking `incoming`.
+ */
+function resolveReconciliation(existing, incoming, nowMillis) {
+  const existingIsOtherActiveSource =
+    existing.source != null &&
+    existing.source !== incoming.source &&
+    isSubscriptionActive(existing.expiryDate, nowMillis);
+
+  if (!existingIsOtherActiveSource) {
+    return { tier: incoming.tier, expiryDate: incoming.expiryDate, source: incoming.source, conflict: false };
+  }
+
+  const existingRank = TIER_RANK[existing.tier] ?? 0;
+  const incomingRank = TIER_RANK[incoming.tier] ?? 0;
+
+  let winner;
+  if (existingRank !== incomingRank) {
+    winner = existingRank > incomingRank ? existing : incoming;
+  } else {
+    // Same tier -- later expiryDate wins; no expiry (null) is treated as furthest-out.
+    const existingExpiry = existing.expiryDate ?? Infinity;
+    const incomingExpiry = incoming.expiryDate ?? Infinity;
+    winner = existingExpiry >= incomingExpiry ? existing : incoming;
+  }
+
+  return { tier: winner.tier, expiryDate: winner.expiryDate, source: winner.source, conflict: true };
+}
 
 function verifySignature(req, secret) {
   const header = req.headers['x-revenuecat-webhook-signature'];
@@ -66,6 +115,104 @@ function verifySignature(req, secret) {
   const bufB = Buffer.from(expectedSignature, 'utf-8');
   if (bufA.length !== bufB.length) return false;
   return crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * Applies one already-validated RC event (grant/revoke/billing-issue) to Firestore. Split out
+ * from the `onRequest` handler so tests can inject a fake `firestoreDb` (mirroring
+ * `evaluation/core.js`'s `runEvaluation` convention) instead of exercising a live/emulated
+ * Firestore transaction, matching this test suite's existing convention.
+ */
+async function processRevenueCatEvent(event, firestoreDb) {
+  const eventId = event.id;
+  const userId = event.app_user_id;
+  const eventType = event.type;
+
+  const logRef = firestoreDb.collection(FirestorePaths.WEBHOOK_LOGS).doc(`rc_${eventId}`);
+  const userRef = firestoreDb.collection(FirestorePaths.USERS).doc(userId);
+  const subscriptionRef = userRef
+    .collection(FirestorePaths.USER_DATA_SUBCOLLECTION)
+    .doc(FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID);
+
+  return firestoreDb.runTransaction(async (transaction) => {
+    const logDoc = await transaction.get(logRef);
+    if (logDoc.exists) {
+      return { idempotent: true };
+    }
+    const subscriptionDoc = await transaction.get(subscriptionRef);
+    const existingData = subscriptionDoc.exists ? subscriptionDoc.data() : {};
+    const existingStartDate = existingData.startDate || null;
+
+    if (eventType === BILLING_ISSUE_EVENT_TYPE) {
+      // RC's grace period is still active -- do NOT revoke tier here; EXPIRATION follows
+      // automatically if the billing problem isn't resolved, and the reconciliation cron is
+      // the real backstop. Field-only write so an unrelated platform's source/tier/expiryDate
+      // is never touched by a billing-issue notification alone.
+      console.warn(`RevenueCat webhook: user ${userId} has a billing issue (event ${eventType}) -- tier unchanged`);
+      transaction.set(subscriptionRef, { billingIssueAt: Date.now() }, { merge: true });
+      transaction.set(logRef, {
+        eventId,
+        userId,
+        eventType,
+        tier: existingData.tier || 'FREE',
+        status: 'processed',
+        processedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      return { success: true, tier: existingData.tier || 'FREE' };
+    }
+
+    const incoming = {
+      source: 'REVENUECAT',
+      tier: GRANT_EVENT_TYPES.has(eventType) ? entitlementIdsToTier(event.entitlement_ids) : 'FREE',
+      expiryDate: event.expiration_at_ms || null
+    };
+    const existing = {
+      source: existingData.source || null,
+      tier: existingData.tier || 'FREE',
+      expiryDate: existingData.expiryDate != null ? existingData.expiryDate : null
+    };
+
+    const resolved = resolveReconciliation(existing, incoming, Date.now());
+
+    if (resolved.conflict) {
+      console.error('RevenueCat webhook: cross-platform subscription conflict detected -- not overwriting', {
+        userId,
+        eventType,
+        incoming,
+        existing,
+        resolvedTier: resolved.tier
+      });
+    }
+
+    const writeData = {
+      tier: resolved.tier,
+      startDate: GRANT_EVENT_TYPES.has(eventType) ? existingStartDate || Date.now() : existingStartDate || 0,
+      expiryDate: resolved.expiryDate,
+      billingCycle: 'MONTHLY',
+      // Marks this doc as owned by the mobile/RevenueCat path -- see `webhooks.js`'s
+      // `applySubscriptionTier` doc comment for why this exists (dual-purchase gate).
+      source: resolved.source,
+      // A following GRANT/REVOKE clears any earlier billing-issue flag -- it's resolved either
+      // way (the subscription renewed, or it's gone).
+      billingIssueAt: null
+    };
+    if (resolved.conflict) {
+      writeData.conflictDetectedAt = admin.firestore.FieldValue.serverTimestamp();
+    }
+
+    transaction.set(subscriptionRef, writeData, { merge: true });
+
+    transaction.set(logRef, {
+      eventId,
+      userId,
+      eventType,
+      tier: resolved.tier,
+      status: 'processed',
+      processedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    return { success: true, tier: resolved.tier };
+  });
 }
 
 // DoW-defense cap (Phase 5, cost & scale guardrails) -- same rationale as webhooks.js's
@@ -97,55 +244,15 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
     return res.status(200).json({ status: 'ok', warning: 'missing_id_or_app_user_id' });
   }
 
-  if (!GRANT_EVENT_TYPES.has(eventType) && !REVOKE_EVENT_TYPES.has(eventType)) {
-    // Every other event type (BILLING_ISSUE, CANCELLATION, TEST, paywall analytics, ...)
-    // doesn't change what tier is granted right now -- CANCELLATION only turns off
-    // auto-renew, access continues until the already-scheduled EXPIRATION event.
+  if (!GRANT_EVENT_TYPES.has(eventType) && !REVOKE_EVENT_TYPES.has(eventType) && eventType !== BILLING_ISSUE_EVENT_TYPE) {
+    // Every other event type (CANCELLATION, TEST, paywall analytics, ...) doesn't change what
+    // tier is granted right now -- CANCELLATION only turns off auto-renew, access continues
+    // until the already-scheduled EXPIRATION event.
     return res.status(200).json({ status: 'ok', ignored: eventType });
   }
 
   try {
-    const logRef = db.collection(FirestorePaths.WEBHOOK_LOGS).doc(`rc_${eventId}`);
-    const userRef = db.collection(FirestorePaths.USERS).doc(userId);
-    const subscriptionRef = userRef
-      .collection(FirestorePaths.USER_DATA_SUBCOLLECTION)
-      .doc(FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID);
-
-    const result = await db.runTransaction(async (transaction) => {
-      const logDoc = await transaction.get(logRef);
-      if (logDoc.exists) {
-        return { idempotent: true };
-      }
-      const subscriptionDoc = await transaction.get(subscriptionRef);
-      const existingStartDate = subscriptionDoc.exists ? subscriptionDoc.data().startDate : null;
-
-      const tier = GRANT_EVENT_TYPES.has(eventType) ? entitlementIdsToTier(event.entitlement_ids) : 'FREE';
-
-      transaction.set(
-        subscriptionRef,
-        {
-          tier,
-          startDate: GRANT_EVENT_TYPES.has(eventType) ? existingStartDate || Date.now() : existingStartDate || 0,
-          expiryDate: event.expiration_at_ms || null,
-          billingCycle: 'MONTHLY',
-          // Marks this doc as owned by the mobile/RevenueCat path -- see `webhooks.js`'s
-          // `applySubscriptionTier` doc comment for why this exists (dual-purchase gate).
-          source: 'REVENUECAT'
-        },
-        { merge: true }
-      );
-
-      transaction.set(logRef, {
-        eventId,
-        userId,
-        eventType,
-        tier,
-        status: 'processed',
-        processedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      return { success: true, tier };
-    });
+    const result = await processRevenueCatEvent(event, db);
 
     if (result.idempotent) {
       console.log(`Duplicate RevenueCat webhook event ${eventId} ignored (idempotent entry found)`);
@@ -162,3 +269,6 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
 
 exports.entitlementIdsToTier = entitlementIdsToTier;
 exports.verifySignature = verifySignature;
+exports.isSubscriptionActive = isSubscriptionActive;
+exports.resolveReconciliation = resolveReconciliation;
+exports.processRevenueCatEvent = processRevenueCatEvent;
