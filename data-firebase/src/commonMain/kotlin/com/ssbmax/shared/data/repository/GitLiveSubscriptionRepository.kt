@@ -7,6 +7,7 @@ import com.ssbmax.shared.domain.repository.UsageInfo
 import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
+import kotlin.time.Clock
 
 /**
  * GitLive-Firebase-backed port of the Android SubscriptionRepositoryImpl.
@@ -21,7 +22,8 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
         return try {
             val snapshot = tierDoc(userId).get()
             val tier = if (snapshot.exists) {
-                snapshot.data(SubscriptionTierDto.serializer()).toDomain()
+                val dto = snapshot.data(SubscriptionTierDto.serializer())
+                deriveEffectiveTier(dto.toDomain(), dto.expiryDate, Clock.System.now().toEpochMilliseconds())
             } else {
                 SubscriptionTier.FREE
             }
@@ -125,3 +127,12 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
         .document(SsbContracts.FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
 
 }
+
+/**
+ * A stale/missed webhook must not leave an expired paid tier readable indefinitely -- derive the
+ * effective tier from `expiryDate` at read time rather than trusting the stored `tier` field as-is.
+ * `expiryDate == null` (legacy/grandfathered docs, e.g. pre-migration Razorpay one-time orders)
+ * falls through to trusting the stored tier unchanged.
+ */
+internal fun deriveEffectiveTier(tier: SubscriptionTier, expiryDate: Long?, nowMillis: Long): SubscriptionTier =
+    if (expiryDate != null && expiryDate < nowMillis) SubscriptionTier.FREE else tier

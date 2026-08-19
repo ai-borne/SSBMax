@@ -11,6 +11,16 @@ export interface SubscriptionOwnership {
 }
 
 /**
+ * A stale/missed webhook must not leave an expired paid tier readable indefinitely -- derive the
+ * effective tier from `expiryDate` at read time rather than trusting the stored `tier` field as-is.
+ * `expiryDate == null` (legacy/grandfathered docs, e.g. pre-migration Razorpay one-time orders)
+ * falls through to trusting the stored tier unchanged.
+ */
+export function deriveEffectiveTier(tier: SubscriptionTier, expiryDate: number | null, nowMillis: number): SubscriptionTier {
+  return expiryDate !== null && expiryDate < nowMillis ? 'FREE' : tier;
+}
+
+/**
  * Web port of `GitLiveSubscriptionRepository` (docs/plans/CrossPlatform_SSOT Phase 4) — reads
  * the same two Firestore docs KMP reads: `users/{uid}/data/subscription` (tier) and
  * `users/{uid}/subscription/usage_{yyyy-MM}` (usage). Fails closed to FREE / zero usage on any
@@ -23,11 +33,15 @@ export class SubscriptionRepository {
       const snap = await getDoc(
         doc(db, FirestorePaths.USERS, userId, FirestorePaths.USER_DATA_SUBCOLLECTION, FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
       );
-      const tier = snap.exists() ? String(snap.data().tier ?? 'FREE').toUpperCase() : 'FREE';
+      if (!snap.exists()) return 'FREE';
+      const data = snap.data();
+      const tier = String(data.tier ?? 'FREE').toUpperCase();
       // Was `tier === 'PRO' || tier === 'PREMIUM' ? tier : 'FREE'` -- silently dropped BASIC
       // (added in Phase 2) to FREE. Fixed to check against the generated contract's tier set
       // instead of a hand-typed list, so a future tier addition can't repeat this gap.
-      return SubscriptionTierValues.includes(tier as SubscriptionTier) ? (tier as SubscriptionTier) : 'FREE';
+      const validTier = SubscriptionTierValues.includes(tier as SubscriptionTier) ? (tier as SubscriptionTier) : 'FREE';
+      const expiryDate = typeof data.expiryDate === 'number' ? data.expiryDate : null;
+      return deriveEffectiveTier(validTier, expiryDate, Date.now());
     } catch (error) {
       console.warn(`Failed to fetch subscription tier for ${userId}, failing closed to FREE`, error);
       return 'FREE';

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { SubscriptionRepository } from '../../src/repositories/SubscriptionRepository';
+import { SubscriptionRepository, deriveEffectiveTier } from '../../src/repositories/SubscriptionRepository';
 import { getDoc } from 'firebase/firestore';
 
 vi.mock('firebase/firestore', () => ({
@@ -117,6 +117,51 @@ describe('SubscriptionRepository', () => {
         data: () => ({ tier: 'PRO', source: 123, expiryDate: 'not-a-number' })
       } as any);
       expect(await repository.getOwnership('user_1')).toEqual({ source: null, expiryDate: null });
+    });
+  });
+
+  /**
+   * Phase 0 (docs/plans dual-platform billing hardening): a missed/delayed webhook must not leave
+   * a stale elevated tier readable forever -- getTier derives the effective tier from expiryDate
+   * at read time instead of trusting the stored `tier` field as-is.
+   */
+  describe('getTier expiry derivation (Phase 0)', () => {
+    it('reads FREE when expiryDate is in the past, regardless of stored tier', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ tier: 'PREMIUM', expiryDate: Date.now() - 1_000 })
+      } as any);
+      expect(await repository.getTier('user_1')).toBe('FREE');
+    });
+
+    it('reads the stored tier when expiryDate is in the future', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ tier: 'PREMIUM', expiryDate: Date.now() + 1_000_000 })
+      } as any);
+      expect(await repository.getTier('user_1')).toBe('PREMIUM');
+    });
+
+    it('reads the stored tier when expiryDate is absent (legacy/grandfathered doc)', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ tier: 'PREMIUM' })
+      } as any);
+      expect(await repository.getTier('user_1')).toBe('PREMIUM');
+    });
+  });
+
+  describe('deriveEffectiveTier', () => {
+    it('returns FREE when expiryDate is in the past', () => {
+      expect(deriveEffectiveTier('PREMIUM', 999, 1_000)).toBe('FREE');
+    });
+
+    it('returns the stored tier when expiryDate is in the future', () => {
+      expect(deriveEffectiveTier('PREMIUM', 1_001, 1_000)).toBe('PREMIUM');
+    });
+
+    it('returns the stored tier when expiryDate is null', () => {
+      expect(deriveEffectiveTier('PREMIUM', null, 1_000)).toBe('PREMIUM');
     });
   });
 });
