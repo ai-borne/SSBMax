@@ -10,8 +10,12 @@
 // could.
 //
 // Excluded from the default `npm test` (see vitest.config.ts's `exclude`) since it needs a
-// live emulator on 127.0.0.1:8080. Run via:
-//   firebase emulators:exec --only firestore \
+// live emulator on 127.0.0.1:8080. The emulator partitions data by project id, so the
+// seeder and this file must name the SAME one -- do not rely on web/.env, which is
+// gitignored and absent on CI (firebase.ts then falls back to 'ssbmax-demo' and every read
+// comes back empty). Run via:
+//   CORPUS_PROJECT_ID=demo-ssbmax-corpus VITE_FIREBASE_PROJECT_ID=demo-ssbmax-corpus \
+//   firebase emulators:exec --only firestore,auth --project demo-ssbmax-corpus \
 //     "node ../firestore-tests/seed-shared-corpus.mjs && npm run test:corpus"
 import { describe, it, expect, beforeAll } from 'vitest';
 import { connectFirestoreEmulator } from 'firebase/firestore';

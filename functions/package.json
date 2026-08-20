@@ -9,7 +9,8 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-ssbmax --config ../firebase.json \"npm test\""
   },
   "engines": {
     "node": "22"

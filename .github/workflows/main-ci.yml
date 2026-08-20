@@ -391,13 +391,26 @@ jobs:
       # itself can't reach a live emulator, see sharedCorpus.contract.test.mjs's docstring)
       # and web's real ContentRepository via the actual firebase/firestore SDK. Needs the
       # Auth emulator too (web signs in anonymously to satisfy firestore.rules'
-      # isAuthenticated() checks) and must run against the default project
-      # (.firebaserc's "ssbmax-49e68") to match web/.env's VITE_FIREBASE_PROJECT_ID --
-      # the rules-unit job above intentionally uses a different demo project, so this is a
-      # separate emulators:exec invocation, not appended to it.
+      # isAuthenticated() checks).
+      #
+      # All THREE participants must name the same project, because the Firestore emulator
+      # partitions data by project id. This previously relied on the default project
+      # (.firebaserc's "ssbmax-49e68") matching web/.env's VITE_FIREBASE_PROJECT_ID -- but
+      # web/.env is gitignored (.gitignore: *.env), so on CI that variable is unset,
+      # web/src/config/firebase.ts falls back to its 'ssbmax-demo' default, and the web SDK
+      # read an empty namespace while the seed landed in "ssbmax-49e68". Every assertion
+      # failed with ContentUnavailableError. Pin one demo project explicitly instead, for
+      # the emulator (--project), the seeder and Node reader (CORPUS_PROJECT_ID, a hook
+      # both scripts already honour) and the web SDK (VITE_FIREBASE_PROJECT_ID). A shell
+      # env var takes precedence over web/.env, so this also works on a dev machine.
+      # Using a demo- id rather than the real project id keeps the suite incapable of
+      # addressing production.
       - name: Run shared-corpus contract tests against the emulator
+        env:
+          CORPUS_PROJECT_ID: demo-ssbmax-corpus
+          VITE_FIREBASE_PROJECT_ID: demo-ssbmax-corpus
         run: |
-          firebase emulators:exec --only firestore,auth \
+          firebase emulators:exec --only firestore,auth --project demo-ssbmax-corpus \
             "npm --prefix firestore-tests run seed:corpus && npm --prefix firestore-tests run test:corpus && npm --prefix web run test:corpus"
 
   # ── Detekt (Kotlin static analysis) ──────────────────────────────────
@@ -479,9 +492,19 @@ jobs:
         working-directory: functions
         run: npm ci
 
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@15.28.1
+
+      # Under the Firestore emulator, on a `demo-` project id. Four
+      # createRazorpaySubscription tests exercise the module-level `db` for real
+      # (the rate-limit transaction and the RevenueCat ownership pre-check), so a
+      # bare `npm test` fails here with "Unable to detect a Project Id in the
+      # current environment" -- and on a developer machine with gcloud ADC it
+      # instead SUCCEEDS by writing to real production Firestore. The `demo-`
+      # prefix makes the Admin SDK refuse to contact production at all.
       - name: Run Cloud Functions unit tests
         working-directory: functions
-        run: npm test
+        run: npm run test:emulator
 
   # ── 10-point security audit (scripts/validate-security.sh) ───────────
   # Phase 8: this script existed and was documented (root CLAUDE.md's
