@@ -32,7 +32,13 @@ data class UpgradeUiState(
     /** RevenueCat's store-quoted MONTHLY price per tier, keyed by domain tier -- see
      * [UpgradeViewModel.loadStorePrices]. Empty (falls back to the generated pricing contract)
      * until the fetch succeeds. */
-    val storeFormattedPrices: Map<SubscriptionTier, String> = emptyMap()
+    val storeFormattedPrices: Map<SubscriptionTier, String> = emptyMap(),
+    /** True once [RevenueCatClient.configure] has resolved for the *current* [currentUserId] --
+     * H4 (payment ecosystem hardening plan): [UpgradeViewModel.upgradeToPlan]/[UpgradeViewModel.
+     * restorePurchases] must not start until this is true, so a purchase can never race RC's
+     * identity switch and land against the wrong (previous/anonymous) app user. Reset to false at
+     * the start of every identity switch, including the very first one on init. */
+    val identityResolved: Boolean = false
 )
 
 /**

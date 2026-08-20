@@ -27,28 +27,43 @@ import kotlin.coroutines.resumeWithException
 internal class DefaultRevenueCatClient(private val sdkKey: String) : RevenueCatClient {
     private var configured = false
 
-    override fun configure(appUserId: String?) {
+    override suspend fun configure(appUserId: String?): Result<Unit> = runCatching {
         if (!configured) {
             Purchases.logLevel = if (isDebugBuild()) LogLevel.DEBUG else LogLevel.ERROR
             Purchases.configure(PurchasesConfiguration(apiKey = sdkKey) { this.appUserId = appUserId })
             configured = true
-            return
+            return@runCatching
         }
         // Already configured -- switch identity instead of re-configuring (configure() is only
-        // valid once per process). Errors are swallowed: a failed logIn/logOut leaves RC on its
-        // previous identity, which self-corrects on the next successful call, and there's no UI
-        // surface here to report it to.
+        // valid once per process). H4 (payment ecosystem hardening plan): this used to fire
+        // logIn/logOut and return immediately with the error swallowed, so a purchase started in
+        // that window could go through against RC's *previous* identity. Now awaited, and a
+        // failure propagates as Result.failure so the caller (UpgradeViewModel) can hold
+        // purchase/restore until identity is confirmed rather than assuming success.
         if (appUserId != null && appUserId != Purchases.sharedInstance.appUserID) {
-            Purchases.sharedInstance.logIn(appUserId, onError = { _ -> }, onSuccess = { _, _ -> })
+            suspendCancellableCoroutine<Unit> { cont ->
+                Purchases.sharedInstance.logIn(
+                    appUserId,
+                    onError = { error -> cont.resumeWithException(RevenueCatException(error.message)) },
+                    onSuccess = { _, _ -> cont.resume(Unit) }
+                )
+            }
         } else if (appUserId == null) {
-            Purchases.sharedInstance.logOut(onError = { _ -> }, onSuccess = { _ -> })
+            suspendCancellableCoroutine<Unit> { cont ->
+                Purchases.sharedInstance.logOut(
+                    onError = { error -> cont.resumeWithException(RevenueCatException(error.message)) },
+                    onSuccess = { _ -> cont.resume(Unit) }
+                )
+            }
         }
     }
 
     /** Defensive fallback for a call site that forgets to call [configure] first (`UpgradeViewModel`
      * always does, but nothing else enforces it at compile time) -- configures anonymously rather
-     * than crashing on `Purchases.sharedInstance` being unset. */
-    private fun ensureConfigured() {
+     * than crashing on `Purchases.sharedInstance` being unset. Fire-and-forget by design: this is
+     * a same-process safety net, not the identity-switch path H4 hardened, so there's no caller
+     * here that needs to observe the result. */
+    private suspend fun ensureConfigured() {
         if (!configured) configure(appUserId = null)
     }
 

@@ -83,8 +83,15 @@ interface RevenueCatClient {
      * Configures the SDK on first call (anonymous if [appUserId] is null); on later calls with
      * the SDK already configured, switches identity via RevenueCat's `logIn`/`logOut` instead of
      * re-configuring -- call this again whenever the signed-in user changes.
+     *
+     * Suspends until the identity switch actually completes and propagates a `logIn`/`logOut`
+     * failure as [Result.failure] (H4, payment ecosystem hardening plan) -- callers must not treat
+     * purchase/restore as safe to start until this resolves successfully. Before this, `configure`
+     * fired the RC SDK's `logIn` and returned immediately with the error swallowed, so a purchase
+     * made in that window could complete against RC's *previous* identity (e.g. still anonymous,
+     * or a different signed-in user) rather than the one just signed in.
      */
-    fun configure(appUserId: String?)
+    suspend fun configure(appUserId: String?): Result<Unit>
 
     /** Resolves [productId] against the [REVENUE_CAT_OFFERING_ID] Offering's packages, then
      * purchases it. */

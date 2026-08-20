@@ -41,6 +41,7 @@ import com.ssbmax.shared.domain.util.DomainLogger
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatProductPrice
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatPurchaseOutcome
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -115,8 +116,19 @@ class FakeRevenueCatClient : RevenueCatClient {
     var restoreCallCount = 0
     var logOutCallCount = 0
 
-    override fun configure(appUserId: String?) {
+    /** H4 (payment ecosystem hardening plan): [configure]'s outcome, defaulting to success. */
+    var configureResult: Result<Unit> = Result.success(Unit)
+
+    /** When set, [configure] suspends on this until the test completes it -- lets a test observe
+     * UpgradeViewModel's behavior while the identity switch is still in flight (e.g. asserting
+     * upgradeToPlan/restorePurchases stay blocked). Left `null` (the default), [configure]
+     * resolves immediately, matching every other fake's synchronous-by-default convention. */
+    var configureGate: CompletableDeferred<Unit>? = null
+
+    override suspend fun configure(appUserId: String?): Result<Unit> {
         lastConfiguredAppUserId = appUserId
+        configureGate?.await()
+        return configureResult
     }
 
     override suspend fun purchase(productId: String): Result<RevenueCatPurchaseOutcome> {

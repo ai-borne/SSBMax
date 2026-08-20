@@ -69,6 +69,7 @@ function makeFakeDb(initialDocs = {}) {
 }
 
 const SUBSCRIPTION_PATH = (uid) => `users/${uid}/data/subscription`;
+const USER_PATH = (uid) => `users/${uid}`;
 const LOG_PATH = (eventId) => `webhook_logs/rc_${eventId}`;
 
 test('entitlementIdsToTier picks the highest cumulative entitlement present', () => {
@@ -223,6 +224,7 @@ test('resolveReconciliation: same tier, active other-source doc -- later expiryD
  */
 test('processRevenueCatEvent: REFUND revokes tier to FREE and writes the idempotency log', async () => {
   const db = makeFakeDb({
+    [USER_PATH('user1')]: { email: 'user1@example.com' },
     [SUBSCRIPTION_PATH('user1')]: { tier: 'PRO', source: 'REVENUECAT', expiryDate: 5_000, startDate: 100 }
   });
   const event = { id: 'evt_refund_1', app_user_id: 'user1', type: 'REFUND' };
@@ -238,6 +240,7 @@ test('processRevenueCatEvent: REFUND revokes tier to FREE and writes the idempot
 
 test('processRevenueCatEvent: BILLING_ISSUE leaves tier untouched and writes billingIssueAt', async () => {
   const db = makeFakeDb({
+    [USER_PATH('user1')]: { email: 'user1@example.com' },
     [SUBSCRIPTION_PATH('user1')]: { tier: 'PRO', source: 'REVENUECAT', expiryDate: 9_999_999_999_999, startDate: 100 }
   });
   const event = { id: 'evt_billing_1', app_user_id: 'user1', type: 'BILLING_ISSUE' };
@@ -263,6 +266,7 @@ test('processRevenueCatEvent: duplicate event delivery is idempotent and does no
 
 test('processRevenueCatEvent: a following RENEWAL clears a prior billingIssueAt flag', async () => {
   const db = makeFakeDb({
+    [USER_PATH('user1')]: { email: 'user1@example.com' },
     [SUBSCRIPTION_PATH('user1')]: { tier: 'PRO', source: 'REVENUECAT', expiryDate: 5_000, startDate: 100, billingIssueAt: 12345 }
   });
   const event = {
@@ -281,6 +285,7 @@ test('processRevenueCatEvent: a following RENEWAL clears a prior billingIssueAt 
 
 test('processRevenueCatEvent: an active Razorpay-sourced doc blocks an RC grant and flags conflictDetectedAt', async () => {
   const db = makeFakeDb({
+    [USER_PATH('user1')]: { email: 'user1@example.com' },
     [SUBSCRIPTION_PATH('user1')]: { tier: 'PREMIUM', source: 'RAZORPAY', expiryDate: 9_999_999_999_999, startDate: 100 }
   });
   const event = {
@@ -300,6 +305,7 @@ test('processRevenueCatEvent: an active Razorpay-sourced doc blocks an RC grant 
 
 test('processRevenueCatEvent: an expired Razorpay-sourced doc does not block an RC grant', async () => {
   const db = makeFakeDb({
+    [USER_PATH('user1')]: { email: 'user1@example.com' },
     [SUBSCRIPTION_PATH('user1')]: { tier: 'PREMIUM', source: 'RAZORPAY', expiryDate: 1, startDate: 100 }
   });
   const event = {
@@ -315,4 +321,38 @@ test('processRevenueCatEvent: an expired Razorpay-sourced doc does not block an 
   assert.equal(result.tier, 'BASIC');
   assert.equal(db._store[SUBSCRIPTION_PATH('user1')].source, 'REVENUECAT');
   assert.equal(db._store[SUBSCRIPTION_PATH('user1')].conflictDetectedAt, undefined);
+});
+
+/**
+ * Phase 4 (H4, payment ecosystem hardening plan): `app_user_id` reaching this webhook with no
+ * corresponding `users/{uid}` doc means RevenueCat's identity was never actually linked to a real
+ * Firebase user -- the "purchase before auth settles" race this phase closes client-side too
+ * (`DefaultRevenueCatClient`/`UpgradeViewModel`). Before this, `transaction.set(subscriptionRef,
+ * ..., { merge: true })` would happily create an orphan `users/{unknown-id}/data/subscription`
+ * doc that no real signed-in session could ever read or reconcile.
+ */
+test('processRevenueCatEvent: an app_user_id with no users/{uid} doc is rejected, not granted an orphan doc', async () => {
+  const db = makeFakeDb(); // no users/user1 doc seeded at all
+  const event = {
+    id: 'evt_orphan_1',
+    app_user_id: 'user1',
+    type: 'INITIAL_PURCHASE',
+    entitlement_ids: ['premium'],
+    expiration_at_ms: 9_999_999_999_999
+  };
+
+  const result = await processRevenueCatEvent(event, db);
+
+  assert.equal(result.rejected, 'unknown_app_user_id');
+  assert.equal(db._store[SUBSCRIPTION_PATH('user1')], undefined, 'no orphan subscription doc must be created');
+  assert.equal(db._store[LOG_PATH('evt_orphan_1')], undefined, 'not logged as processed -- a real signup later must not look like a duplicate delivery');
+});
+
+test('processRevenueCatEvent: rejects an unknown app_user_id even for a revoke event type', async () => {
+  const db = makeFakeDb();
+  const event = { id: 'evt_orphan_2', app_user_id: 'ghost-user', type: 'EXPIRATION' };
+
+  const result = await processRevenueCatEvent(event, db);
+
+  assert.equal(result.rejected, 'unknown_app_user_id');
 });

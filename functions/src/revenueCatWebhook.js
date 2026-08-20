@@ -142,6 +142,25 @@ async function processRevenueCatEvent(event, firestoreDb) {
     if (logDoc.exists) {
       return { idempotent: true };
     }
+
+    // H4 (payment ecosystem hardening plan, Phase 4): a real signed-in user always has a
+    // `users/{uid}` root doc (written client-side at account creation, `GitLiveUserRepository`) --
+    // `event.app_user_id` reaching here with no such doc means RevenueCat's identity was never
+    // actually linked to a real Firebase user, the exact "purchase before auth settles" race this
+    // phase closes on the client side (`DefaultRevenueCatClient`/`UpgradeViewModel`). Rejecting
+    // here instead of `transaction.set(subscriptionRef, ..., { merge: true })`'s previous
+    // behavior -- which happily creates `users/{anonymous-rc-id}/data/subscription` for an id that
+    // will never be read by any real signed-in session -- stops that from silently granting an
+    // orphaned entitlement nobody can ever use or reconcile.
+    const userDoc = await transaction.get(userRef);
+    if (!userDoc.exists) {
+      console.error(
+        `RevenueCat webhook: app_user_id ${userId} has no users/{uid} doc -- rejecting rather than creating an orphan subscription doc`,
+        { eventId, eventType }
+      );
+      return { rejected: 'unknown_app_user_id' };
+    }
+
     const subscriptionDoc = await transaction.get(subscriptionRef);
     const existingData = subscriptionDoc.exists ? subscriptionDoc.data() : {};
     const existingStartDate = existingData.startDate || null;
@@ -260,6 +279,10 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
     if (result.idempotent) {
       console.log(`Duplicate RevenueCat webhook event ${eventId} ignored (idempotent entry found)`);
       return res.status(200).json({ status: 'ok', idempotent: true });
+    }
+
+    if (result.rejected) {
+      return res.status(200).json({ status: 'ok', warning: result.rejected });
     }
 
     console.log(`RevenueCat webhook: user ${userId} -> ${result.tier} (event ${eventType})`);

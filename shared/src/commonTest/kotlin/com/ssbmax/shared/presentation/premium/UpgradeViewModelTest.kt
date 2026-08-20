@@ -20,6 +20,7 @@ import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
 import com.ssbmax.shared.presentation.testing.testUser
 import com.ssbmax.shared.ui.theme.TierColors
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -337,4 +338,84 @@ class UpgradeViewModelTest {
         assertEquals(0, revenueCatClient.restoreCallCount)
         assertEquals(false, viewModel.uiState.value.isRestoring)
     }
+
+    /**
+     * Phase 4 (H4, payment ecosystem hardening plan): `configure` used to be fire-and-forget --
+     * `upgradeToPlan` could start a purchase while RevenueCat's `logIn` for the just-signed-in user
+     * was still in flight, landing the purchase against RC's previous identity instead. `identityResolved`
+     * closes that window: it stays false for the whole time `configure` is suspended.
+     */
+    @Test
+    fun `upgradeToPlan is blocked while RevenueCat identity is still resolving`() = runTest(testDispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        revenueCatClient.configureGate = gate
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(false, viewModel.uiState.value.identityResolved)
+        viewModel.upgradeToPlan(SubscriptionTier.PRO)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(null, revenueCatClient.lastPurchasedProductId)
+        assertEquals(false, viewModel.uiState.value.isPurchasing)
+
+        gate.complete(Unit)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(true, viewModel.uiState.value.identityResolved)
+    }
+
+    @Test
+    fun `restorePurchases is blocked while RevenueCat identity is still resolving`() = runTest(testDispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        revenueCatClient.configureGate = gate
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.restorePurchases()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, revenueCatClient.restoreCallCount)
+        gate.complete(Unit)
+    }
+
+    @Test
+    fun `a RevenueCat identity switch failure surfaces as purchaseError, not silently swallowed`() =
+        runTest(testDispatcher) {
+            revenueCatClient.configureResult = Result.failure(Exception("RevenueCat logIn failed"))
+            val viewModel = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(false, state.identityResolved)
+            assertEquals("RevenueCat logIn failed", state.purchaseError)
+        }
+
+    @Test
+    fun `upgradeToPlan is blocked when the RevenueCat identity switch failed, not just while pending`() =
+        runTest(testDispatcher) {
+            revenueCatClient.configureResult = Result.failure(Exception("RevenueCat logIn failed"))
+            val viewModel = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.upgradeToPlan(SubscriptionTier.PRO)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(null, revenueCatClient.lastPurchasedProductId)
+        }
+
+    @Test
+    fun `identityResolved is true once configure succeeds, allowing a purchase to proceed`() =
+        runTest(testDispatcher) {
+            revenueCatClient.purchaseResult = Result.success(
+                RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("pro"))
+            )
+            val viewModel = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(true, viewModel.uiState.value.identityResolved)
+            viewModel.upgradeToPlan(SubscriptionTier.PRO)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(SSBMaxProductIds.PRO_MONTHLY, revenueCatClient.lastPurchasedProductId)
+        }
 }

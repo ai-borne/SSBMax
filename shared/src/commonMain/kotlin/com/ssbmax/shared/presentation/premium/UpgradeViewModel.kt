@@ -114,8 +114,22 @@ class UpgradeViewModel(
 
     private suspend fun loadCurrentSubscriptionFor(currentUser: SSBMaxUser?) {
         currentUserId = currentUser?.id
-        revenueCatClient.configure(appUserId = currentUser?.id)
-        _uiState.update { it.copy(isLoading = true) }
+        _uiState.update { it.copy(isLoading = true, identityResolved = false) }
+
+        // H4 (payment ecosystem hardening plan): awaited, not fire-and-forget -- upgradeToPlan/
+        // restorePurchases gate on `identityResolved`, so a purchase can never start against RC's
+        // previous identity while this switch is still in flight. A failure surfaces as
+        // `purchaseError` instead of being swallowed; `identityResolved` stays false, so purchase
+        // actions stay blocked until the *next* successful identity switch (e.g. app restart, or
+        // the user's auth state settling) rather than silently proceeding on a stale identity.
+        val identityError = revenueCatClient.configure(appUserId = currentUser?.id).exceptionOrNull()
+        if (identityError != null) {
+            logger.e(TAG, "RevenueCat identity switch failed for ${currentUser?.id}", identityError)
+        }
+        _uiState.update {
+            it.copy(identityResolved = identityError == null, purchaseError = identityError?.message ?: it.purchaseError)
+        }
+
         try {
             if (currentUser == null) {
                 logger.w(TAG, "No user logged in, defaulting to FREE tier")
@@ -194,6 +208,12 @@ class UpgradeViewModel(
             logger.w(TAG, "upgradeToPlan called with no signed-in user or no product for $tier")
             return
         }
+        if (!_uiState.value.identityResolved) {
+            // H4: RevenueCat's identity switch for this user hasn't confirmed yet (or failed) --
+            // starting a purchase now risks it landing against the previous/anonymous identity.
+            logger.w(TAG, "upgradeToPlan blocked: RevenueCat identity not yet resolved for $userId")
+            return
+        }
         if (_uiState.value.activeOnWebInstead) {
             // Neither webhook reconciles against what the other already wrote (see
             // `SubscriptionOwnership`'s doc comment) -- block a second, separate mobile purchase
@@ -241,6 +261,12 @@ class UpgradeViewModel(
         val userId = currentUserId
         if (userId == null) {
             logger.w(TAG, "restorePurchases called with no signed-in user")
+            return
+        }
+        if (!_uiState.value.identityResolved) {
+            // Same H4 gate as upgradeToPlan -- restoring against the wrong identity would surface
+            // another RC account's entitlements as this user's own.
+            logger.w(TAG, "restorePurchases blocked: RevenueCat identity not yet resolved for $userId")
             return
         }
         if (_uiState.value.activeOnWebInstead) {
