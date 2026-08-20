@@ -136,15 +136,25 @@ fun SRTTestScreen(
         SRTScreenBody(uiState = uiState, paddingValues = paddingValues, viewModel = viewModel, testId = testId)
     }
 
-    SRTScreenDialogs(
-        showExitDialog = showExitDialog,
-        showSubmitDialog = showSubmitDialog,
-        uiState = uiState,
-        onDismissExitDialog = { showExitDialog = false },
-        onExit = { showExitDialog = false; viewModel.pauseTest(); onNavigateBack() },
-        onDismissSubmitDialog = { showSubmitDialog = false },
-        onConfirmSubmit = { showSubmitDialog = false; viewModel.submitTest() }
-    )
+    if (showExitDialog) {
+        SRTExitDialog(
+            onDismiss = { showExitDialog = false },
+            onExit = {
+                showExitDialog = false
+                viewModel.pauseTest()
+                onNavigateBack()
+            }
+        )
+    }
+    if (showSubmitDialog) {
+        SRTSubmitDialog(
+            validResponseCount = uiState.validResponseCount,
+            totalSituations = uiState.situations.size,
+            onDismiss = { showSubmitDialog = false },
+            onConfirm = { showSubmitDialog = false; viewModel.submitTest() }
+        )
+    }
+    if (uiState.isTimeUp) SRTTimeUpDialog()
 }
 
 /** The Scaffold body content -- extracted so [SRTTestScreen] itself stays within the LOC/complexity limits. */
@@ -188,37 +198,9 @@ private fun SRTPhaseContent(uiState: SRTTestUiState, viewModel: SRTTestViewModel
         SRTPhase.REVIEW -> SRTReviewPhase(
             responses = uiState.responses,
             totalSituations = uiState.situations.size,
-            onEdit = { index -> viewModel.editResponse(index) }
+            onEdit = { viewModel.editResponse(it) }
         )
         SRTPhase.COMPLETED, SRTPhase.SUBMITTED -> Unit // navigation happens in LaunchedEffect above
-    }
-}
-
-@Composable
-private fun SRTScreenDialogs(
-    showExitDialog: Boolean,
-    showSubmitDialog: Boolean,
-    uiState: SRTTestUiState,
-    onDismissExitDialog: () -> Unit,
-    onExit: () -> Unit,
-    onDismissSubmitDialog: () -> Unit,
-    onConfirmSubmit: () -> Unit
-) {
-    if (showExitDialog) {
-        SRTExitDialog(onDismiss = onDismissExitDialog, onExit = onExit)
-    }
-
-    if (showSubmitDialog) {
-        SRTSubmitDialog(
-            validResponseCount = uiState.validResponseCount,
-            totalSituations = uiState.situations.size,
-            onDismiss = onDismissSubmitDialog,
-            onConfirm = onConfirmSubmit
-        )
-    }
-
-    if (uiState.isTimeUp) {
-        SRTTimeUpDialog()
     }
 }
 
@@ -235,10 +217,7 @@ private fun LoadingState(modifier: Modifier = Modifier) {
 /**
  * Always present, across every [SRTPhase] -- matching TAT/PPDT/WAT's precedent of a single
  * `Scaffold`-level `TopAppBar` for the whole screen, rather than a header duplicated per
- * phase composable. `TopAppBar` applies `WindowInsets.statusBars` by default; the previous
- * per-phase headers didn't uniformly do that, which let the `INSTRUCTIONS` phase's title
- * card render underneath the status bar/notch (see [com.ssbmax.shared.ui.wat.WATTestScreen]'s
- * identical fix for the same bug class).
+ * phase composable.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -286,13 +265,11 @@ private fun SRTTopBar(
                 }
                 Card(
                     colors = CardDefaults.cardColors(containerColor = containerColor),
-                    modifier = Modifier
-                        .padding(end = 8.dp)
-                        .timerSemantics(
-                            description = timerDescription,
-                            remainingSeconds = timeRemaining,
-                            totalSeconds = 1800
-                        )
+                    modifier = Modifier.padding(end = 8.dp).timerSemantics(
+                        description = timerDescription,
+                        remainingSeconds = timeRemaining,
+                        totalSeconds = 1800
+                    )
                 ) {
                     Text(
                         text = formatSrtTime(timeRemaining),

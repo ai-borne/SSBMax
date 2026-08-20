@@ -94,19 +94,10 @@ internal fun AnimatedPlanCard(
     )
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .scale(scale)
-            .alpha(alpha),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (plan.isRecommended) 8.dp else 2.dp
-        ),
+        modifier = modifier.fillMaxWidth().scale(scale).alpha(alpha),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (plan.isRecommended) 8.dp else 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (plan.tier == currentTier) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
+            containerColor = if (plan.tier == currentTier) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
         )
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
@@ -115,9 +106,7 @@ internal fun AnimatedPlanCard(
             plan.features.forEach { feature ->
                 PlanFeatureRow(feature)
             }
-
             Spacer(Modifier.height(16.dp))
-
             UpgradeButton(
                 plan = plan,
                 currentTier = currentTier,
@@ -205,10 +194,7 @@ private fun PlanCardHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                brush = Brush.horizontalGradient(colors = plan.gradient),
-                shape = RoundedCornerShape(12.dp)
-            )
+            .background(brush = Brush.horizontalGradient(colors = plan.gradient), shape = RoundedCornerShape(12.dp))
             .padding(16.dp)
     ) {
         Column {
@@ -218,24 +204,11 @@ private fun PlanCardHeader(
                 verticalAlignment = Alignment.Top
             ) {
                 Column {
-                    Text(
-                        plan.name,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        plan.tagline,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
+                    Text(plan.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(plan.tagline, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
                 }
-                if (plan.isRecommended) {
-                    PlanBadge(stringResource(Res.string.premium_plan_badge_popular))
-                }
-                if (plan.tier == currentTier) {
-                    PlanBadge(stringResource(Res.string.premium_plan_badge_current))
-                }
+                if (plan.isRecommended) PlanBadge(stringResource(Res.string.premium_plan_badge_popular))
+                if (plan.tier == currentTier) PlanBadge(stringResource(Res.string.premium_plan_badge_current))
             }
             Spacer(Modifier.height(16.dp))
 
@@ -248,17 +221,9 @@ private fun PlanCardHeader(
                         color = Color.White
                     )
                 } else {
-                    // RevenueCat's formatted price already includes the currency sign (e.g.
-                    // "₹299.00") -- only used for MONTHLY, RC's Test Store has no quarterly/yearly
-                    // products, so those cycles always fall back to the generated contract's number.
                     val displayPrice = storeFormattedPrice.takeIf { selectedBillingCycle == BillingCycle.MONTHLY }
                         ?: "₹${plan.getPriceForCycle(selectedBillingCycle).toInt()}"
-                    Text(
-                        displayPrice,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    Text(displayPrice, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = Color.White)
                     Text(
                         stringResource(
                             when (selectedBillingCycle) {
@@ -287,10 +252,7 @@ private fun PlanCardHeader(
 
 @Composable
 private fun PlanBadge(text: String) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = Color.White.copy(alpha = 0.3f)
-    ) {
+    Surface(shape = RoundedCornerShape(8.dp), color = Color.White.copy(alpha = 0.3f)) {
         Text(
             text,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
