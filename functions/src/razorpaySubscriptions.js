@@ -23,6 +23,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths, PricingTiers } = require('./generated/contracts.cjs');
 const { enforceSubscriptionCreationRateLimit, HOURLY_SUBSCRIPTION_CREATE_LIMIT } = require('./lib/subscriptionRateLimit');
+const { razorpayRequest } = require('./lib/razorpayClient');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -160,14 +161,12 @@ exports.createRazorpaySubscription = functions.runWith(runtimeOptions).https.onC
   }
 
   try {
-    const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-    const response = await fetch('https://api.razorpay.com/v1/subscriptions', {
+    const subscriptionData = await razorpayRequest(fetch, {
+      keyId,
+      keySecret,
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader
-      },
-      body: JSON.stringify({
+      path: '/subscriptions',
+      body: {
         plan_id: razorpayPlanId,
         // Razorpay requires a bound on total billing cycles; 120 (~10 years of monthly cycles)
         // is a practical "unbounded" ceiling -- actual continuation/cancellation is customer-
@@ -177,13 +176,8 @@ exports.createRazorpaySubscription = functions.runWith(runtimeOptions).https.onC
           userId: userId,
           planId: planId
         }
-      })
+      }
     });
-
-    const subscriptionData = await response.json();
-    if (!response.ok) {
-      throw new Error(subscriptionData.error?.description || 'Razorpay subscription creation failed');
-    }
 
     return {
       success: true,

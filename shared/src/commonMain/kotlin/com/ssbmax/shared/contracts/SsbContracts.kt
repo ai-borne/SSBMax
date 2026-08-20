@@ -53,6 +53,7 @@ object SsbContracts {
         const val CONTENT_VERSIONS_GLOBAL_DOC_ID = "global"
         const val FEATURE_FLAGS = "feature_flags"
         const val FEATURE_FLAGS_CONFIG_DOC_ID = "config"
+        const val OPS_ALERTS = "ops_alerts"
 
         object TestContent {
             const val OIR_BATCHES = "test_content/oir/batches"

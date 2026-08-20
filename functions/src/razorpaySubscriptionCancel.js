@@ -17,6 +17,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths } = require('./generated/contracts.cjs');
 const { enforceSubscriptionCancelRateLimit } = require('./lib/subscriptionRateLimit');
+const { razorpayRequest } = require('./lib/razorpayClient');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -75,22 +76,15 @@ async function cancelRazorpaySubscriptionForUser(firestoreDb, userId, fetchImpl 
   }
 
   try {
-    const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-    const response = await fetchImpl(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}/cancel`, {
+    // `cancel_at_cycle_end`: access continues until `current_end`, mirroring RevenueCat's
+    // "cancellation only turns off auto-renew" semantics (see `revenueCatWebhook.js`).
+    await razorpayRequest(fetchImpl, {
+      keyId,
+      keySecret,
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader
-      },
-      // `cancel_at_cycle_end`: access continues until `current_end`, mirroring RevenueCat's
-      // "cancellation only turns off auto-renew" semantics (see `revenueCatWebhook.js`).
-      body: JSON.stringify({ cancel_at_cycle_end: 1 })
+      path: `/subscriptions/${subscriptionId}/cancel`,
+      body: { cancel_at_cycle_end: 1 }
     });
-
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error?.description || 'Razorpay subscription cancellation failed');
-    }
 
     return { success: true, subscriptionId };
   } catch (error) {

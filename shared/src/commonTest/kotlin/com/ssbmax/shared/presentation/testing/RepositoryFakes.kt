@@ -25,6 +25,7 @@ import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
 import com.ssbmax.shared.domain.model.FeatureFlags
 import com.ssbmax.shared.domain.repository.AuthRepository
 import com.ssbmax.shared.domain.repository.FeatureFlagRepository
+import com.ssbmax.shared.domain.repository.MobileEntitlementRepairClient
 import com.ssbmax.shared.domain.repository.OIREvaluationClient
 import com.ssbmax.shared.domain.repository.OIREvaluationResult
 import com.ssbmax.shared.domain.repository.OIRSubmittedAnswer
@@ -147,6 +148,19 @@ class FakeRevenueCatClient : RevenueCatClient {
 
     override fun logOut() {
         logOutCallCount++
+    }
+}
+
+/** Phase 7 (payment ecosystem hardening plan). */
+class FakeMobileEntitlementRepairClient : MobileEntitlementRepairClient {
+    var repairResult: Result<Unit> = Result.success(Unit)
+    var lastClaimedTier: SubscriptionTier? = null
+    var repairCallCount = 0
+
+    override suspend fun repairEntitlement(claimedTier: SubscriptionTier): Result<Unit> {
+        repairCallCount++
+        lastClaimedTier = claimedTier
+        return repairResult
     }
 }
 

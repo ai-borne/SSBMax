@@ -31,6 +31,8 @@ const { completeInterviewSession } = require('./interview/completeInterviewSessi
 const { archiveOldSubmissions } = require('./archival/archiveOldSubmissions');
 const { scheduledFirestoreBackup } = require('./archival/scheduledFirestoreBackup');
 const { scheduledSubscriptionReconciliation } = require('./subscriptions/scheduledSubscriptionReconciliation');
+const { scheduledRazorpayDriftSweep } = require('./subscriptions/scheduledRazorpayDriftSweep');
+const { repairMobileEntitlement } = require('./subscriptions/repairMobileEntitlement');
 const { evaluateGTO } = require('./evaluation/gtoEvaluate');
 const { evaluatePPDT } = require('./evaluation/ppdtEvaluate');
 const { evaluateTAT } = require('./evaluation/tatEvaluate');
@@ -110,6 +112,15 @@ exports.scheduledFirestoreBackup = scheduledFirestoreBackup;
 // the new `data` collectionGroup composite index (firestore.indexes.json) to be deployed before
 // its first real run -- see that function's doc comment.
 exports.scheduledSubscriptionReconciliation = scheduledSubscriptionReconciliation;
+// Phase 7 (Payment Ecosystem Hardening plan): the upward counterpart -- reconciliation only ever
+// downgrades; this daily sweep enumerates Razorpay's `status=active` subscriptions and repairs any
+// Firestore doc stranded behind what Razorpay actually confirms (a missed grant/renewal webhook).
+exports.scheduledRazorpayDriftSweep = scheduledRazorpayDriftSweep;
+// Phase 7: RevenueCat has no cheap bulk "all active subscribers" endpoint, so this is the
+// client-triggered counterpart to the sweep above -- the device detects local drift, this callable
+// re-verifies against RevenueCat's REST API server-side before writing anything (never trusts the
+// client's claim -- see this function's doc comment for the C1-regression guard it enforces).
+exports.repairMobileEntitlement = repairMobileEntitlement;
 // Phase 8 Ship (Web SSB Test Flow Parity plan): behind KMP's `gto_server_evaluation`
 // feature flag, default off -- see GTOAnalysisOrchestrator. GD/GPE/Lecturette only
 // (scope correction, confirmed with the user -- see gtoPrompts.js's class doc for why

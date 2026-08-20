@@ -2,6 +2,7 @@ package com.ssbmax.shared.presentation.settings
 
 import com.ssbmax.shared.data.repository.SubscriptionLimits
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.domain.repository.MobileEntitlementRepairClient
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetMonthlyUsageUseCase
@@ -53,6 +54,7 @@ class SubscriptionManagementViewModel(
     private val getMonthlyUsage: GetMonthlyUsageUseCase,
     private val subscriptionRepository: SubscriptionRepository,
     private val revenueCatClient: RevenueCatClient,
+    private val mobileEntitlementRepairClient: MobileEntitlementRepairClient,
     private val logger: DomainLogger
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SubscriptionManagementUiState())
@@ -103,20 +105,22 @@ class SubscriptionManagementViewModel(
                     null
                 }
 
+                // Fetched unconditionally (not just when RevenueCat-sourced) so it can also drive
+                // Phase 7's local drift detection below -- the "locked out" case (stored FREE,
+                // RevenueCat actually active) is exactly the case where the old tier != FREE
+                // guard would have skipped this call entirely. RC's SDK caches this locally, so
+                // the extra call on every Settings > Subscription visit is cheap.
+                val customerInfo = revenueCatClient.getCustomerInfo()
+                    .onFailure { logger.e(TAG, "Failed to fetch RevenueCat customer info", it) }
+                    .getOrNull()
+
                 // Phase 6 (payment ecosystem hardening plan): the store-managed "Manage Billing"
                 // action is shown only for an active RevenueCat-sourced subscription -- a
                 // Razorpay-sourced one is cancelled from the web SubscriptionPage (Phase 5), and
                 // Apple/Google forbid a backend from cancelling a StoreKit/Play subscription, so
                 // mobile can only deep-link to the store's own management page.
                 val isRevenueCatSourced = tier != SubscriptionTier.FREE && ownership?.source == REVENUECAT_SOURCE
-                val managementUrl = if (isRevenueCatSourced) {
-                    revenueCatClient.getCustomerInfo()
-                        .onFailure { logger.e(TAG, "Failed to fetch RevenueCat management URL", it) }
-                        .getOrNull()
-                        ?.managementUrl
-                } else {
-                    null
-                }
+                val managementUrl = if (isRevenueCatSourced) customerInfo?.managementUrl else null
 
                 _uiState.value = SubscriptionManagementUiState(
                     isLoading = false,
@@ -127,6 +131,8 @@ class SubscriptionManagementViewModel(
                     showManageBilling = isRevenueCatSourced,
                     managementUrl = managementUrl
                 )
+
+                triggerEntitlementRepairIfDrifted(customerInfo?.tier, tier)
             } catch (e: Exception) {
                 logger.e(TAG, "Failed to load subscription data", e)
                 _uiState.update {
@@ -136,6 +142,26 @@ class SubscriptionManagementViewModel(
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Phase 7 (payment ecosystem hardening plan): fires the client-triggered half of mobile
+     * drift repair -- called every [loadSubscriptionData] once the screen's own state is already
+     * built, so a repair (or its failure) never delays or affects what THIS load renders; a
+     * repaired tier shows up on the next visit to this screen. Reuses the existing entitlement
+     * refresh this screen already does (`revenueCatClient.getCustomerInfo()` above) rather than
+     * adding a new startup hook -- the repair callable itself is only invoked when
+     * [rcTier] outranks [storedTier], so it is not hit on every visit by every user, only when
+     * the device actually observes local drift. [rcTier] is never trusted for the write --
+     * `repairMobileEntitlementForUser` re-verifies server-side (see
+     * [MobileEntitlementRepairClient]'s doc comment).
+     */
+    private fun triggerEntitlementRepairIfDrifted(rcTier: SubscriptionTier?, storedTier: SubscriptionTier) {
+        if (rcTier == null || rcTier.ordinal <= storedTier.ordinal) return
+        viewModelScope.launch {
+            mobileEntitlementRepairClient.repairEntitlement(claimedTier = rcTier)
+                .onFailure { logger.e(TAG, "Mobile entitlement repair failed", it) }
         }
     }
 

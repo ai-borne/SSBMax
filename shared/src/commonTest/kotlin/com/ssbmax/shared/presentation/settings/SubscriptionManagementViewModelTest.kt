@@ -10,6 +10,7 @@ import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.NoOpLogger
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatPurchaseOutcome
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
+import com.ssbmax.shared.presentation.testing.FakeMobileEntitlementRepairClient
 import com.ssbmax.shared.presentation.testing.FakeRevenueCatClient
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
 import com.ssbmax.shared.presentation.testing.testUser
@@ -39,6 +40,7 @@ class SubscriptionManagementViewModelTest {
     private lateinit var authRepository: FakeAuthRepository
     private lateinit var subscriptionRepository: FakeSubscriptionRepository
     private lateinit var revenueCatClient: FakeRevenueCatClient
+    private lateinit var mobileEntitlementRepairClient: FakeMobileEntitlementRepairClient
 
     @BeforeTest
     fun setUp() {
@@ -46,6 +48,7 @@ class SubscriptionManagementViewModelTest {
         authRepository = FakeAuthRepository(initialUser = testUser())
         subscriptionRepository = FakeSubscriptionRepository()
         revenueCatClient = FakeRevenueCatClient()
+        mobileEntitlementRepairClient = FakeMobileEntitlementRepairClient()
     }
 
     @AfterTest
@@ -59,6 +62,7 @@ class SubscriptionManagementViewModelTest {
         getMonthlyUsage = GetMonthlyUsageUseCase(subscriptionRepository),
         subscriptionRepository = subscriptionRepository,
         revenueCatClient = revenueCatClient,
+        mobileEntitlementRepairClient = mobileEntitlementRepairClient,
         logger = NoOpLogger()
     )
 
@@ -149,5 +153,77 @@ class SubscriptionManagementViewModelTest {
         assertNull(state.error)
         assertTrue(state.showManageBilling)
         assertNull(state.managementUrl)
+    }
+
+    /**
+     * Phase 7 (payment ecosystem hardening plan): the "paid but locked out" case this phase
+     * exists for -- Firestore reads FREE (a missed grant webhook), but RevenueCat's own SDK
+     * already reports an active PRO entitlement. The screen must trigger the repair callable so
+     * the next visit shows the corrected tier, and it must pass RevenueCat's tier as a diagnostic
+     * claim only -- the callable itself (not this ViewModel) is what re-verifies server-side.
+     */
+    @Test
+    fun `triggers entitlement repair when RevenueCat reports a higher tier than Firestore has on record`() = runTest(testDispatcher) {
+        subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
+        revenueCatClient.purchaseResult = Result.success(
+            RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("pro"))
+        )
+
+        val viewModel = buildViewModel()
+        viewModel.loadSubscriptionData()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, mobileEntitlementRepairClient.repairCallCount)
+        assertEquals(SubscriptionTier.PRO, mobileEntitlementRepairClient.lastClaimedTier)
+    }
+
+    @Test
+    fun `does not trigger entitlement repair when RevenueCat and Firestore already agree`() = runTest(testDispatcher) {
+        subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
+        subscriptionRepository.ownershipResult =
+            Result.success(SubscriptionOwnership(source = "REVENUECAT", expiryDate = null))
+        revenueCatClient.purchaseResult = Result.success(
+            RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("pro"))
+        )
+
+        val viewModel = buildViewModel()
+        viewModel.loadSubscriptionData()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, mobileEntitlementRepairClient.repairCallCount)
+    }
+
+    @Test
+    fun `does not trigger entitlement repair when RevenueCat reports a lower tier than what is stored -- never a client-side downgrade signal`() = runTest(testDispatcher) {
+        subscriptionRepository.tierResult = Result.success(SubscriptionTier.PREMIUM)
+        subscriptionRepository.ownershipResult =
+            Result.success(SubscriptionOwnership(source = "RAZORPAY", expiryDate = null))
+        revenueCatClient.purchaseResult = Result.success(
+            RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("basic"))
+        )
+
+        val viewModel = buildViewModel()
+        viewModel.loadSubscriptionData()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, mobileEntitlementRepairClient.repairCallCount)
+    }
+
+    @Test
+    fun `a repair failure is logged and does not affect the already-rendered screen state`() = runTest(testDispatcher) {
+        subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
+        revenueCatClient.purchaseResult = Result.success(
+            RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("pro"))
+        )
+        mobileEntitlementRepairClient.repairResult = Result.failure(RuntimeException("repair rejected"))
+
+        val viewModel = buildViewModel()
+        viewModel.loadSubscriptionData()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, mobileEntitlementRepairClient.repairCallCount)
+        val state = viewModel.uiState.value
+        assertEquals(false, state.isLoading)
+        assertNull(state.error)
     }
 }

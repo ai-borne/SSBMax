@@ -621,6 +621,15 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Ops alerts (Phase 7, Payment Ecosystem Hardening plan) - written only by
+    // functions/src/lib/opsAlert.js via the Admin SDK. Server-only, same
+    // defense-in-depth stance as webhook_logs/payments above -- Phase 9's
+    // support view reads this through an admin-gated callable, never
+    // directly from a client SDK.
+    match /ops_alerts/{alertId} {
+      allow read, write: if false;
+    }
+
     // Interview results - users can read their own results
     match /interview_results/{resultId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;

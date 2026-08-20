@@ -87,6 +87,9 @@ collections:
   - name: FEATURE_FLAGS_CONFIG_DOC_ID
     path: config
     note: "Fixed doc id under FEATURE_FLAGS."
+  - name: OPS_ALERTS
+    path: ops_alerts
+    note: "Phase 7 (Payment Ecosystem Hardening plan) drift-repair alerts, formalized into a full delivery channel in Phase 8. Tier 2, functions-only (functions/src/lib/opsAlert.js). Server-only: allow read, write: if false in firestore.rules -- Admin SDK only, never a client."
 
 # test_content/{testType}/... sub-paths. Each entry is relative to
 # collections.TEST_CONTENT ("test_content").

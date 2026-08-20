@@ -20,6 +20,11 @@ const { FirestorePaths } = require('../generated/contracts.cjs');
 const HOURLY_SUBSCRIPTION_CREATE_LIMIT = 5;
 // Phase 5 (H5a): same abuse-control shape and sizing as create, for the same reason.
 const HOURLY_SUBSCRIPTION_CANCEL_LIMIT = 5;
+// Phase 7: `repairMobileEntitlement` makes a real RevenueCat REST call per attempt (unlike a plain
+// eligibility read) -- capped like create/cancel so a client can't hammer this into a RevenueCat
+// API-cost/rate-limit problem. A legitimate repair needs at most one or two attempts (the device
+// only calls this when it observes local drift, not on every launch).
+const HOURLY_ENTITLEMENT_REPAIR_LIMIT = 5;
 
 /** Server owns the hour boundary -- UTC, matches geminiProxy.js's currentHourKey() convention. */
 function currentHourKey() {
@@ -79,9 +84,21 @@ async function enforceSubscriptionCancelRateLimit(firestoreDb, userId) {
   );
 }
 
+async function enforceEntitlementRepairRateLimit(firestoreDb, userId) {
+  return enforceHourlyActionRateLimit(
+    firestoreDb,
+    userId,
+    'entitlement_repair_usage',
+    HOURLY_ENTITLEMENT_REPAIR_LIMIT,
+    'entitlement repair'
+  );
+}
+
 module.exports = {
   HOURLY_SUBSCRIPTION_CREATE_LIMIT,
   HOURLY_SUBSCRIPTION_CANCEL_LIMIT,
+  HOURLY_ENTITLEMENT_REPAIR_LIMIT,
   enforceSubscriptionCreationRateLimit,
-  enforceSubscriptionCancelRateLimit
+  enforceSubscriptionCancelRateLimit,
+  enforceEntitlementRepairRateLimit
 };
