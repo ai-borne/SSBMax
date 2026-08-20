@@ -195,12 +195,17 @@ test('subscription.paused sets willRenew:false, subscription.resumed sets willRe
 test('reconciliation: an active REVENUECAT-sourced doc is not clobbered by a lower-tier Razorpay grant', async () => {
   const seed = { tier: 'PREMIUM', source: 'REVENUECAT', expiryDate: Date.now() + 100000, startDate: 1000 };
   const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
-  await processRazorpaySubscriptionEvent('subscription.activated', activatedPayload(), 'evt_8', db); // grants PRO
+  const result = await processRazorpaySubscriptionEvent('subscription.activated', activatedPayload(), 'evt_8', db); // grants PRO
 
   const doc = subscriptionDocs.get('user1');
   assert.equal(doc.tier, 'PREMIUM');
   assert.equal(doc.source, 'REVENUECAT');
   assert.ok(doc.conflictDetectedAt !== undefined);
+  // Phase 8: the dispatcher (webhooks.js) reads `result.conflict`/`result.userId` off this return
+  // value to decide whether to call emitOpsAlert -- without these, M2's conflictDetectedAt write
+  // stays exactly as invisible to a human as it was before Phase 8.
+  assert.equal(result.conflict, true, 'the dispatcher needs this to know whether to alert');
+  assert.equal(result.userId, 'user1', 'the dispatcher needs this to attach the alert to the right user');
 });
 
 test('missing userId in notes returns a warning, does not throw', async () => {

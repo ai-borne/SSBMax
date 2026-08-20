@@ -20,7 +20,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths } = require('../generated/contracts.cjs');
-const { entitlementIdsToTier } = require('../revenueCatWebhook');
+const { entitlementIdsToTier } = require('../lib/revenueCatReconciliation');
 const { resolveSubscriptionDrift, DRIFT_ACTIONS, TIER_RANK } = require('../lib/subscriptionDrift');
 const { emitOpsAlert, ALERT_KINDS, SEVERITIES } = require('../lib/opsAlert');
 const { enforceEntitlementRepairRateLimit } = require('../lib/subscriptionRateLimit');

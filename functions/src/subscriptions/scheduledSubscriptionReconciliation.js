@@ -23,6 +23,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths } = require('../generated/contracts.cjs');
 const { deriveEffectiveTier } = require('../lib/effectiveTier');
+const { emitOpsAlert, ALERT_KINDS, SEVERITIES } = require('../lib/opsAlert');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -77,6 +78,23 @@ const MAX_BATCHES_PER_RUN = 8; // up to 2000 docs/invocation at the default BATC
 async function reconcileStaleSubscriptions(db, now = Date.now(), { batchSize = BATCH_SIZE, maxBatches = MAX_BATCHES_PER_RUN } = {}) {
   let reconciledCount = 0;
 
+  // Phase 8: every downgrade this function makes is evidence a webhook was missed for that user --
+  // exactly the signal M2 exists to surface. One alert per RUN (not per doc) so an outage that
+  // strands thousands of docs produces one human-readable "reconciliation corrected N docs" alert,
+  // not N `ops_alerts` docs -- see `lib/opsAlert.js`'s dedupe-window comment for the rest of that
+  // reasoning. `completed: false` (the maxBatches cap was hit) is HIGH, not INFO: it means more
+  // stale docs remain after this run, worth a human's attention sooner than the next scheduled tick.
+  async function finish(completed) {
+    if (reconciledCount > 0) {
+      await emitOpsAlert(db, {
+        kind: ALERT_KINDS.RECONCILIATION_CORRECTION,
+        severity: completed ? SEVERITIES.INFO : SEVERITIES.HIGH,
+        detail: { reconciledCount, completed }
+      });
+    }
+    return { reconciledCount, completed };
+  }
+
   for (let batch = 0; batch < maxBatches; batch++) {
     const snapshot = await db
       .collectionGroup(FirestorePaths.USER_DATA_SUBCOLLECTION)
@@ -87,7 +105,7 @@ async function reconcileStaleSubscriptions(db, now = Date.now(), { batchSize = B
       .get();
 
     if (snapshot.docs.length === 0) {
-      return { reconciledCount, completed: true };
+      return finish(true);
     }
 
     for (const doc of snapshot.docs) {
@@ -114,7 +132,7 @@ async function reconcileStaleSubscriptions(db, now = Date.now(), { batchSize = B
     }
 
     if (snapshot.docs.length < batchSize) {
-      return { reconciledCount, completed: true };
+      return finish(true);
     }
   }
 
@@ -122,7 +140,7 @@ async function reconcileStaleSubscriptions(db, now = Date.now(), { batchSize = B
     `[scheduledSubscriptionReconciliation] hit maxBatches=${maxBatches} cap this run (reconciled ${reconciledCount}) -- ` +
       'remaining stale docs will be picked up by the next scheduled run'
   );
-  return { reconciledCount, completed: false };
+  return finish(false);
 }
 
 // Bumped from the implicit 60s/256MB default to 540s (Cloud Functions v1's ceiling) -- headroom

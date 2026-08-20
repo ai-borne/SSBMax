@@ -8,7 +8,7 @@
 
 const admin = require('firebase-admin');
 const { FirestorePaths } = require('../generated/contracts.cjs');
-const { resolveReconciliation } = require('../revenueCatWebhook');
+const { resolveReconciliation } = require('./revenueCatReconciliation');
 
 /**
  * Razorpay subscription-family events (Phase B, Razorpay Subscriptions API migration) -- these
@@ -158,7 +158,7 @@ async function processRazorpaySubscriptionEvent(eventType, payload, eventId, fir
       processedAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    return { success: true, tier: writeData.tier };
+    return { success: true, tier: writeData.tier, conflict, userId: ctx.userId };
   });
 }
 

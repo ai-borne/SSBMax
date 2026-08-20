@@ -1,21 +1,15 @@
 /**
- * Ops alert emitter -- minimal Phase 7 prerequisite (Payment Ecosystem Hardening plan). Phase 7's
+ * Ops alert emitter (Payment Ecosystem Hardening plan). Started as a Phase 7 prerequisite so the
  * drift-repair mechanisms (`subscriptions/scheduledRazorpayDriftSweep.js`,
- * `subscriptions/repairMobileEntitlement.js`) need somewhere to signal "I just repaired a stranded
+ * `subscriptions/repairMobileEntitlement.js`) had somewhere to signal "I just repaired a stranded
  * paying customer" / "a client tried to claim an entitlement RevenueCat doesn't confirm" the
- * moment they ship, rather than that evidence vanishing into Cloud Logging with nobody subscribed
- * -- exactly the gap Phase 8 ("One alert destination") exists to close for the *whole* system
- * (reconciliation corrections, both webhooks' `conflictDetectedAt` writes, signature failures,
- * etc). This file is deliberately the smallest slice of that phase pulled forward: one write sink
- * (`ops_alerts`) and one log line, both already shaped the way Phase 8 specifies, so Phase 7 does
- * not have to invent (and then discard) its own throwaway alerting shape.
- *
- * Phase 8 is expected to extend this file, not replace it: `ALERT_KINDS` grows to cover its
- * additional signals, and `functions/scripts/set-ops-alerting.js` provisions the log-based
- * metric/notification channel/alert policy that actually turns these log lines into a human
- * notification. Until Phase 8 lands, an alert here is queryable in Firestore and visible in Cloud
- * Logging, but nothing is yet subscribed to page anyone -- do not treat this file alone as
- * "monitoring is done."
+ * moment they shipped, rather than that evidence vanishing into Cloud Logging with nobody
+ * subscribed. Phase 8 ("One alert destination") extended it to the whole system -- reconciliation
+ * corrections, both webhooks' `conflictDetectedAt` writes, and webhook signature failures all go
+ * through the same `ALERT_KINDS` map and the same two sinks (`ops_alerts` doc + labelled
+ * `console.error`) -- and provisioned the delivery channel that actually turns these log lines
+ * into a human notification: `functions/scripts/set-ops-alerting.js` creates the Cloud Monitoring
+ * log-based metric, email notification channel, and alert policy, as code, idempotently.
  */
 
 const admin = require('firebase-admin');
@@ -33,10 +27,43 @@ const ALERT_KINDS = Object.freeze({
   DRIFT_REPAIR_REJECTED: 'DRIFT_REPAIR_REJECTED',
   /** `resolveSubscriptionDrift` returned `FLAG_CONFLICT` -- provider and stored disagree in a way
    * that must not be auto-resolved (e.g. a dual mobile+web purchase). */
-  DRIFT_CONFLICT: 'DRIFT_CONFLICT'
+  DRIFT_CONFLICT: 'DRIFT_CONFLICT',
+  /** Phase 8: `scheduledSubscriptionReconciliation`'s downward sweep downgraded one or more stale
+   * docs this run -- each correction is itself evidence a webhook was missed (M2's original
+   * framing: this cron's corrections were the intended signal, and until now nothing read them). */
+  RECONCILIATION_CORRECTION: 'RECONCILIATION_CORRECTION',
+  /** Phase 8: `revenueCatWebhook.js`/`lib/razorpaySubscriptionWebhook.js`'s `resolveReconciliation`
+   * detected a cross-platform conflict (both an active RevenueCat and an active Razorpay
+   * subscription for the same user) and refused to silently overwrite -- this is what actually
+   * closes M2 for the `conflictDetectedAt` writes, which were previously read by nothing. */
+  WEBHOOK_RECONCILIATION_CONFLICT: 'WEBHOOK_RECONCILIATION_CONFLICT',
+  /** Phase 8: a Razorpay or RevenueCat webhook request failed HMAC signature verification -- either
+   * a misconfigured secret (every legitimate webhook would then fail) or a forged request. */
+  SIGNATURE_VERIFICATION_FAILED: 'SIGNATURE_VERIFICATION_FAILED',
+  /** Phase 8: `functions/scripts/set-ops-alerting.js --smoke` -- never emitted by production code.
+   * Exists so a human can confirm the whole pipeline (log line -> log-based metric -> alert policy
+   * -> notification channel -> inbox) actually delivers, end to end, not just "the objects exist". */
+  SYNTHETIC_PROBE: 'SYNTHETIC_PROBE'
 });
 
 const SEVERITIES = Object.freeze({ INFO: 'INFO', HIGH: 'HIGH', CRITICAL: 'CRITICAL' });
+
+// Phase 8: best-effort spam guard, deliberately thin (Rule 2 -- no new Firestore collection, no
+// second round-trip before every alert). Keyed per warm function instance only -- it will NOT
+// dedupe an identical alert fired from two concurrent instances (Cloud Functions gives each
+// instance its own module scope), so this is not an exactness guarantee. It exists to stop the
+// pathological single-instance case the plan calls out by name: a webhook signature failure
+// hammered in a tight retry loop, or a reconciliation run correcting thousands of docs in one
+// invocation, from writing thousands of `ops_alerts` docs / emitting thousands of emails. The
+// durable, cross-instance line of defense is Cloud Monitoring's own rolling-window alert policy
+// (`set-ops-alerting.js`), which coalesces by `alertKind` regardless of how many log lines land --
+// this in-memory guard only keeps the Firestore side (and this instance's log volume) sane.
+const DEDUPE_WINDOW_MS = 15 * 60 * 1000;
+const recentAlertsAt = new Map();
+
+function dedupeKey(kind, userId) {
+  return `${kind}:${userId ?? 'GLOBAL'}`;
+}
 
 /** Truncated (16 hex chars) SHA-256 of a userId -- enough to correlate repeated alerts for the
  * same user in logs without the log line itself ever carrying the raw id (root CLAUDE.md, "No
@@ -52,21 +79,39 @@ function hashUserId(userId) {
  * `DefaultRevenueCatClient.logOut`'s fire-and-forget error handling elsewhere in this codebase.
  */
 async function emitOpsAlert(firestoreDb, { kind, severity, userId = null, detail = null }) {
-  try {
-    await firestoreDb.collection(FirestorePaths.OPS_ALERTS).add({
-      kind,
-      severity,
-      userId,
-      detail,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
-    });
-  } catch (writeError) {
-    console.error('emitOpsAlert: failed to write ops_alerts doc', writeError);
+  const key = dedupeKey(kind, userId);
+  const now = Date.now();
+  const lastSentAt = recentAlertsAt.get(key);
+  const suppressed = lastSentAt != null && now - lastSentAt < DEDUPE_WINDOW_MS;
+
+  if (!suppressed) {
+    recentAlertsAt.set(key, now);
+    try {
+      await firestoreDb.collection(FirestorePaths.OPS_ALERTS).add({
+        kind,
+        severity,
+        userId,
+        detail,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (writeError) {
+      console.error('emitOpsAlert: failed to write ops_alerts doc', writeError);
+    }
   }
 
   console.error(
-    `[ops_alert] kind=${kind} severity=${severity} userHash=${userId != null ? hashUserId(userId) : 'n/a'} detail=${JSON.stringify(detail || {})}`
+    `[ops_alert]${suppressed ? ' suppressed=dedupe' : ''} kind=${kind} severity=${severity} userHash=${userId != null ? hashUserId(userId) : 'n/a'} detail=${JSON.stringify(detail || {})}`
   );
 }
 
-module.exports = { emitOpsAlert, ALERT_KINDS, SEVERITIES, hashUserId };
+/** Test-only: clears the in-memory dedupe state. Without this, two unrelated tests in the same
+ * file/process that happen to emit the same (kind, userId) pair -- e.g. two GLOBAL-keyed alerts
+ * with no userId, like RECONCILIATION_CORRECTION or SIGNATURE_VERIFICATION_FAILED -- would see the
+ * second one silently suppressed by the dedupe window, not because of a bug but because that's
+ * exactly what the window is for. Call at the top of any test asserting an alert IS written. Never
+ * called from production code. */
+function __resetDedupeForTests() {
+  recentAlertsAt.clear();
+}
+
+module.exports = { emitOpsAlert, ALERT_KINDS, SEVERITIES, hashUserId, DEDUPE_WINDOW_MS, __resetDedupeForTests };

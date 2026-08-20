@@ -13,6 +13,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { verifyRazorpaySignature, timingSafeCompare } = require('./lib/razorpaySignature');
+const { emitOpsAlert, ALERT_KINDS, SEVERITIES } = require('./lib/opsAlert');
 const {
   TIER_PRICES,
   planIdToTier,
@@ -58,6 +59,11 @@ exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10, se
     return res.status(400).json({ status: 'error', message: 'Missing signature' });
   } else if (!verifyRazorpaySignature(req, secret)) {
     console.error('Invalid Razorpay Webhook signature (timing-safe check failed)');
+    await emitOpsAlert(db, {
+      kind: ALERT_KINDS.SIGNATURE_VERIFICATION_FAILED,
+      severity: SEVERITIES.HIGH,
+      detail: { provider: 'RAZORPAY' }
+    });
     return res.status(400).json({ status: 'error', message: 'Invalid signature' });
   }
 
@@ -122,6 +128,15 @@ exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10, se
       if (result.idempotent) {
         console.log(`Duplicate webhook event ${eventId} ignored (idempotent entry found)`);
         return res.status(200).json({ status: 'ok', idempotent: true });
+      }
+
+      if (result.conflict) {
+        await emitOpsAlert(db, {
+          kind: ALERT_KINDS.WEBHOOK_RECONCILIATION_CONFLICT,
+          severity: SEVERITIES.HIGH,
+          userId: result.userId,
+          detail: { source: 'RAZORPAY', eventType: event, resolvedTier: result.tier }
+        });
       }
 
       console.log(`Razorpay subscription webhook: event ${event} processed (${eventId})`);

@@ -19,86 +19,20 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { FirestorePaths } = require('./generated/contracts.cjs');
+const { emitOpsAlert, ALERT_KINDS, SEVERITIES } = require('./lib/opsAlert');
+const {
+  entitlementIdsToTier,
+  GRANT_EVENT_TYPES,
+  REVOKE_EVENT_TYPES,
+  BILLING_ISSUE_EVENT_TYPE,
+  isSubscriptionActive,
+  resolveReconciliation
+} = require('./lib/revenueCatReconciliation');
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
-
-/**
- * RC entitlement identifiers -> app tier, cumulative (mirrors `RevenueCatEntitlementMapper.toTier`,
- * which is an `object` INSIDE
- * `shared/src/commonMain/kotlin/com/ssbmax/shared/platform/billing/revenuecat/RevenueCatClient.kt`
- * -- there is no RevenueCatEntitlementMapper.kt file; the identifier constants it maps live in
- * `RevenueCatEntitlements` in that same file. The RC dashboard grants basic+pro+premium together
- * on a premium purchase, so this only has to pick the highest one present, never combine tiers
- * itself). Kept in sync by hand since this is a different runtime (Node) than the Kotlin client --
- * both read the same three RC dashboard identifiers, not a generated contract, because RC
- * entitlement IDs aren't a `contracts/` value (finding L4 tracks closing that duplication).
- */
-function entitlementIdsToTier(entitlementIds) {
-  const ids = new Set(entitlementIds || []);
-  if (ids.has('premium')) return 'PREMIUM';
-  if (ids.has('pro')) return 'PRO';
-  if (ids.has('basic')) return 'BASIC';
-  return 'FREE';
-}
-
-/** Event types that grant/renew an entitlement -- tier is (re)computed from `entitlement_ids`. */
-const GRANT_EVENT_TYPES = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'UNCANCELLATION']);
-
-/** Event types that end an entitlement -- downgrades to FREE (single cumulative product per tier,
- * so an expiring subscription always expires the whole tier, not a partial entitlement set).
- * REFUND gets identical treatment to EXPIRATION -- both are "this entitlement is gone now". */
-const REVOKE_EVENT_TYPES = new Set(['EXPIRATION', 'REFUND']);
-
-/** RC's grace-period signal -- entitlement isn't revoked yet (EXPIRATION follows automatically
- * if the billing problem isn't resolved), but worth surfacing so a reconciliation cron/dashboard
- * can flag it. Handled in its own branch rather than the generic grant/revoke sets. */
-const BILLING_ISSUE_EVENT_TYPE = 'BILLING_ISSUE';
-
-/** Tier ranking for cross-platform reconciliation (higher wins on conflict). */
-const TIER_RANK = { FREE: 0, BASIC: 1, PRO: 2, PREMIUM: 3 };
-
-/** A subscription with no expiry (fails closed to "still active", matching the RC-always-writes-
- * expiryDate-on-grant assumption used elsewhere) or a future expiry is still in force. */
-function isSubscriptionActive(expiryDate, nowMillis) {
-  return expiryDate == null || expiryDate > nowMillis;
-}
-
-/**
- * Cross-cutting webhook-to-webhook reconciliation (see `shimmying-roaming-crane.md`'s "Webhook-
- * to-webhook reconciliation" section): neither this webhook nor `webhooks.js`'s Razorpay handler
- * knows what the other already wrote, so without this a race/stale-tab/direct-API-call scenario
- * lets whichever webhook fires last silently clobber an active subscription from the other
- * platform. If the existing doc was written by a different, still-active source, keep whichever
- * side has the higher tier (or, tied, the later expiryDate) instead of blindly taking `incoming`.
- */
-function resolveReconciliation(existing, incoming, nowMillis) {
-  const existingIsOtherActiveSource =
-    existing.source != null &&
-    existing.source !== incoming.source &&
-    isSubscriptionActive(existing.expiryDate, nowMillis);
-
-  if (!existingIsOtherActiveSource) {
-    return { tier: incoming.tier, expiryDate: incoming.expiryDate, source: incoming.source, conflict: false };
-  }
-
-  const existingRank = TIER_RANK[existing.tier] ?? 0;
-  const incomingRank = TIER_RANK[incoming.tier] ?? 0;
-
-  let winner;
-  if (existingRank !== incomingRank) {
-    winner = existingRank > incomingRank ? existing : incoming;
-  } else {
-    // Same tier -- later expiryDate wins; no expiry (null) is treated as furthest-out.
-    const existingExpiry = existing.expiryDate ?? Infinity;
-    const incomingExpiry = incoming.expiryDate ?? Infinity;
-    winner = existingExpiry >= incomingExpiry ? existing : incoming;
-  }
-
-  return { tier: winner.tier, expiryDate: winner.expiryDate, source: winner.source, conflict: true };
-}
 
 function verifySignature(req, secret) {
   const header = req.headers['x-revenuecat-webhook-signature'];
@@ -233,7 +167,7 @@ async function processRevenueCatEvent(event, firestoreDb) {
       processedAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    return { success: true, tier: resolved.tier };
+    return { success: true, tier: resolved.tier, conflict: resolved.conflict, userId };
   });
 }
 
@@ -249,6 +183,11 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
     }
   } else if (!verifySignature(req, secret)) {
     console.error('Invalid RevenueCat webhook signature');
+    await emitOpsAlert(db, {
+      kind: ALERT_KINDS.SIGNATURE_VERIFICATION_FAILED,
+      severity: SEVERITIES.HIGH,
+      detail: { provider: 'REVENUECAT' }
+    });
     return res.status(400).json({ status: 'error', message: 'Invalid signature' });
   }
 
@@ -285,6 +224,15 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
       return res.status(200).json({ status: 'ok', warning: result.rejected });
     }
 
+    if (result.conflict) {
+      await emitOpsAlert(db, {
+        kind: ALERT_KINDS.WEBHOOK_RECONCILIATION_CONFLICT,
+        severity: SEVERITIES.HIGH,
+        userId,
+        detail: { source: 'REVENUECAT', eventType, resolvedTier: result.tier }
+      });
+    }
+
     console.log(`RevenueCat webhook: user ${userId} -> ${result.tier} (event ${eventType})`);
     return res.status(200).json({ status: 'ok' });
   } catch (txError) {
@@ -293,6 +241,8 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
   }
 });
 
+// Re-exported for backward compatibility -- these now live in lib/revenueCatReconciliation.js
+// (Phase 8's 300-LOC split), but every existing test/caller imports them from this module.
 exports.entitlementIdsToTier = entitlementIdsToTier;
 exports.verifySignature = verifySignature;
 exports.isSubscriptionActive = isSubscriptionActive;
