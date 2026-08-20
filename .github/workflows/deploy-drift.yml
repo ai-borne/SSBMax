@@ -1,0 +1,84 @@
+name: Deploy Drift
+
+# Detects the failure this workflow was written for: production serving a build
+# that `main` has long overtaken, with nothing anywhere reporting it. ssbmax.in
+# was found serving a pre-merge bundle while `main` sat 239 commits ahead, and the
+# only way to notice was fetching the JS bundle and grepping for `data-testid`
+# markers that had moved between components.
+#
+# The web app is built and deployed by Cloudflare Pages directly from GitHub --
+# there is no deploy step in this repository, so the branch Pages builds from is
+# dashboard state, invisible here. This job cannot fix that coupling; it makes it
+# observable.
+#
+# NON-BLOCKING by design: it gates nothing and is not in `CI Success`'s `needs`.
+# It reads production over the public internet, so a transient network failure or
+# a deliberate deploy freeze must not turn a required check red -- a security or
+# release check that cries wolf is one people learn to ignore.
+'on':
+  schedule:
+    - cron: '17 6 * * *'   # daily, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-deployed-commit:
+    name: Deployed commit vs main
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: main
+          fetch-depth: 0   # merge-base/rev-list need history, not a shallow clone
+          persist-credentials: false
+
+      - name: Compare https://ssbmax.in/version.json against main
+        run: |
+          set -uo pipefail
+          EXPECTED="$(git rev-parse HEAD)"
+
+          # -L: ssbmax.in and ssbmax.ai both redirect to the pages.dev origin.
+          if ! curl -sfL --max-time 30 https://ssbmax.in/version.json -o /tmp/version.json; then
+            echo "::warning::Could not fetch https://ssbmax.in/version.json -- site unreachable."
+            exit 0
+          fi
+
+          # A 200 is NOT proof the endpoint exists. This is a SPA: the catch-all
+          # rewrite serves index.html for any unmatched path, so a build predating
+          # web/scripts/write-version.mjs returns HTML here with a 200. Parse before
+          # trusting, and treat unparseable as "no version endpoint deployed yet".
+          DEPLOYED="$(jq -er '.commit' /tmp/version.json 2>/dev/null || true)"
+          if [ -z "$DEPLOYED" ]; then
+            echo "::warning::/version.json did not return JSON (got the SPA fallback)."
+            echo "The deployed build predates web/scripts/write-version.mjs, so it cannot"
+            echo "identify itself -- which itself means production is behind main."
+            echo "Check: Cloudflare -> Workers & Pages -> ssbmax-web -> Settings ->"
+            echo "Builds & deployments -> Production branch."
+            exit 0
+          fi
+
+          BRANCH="$(jq -r '.branch // "unknown"' /tmp/version.json)"
+          BUILT_AT="$(jq -r '.builtAt // "unknown"' /tmp/version.json)"
+          echo "deployed commit : $DEPLOYED"
+          echo "deployed branch : $BRANCH"
+          echo "built at        : $BUILT_AT"
+          echo "main HEAD       : $EXPECTED"
+
+          if [ "$DEPLOYED" = "$EXPECTED" ]; then
+            echo "::notice::Production is serving main HEAD."
+            exit 0
+          fi
+
+          if git merge-base --is-ancestor "$DEPLOYED" HEAD 2>/dev/null; then
+            BEHIND="$(git rev-list --count "$DEPLOYED"..HEAD)"
+            echo "::warning::Production is $BEHIND commit(s) behind main (deployed $DEPLOYED)."
+          else
+            echo "::warning::Production is serving $DEPLOYED, which is NOT an ancestor of main."
+            echo "Cloudflare Pages is most likely building from a branch other than main."
+            echo "Check: Cloudflare -> Workers & Pages -> ssbmax-web -> Settings ->"
+            echo "Builds & deployments -> Production branch."
+          fi

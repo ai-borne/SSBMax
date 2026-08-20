@@ -228,6 +228,40 @@ tests/
 
 ---
 
+## Deployment (read this before assuming a merge ships)
+
+The web app is built and deployed by **Cloudflare Pages (project `ssbmax-web`)** directly
+from GitHub. There is **no deploy step in this repository** — which branch Pages builds
+from is Cloudflare dashboard state, not version-controlled, and therefore invisible here.
+
+`ssbmax.in` and `ssbmax.ai` both redirect to the `ssbmax-web.pages.dev` origin.
+
+This has already caused one silent production incident: `main` moved 239 commits ahead
+while production kept serving a build from a branch Pages was still watching, and the only
+way to detect it was fetching the JS bundle and grepping for `data-testid` markers that had
+moved between components. Two things now exist so that cannot recur silently:
+
+- **`web/scripts/write-version.mjs`** runs as part of `npm run build` and emits
+  `dist/version.json` — `{ commit, branch, builtAt }`. The commit comes from
+  `CF_PAGES_COMMIT_SHA` (authoritative, since Pages is what builds production),
+  falling back to `GITHUB_SHA`, then `git rev-parse HEAD`. So
+  `curl https://ssbmax.in/version.json` answers "what is actually live" in one request.
+- **`.github/workflows/deploy-drift.yml`** compares that endpoint against `main` daily and
+  warns when they differ. It is **non-blocking by design** — it reads production over the
+  public internet, and a release check that cries wolf is one people learn to ignore.
+
+Note the SPA gotcha when checking by hand: the catch-all rewrite serves `index.html` with a
+**200** for any unmatched path, so a successful `curl` of `/version.json` is not proof the
+endpoint exists. Parse it before trusting it; HTML back means the deployed build predates
+the version stamp.
+
+Environment variables (`VITE_FIREBASE_*`) are configured in the Pages project, not in this
+repo — `web/.env` is gitignored. A build without them falls back to the `ssbmax-demo`
+placeholder project in `src/config/firebase.ts`, which is why CI builds are safe to run but
+must never be deployed.
+
+---
+
 ## Build & Dev Commands
 
 ```bash
