@@ -99,6 +99,24 @@ class SemanticUiStandardsTest {
     }
 
     @Test
+    fun `stat card container and content pairings satisfy WCAG AA contrast in both themes`() = runComposeUiTest {
+        var lightColors: SemanticColors? = null
+        var darkColors: SemanticColors? = null
+
+        setContent {
+            SSBMaxTheme(appTheme = AppTheme.LIGHT) { lightColors = MaterialTheme.semanticColors }
+            SSBMaxTheme(appTheme = AppTheme.DARK) { darkColors = MaterialTheme.semanticColors }
+        }
+        waitForIdle()
+
+        listOfNotNull(lightColors, darkColors).forEach { colors ->
+            assertTrue(contrastRatio(colors.onSuccess, colors.success) >= 4.5f)
+            assertTrue(contrastRatio(colors.onWarning, colors.warning) >= 4.5f)
+            assertTrue(contrastRatio(colors.onInformational, colors.informational) >= 4.5f)
+        }
+    }
+
+    @Test
     fun `status surfaces remain distinguishable without hue alone`() = runComposeUiTest {
         var colors: SemanticColors? = null
         setContent { SSBMaxTheme(appTheme = AppTheme.LIGHT) { colors = MaterialTheme.semanticColors } }

@@ -48,8 +48,9 @@ internal fun StatsCardsRow(currentStreak: Int, testsCompleted: Int) {
             subtitle = stringResource(Res.string.stats_days),
             icon = Icons.Default.LocalFireDepartment,
             gradient = Brush.linearGradient(
-                colors = listOf(MaterialTheme.tokens.warning, MaterialTheme.tokens.warning.copy(alpha = 0.8f))
+                colors = listOf(MaterialTheme.tokens.warningContainer, MaterialTheme.tokens.warningContainer.copy(alpha = 0.85f))
             ),
+            contentColor = MaterialTheme.tokens.onWarningContainer,
             iconContentDescription = stringResource(Res.string.cd_stats_streak_icon),
             modifier = Modifier.weight(1f)
         )
@@ -60,8 +61,9 @@ internal fun StatsCardsRow(currentStreak: Int, testsCompleted: Int) {
             subtitle = stringResource(Res.string.stats_tests),
             icon = Icons.Default.CheckCircle,
             gradient = Brush.linearGradient(
-                colors = listOf(MaterialTheme.tokens.success, MaterialTheme.tokens.success.copy(alpha = 0.8f))
+                colors = listOf(MaterialTheme.tokens.emeraldContainer, MaterialTheme.tokens.emeraldContainer.copy(alpha = 0.85f))
             ),
+            contentColor = MaterialTheme.tokens.onEmeraldContainer,
             iconContentDescription = stringResource(Res.string.cd_stats_tests_icon),
             modifier = Modifier.weight(1f)
         )
