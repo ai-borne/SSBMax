@@ -902,6 +902,8 @@
     <string name="subscription_mgmt_used_suffix">%1$d used</string>
     <string name="subscription_mgmt_used_of_limit">%1$d/%2$d</string>
     <string name="subscription_mgmt_compare_plans">Compare Plans</string>
+    <string name="subscription_mgmt_manage_billing">Manage Billing</string>
+    <string name="subscription_mgmt_manage_billing_error">Unable to open billing management right now</string>
     <string name="subscription_mgmt_faq_title">Frequently Asked Questions</string>
     <string name="subscription_mgmt_faq_q1">Can I cancel anytime?</string>
     <string name="subscription_mgmt_faq_a1">Yes! You can cancel your subscription at any time. You\'ll continue to have access until the end of your billing period.</string>

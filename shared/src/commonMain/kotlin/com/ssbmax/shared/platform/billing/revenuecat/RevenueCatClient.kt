@@ -58,8 +58,16 @@ object RevenueCatEntitlementMapper {
 /**
  * Result of any RevenueCat call that returns a [com.revenuecat.purchases.kmp.models.CustomerInfo]
  * (purchase/restore/getCustomerInfo) -- callers consume [tier], never the raw entitlement IDs.
+ *
+ * [managementUrl] mirrors `CustomerInfo.managementUrlString` (Phase 6, payment ecosystem hardening
+ * plan) -- the store-hosted subscription-management page (App Store for an iOS purchase, Play
+ * Store for an Android one), or `null` when there's no active subscription for RevenueCat to
+ * point at.
  */
-data class RevenueCatPurchaseOutcome(val activeEntitlementIds: Set<String>) {
+data class RevenueCatPurchaseOutcome(
+    val activeEntitlementIds: Set<String>,
+    val managementUrl: String? = null
+) {
     val tier: SubscriptionTier get() = RevenueCatEntitlementMapper.toTier(activeEntitlementIds)
 }
 

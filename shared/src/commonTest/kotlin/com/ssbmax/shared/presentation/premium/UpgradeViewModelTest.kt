@@ -379,7 +379,7 @@ class UpgradeViewModelTest {
     }
 
     @Test
-    fun `a RevenueCat identity switch failure surfaces as purchaseError, not silently swallowed`() =
+    fun `a RevenueCat identity switch failure surfaces as purchaseError instead of being silently swallowed`() =
         runTest(testDispatcher) {
             revenueCatClient.configureResult = Result.failure(Exception("RevenueCat logIn failed"))
             val viewModel = buildViewModel()
@@ -391,7 +391,7 @@ class UpgradeViewModelTest {
         }
 
     @Test
-    fun `upgradeToPlan is blocked when the RevenueCat identity switch failed, not just while pending`() =
+    fun `upgradeToPlan is blocked when the RevenueCat identity switch failed not just while pending`() =
         runTest(testDispatcher) {
             revenueCatClient.configureResult = Result.failure(Exception("RevenueCat logIn failed"))
             val viewModel = buildViewModel()
@@ -404,7 +404,7 @@ class UpgradeViewModelTest {
         }
 
     @Test
-    fun `identityResolved is true once configure succeeds, allowing a purchase to proceed`() =
+    fun `identityResolved is true once configure succeeds allowing a purchase to proceed`() =
         runTest(testDispatcher) {
             revenueCatClient.purchaseResult = Result.success(
                 RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("pro"))

@@ -135,5 +135,8 @@ internal class DefaultRevenueCatClient(private val sdkKey: String) : RevenueCatC
             ?: throw RevenueCatException("Product not found in offering '$REVENUE_CAT_OFFERING_ID': $productId")
 
     private fun CustomerInfo.toOutcome(): RevenueCatPurchaseOutcome =
-        RevenueCatPurchaseOutcome(activeEntitlementIds = entitlements.active.keys)
+        RevenueCatPurchaseOutcome(
+            activeEntitlementIds = entitlements.active.keys,
+            managementUrl = managementUrlString
+        )
 }
