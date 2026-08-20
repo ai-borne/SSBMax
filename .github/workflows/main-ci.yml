@@ -35,7 +35,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate wrapper
-        uses: gradle/actions/wrapper-validation@48b5f213c81028ace310571dc5ec0fbbca0b2947 # v4
+        uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
   # ── Security (runs in parallel with build jobs) ──────────────────────
   security-scan:
