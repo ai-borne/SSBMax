@@ -31,4 +31,23 @@ describe('PaymentService', () => {
     expect(callable).toHaveBeenCalledWith({ planId: 'pro_monthly' });
     expect(result).toEqual({ success: true, orderId: 'order_1', amount: 49900, currency: 'INR', keyId: 'rzp_test_key' });
   });
+
+  /**
+   * Phase 5 (H5a, Payment Ecosystem Hardening plan): `cancelSubscription` invokes the right
+   * callable name with no payload -- the callable always targets the caller's own subscription
+   * doc server-side (`context.auth.uid`), so there is nothing for the client to send.
+   */
+  it('cancelSubscription calls the cancelRazorpaySubscription callable with no payload', async () => {
+    const callable = vi.fn().mockResolvedValue({
+      data: { success: true, subscriptionId: 'sub_abc123' }
+    });
+    vi.mocked(httpsCallable).mockReturnValue(callable as any);
+
+    const service = new PaymentService();
+    const result = await service.cancelSubscription();
+
+    expect(httpsCallable).toHaveBeenCalledWith(expect.anything(), 'cancelRazorpaySubscription');
+    expect(callable).toHaveBeenCalledWith();
+    expect(result).toEqual({ success: true, subscriptionId: 'sub_abc123' });
+  });
 });

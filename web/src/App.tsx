@@ -196,6 +196,7 @@ export const App: FC = () => {
               isPaidMember={isPaidMember}
               createOrderFn={paymentService.createOrder}
               createSubscriptionFn={paymentService.createSubscription}
+              cancelSubscriptionFn={paymentService.cancelSubscription}
               useSubscriptionCheckout={razorpaySubscriptionsCheckoutEnabled}
               onPaymentSuccess={() => setActiveTab('tests')}
             />

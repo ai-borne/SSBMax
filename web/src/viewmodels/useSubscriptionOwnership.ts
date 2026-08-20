@@ -1,7 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SubscriptionRepository, SubscriptionOwnership } from '../repositories/SubscriptionRepository';
 
 const EMPTY_OWNERSHIP: SubscriptionOwnership = { source: null, expiryDate: null, willRenew: true };
+
+export interface UseSubscriptionOwnershipReturn extends SubscriptionOwnership {
+  /** Phase 5 (H5a): re-fetches ownership on demand -- there was previously no way to refresh
+   * after an action outside this hook's own load effect (e.g. `SubscriptionPage.tsx`'s cancel
+   * button) other than remounting the component. */
+  refresh: () => void;
+}
 
 /**
  * Web port of `UpgradeViewModel.kt`'s ownership load (Phase 4 amendment, dual-purchase gate) --
@@ -10,8 +17,9 @@ const EMPTY_OWNERSHIP: SubscriptionOwnership = { source: null, expiryDate: null,
 export function useSubscriptionOwnership(
   userId: string | undefined,
   repository: SubscriptionRepository = new SubscriptionRepository()
-): SubscriptionOwnership {
+): UseSubscriptionOwnershipReturn {
   const [ownership, setOwnership] = useState<SubscriptionOwnership>(EMPTY_OWNERSHIP);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -25,9 +33,11 @@ export function useSubscriptionOwnership(
     return () => {
       isMounted = false;
     };
-  }, [userId, repository]);
+  }, [userId, repository, refreshToken]);
 
-  return ownership;
+  const refresh = useCallback(() => setRefreshToken((t) => t + 1), []);
+
+  return { ...ownership, refresh };
 }
 
 /** RevenueCat webhook's `source` value (`functions/src/revenueCatWebhook.js`) -- the mobile path. */

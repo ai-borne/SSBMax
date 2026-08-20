@@ -11,6 +11,9 @@
  * `createRazorpayOrder` stays deployed (deprecated-but-live) until this path is verified --
  * see this file's plan doc, senior-review fix #8 (checkout cutover is a feature-flagged,
  * atomic client-side switch, not a rip-and-replace).
+ *
+ * Phase 5 (H5a) split `cancelRazorpaySubscription` out into `razorpaySubscriptionCancel.js`
+ * (300-LOC cap) -- both share `lib/subscriptionRateLimit.js`'s hourly rate limiter.
  */
 
 // Pinned to v1, same reason as `payments.js`'s identical comment: this handler uses the v1
@@ -19,6 +22,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths, PricingTiers } = require('./generated/contracts.cjs');
+const { enforceSubscriptionCreationRateLimit, HOURLY_SUBSCRIPTION_CREATE_LIMIT } = require('./lib/subscriptionRateLimit');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -40,54 +44,6 @@ const runtimeOptions = {
   maxInstances: 10,
   secrets: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_PLAN_IDS']
 };
-
-// Per-user rate limit on subscription-creation attempts (scale-hardening follow-up to the
-// Dual-Platform Subscription Billing Hardening plan). The blanket `maxInstances: 10` above caps
-// total concurrency across ALL users -- without a per-user limit, a promo-driven burst or a
-// scripted/compromised client hammering this endpoint can monopolize that shared pool, and
-// legitimate purchasers get backpressure failures indistinguishable from abuse. Mirrors
-// geminiProxy.js's `enforceRateLimit` shape (atomic transaction-based hour-bucket counter),
-// scoped here to subscription-creation attempts rather than AI calls. A real purchase flow
-// needs at most a couple of attempts (initial + retry after a transient failure); 5/hour is
-// generous headroom above that while still capping one account's share of the instance pool.
-const HOURLY_SUBSCRIPTION_CREATE_LIMIT = 5;
-
-/** Server owns the hour boundary -- UTC, matches geminiProxy.js's currentHourKey() convention. */
-function currentHourKey() {
-  const now = new Date();
-  return (
-    `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-` +
-    `${String(now.getUTCDate()).padStart(2, '0')}-${String(now.getUTCHours()).padStart(2, '0')}`
-  );
-}
-
-/**
- * Atomically checks and increments a per-user hourly subscription-creation counter. Reuses the
- * existing USER_SUBSCRIPTION_SUBCOLLECTION ("subscription") rather than a new FirestorePaths
- * entry, same precedent as geminiProxy.js's `ai_usage_{hourKey}` doc alongside eligibility.js's
- * `usage_{month}` docs in the same subcollection.
- */
-async function enforceSubscriptionCreationRateLimit(firestoreDb, userId) {
-  const hourKey = currentHourKey();
-  const docRef = firestoreDb
-    .collection(FirestorePaths.USERS)
-    .doc(userId)
-    .collection(FirestorePaths.USER_SUBSCRIPTION_SUBCOLLECTION)
-    .doc(`subscription_create_usage_${hourKey}`);
-
-  return firestoreDb.runTransaction(async (tx) => {
-    const snapshot = await tx.get(docRef);
-    const currentCount = snapshot.exists ? snapshot.data().count || 0 : 0;
-    if (currentCount >= HOURLY_SUBSCRIPTION_CREATE_LIMIT) {
-      throw new functions.https.HttpsError(
-        'resource-exhausted',
-        `Too many subscription creation attempts (${currentCount}/${HOURLY_SUBSCRIPTION_CREATE_LIMIT} this hour) -- please try again later`
-      );
-    }
-    tx.set(docRef, { count: currentCount + 1, lastUpdated: Date.now() }, { merge: true });
-    return currentCount + 1;
-  });
-}
 
 /**
  * Phase C (Dual-Platform Subscription Billing Hardening plan): server-side purchase gate --

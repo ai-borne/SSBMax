@@ -47,7 +47,11 @@ function extractRazorpaySubscriptionContext(payload) {
     userId: notes.userId || null,
     planId: notes.planId || null,
     // Razorpay timestamps are unix seconds; Firestore/JS convention here is epoch millis.
-    currentEndMs: typeof subEntity?.current_end === 'number' ? subEntity.current_end * 1000 : null
+    currentEndMs: typeof subEntity?.current_end === 'number' ? subEntity.current_end * 1000 : null,
+    // Phase 5 (H5a): only present on subscription.* events (subEntity), not the
+    // payment.entity-shaped refund.processed -- `razorpaySubscriptionCancel.js`'s
+    // `cancelRazorpaySubscription` callable needs this to know what to target.
+    subscriptionId: subEntity?.id || null
   };
 }
 
@@ -111,7 +115,12 @@ async function processRazorpaySubscriptionEvent(eventType, payload, eventId, fir
         // forced end -- willRenew off either way, mirroring RC's grant/revoke tier split.
         willRenew: isGrant,
         // A following grant/revoke clears any earlier billing-issue flag, same as RC's handling.
-        billingIssueAt: null
+        billingIssueAt: null,
+        // Phase 5 (H5a): persisted at activation so `cancelRazorpaySubscription` has something to
+        // target -- Razorpay's cancel API is `POST /v1/subscriptions/{id}/cancel`, id-addressed,
+        // not user-addressed. Kept (not cleared) on revoke so a completed/refunded subscription's
+        // id remains visible for support lookups; only ever overwritten by a newer grant.
+        ...(ctx.subscriptionId != null ? { subscriptionId: ctx.subscriptionId } : {})
       };
       if (conflict) {
         writeData.conflictDetectedAt = admin.firestore.FieldValue.serverTimestamp();

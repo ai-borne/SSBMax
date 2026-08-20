@@ -118,6 +118,21 @@ test('subscription.activated grants tier + expiryDate + willRenew:true, source R
   assert.ok(webhookLogs.has('rzp_sub_evt_1'));
 });
 
+test('subscription.activated persists subscriptionId (Phase 5, H5a: cancel target)', async () => {
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb();
+  await processRazorpaySubscriptionEvent('subscription.activated', activatedPayload(), 'evt_sub_id', db);
+
+  assert.equal(subscriptionDocs.get('user1').subscriptionId, 'sub_123');
+});
+
+test('subscription.completed keeps the prior subscriptionId (visible for support lookups after revoke)', async () => {
+  const seed = { tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000, subscriptionId: 'sub_123' };
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
+  await processRazorpaySubscriptionEvent('subscription.completed', activatedPayload(), 'evt_sub_id_2', db);
+
+  assert.equal(subscriptionDocs.get('user1').subscriptionId, 'sub_123');
+});
+
 test('duplicate event id is idempotent (no double-processing)', async () => {
   const { db, subscriptionDocs } = makeSubscriptionFakeDb();
   await processRazorpaySubscriptionEvent('subscription.activated', activatedPayload(), 'evt_dup', db);

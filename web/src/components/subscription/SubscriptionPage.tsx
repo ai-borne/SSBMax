@@ -1,9 +1,11 @@
-import { FC } from 'react';
-import { Check, ShieldCheck, Zap, AlertCircle, Award, Info } from 'lucide-react';
+import { FC, useState } from 'react';
+import { Check, ShieldCheck, Zap, AlertCircle, Award, Info, XCircle } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { usePaymentViewModel } from '../../viewmodels/PaymentViewModel';
 import { useSubscriptionOwnership, isActiveMobileSubscription } from '../../viewmodels/useSubscriptionOwnership';
 import { SUBSCRIPTION_TIERS } from '../../constants/ssbSelectionProcess';
+
+type CancelStatus = 'idle' | 'confirming' | 'cancelling' | 'success' | 'error';
 
 export interface SubscriptionPageProps {
   userId?: string;
@@ -21,6 +23,10 @@ export interface SubscriptionPageProps {
   /** Checkout-cutover kill switch (`razorpay_subscriptions_checkout` feature flag) -- defaults
    * `false` (old order-based path) when the caller doesn't pass a live flag value. */
   useSubscriptionCheckout?: boolean;
+  /** Phase 5 (H5a): `PaymentService.cancelSubscription` (`functions/src/razorpaySubscriptionCancel.js`).
+   * Shown only for an active Razorpay-sourced subscription with `willRenew === true` -- a
+   * RevenueCat-sourced one is cancelled via the mobile app (store-managed, Phase 6). */
+  cancelSubscriptionFn?: () => Promise<{ success: boolean; subscriptionId: string }>;
 }
 
 export const SubscriptionPage: FC<SubscriptionPageProps> = ({
@@ -29,7 +35,8 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
   onPaymentSuccess,
   createOrderFn,
   createSubscriptionFn,
-  useSubscriptionCheckout = false
+  useSubscriptionCheckout = false,
+  cancelSubscriptionFn
 }) => {
   const paymentVM = usePaymentViewModel(createOrderFn, createSubscriptionFn, useSubscriptionCheckout);
   const { status, errorMessage, initiatePayment } = paymentVM;
@@ -40,6 +47,24 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
   // comment. Block a second, separate web purchase while an active mobile subscription exists.
   const ownership = useSubscriptionOwnership(userId);
   const blockedByMobileSubscription = isActiveMobileSubscription(ownership);
+
+  const [cancelStatus, setCancelStatus] = useState<CancelStatus>('idle');
+  // Only a Razorpay-sourced, still-auto-renewing subscription has anything to cancel here --
+  // a RevenueCat-sourced one is store-managed (mobile), and one already `willRenew: false`
+  // has nothing left for this action to do.
+  const canCancel = ownership.source === 'RAZORPAY' && ownership.willRenew === true;
+
+  const handleCancelSubscription = async () => {
+    if (!cancelSubscriptionFn) return;
+    setCancelStatus('cancelling');
+    try {
+      await cancelSubscriptionFn();
+      setCancelStatus('success');
+      ownership.refresh();
+    } catch {
+      setCancelStatus('error');
+    }
+  };
 
   const handleUpgradeClick = async (tierId: string) => {
     if (blockedByMobileSubscription) return;
@@ -69,9 +94,9 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
       {isPaidMember && (
         <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300 flex items-center gap-3" data-testid="subscription-success-banner">
           <ShieldCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <div>
-            <p className="font-bold text-sm">Membership Active</p>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400">You have unlocked full access to your plan's Stage-I & Stage-II simulators and AI assessments.</p>
+          <div className="flex-1">
+            <p className="font-bold text-sm">{strings.subscription.membershipActiveBadge}</p>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400">{strings.subscription.membershipActiveDescription}</p>
             {/* Phase B (Razorpay Subscriptions API migration): real renewal status, once a
                 lifecycle webhook has populated expiryDate -- legacy/grandfathered docs with no
                 expiryDate show nothing here rather than a fabricated date. */}
@@ -80,6 +105,53 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
                 {ownership.willRenew
                   ? strings.subscription.renewsOn(new Date(ownership.expiryDate).toLocaleDateString())
                   : strings.subscription.expiresNoRenew(new Date(ownership.expiryDate).toLocaleDateString())}
+              </p>
+            )}
+
+            {/* Phase 5 (H5a): Razorpay-only cancellation -- see `canCancel`'s doc comment. */}
+            {canCancel && cancelSubscriptionFn && cancelStatus === 'idle' && (
+              <button
+                onClick={() => setCancelStatus('confirming')}
+                className="mt-2 text-xs font-bold text-rose-700 dark:text-rose-400 underline underline-offset-2"
+                data-testid="cancel-subscription-link"
+              >
+                {strings.subscription.cancelSubscription}
+              </button>
+            )}
+            {canCancel && cancelStatus === 'confirming' && (
+              <div className="mt-3 p-3 rounded-lg bg-white/60 dark:bg-slate-900/40 border border-emerald-300 dark:border-emerald-500/30" data-testid="cancel-subscription-confirm">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">{strings.subscription.cancelConfirmTitle}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{strings.subscription.cancelConfirmBody}</p>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={handleCancelSubscription}
+                    className="px-3 py-2 min-h-[44px] rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold"
+                    data-testid="cancel-subscription-confirm-button"
+                  >
+                    {strings.subscription.cancelConfirmButton}
+                  </button>
+                  <button
+                    onClick={() => setCancelStatus('idle')}
+                    className="px-3 py-2 min-h-[44px] rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold"
+                    data-testid="cancel-subscription-keep-button"
+                  >
+                    {strings.subscription.cancelKeepButton}
+                  </button>
+                </div>
+              </div>
+            )}
+            {cancelStatus === 'cancelling' && (
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-2">{strings.subscription.cancelInProgress}</p>
+            )}
+            {cancelStatus === 'success' && (
+              <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300 mt-2" data-testid="cancel-subscription-success">
+                {strings.subscription.cancelSuccess}
+              </p>
+            )}
+            {cancelStatus === 'error' && (
+              <p className="text-xs font-bold text-rose-700 dark:text-rose-400 mt-2 flex items-center gap-1" data-testid="cancel-subscription-error">
+                <XCircle className="w-3.5 h-3.5 shrink-0" />
+                {strings.subscription.cancelError}
               </p>
             )}
           </div>
@@ -123,7 +195,7 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
             >
               {tier.isPopular && (
                 <div className="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-black uppercase tracking-widest shadow-md">
-                  Most Popular
+                  {strings.subscription.mostPopularBadge}
                 </div>
               )}
 
@@ -167,11 +239,11 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
                   data-testid={`upgrade-${testIdBase}-button`}
                 >
                   {isLoading ? (
-                    <span>Initiating Razorpay...</span>
+                    <span>{strings.subscription.initiatingRazorpay}</span>
                   ) : isPaidMember ? (
                     <>
                       <ShieldCheck className="w-4 h-4" />
-                      <span>Pass Active</span>
+                      <span>{strings.subscription.passActive}</span>
                     </>
                   ) : (
                     <>

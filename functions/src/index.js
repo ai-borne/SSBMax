@@ -15,6 +15,7 @@ const { handleRazorpayWebhook } = require('./webhooks');
 const { handleRevenueCatWebhook } = require('./revenueCatWebhook');
 const { createRazorpayOrder } = require('./payments');
 const { createRazorpaySubscription } = require('./razorpaySubscriptions');
+const { cancelRazorpaySubscription } = require('./razorpaySubscriptionCancel');
 const { evaluateOIRAnswers } = require('./oirScoring');
 const { onOirSubmissionCreated } = require('./notifications/onOirSubmissionCreated');
 const { notifyGradingComplete } = require('./notifications/notifyGradingComplete');
@@ -54,6 +55,10 @@ exports.createRazorpayOrder = createRazorpayOrder;
 // (deprecated-but-live) -- web's checkout cutover is feature-flag gated, not atomic with this
 // function's deploy.
 exports.createRazorpaySubscription = createRazorpaySubscription;
+// Phase 5 (H5a, Payment Ecosystem Hardening plan): server-side half of Razorpay cancellation --
+// calls Razorpay's cancel API for the caller's own subscription; the existing
+// `subscription.cancelled` webhook flips `willRenew: false` once Razorpay confirms it.
+exports.cancelRazorpaySubscription = cancelRazorpaySubscription;
 exports.evaluateOIRAnswers = evaluateOIRAnswers;
 // Fires notifyEvaluationComplete for OIR specifically -- evaluateOIRAnswers above has no
 // submissionId to notify against (it runs before the submission doc exists, see
