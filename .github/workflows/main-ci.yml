@@ -6,7 +6,7 @@ name: SSBMax CI
 'on':
   pull_request:
   push:
-    branches: [ main, develop, 'feature/*', 'feature/**', 'fix/*', 'fix/**', 'tech-debt/*', 'tech-debt/**', PsyTests ]
+    branches: [ main, develop, 'feature/*', 'feature/**', 'fix/*', 'fix/**', 'tech-debt/*', 'tech-debt/**', 'chore/*', 'chore/**', 'ci/*', 'ci/**', PsyTests ]
   merge_group:
   workflow_dispatch:
 
@@ -204,23 +204,34 @@ jobs:
   # assembleSharedKitXCFramework is deliberately NOT run here (release
   # framework assembly is a release-pipeline concern, not a PR gate).
   #
-  # Xcode version pinned: `shared`'s cocoapods integration (Firebase pods,
-  # needed because GitLive's Kotlin/Native Firebase artifacts are published
-  # as CocoaPods-shaped cinterops -- SPM's Firebase integration never
-  # produces the .framework bundles they link against) requires a Kotlin
-  # Native compiler whose bundled Clang can parse the target SDK's headers.
+  # This job is the ONLY thing that compiles Kotlin for Apple targets. It is
+  # therefore the only gate that can catch a klib ABI mismatch, a Kotlin/Native
+  # source rejection (e.g. commas in backticked test names), or a missing
+  # linker search path. Keep the device-target compile below alongside the
+  # simulator one: an iosArm64-only break is otherwise invisible.
   #
-  # Kotlin 2.2.20 added Xcode 26 support (see the 2.2.20 release notes), so
-  # this job uses Xcode 26.2. That is the floor for the Swift package graph
-  # too: the resolved firebase-ios-sdk pulls swift-protobuf 1.38.x, whose
-  # Package.swift requires Swift tools 6.2.0 -- Xcode 16.x ships Swift 6.0
-  # and fails xcodebuild with "using Swift tools version 6.2.0 but the
-  # installed version is 6.0.0". Do NOT drop back to Xcode 16.x without
-  # also pinning swift-protobuf to a Swift-6.0-compatible version.
+  # Xcode version pinned: the Kotlin/Native compiler's bundled Clang has to be
+  # able to parse the target SDK's headers, and Kotlin 2.2.20 was the release
+  # that added Xcode 26 support (retained in 2.3.20), so this job uses Xcode
+  # 26.2. That is the floor for the Swift package graph too: the resolved
+  # firebase-ios-sdk pulls swift-protobuf 1.38.x, whose Package.swift requires
+  # Swift tools 6.2.0 -- Xcode 16.x ships Swift 6.0 and fails xcodebuild with
+  # "using Swift tools version 6.2.0 but the installed version is 6.0.0". Do
+  # NOT drop back to Xcode 16.x without also pinning swift-protobuf to a
+  # Swift-6.0-compatible version.
+  # (This block used to describe a CocoaPods/Firebase-pods integration. That is
+  # long gone -- iOS dependency management is SPM only, see root CLAUDE.md.)
   ios-tests:
     name: iOS (shared tests + Xcode build)
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 45
+    # Overrides the workflow-level GRADLE_OPTS, which pins -Xmx4g. The
+    # Kotlin/Native compiler runs inside the Gradle daemon and needs more than
+    # that to link Compose Multiplatform + skiko + GitLive + RevenueCat; 4g
+    # dies with "e: Compilation failed: Java heap space". Keep this in step with
+    # org.gradle.jvmargs in gradle.properties.
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.jvmargs=-Xmx8g"
     steps:
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -265,7 +276,18 @@ jobs:
         if: ${{ env.IOS_GOOGLE_SERVICES_PLIST != '' }}
         run: printf '%s' "$IOS_GOOGLE_SERVICES_PLIST" > iosApp/iosApp/GoogleService-Info.plist
 
+      - name: Compile shared for the iOS device target
+        # iosSimulatorArm64Test below never touches iosArm64, so a
+        # device-only compile break would ship unnoticed.
+        run: |
+          ./gradlew :shared:compileKotlinIosArm64 \
+            --build-cache \
+            --stacktrace
+
       - name: Run shared's Kotlin/Native tests
+        # Implies :shared:linkDebugTestIosSimulatorArm64 -- the link step is
+        # where missing frameworks and linker search paths surface, and it is
+        # the reason this step must never be reduced to a compile-only check.
         run: |
           ./gradlew :shared:iosSimulatorArm64Test \
             --build-cache \
@@ -355,8 +377,41 @@ jobs:
         working-directory: firestore-tests
         run: npm ci
 
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
       - name: Run rules-unit tests against the emulator
         run: firebase emulators:exec --only firestore --project demo-ssbmax-rules-test "npm --prefix firestore-tests test"
+
+      # ── Phase 6 (docs/plans/CrossPlatform_SSOT): shared-corpus contract tests ──
+      # Seeds one fixture corpus (firestore-tests/fixtures/shared-corpus.json) into the
+      # emulator, then exercises it from BOTH readers against the same running instance --
+      # firestore-tests' Node suite (a proxy for data-firebase's Kotlin DTOs; androidUnitTest
+      # itself can't reach a live emulator, see sharedCorpus.contract.test.mjs's docstring)
+      # and web's real ContentRepository via the actual firebase/firestore SDK. Needs the
+      # Auth emulator too (web signs in anonymously to satisfy firestore.rules'
+      # isAuthenticated() checks).
+      #
+      # All THREE participants must name the same project, because the Firestore emulator
+      # partitions data by project id. This previously relied on the default project
+      # (.firebaserc's "ssbmax-49e68") matching web/.env's VITE_FIREBASE_PROJECT_ID -- but
+      # web/.env is gitignored (.gitignore: *.env), so on CI that variable is unset,
+      # web/src/config/firebase.ts falls back to its 'ssbmax-demo' default, and the web SDK
+      # read an empty namespace while the seed landed in "ssbmax-49e68". Every assertion
+      # failed with ContentUnavailableError. Pin one demo project explicitly instead, for
+      # the emulator (--project), the seeder and Node reader (CORPUS_PROJECT_ID, a hook
+      # both scripts already honour) and the web SDK (VITE_FIREBASE_PROJECT_ID). A shell
+      # env var takes precedence over web/.env, so this also works on a dev machine.
+      # Using a demo- id rather than the real project id keeps the suite incapable of
+      # addressing production.
+      - name: Run shared-corpus contract tests against the emulator
+        env:
+          CORPUS_PROJECT_ID: demo-ssbmax-corpus
+          VITE_FIREBASE_PROJECT_ID: demo-ssbmax-corpus
+        run: |
+          firebase emulators:exec --only firestore,auth --project demo-ssbmax-corpus \
+            "npm --prefix firestore-tests run seed:corpus && npm --prefix firestore-tests run test:corpus && npm --prefix web run test:corpus"
 
   # ── Detekt (Kotlin static analysis) ──────────────────────────────────
   # Fails only on NEW smells; existing ones are grandfathered per-module via
@@ -387,6 +442,99 @@ jobs:
           name: detekt-reports
           path: '**/build/reports/detekt/detekt.html'
           retention-days: 7
+
+  # ── Contracts (Tier-1 SSOT generator — docs/plans/CrossPlatform_SSOT Phase 1) ──
+  # Fails if generated/* or any of its shared/web/functions mirrors
+  # are stale relative to contracts/*.yaml, or if the generator's own tests
+  # (parser golden-file / malformed-input / regen-diff) regress.
+  contracts:
+    name: Contracts Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Run generator tests
+        run: npm run contracts:test
+
+      - name: Verify generated output matches contracts/*.yaml (no drift)
+        run: npm run contracts:check
+
+  # ── Cloud Functions unit tests ────────────────────────────────────────
+  # Phase 8 (docs/plans/CrossPlatform_SSOT): functions/ is a Tier-1/Tier-2
+  # contract consumer (§1 of the plan) but had no dedicated CI job of its own
+  # -- `npm test` only ran locally. Runs standalone (no emulator needed;
+  # functions/test/*.test.js mock Firestore/Admin SDK directly).
+  functions:
+    name: Cloud Functions Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: functions
+        run: npm ci
+
+      # The Firestore emulator is a Java process, and firebase-tools 15.x refuses to start
+      # it on anything older than JDK 21 ("firebase-tools no longer supports Java version
+      # before 21"). The ubuntu runner's default JDK is older, so this step is required --
+      # the firestore-rules job sets up JDK 21 for the same reason.
+      - name: Set up JDK 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@15.28.1
+
+      # Under the Firestore emulator, on a `demo-` project id. Four
+      # createRazorpaySubscription tests exercise the module-level `db` for real
+      # (the rate-limit transaction and the RevenueCat ownership pre-check), so a
+      # bare `npm test` fails here with "Unable to detect a Project Id in the
+      # current environment" -- and on a developer machine with gcloud ADC it
+      # instead SUCCEEDS by writing to real production Firestore. The `demo-`
+      # prefix makes the Admin SDK refuse to contact production at all.
+      - name: Run Cloud Functions unit tests
+        working-directory: functions
+        run: npm run test:emulator
+
+  # ── 10-point security audit (scripts/validate-security.sh) ───────────
+  # Phase 8: this script existed and was documented (root CLAUDE.md's
+  # "Security Principles") but was never actually invoked in CI -- only the
+  # narrower security-scan job above ran automatically. fetch-depth: 0
+  # matches security-scan's own checkout (the script's git-tracked-file scans
+  # need full history, not a shallow clone).
+  validate-security-script:
+    name: Security & Compliance Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run 10-point security & compliance audit
+        run: ./scripts/validate-security.sh
 
   # ── Web Platform CI (ssbmax-web) ────────────────────────────────────
   web-ci:
@@ -432,25 +580,37 @@ jobs:
     name: CI Success
     runs-on: ubuntu-latest
     if: always()
-    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, build, firestore-rules, web-ci]
+    # ios-tests belongs here. It was omitted, so the aggregate gate reported
+    # success while the iOS job was red -- the second half of why a broken iOS
+    # target survived five commits (the first half being the machine-specific
+    # org.gradle.java.home in gradle.properties, which failed every job).
+    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, ios-tests, build, firestore-rules, contracts, functions, validate-security-script, web-ci]
     steps:
       - name: Verify all jobs succeeded
         run: |
-          echo "wrapper-validation: ${{ needs.wrapper-validation.result }}"
-          echo "security-scan:      ${{ needs.security-scan.result }}"
-          echo "lint:               ${{ needs.lint.result }}"
-          echo "detekt:             ${{ needs.detekt.result }}"
-          echo "unit-tests:         ${{ needs.unit-tests.result }}"
-          echo "build:              ${{ needs.build.result }}"
-          echo "firestore-rules:    ${{ needs.firestore-rules.result }}"
-          echo "web-ci:             ${{ needs.web-ci.result }}"
+          echo "wrapper-validation:      ${{ needs.wrapper-validation.result }}"
+          echo "security-scan:           ${{ needs.security-scan.result }}"
+          echo "lint:                    ${{ needs.lint.result }}"
+          echo "detekt:                  ${{ needs.detekt.result }}"
+          echo "unit-tests:              ${{ needs.unit-tests.result }}"
+          echo "ios-tests:               ${{ needs.ios-tests.result }}"
+          echo "build:                   ${{ needs.build.result }}"
+          echo "firestore-rules:         ${{ needs.firestore-rules.result }}"
+          echo "contracts:               ${{ needs.contracts.result }}"
+          echo "functions:               ${{ needs.functions.result }}"
+          echo "validate-security-script: ${{ needs.validate-security-script.result }}"
+          echo "web-ci:                  ${{ needs.web-ci.result }}"
           if [ "${{ needs.wrapper-validation.result }}" != "success" ] || \
              [ "${{ needs.security-scan.result }}" != "success" ] || \
              [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.detekt.result }}" != "success" ] || \
              [ "${{ needs.unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.ios-tests.result }}" != "success" ] || \
              [ "${{ needs.build.result }}" != "success" ] || \
              [ "${{ needs.firestore-rules.result }}" != "success" ] || \
+             [ "${{ needs.contracts.result }}" != "success" ] || \
+             [ "${{ needs.functions.result }}" != "success" ] || \
+             [ "${{ needs.validate-security-script.result }}" != "success" ] || \
              [ "${{ needs.web-ci.result }}" != "success" ]; then
             echo "❌ One or more CI jobs failed."
             exit 1

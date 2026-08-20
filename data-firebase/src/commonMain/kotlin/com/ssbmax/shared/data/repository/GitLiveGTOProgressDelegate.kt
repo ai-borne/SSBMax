@@ -9,13 +9,19 @@ import kotlin.time.Clock
 import kotlinx.serialization.Serializable
 
 /**
- * GTO progress/usage-tracking cluster (`getUserProgress`/`observeUserProgress`/`updateProgress`/
- * `canUserTakeTest`/`getCompletedTests`/`getNextAvailableTest`/`recordTestUsage`/
- * `getTestUsageCount`/`resetMonthlyUsage`), split out of the former single `GitLiveGTORepository`
- * god-class (300-line-file limit). Pure structural split — no behavior change from the original
- * merged class.
+ * GTO progress/sequential-unlock cluster (`getUserProgress`/`observeUserProgress`/
+ * `updateProgress`/`canUserTakeTest`/`getCompletedTests`/`getNextAvailableTest`), split out of
+ * the former single `GitLiveGTORepository` god-class (300-line-file limit).
  *
- * **`updateProgress`/`recordTestUsage` are read-then-write instead of the Android original's
+ * Quota bookkeeping (`recordTestUsage`/`getTestUsageCount`/`resetMonthlyUsage`,
+ * `GTOProgressDto.testsUsedThisMonth`) moved out entirely in Phase 5
+ * (docs/plans/CrossPlatform_SSOT): it never actually gated anything (`GTOEligibilityChecker`
+ * already read quota from `SubscriptionLimits`/`SubscriptionUsageDto`'s "GTO" bucket, not this
+ * map), so it was a second, permanently-out-of-sync counter. GTO submissions now go through the
+ * same [com.ssbmax.shared.domain.repository.TestUsageRecorder]/`recordTestUsage` callable as
+ * every other test type, via `GTOSubmissionCoordinator`.
+ *
+ * **`updateProgress` is read-then-write instead of the Android original's
  * `firestore.runTransaction`** — see [GitLiveGTORepository]'s class doc for why (no other
  * `GitLive*Repository` port in this codebase has exercised GitLive's `Transaction` API yet).
  */
@@ -91,64 +97,11 @@ internal class GitLiveGTOProgressDelegate(private val collections: GitLiveGTOCol
 
     suspend fun getNextAvailableTest(userId: String): Result<GTOTestType?> =
         getUserProgress(userId).map { it.getNextTest() }
-
-    /**
-     * Read-then-write (not the Android original's `runTransaction`) — see the class doc for why.
-     * `submissionId` is unused, matching the Android original's own signature.
-     */
-    suspend fun recordTestUsage(
-        userId: String,
-        testType: GTOTestType,
-        submissionId: String
-    ): Result<Unit> = try {
-        val ref = progressCollection.document(userId)
-        val snapshot = ref.get()
-        val current = if (snapshot.exists) {
-            runCatching { snapshot.data(GTOProgressDto.serializer()) }.getOrDefault(GTOProgressDto())
-        } else {
-            GTOProgressDto()
-        }
-
-        val testsUsed = current.testsUsedThisMonth.toMutableMap()
-        testsUsed[testType.name] = (testsUsed[testType.name] ?: 0) + 1
-
-        ref.set(current.copy(testsUsedThisMonth = testsUsed))
-
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
-
-    suspend fun getTestUsageCount(userId: String, testType: GTOTestType): Result<Int> =
-        getUserProgress(userId).map { it.testsUsedThisMonth[testType] ?: 0 }
-
-    suspend fun resetMonthlyUsage(userId: String): Result<Unit> = try {
-        val ref = progressCollection.document(userId)
-        val snapshot = ref.get()
-        val current = if (snapshot.exists) {
-            runCatching { snapshot.data(GTOProgressDto.serializer()) }.getOrDefault(GTOProgressDto())
-        } else {
-            GTOProgressDto()
-        }
-
-        ref.set(
-            current.copy(
-                testsUsedThisMonth = emptyMap(),
-                lastResetDate = Clock.System.now().toEpochMilliseconds()
-            )
-        )
-
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
 }
 
 @Serializable
 internal data class GTOProgressDto(
     val completedTests: List<String> = emptyList(),
-    val testsUsedThisMonth: Map<String, Int> = emptyMap(),
-    val lastResetDate: Long = 0L,
     val currentSequentialOrder: Int = 1,
     val lastCompletedAt: Long? = null
 )
@@ -156,10 +109,6 @@ internal data class GTOProgressDto(
 internal fun GTOProgressDto.toDomain(userId: String): GTOProgress = GTOProgress(
     userId = userId,
     completedTests = completedTests.mapNotNull { runCatching { GTOTestType.valueOf(it) }.getOrNull() },
-    testsUsedThisMonth = testsUsedThisMonth.mapNotNull { (key, value) ->
-        runCatching { GTOTestType.valueOf(key) }.getOrNull()?.let { it to value }
-    }.toMap(),
-    lastResetDate = lastResetDate,
     currentSequentialOrder = currentSequentialOrder,
     lastCompletedAt = lastCompletedAt
 )

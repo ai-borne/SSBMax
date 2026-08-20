@@ -146,6 +146,10 @@ private fun <T : UnifiedResultUiState> LazyListScope.analysisStatusSection(
     when {
         uiState.isPending -> item { PendingAnalysisCard() }
         uiState.isAnalyzing -> item { AnalyzingCard() }
+        // Firestore can expose COMPLETED a few seconds before the separate
+        // psych_results document is readable. Keep the user informed instead
+        // of leaving an empty result section during that consistency window.
+        uiState.isCompleted && !uiState.hasResults -> item { AnalyzingCard() }
         uiState.isFailed -> item { AnalysisFailedCard() }
         uiState.showResults -> olqResultsSection(
             uiState.olqResult!!, uiState.ssbRecommendation,

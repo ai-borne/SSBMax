@@ -1,8 +1,11 @@
 package com.ssbmax.shared.presentation.root
 
 import com.ssbmax.shared.domain.model.AppTheme
+import com.ssbmax.shared.domain.model.FeatureFlags
+import com.ssbmax.shared.platform.currentAppVersion
 import com.ssbmax.shared.platform.settings.AppThemeSettings
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
+import com.ssbmax.shared.presentation.testing.FakeFeatureFlagRepository
 import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeUserProfileRepository
 import com.ssbmax.shared.presentation.testing.RecordingLogger
@@ -36,6 +39,7 @@ class AppRootViewModelTest {
     private lateinit var appThemeSettings: AppThemeSettings
     private lateinit var authRepository: FakeAuthRepository
     private lateinit var userProfileRepository: FakeUserProfileRepository
+    private lateinit var featureFlagRepository: FakeFeatureFlagRepository
     private lateinit var logger: RecordingLogger
 
     @BeforeTest
@@ -44,6 +48,7 @@ class AppRootViewModelTest {
         appThemeSettings = AppThemeSettings(FakeSettings())
         authRepository = FakeAuthRepository(initialUser = testUser())
         userProfileRepository = FakeUserProfileRepository()
+        featureFlagRepository = FakeFeatureFlagRepository()
         logger = RecordingLogger()
     }
 
@@ -56,6 +61,7 @@ class AppRootViewModelTest {
         appThemeSettings = appThemeSettings,
         authRepository = authRepository,
         userProfileRepository = userProfileRepository,
+        featureFlagRepository = featureFlagRepository,
         logger = logger
     )
 
@@ -110,5 +116,40 @@ class AppRootViewModelTest {
         // real thrown exception reaches the try/catch's log call, matching
         // the original's "not critical for app functionality" comment.
         assertTrue(logger.entries.none { it.level == "e" })
+    }
+
+    @Test
+    fun `updateRequired defaults to false before the flag fetch resolves`() = runTest(testDispatcher) {
+        featureFlagRepository.flagsResult = FeatureFlags(minimumSupportedAppVersion = "999.0.0")
+
+        val viewModel = buildViewModel()
+
+        // Fail-open: until the async fetch resolves, a real user is never blocked by default.
+        assertEquals(false, viewModel.updateRequired.value)
+    }
+
+    @Test
+    fun `updateRequired stays false when the live minimum equals the current build`() = runTest(testDispatcher) {
+        // Uses the real currentAppVersion() rather than a hardcoded string: the iOS actual's
+        // NSBundle read returns a fallback (not the Info.plist value) inside a bare
+        // Kotlin/Native test binary, so a fixed "low" string here would be flaky per-platform.
+        featureFlagRepository.flagsResult = FeatureFlags(minimumSupportedAppVersion = currentAppVersion())
+
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(false, viewModel.updateRequired.value)
+    }
+
+    @Test
+    fun `updateRequired becomes true once the live minimum exceeds the current build`() = runTest(testDispatcher) {
+        // Safely above any real or fallback currentAppVersion() value on any platform.
+        featureFlagRepository.flagsResult = FeatureFlags(minimumSupportedAppVersion = "99999.0.0")
+
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(true, viewModel.updateRequired.value)
+        assertEquals(1, featureFlagRepository.getFeatureFlagsCallCount)
     }
 }

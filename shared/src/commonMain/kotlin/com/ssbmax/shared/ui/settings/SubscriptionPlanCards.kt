@@ -40,6 +40,7 @@ import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.subscription_mgmt_collapse_cd
 import ssbmax.shared.generated.resources.subscription_mgmt_current_plan_label
 import ssbmax.shared.generated.resources.subscription_mgmt_expand_cd
+import ssbmax.shared.generated.resources.subscription_mgmt_expires_no_renew
 import ssbmax.shared.generated.resources.subscription_mgmt_na
 import ssbmax.shared.generated.resources.subscription_mgmt_renews_on
 import ssbmax.shared.generated.resources.subscription_mgmt_used_of_limit
@@ -55,6 +56,7 @@ import ssbmax.shared.generated.resources.subscription_mgmt_usage_title
 internal fun CurrentPlanCard(
     tier: SubscriptionTierModel,
     expiresAt: String?,
+    willRenew: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -62,6 +64,7 @@ internal fun CurrentPlanCard(
         colors = CardDefaults.cardColors(
             containerColor = when (tier) {
                 SubscriptionTierModel.FREE -> MaterialTheme.colorScheme.surface
+                SubscriptionTierModel.BASIC -> MaterialTheme.colorScheme.secondaryContainer
                 SubscriptionTierModel.PRO -> MaterialTheme.colorScheme.primaryContainer
                 SubscriptionTierModel.PREMIUM -> MaterialTheme.colorScheme.tertiaryContainer
             }
@@ -78,6 +81,7 @@ internal fun CurrentPlanCard(
                 Icon(
                     imageVector = when (tier) {
                         SubscriptionTierModel.FREE -> Icons.Default.AccountCircle
+                        SubscriptionTierModel.BASIC -> Icons.Default.Star
                         SubscriptionTierModel.PRO -> Icons.Default.Star
                         SubscriptionTierModel.PREMIUM -> Icons.Default.Diamond
                     },
@@ -120,7 +124,11 @@ internal fun CurrentPlanCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = stringResource(Res.string.subscription_mgmt_renews_on, expiresAt),
+                        text = if (willRenew) {
+                            stringResource(Res.string.subscription_mgmt_renews_on, expiresAt)
+                        } else {
+                            stringResource(Res.string.subscription_mgmt_expires_no_renew, expiresAt)
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -239,6 +247,3 @@ private fun UsageRow(
         }
     }
 }
-
-// PlanComparisonCards/PlanCard moved to SubscriptionPlanComparisonCards.kt
-// to keep this file under this repo's 300-line Quality Limit.

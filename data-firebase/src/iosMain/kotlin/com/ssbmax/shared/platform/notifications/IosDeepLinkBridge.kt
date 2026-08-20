@@ -10,7 +10,7 @@ import com.ssbmax.shared.platform.sharedKoin
  * `userNotificationCenter(_:didReceive:)` was an explicit no-op before this
  * -- see that method's own doc comment.
  *
- * Same shape as [onApnsDeviceTokenReceived] in this package: `ensureKoinStarted()`
+ * Same shape as [onFcmTokenReceived] in this package: `ensureKoinStarted()`
  * is a guarded no-op here too (`AppDelegate` already starts Koin in
  * `didFinishLaunchingWithOptions`, before `UNUserNotificationCenter`'s
  * delegate can fire), kept defensive for the same reason.

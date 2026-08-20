@@ -14,6 +14,7 @@ import com.ssbmax.shared.presentation.testing.FakeSubmissionAnalysisTrigger
 import com.ssbmax.shared.presentation.testing.FakeSubmissionRepository
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
 import com.ssbmax.shared.presentation.testing.FakeTestContentRepository
+import com.ssbmax.shared.presentation.testing.FakeTestUsageRecorder
 import com.ssbmax.shared.presentation.testing.RecordingAnalyticsTracker
 import com.ssbmax.shared.presentation.testing.testUser
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ class GDTestViewModelTest {
     private lateinit var authRepository: FakeAuthRepository
     private lateinit var subscriptionRepository: FakeSubscriptionRepository
     private lateinit var gtoRepository: FakeGTORepository
+    private lateinit var usageRecorder: FakeTestUsageRecorder
     private lateinit var testContentRepository: FakeTestContentRepository
     private lateinit var submissionRepository: FakeSubmissionRepository
     private lateinit var analysisTrigger: FakeSubmissionAnalysisTrigger
@@ -53,10 +55,11 @@ class GDTestViewModelTest {
         authRepository = FakeAuthRepository(initialUser = testUser())
         subscriptionRepository = FakeSubscriptionRepository()
         gtoRepository = FakeGTORepository()
+        usageRecorder = FakeTestUsageRecorder()
         testContentRepository = FakeTestContentRepository()
         submissionRepository = FakeSubmissionRepository()
         analysisTrigger = FakeSubmissionAnalysisTrigger()
-        // "GTO Tests" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
+        // "GTO" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
         // tests are eligible unless a test explicitly overrides to exercise LimitReached.
         subscriptionRepository.tierResult = Result.success(com.ssbmax.shared.domain.model.SubscriptionTier.PRO)
     }
@@ -78,6 +81,7 @@ class GDTestViewModelTest {
         )
         val submissionCoordinator = GTOSubmissionCoordinator(
             gtoRepository = gtoRepository,
+            usageRecorder = usageRecorder,
             analysisTrigger = analysisTrigger,
             logger = logger
         )
@@ -94,7 +98,7 @@ class GDTestViewModelTest {
     fun `loadTest surfaces limit reached without loading topic`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(com.ssbmax.shared.domain.model.SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("GTO Tests" to com.ssbmax.shared.domain.repository.UsageInfo(used = 1, limit = 1))
+            mapOf("GTO" to com.ssbmax.shared.domain.repository.UsageInfo(used = 1, limit = 1))
         )
         val viewModel = buildViewModel()
 
@@ -180,7 +184,7 @@ class GDTestViewModelTest {
         assertTrue(state.isCompleted)
         assertEquals(GDPhase.SUBMITTED, state.phase)
         assertNotNull(state.submissionId)
-        assertTrue(gtoRepository.recordedUsage.isNotEmpty())
+        assertTrue(usageRecorder.recorded.isNotEmpty())
         assertTrue(gtoRepository.recordedProgress.isNotEmpty())
         assertTrue(analysisTrigger.triggeredCalls.isNotEmpty())
     }

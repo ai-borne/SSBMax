@@ -75,7 +75,7 @@ class TATTestViewModelTest {
         submissionRepository = FakeSubmissionRepository()
         usageRecorder = FakeTestUsageRecorder()
         analysisTrigger = FakeSubmissionAnalysisTrigger()
-        // "TAT Tests" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
+        // "TAT" is limit 0 on FREE (SubscriptionLimits) -- default to PRO so
         // tests are eligible unless a test explicitly overrides to exercise LimitReached.
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
     }
@@ -118,7 +118,7 @@ class TATTestViewModelTest {
     fun `limit reached surfaces subscription details without loading questions`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult =
-            Result.success(mapOf("TAT Tests" to UsageInfo(used = 1, limit = 1)))
+            Result.success(mapOf("TAT" to UsageInfo(used = 1, limit = 1)))
         val viewModel = buildViewModel()
 
         viewModel.loadTest()
@@ -198,6 +198,32 @@ class TATTestViewModelTest {
         // close() to cancel the scope with -- clearForTest() (see ViewModelTestUtils.kt) forces
         // onCleared() via a throwaway ViewModelStore so cleanup is instant.
         viewModel.clearForTest()
+    }
+
+    // TAT_Impr_3 Phase 4: submitTest must persist the exact questions the user saw so the
+    // analysis paths can recover the questionId -> imageUrl mapping instead of re-fetching a
+    // fresh random 12 (the "0 bytes" image bug).
+    @Test
+    fun `submitTest persists the questions the user saw in the submission`() = runTest(testDispatcher) {
+        val fakeWithTAT = object : com.ssbmax.shared.domain.repository.TestContentRepository by testContentRepository {
+            override suspend fun getTATQuestions(testId: String, genderTag: com.ssbmax.shared.domain.model.GenderTag?) =
+                Result.success(questions())
+        }
+        val viewModel = TATTestViewModel(
+            LoadTATTestUseCase(fakeWithTAT, testSessionRepository, userProfileRepository),
+            SubmitTATTestUseCase(submissionRepository), ObserveCurrentUserUseCase(authRepository),
+            CheckTestEligibilityUseCase(subscriptionRepository, RecordingAnalyticsTracker()), GetSubscriptionTierUseCase(subscriptionRepository), usageRecorder,
+            analysisTrigger, testSessionRepository, NoOpLogger(), RecordingAnalyticsTracker()
+        )
+        viewModel.loadTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.submitTest()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val submitted = submissionRepository.lastTATSubmission
+        assertNotNull(submitted)
+        assertEquals(questions(), submitted.questions)
     }
 
     @Test

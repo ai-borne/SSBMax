@@ -27,19 +27,23 @@ internal class GitLiveGTOSubmissionDelegate(private val collections: GitLiveGTOC
     private val submissionsCollection get() = collections.submissions
     private val resultsCollection get() = collections.results
 
-    suspend fun getSubmission(submissionId: String): Result<GTOSubmission> = try {
-        val doc = submissionsCollection.document(submissionId).get()
-        if (!doc.exists) {
-            Result.failure(Exception("Submission not found: $submissionId"))
-        } else {
-            Result.success(doc.data(GTOSubmissionDocDto.serializer()).toDomain())
+    suspend fun getSubmission(submissionId: String): Result<GTOSubmission> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            val doc = submissionsCollection.document(submissionId).get()
+            if (!doc.exists) {
+                Result.failure(Exception("Submission not found: $submissionId"))
+            } else {
+                Result.success(doc.data(GTOSubmissionDocDto.serializer()).toDomain())
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
-    } catch (e: Exception) {
-        Result.failure(e)
     }
 
-    fun observeSubmission(submissionId: String): Flow<GTOSubmission?> =
-        submissionsCollection.document(submissionId).snapshots
+    fun observeSubmission(submissionId: String): Flow<GTOSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return kotlinx.coroutines.flow.flowOf(null)
+        return submissionsCollection.document(submissionId).snapshots
             .map { snap ->
                 if (snap.exists) {
                     runCatching { snap.data(GTOSubmissionDocDto.serializer()).toDomain() }.getOrNull()
@@ -47,21 +51,27 @@ internal class GitLiveGTOSubmissionDelegate(private val collections: GitLiveGTOC
                     null
                 }
             }
+    }
 
     suspend fun updateSubmissionStatus(
         submissionId: String,
         status: GTOSubmissionStatus
-    ): Result<Unit> = try {
-        submissionsCollection.document(submissionId).update(GTO_FIELD_STATUS to status.name)
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
+    ): Result<Unit> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            submissionsCollection.document(submissionId).update(GTO_FIELD_STATUS to status.name)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun updateSubmissionOLQScores(
         submissionId: String,
         olqScores: Map<OLQ, OLQScore>
-    ): Result<Unit> = try {
+    ): Result<Unit> {
+      if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+      return try {
         val submissionDoc = submissionsCollection.document(submissionId).get()
         if (!submissionDoc.exists) {
             Result.failure(Exception("Submission not found: $submissionId"))
@@ -90,8 +100,9 @@ internal class GitLiveGTOSubmissionDelegate(private val collections: GitLiveGTOC
 
             Result.success(Unit)
         }
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(e)
+      }
     }
 
     suspend fun getUserSubmissions(

@@ -16,6 +16,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -138,4 +139,30 @@ class OirResultViewModelTest {
         assertNotNull(state.result)
         assertNull(state.error)
     }
+
+    @Test
+    fun `result screen loads by submission id and reflects the most recently submitted attempt`() =
+        runTest(testDispatcher) {
+            // OIR Retake Seal, Phase 3 (finding #5): pins that the result screen is driven
+            // purely by the submission id passed to loadSubmission, so a retake's fresh id
+            // (Phase 1) reaches this screen and displays its own result -- never the prior
+            // attempt's, which was Defect 1 (stale retake result).
+            val viewModel = buildViewModel()
+
+            repository.oirResult = Result.success(result("submission-1"))
+            viewModel.loadSubmission("submission-1")
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals("submission-1", repository.lastRequestedSubmissionId)
+            assertEquals("submission-1", viewModel.uiState.value.result?.sessionId)
+
+            // Retake: a second, distinct attempt with its own fresh submission id.
+            repository.oirResult = Result.success(result("submission-2"))
+            viewModel.loadSubmission("submission-2")
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals("submission-2", repository.lastRequestedSubmissionId)
+            assertEquals("submission-2", state.result?.sessionId)
+            assertNotEquals("submission-1", state.result?.sessionId)
+        }
 }

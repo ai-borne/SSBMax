@@ -101,7 +101,11 @@ its one Android-only survivor, a Room cache for two WorkManager workers, is docu
 **Start here:** `shared/src/commonMain/kotlin/com/ssbmax/shared/ui/` (no dedicated
 CLAUDE.md yet — `core:designsystem`, which used to cover this, was deleted
 once its only two SSOT-worthy objects, `SSBColors`/`Spacing`, were confirmed
-already duplicated in `shared`; see the KMP-convergence plan's Phase 0f)
+already duplicated in `shared`; see the KMP-convergence plan's Phase 0f. Colors
+moved again in the Cross-Platform SSOT plan's Phase 7: `SSBColors` itself is
+gone — theme colors come from the generated `SsbContracts.DesignTokens`
+(`contracts/tokens.yaml` is the SSOT, shared with web). `Spacing` stays a
+plain `shared`-local object; there was no cross-platform fork to unify there)
 - Component API design
 - Material3 theming
 - Accessibility (WCAG)

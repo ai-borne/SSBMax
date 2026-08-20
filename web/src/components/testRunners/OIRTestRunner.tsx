@@ -10,6 +10,7 @@ export interface OIRTestRunnerProps {
   viewModel: OIRTestViewModel;
   userId: string;
   isOnline?: boolean;
+  batchIndex?: number;
   onExitTest?: () => void;
 }
 
@@ -17,6 +18,7 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
   viewModel,
   userId,
   isOnline = true,
+  batchIndex = 0,
   onExitTest
 }) => {
   const [state, setState] = useState<OIRTestState>(viewModel.getState());
@@ -26,9 +28,10 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
     const unsubscribe = viewModel.subscribe(() => {
       setState(viewModel.getState());
     });
-    viewModel.loadQuestions(0);
+    viewModel.loadQuestions(batchIndex);
     return () => unsubscribe();
-  }, [viewModel]);
+  }, [viewModel, batchIndex]);
+
 
   const { formattedTime, start } = useTestTimer({
     initialSeconds: 30 * 60,
@@ -58,37 +61,76 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
   }
 
   if (state.error) {
+    const isPermissionError = state.error.toLowerCase().includes('permission') || state.error.toLowerCase().includes('sign in');
     return (
-      <div className="p-6 bg-red-900/20 border border-red-700/50 rounded-lg text-red-300 flex items-center justify-between">
-        <span>{state.error}</span>
-        <button
-          onClick={() => viewModel.loadQuestions(0)}
-          className="px-4 py-2 bg-red-800 hover:bg-red-700 rounded text-white text-sm"
-        >
-          {strings.common.retry}
-        </button>
+      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-md mx-auto space-y-4 shadow-lg my-12">
+        <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+          {isPermissionError ? 'Sign-In Required' : strings.common.error}
+        </h3>
+        <p className="text-sm text-[var(--color-text-muted)]">
+          {state.error}
+        </p>
+        <div className="flex justify-center gap-3 pt-2">
+          {onExitTest && (
+            <button
+              onClick={onExitTest}
+              className="px-4 py-2 text-xs font-semibold rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-card)]"
+            >
+              {strings.common.back}
+            </button>
+          )}
+          <button
+            onClick={() => viewModel.loadQuestions(batchIndex)}
+            className="px-4 py-2 bg-[var(--color-accent)] hover:opacity-90 rounded-lg text-white text-xs font-bold"
+          >
+            {strings.common.retry}
+          </button>
+        </div>
       </div>
     );
   }
 
   if (state.isCompleted && state.result) {
     return (
-      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-lg mx-auto">
-        <CheckCircle2 className="w-16 h-16 text-[var(--color-success)] mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">{strings.oir.completedTitle}</h2>
-        <div className="my-6 p-4 bg-[var(--color-bg-elevated)] rounded-lg flex justify-around">
+      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-lg mx-auto space-y-6 shadow-xl my-8">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto animate-pulse">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+        
+        <div>
+          <h2 className="text-2xl font-black text-[var(--color-text-primary)] mb-1">{strings.oir.completedTitle}</h2>
+          <p className="text-xs text-[var(--color-text-muted)]">Your responses have been processed and scored against Assessor OIR Benchmarks.</p>
+        </div>
+
+        <div className="p-5 bg-[var(--color-bg-elevated)] rounded-xl border border-[var(--color-border)] grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{strings.oir.scoreLabel}</p>
-            <p className="text-3xl font-extrabold text-[var(--color-accent)]">
-              {state.result.score} / {state.result.totalQuestions}
+            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{strings.oir.scoreLabel}</p>
+            <p className="text-3xl font-extrabold text-[var(--color-accent)] mt-1">
+              {state.result.score} <span className="text-sm font-normal text-[var(--color-text-muted)]">/ {state.result.totalQuestions}</span>
             </p>
           </div>
           <div>
-            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{strings.oir.ratingLabel}</p>
-            <p className="text-3xl font-extrabold text-[var(--color-success)]">
+            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{strings.oir.ratingLabel}</p>
+            <p className="text-3xl font-extrabold text-emerald-500 mt-1">
               OIR-{state.result.oirRating}
             </p>
           </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+          {onExitTest && (
+            <button
+              onClick={onExitTest}
+              data-testid="return-to-tests-button"
+              className="min-h-[44px] px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20 transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Return to SSB Tests</span>
+            </button>
+          )}
         </div>
       </div>
     );
@@ -201,7 +243,11 @@ export const OIRTestRunner: React.FC<OIRTestRunnerProps> = ({
               disabled={state.isSubmitting}
               className="flex items-center px-6 py-2 bg-[var(--color-success)] hover:opacity-90 text-white rounded-lg text-sm font-medium"
             >
-              <Send className="w-4 h-4 mr-1.5" />
+              {state.isSubmitting ? (
+                <Clock className="w-4 h-4 mr-1.5 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1.5" />
+              )}
               {state.isSubmitting ? strings.oir.submitting : strings.oir.submitTest}
             </button>
           )}

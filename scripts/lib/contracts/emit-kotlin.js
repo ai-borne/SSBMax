@@ -1,0 +1,137 @@
+'use strict';
+
+const { header, ALL_SOURCE_FILES } = require('./header');
+
+function ktString(s) {
+  return JSON.stringify(String(s));
+}
+
+// '#rrggbb' or '#rrggbbaa' -> Kotlin's 0xAARRGGBB Color(...) literal.
+function ktColor(hex) {
+  const h = hex.replace('#', '');
+  const argb = h.length === 8 ? h.slice(6, 8) + h.slice(0, 6) : `FF${h}`;
+  return `Color(0x${argb.toUpperCase()})`;
+}
+
+function emitKotlin(data) {
+  const { firestorePaths, enums, subscription, pricing, testConfig, events, routes, tokens } = data;
+  const out = [];
+  out.push(header('kt', ALL_SOURCE_FILES));
+  out.push('package com.ssbmax.shared.contracts');
+  out.push('');
+  out.push('import androidx.compose.ui.graphics.Color');
+  out.push('');
+  out.push('object SsbContracts {');
+  out.push('');
+
+  // Firestore paths
+  out.push('    object FirestorePaths {');
+  for (const c of firestorePaths.collections) {
+    out.push(`        const val ${c.name} = ${ktString(c.path)}`);
+  }
+  out.push('');
+  out.push('        object TestContent {');
+  for (const tc of firestorePaths.testContent) {
+    out.push(`            const val ${tc.testType}_BATCHES = ${ktString(tc.batchesPath)}`);
+    if (tc.metaConfigPath) {
+      out.push(`            const val ${tc.testType}_META_CONFIG = ${ktString(tc.metaConfigPath)}`);
+    }
+  }
+  out.push('        }');
+  out.push('    }');
+  out.push('');
+
+  // Enums
+  out.push('    object Enums {');
+  for (const e of enums.enums) {
+    const isObjectMembers = e.members.length > 0 && typeof e.members[0] === 'object' && e.members[0] !== null;
+    if (!isObjectMembers) {
+      out.push(`        enum class ${e.name} { ${e.members.join(', ')} }`);
+    } else {
+      out.push(`        enum class ${e.name}(val displayName: String, val category: String, val critical: Boolean) {`);
+      const rows = e.members.map((m) => `            ${m.id}(${ktString(m.displayName)}, ${ktString(m.category)}, ${m.critical ? 'true' : 'false'})`);
+      out.push(rows.join(',\n') + ';');
+      out.push('        }');
+    }
+  }
+  out.push('    }');
+  out.push('');
+
+  // Subscription limits
+  out.push('    data class SubscriptionLimit(val bucket: String, val testTypes: List<String>, val free: Int, val basic: Int, val pro: Int, val premium: Int)');
+  out.push('    object Subscription {');
+  out.push('        val LIMITS: List<SubscriptionLimit> = listOf(');
+  const subRows = subscription.limits.map((l) => {
+    const types = l.testTypes.map((t) => `"${t}"`).join(', ');
+    return `            SubscriptionLimit(${ktString(l.bucket)}, listOf(${types}), ${l.FREE}, ${l.BASIC}, ${l.PRO}, ${l.PREMIUM})`;
+  });
+  out.push(subRows.join(',\n'));
+  out.push('        )');
+  out.push('    }');
+  out.push('');
+
+  // Pricing (INR, monthly)
+  out.push('    data class TierPrice(val tier: String, val monthlyInr: Int)');
+  out.push('    object Pricing {');
+  out.push('        val TIERS: List<TierPrice> = listOf(');
+  const tierRows = Object.entries(pricing.tiers).map(([tier, price]) => `            TierPrice(${ktString(tier)}, ${price})`);
+  out.push(tierRows.join(',\n'));
+  out.push('        )');
+  for (const [addon, price] of Object.entries(pricing.addons)) {
+    out.push(`        const val ${addon}_INR = ${price}`);
+  }
+  out.push('    }');
+  out.push('');
+
+  // Test config
+  out.push('    data class TestConfigEntry(val testType: String, val values: Map<String, Any>)');
+  out.push('    object TestConfig {');
+  out.push('        val ENTRIES: List<TestConfigEntry> = listOf(');
+  const tcRows = testConfig.tests.map((t) => {
+    const values = Object.entries(t).filter(([k]) => !['testType', 'source', 'note'].includes(k));
+    const mapEntries = values.map(([k, v]) => `"${k}" to ${typeof v === 'string' ? ktString(v) : v}`).join(', ');
+    return `            TestConfigEntry(${ktString(t.testType)}, mapOf(${mapEntries}))`;
+  });
+  out.push(tcRows.join(',\n'));
+  out.push('        )');
+  out.push('    }');
+  out.push('');
+
+  // Events
+  out.push('    object SecurityEvents {');
+  for (const ev of events.securityEvents) {
+    out.push(`        const val ${ev.name} = ${ktString(ev.value)}`);
+  }
+  out.push('    }');
+  out.push('');
+
+  // Routes
+  out.push('    object Routes {');
+  out.push(`        const val MINIMUM_SUPPORTED_APP_VERSION = ${ktString(routes.minimumSupportedAppVersion)}`);
+  for (const r of routes.routes) {
+    out.push(`        const val ${r.name} = ${ktString(r.path)}`);
+  }
+  out.push('    }');
+  out.push('');
+
+  // Design tokens (Phase 7)
+  out.push('    data class Palette(');
+  for (const t of tokens.tokens) {
+    out.push(`        val ${t.name}: Color,`);
+  }
+  out.push('    )');
+  out.push('    object DesignTokens {');
+  out.push('        val Light = Palette(');
+  out.push(tokens.tokens.map((t) => `            ${t.name} = ${ktColor(t.light)}`).join(',\n'));
+  out.push('        )');
+  out.push('        val Dark = Palette(');
+  out.push(tokens.tokens.map((t) => `            ${t.name} = ${ktColor(t.dark)}`).join(',\n'));
+  out.push('        )');
+  out.push('    }');
+  out.push('}');
+  out.push('');
+
+  return out.join('\n');
+}
+
+module.exports = { emitKotlin };

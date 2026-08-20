@@ -1,4 +1,4 @@
-import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument } from '../../types/testContent';
+import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, TestBatchInfo, GPEImage, OIRContentMeta } from '../../types/testContent';
 
 export interface IContentRepository {
   getStudyMaterials(): Promise<StudyMaterial[]>;
@@ -8,5 +8,8 @@ export interface IContentRepository {
   getTATSet(id?: string): Promise<TATSet>;
   getWATBatch(id?: string): Promise<WATBatch>;
   getSRTBatch(id?: string): Promise<SRTBatch>;
-  getCappedBatch<T>(collectionName: string, batchIndex?: number, maxItems?: number): Promise<BatchDocument<T>>;
+  getGPEBatch(id?: string, batchIndex?: number): Promise<BatchDocument<GPEImage>>;
+  getOIRContentVersion(): Promise<OIRContentMeta>;
+  getAvailableBatches(moduleName: string): Promise<TestBatchInfo[]>;
 }
+

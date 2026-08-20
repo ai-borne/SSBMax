@@ -10,6 +10,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { OLQ_DEFINITIONS, PIQ_TO_OLQ_MAPPING } = require('./olqDefinitions');
+const { FirestorePaths, Enums } = require('./generated/contracts.cjs');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -91,13 +92,24 @@ function parseAnalysisResponse(responseText) {
   if (!parsed.olqScores || !Array.isArray(parsed.olqScores)) {
     throw new Error('Invalid response structure from Gemini: missing olqScores');
   }
+
+  // Regression target (docs/plans/CrossPlatform_SSOT §3.4): a Gemini response using a wire key
+  // outside the generated OLQ contract (e.g. a casing/name drift like 'socialAdaptability')
+  // must fail loudly here, not get written to Firestore for a client to silently misread as 0.
+  for (const item of parsed.olqScores) {
+    if (!item || !Object.prototype.hasOwnProperty.call(Enums.OLQ, item.olq)) {
+      throw new Error(`Invalid response structure from Gemini: unknown OLQ id '${item && item.olq}'`);
+    }
+  }
+
   return parsed;
 }
 
 // Function options for DoW protection
 const runtimeOptions = {
   maxInstances: 10,
-  timeoutSeconds: 60
+  timeoutSeconds: 60,
+  secrets: ['GEMINI_API_KEY']
 };
 
 exports.analyzeInterviewResponse = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
@@ -111,7 +123,7 @@ exports.analyzeInterviewResponse = functions.runWith(runtimeOptions).https.onCal
     throw new functions.https.HttpsError('invalid-argument', 'responseId and sessionId are required');
   }
 
-  const responseRef = db.collection('interview_responses').doc(responseId);
+  const responseRef = db.collection(FirestorePaths.INTERVIEW_RESPONSES).doc(responseId);
 
   try {
     const responseDoc = await responseRef.get();
@@ -122,7 +134,7 @@ exports.analyzeInterviewResponse = functions.runWith(runtimeOptions).https.onCal
     const responseData = responseDoc.data();
 
     // Dual-Ownership Verification
-    const sessionDoc = await db.collection('interview_sessions').doc(sessionId).get();
+    const sessionDoc = await db.collection(FirestorePaths.INTERVIEW_SESSIONS).doc(sessionId).get();
     if (
       !sessionDoc.exists ||
       sessionDoc.data().userId !== userId ||

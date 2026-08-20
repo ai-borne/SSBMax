@@ -44,12 +44,46 @@ kotlin {
     // carries the Firebase-backed repository implementations AND this module's
     // UI/ViewModels; a framework built here would link an app whose Koin graph
     // has no repository bindings at all.
-    iosArm64()
-    iosSimulatorArm64()
+    // RevenueCat's purchases-kmp klibs (kn-core Cinterop-RevenueCat*) record a
+    // linkerOpts `-L` pointing at the BUILD MACHINE's Xcode --
+    // `/Applications/Xcode-16.4.app/.../usr/lib/swift/iphonesimulator/` -- which
+    // does not exist here, so `ld` silently drops the search path and then fails
+    // the Kotlin/Native test executable with `Undefined symbols: _swift_FORCE_LOAD
+    // _$_swiftCompatibility56 / ...Concurrency / _swift_getFunctionTypeMetadata
+    // GlobalActorBackDeploy`. Those are Swift back-deployment shims force-loaded by
+    // RevenueCat's bundled Swift objects. Re-add the same search path resolved from
+    // THIS machine's active toolchain (`xcode-select -p`) so the libs are found.
+    // This is an upstream packaging bug, independent of the Kotlin version -- it
+    // only surfaced now because nothing had ever linked the iOS test binary.
+    // NOT a CocoaPods reintroduction: the Swift objects themselves ship inside the
+    // klib, only the platform Swift runtime shims need locating.
+    // Host-guarded: `xcode-select` only exists on macOS, and Apple targets can only
+    // be built there anyway. Without this guard the exec runs at CONFIGURATION time
+    // on every platform and fails the whole Gradle build on Linux CI with
+    // `java.io.IOException: Cannot run program "xcode-select"` -- which takes out
+    // :lint, :detekt and :unit-tests too, none of which touch iOS.
+    val isMacOsHost = System.getProperty("os.name").startsWith("Mac")
+    val swiftRuntimeSearchPath: (String) -> List<String> = { sdk ->
+        if (!isMacOsHost) {
+            emptyList()
+        } else {
+            val developerDir = providers.exec {
+                commandLine("xcode-select", "-p")
+            }.standardOutput.asText.get().trim()
+            listOf("-L$developerDir/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$sdk")
+        }
+    }
+
+    iosArm64 {
+        binaries.all { linkerOpts(swiftRuntimeSearchPath("iphoneos")) }
+    }
+    iosSimulatorArm64 {
+        binaries.all { linkerOpts(swiftRuntimeSearchPath("iphonesimulator")) }
+    }
 
     applyDefaultHierarchyTemplate()
 
-    // Kotlin 2.2.20 (bumped for Xcode 26 SDK support, see gradle/libs.versions.toml)
+    // Kotlin 2.3.20 (see gradle/libs.versions.toml for why)
     // ships kotlin.time.Clock/Instant as @ExperimentalTime -- kotlinx-datetime 0.7.1's
     // kotlinx.datetime.Clock/Instant are now deprecated typealiases for those stdlib
     // types, so every pre-existing `Clock.System.now()` / `Instant.fromEpochMilliseconds()`
@@ -66,8 +100,16 @@ kotlin {
     // files.
     sourceSets.all {
         languageSettings.optIn("kotlin.time.ExperimentalTime")
-        languageSettings.optIn("kotlinx.cinterop.ExperimentalForeignApi")
     }
+    // ExperimentalForeignApi only exists in Kotlin/Native. Opting in from
+    // `sourceSets.all` also hit the Android/JVM source sets, where the annotation
+    // class is not on the classpath, producing "w: Opt-in requirement marker
+    // 'kotlinx.cinterop.ExperimentalForeignApi' is unresolved" on every
+    // compile*KotlinAndroid task. Scope it to the native tree instead.
+    sourceSets.matching { it.name.startsWith("ios") || it.name.startsWith("apple") || it.name.startsWith("native") }
+        .configureEach {
+            languageSettings.optIn("kotlinx.cinterop.ExperimentalForeignApi")
+        }
 
     sourceSets {
         commonMain.dependencies {
@@ -128,6 +170,11 @@ kotlin {
 
             implementation(libs.multiplatform.settings)
             implementation(libs.multiplatform.settings.coroutines)
+
+            // Phase 4 (RevenueCat integration): replaces hand-rolled Play/StoreKit
+            // reconciliation. Pure-Kotlin KMP artifact -- no CocoaPods/SPM wiring
+            // needed on iOS, same as ktor-darwin/coil3 above.
+            implementation(libs.purchases.kmp.core)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -207,6 +254,14 @@ android {
 
     defaultConfig {
         minSdk = 26
+        // Phase 8 (Cross-Platform SSOT plan): read by currentAppVersion()'s
+        // Android actual for the remote-kill-switch version gate. Must be
+        // bumped alongside app/build.gradle.kts's `versionName` and iOS's
+        // Info.plist `CFBundleShortVersionString` at release time -- there is
+        // no single build-time SSOT across Gradle and Xcode, so this is a
+        // release-checklist item, not a contract value (only the *minimum
+        // supported* version is a contracts/ value; see routes.yaml).
+        buildConfigField("String", "APP_VERSION_NAME", "\"1.0.0\"")
     }
 
     // Robolectric-only launcher Activity for SSBMaxThemeUiTest's

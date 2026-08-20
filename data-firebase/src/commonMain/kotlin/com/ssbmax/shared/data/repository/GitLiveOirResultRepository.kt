@@ -3,6 +3,7 @@ package com.ssbmax.shared.data.repository
 import com.ssbmax.shared.domain.model.OIRTestResult
 import com.ssbmax.shared.domain.repository.OirResultRepository
 import com.ssbmax.shared.data.repository.toDomain
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 
@@ -21,13 +22,16 @@ class GitLiveOirResultRepository(
 ) : OirResultRepository {
 
     override suspend fun getOirResult(submissionId: String): Result<OIRTestResult?> {
-        cache.get(submissionId)?.let { cached ->
-            return Result.success(cached.toDomain())
-        }
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        val cached = cache.get(submissionId)
+        if (cached != null) return Result.success(cached.toDomain())
+        return fetchAndCacheFromFirestore(submissionId)
+    }
 
+    private suspend fun fetchAndCacheFromFirestore(submissionId: String): Result<OIRTestResult?> {
         return try {
             val snapshot = Firebase.firestore
-                .collection("submissions")
+                .collection(SsbContracts.FirestorePaths.SUBMISSIONS)
                 .document(submissionId)
                 .get()
 
@@ -45,5 +49,4 @@ class GitLiveOirResultRepository(
             Result.failure(e)
         }
     }
-
 }

@@ -41,18 +41,8 @@
     <string name="notification_ppdt_failed_title">PPDT Analysis Issue</string>
     <string name="notification_ppdt_failed_body">We couldn\'t complete the PPDT analysis. Please try again later.</string>
 
-    <!-- FCM notifications -->
-    <string name="notification_default_title">SSBMax Notification</string>
-    <string name="notification_action_view_results">View Results</string>
-    <string name="notification_action_view_invitation">View Invitation</string>
-    <string name="notification_channel_description">SSBMax notifications for %1$s</string>
-    <string name="notification_channel_grading">Grading Complete</string>
-    <string name="notification_channel_feedback">New Feedback</string>
-    <string name="notification_channel_batch">Batch Invitations</string>
-    <string name="notification_channel_general">Announcements</string>
-    <string name="notification_channel_study_reminders">Study Reminders</string>
-    <string name="notification_channel_test_reminders">Test Reminders</string>
-    <string name="notification_channel_marketplace">Marketplace Updates</string>
+    <!-- FCM notifications (SSBMaxFirebaseMessagingService's own strings moved to
+         data-firebase/src/androidMain/res/values/strings.xml alongside the service itself) -->
     <string name="notification_gto_results_title">%1$s Results Ready</string>
     <string name="notification_gto_results_body">Your GTO test has been analyzed. Tap to view your OLQ scores!</string>
     <string name="notification_gto_results_big_text">Your %1$s has been analyzed by AI. View your performance across all 15 Officer-Like Qualities.</string>

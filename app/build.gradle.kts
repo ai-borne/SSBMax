@@ -1,4 +1,3 @@
-import java.util.Properties
 import org.gradle.testing.jacoco.tasks.JacocoReport
 import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
 import java.math.BigDecimal
@@ -86,18 +85,6 @@ extensions.getByType<ApplicationExtension>().apply {
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
-
-        // Gemini API Key for AI Interview Feature
-        // Read from local.properties (fallback to project property, then empty string)
-        val localProperties = Properties()
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.inputStream().use { localProperties.load(it) }
-        }
-        val geminiApiKey: String = localProperties.getProperty("GEMINI_API_KEY")
-            ?: project.findProperty("GEMINI_API_KEY") as? String
-            ?: ""
-        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
 
     }
 

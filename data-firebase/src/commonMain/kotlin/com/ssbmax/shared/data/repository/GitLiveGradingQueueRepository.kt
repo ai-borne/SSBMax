@@ -6,6 +6,7 @@ import com.ssbmax.shared.domain.model.InstructorGradingStats
 import com.ssbmax.shared.domain.model.SubmissionStatus
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.GradingQueueRepository
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.DocumentSnapshot
@@ -35,7 +36,7 @@ import kotlinx.serialization.Serializable
  */
 class GitLiveGradingQueueRepository : GradingQueueRepository {
 
-    private val submissionsCollection = Firebase.firestore.collection(SUBMISSIONS_COLLECTION)
+    private val submissionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
 
     override fun observePendingSubmissions(instructorId: String): Flow<List<GradingQueueItem>> =
         submissionsCollection
@@ -164,7 +165,6 @@ class GitLiveGradingQueueRepository : GradingQueueRepository {
     }
 
     private companion object {
-        const val SUBMISSIONS_COLLECTION = "submissions"
         const val FIELD_STATUS = "status"
         const val FIELD_TEST_TYPE = "testType"
         const val FIELD_BATCH_ID = "batchId"

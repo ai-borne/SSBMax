@@ -22,15 +22,25 @@ import com.ssbmax.shared.domain.model.WATSubmission
 import com.ssbmax.shared.domain.model.gto.GTOSubmission
 import com.ssbmax.shared.domain.model.scoring.AnalysisStatus
 import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
+import com.ssbmax.shared.domain.model.FeatureFlags
 import com.ssbmax.shared.domain.repository.AuthRepository
+import com.ssbmax.shared.domain.repository.FeatureFlagRepository
+import com.ssbmax.shared.domain.repository.OIREvaluationClient
+import com.ssbmax.shared.domain.repository.OIREvaluationResult
+import com.ssbmax.shared.domain.repository.OIRSubmittedAnswer
 import com.ssbmax.shared.domain.repository.SubmissionRepository
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.TestContentRepository
 import com.ssbmax.shared.domain.repository.TestSessionRepository
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
 import com.ssbmax.shared.domain.repository.UsageInfo
 import com.ssbmax.shared.domain.repository.UserProfileRepository
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.domain.util.DomainLogger
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatProductPrice
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatPurchaseOutcome
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -67,15 +77,76 @@ class FakeAuthRepository(
 class FakeSubscriptionRepository : SubscriptionRepository {
     var tierResult: Result<SubscriptionTier> = Result.success(SubscriptionTier.FREE)
     var monthlyUsageResult: Result<Map<String, UsageInfo>> = Result.success(emptyMap())
-    var updateTierResult: Result<Unit> = Result.success(Unit)
+    var startDateResult: Result<Long?> = Result.success(null)
+    var ownershipResult: Result<SubscriptionOwnership> = Result.success(SubscriptionOwnership(source = null, expiryDate = null))
     var getSubscriptionTierCallCount = 0
+
+    // No tier-write recorder here any more: `updateSubscriptionTier` was removed from
+    // [SubscriptionRepository] in Phase 1 of the Payment Ecosystem Hardening plan (finding C1).
+    // "A purchase performs no client-side tier write" is now guaranteed by the type -- production
+    // code calling one would not compile -- rather than asserted at runtime.
+
+    /** Phase 3: records the period key each [getMonthlyUsage] call was made with, so tests can
+     * assert the caller computed the right billing-anniversary key. */
+    var lastMonthlyUsagePeriod: String? = null
 
     override suspend fun getSubscriptionTier(userId: String): Result<SubscriptionTier> {
         getSubscriptionTierCallCount++
         return tierResult
     }
-    override suspend fun getMonthlyUsage(userId: String, month: String) = monthlyUsageResult
-    override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier) = updateTierResult
+    override suspend fun getMonthlyUsage(userId: String, month: String): Result<Map<String, UsageInfo>> {
+        lastMonthlyUsagePeriod = month
+        return monthlyUsageResult
+    }
+    override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
+    override suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership> = ownershipResult
+}
+
+/** Phase 4 (RevenueCat integration): test double for [RevenueCatClient] -- avoids pulling the
+ * real `Purchases` SDK singleton (global mutable state) into ViewModel unit tests. */
+class FakeRevenueCatClient : RevenueCatClient {
+    var purchaseResult: Result<RevenueCatPurchaseOutcome> =
+        Result.success(RevenueCatPurchaseOutcome(activeEntitlementIds = emptySet()))
+    var restoreResult: Result<RevenueCatPurchaseOutcome> =
+        Result.success(RevenueCatPurchaseOutcome(activeEntitlementIds = emptySet()))
+    var offeringPricesResult: Result<Map<String, RevenueCatProductPrice>> = Result.success(emptyMap())
+    var lastConfiguredAppUserId: String? = null
+    var lastPurchasedProductId: String? = null
+    var restoreCallCount = 0
+    var logOutCallCount = 0
+
+    override fun configure(appUserId: String?) {
+        lastConfiguredAppUserId = appUserId
+    }
+
+    override suspend fun purchase(productId: String): Result<RevenueCatPurchaseOutcome> {
+        lastPurchasedProductId = productId
+        return purchaseResult
+    }
+
+    override suspend fun restorePurchases(): Result<RevenueCatPurchaseOutcome> {
+        restoreCallCount++
+        return restoreResult
+    }
+
+    override suspend fun getCustomerInfo(): Result<RevenueCatPurchaseOutcome> = purchaseResult
+
+    override suspend fun getOfferingPrices(): Result<Map<String, RevenueCatProductPrice>> = offeringPricesResult
+
+    override fun logOut() {
+        logOutCallCount++
+    }
+}
+
+class FakeFeatureFlagRepository(
+    var flagsResult: FeatureFlags = FeatureFlags.SAFE_DEFAULT
+) : FeatureFlagRepository {
+    var getFeatureFlagsCallCount = 0
+
+    override suspend fun getFeatureFlags(): FeatureFlags {
+        getFeatureFlagsCallCount++
+        return flagsResult
+    }
 }
 
 class FakeTestContentRepository : TestContentRepository {
@@ -166,6 +237,116 @@ class FakeTestUsageRecorder : TestUsageRecorder {
     }
 }
 
+/**
+ * Stands in for the `evaluateOIRAnswers` Cloud Function (Phase 2, Web SSB Test Flow
+ * Parity plan). Defaults to marking every submitted question id incorrect -- tests that
+ * care about the resulting score should set [result] explicitly rather than relying on
+ * this default.
+ */
+class FakeOIREvaluationClient : OIREvaluationClient {
+    var result: Result<OIREvaluationResult>? = null
+
+    override suspend fun evaluateAnswers(
+        answersByBatch: Map<String, Map<String, OIRSubmittedAnswer>>
+    ): Result<OIREvaluationResult> {
+        result?.let { return it }
+        val questionIds = answersByBatch.values.flatMap { it.keys }
+        return Result.success(
+            OIREvaluationResult(
+                score = 0,
+                total = questionIds.size,
+                percentage = 0,
+                oirRating = 5,
+                correctnessByQuestionId = questionIds.associateWith { false }
+            )
+        )
+    }
+}
+
+class FakeEvaluationFunctionsClient : EvaluationFunctionsClient {
+    var evaluateWATResult: Result<Unit> = Result.success(Unit)
+    val evaluateWATCalls = mutableListOf<String>()
+    var evaluateSRTResult: Result<Unit> = Result.success(Unit)
+    val evaluateSRTCalls = mutableListOf<String>()
+    var evaluateSDResult: Result<Unit> = Result.success(Unit)
+    val evaluateSDCalls = mutableListOf<String>()
+    var evaluateInterviewResponseResult: Result<Unit> = Result.success(Unit)
+    val evaluateInterviewResponseCalls = mutableListOf<Pair<String, String>>()
+
+    override suspend fun evaluateWAT(submissionId: String): Result<Unit> {
+        evaluateWATCalls.add(submissionId)
+        return evaluateWATResult
+    }
+
+    override suspend fun evaluateSRT(submissionId: String): Result<Unit> {
+        evaluateSRTCalls.add(submissionId)
+        return evaluateSRTResult
+    }
+
+    override suspend fun evaluateSD(submissionId: String): Result<Unit> {
+        evaluateSDCalls.add(submissionId)
+        return evaluateSDResult
+    }
+
+    override suspend fun evaluateInterviewResponse(responseId: String, sessionId: String): Result<Unit> {
+        evaluateInterviewResponseCalls.add(responseId to sessionId)
+        return evaluateInterviewResponseResult
+    }
+
+    var createInterviewSessionResult: Result<com.ssbmax.shared.domain.model.interview.InterviewSession> =
+        Result.failure(UnsupportedOperationException("not stubbed"))
+    val createInterviewSessionCalls = mutableListOf<String>()
+    var completeInterviewSessionResult: Result<com.ssbmax.shared.domain.model.interview.InterviewResult> =
+        Result.failure(UnsupportedOperationException("not stubbed"))
+    val completeInterviewSessionCalls = mutableListOf<String>()
+
+    override suspend fun createInterviewSession(
+        mode: com.ssbmax.shared.domain.model.interview.InterviewMode,
+        piqSnapshotId: String,
+        consentGiven: Boolean
+    ): Result<com.ssbmax.shared.domain.model.interview.InterviewSession> {
+        createInterviewSessionCalls.add(piqSnapshotId)
+        return createInterviewSessionResult
+    }
+
+    override suspend fun completeInterviewSession(sessionId: String): Result<com.ssbmax.shared.domain.model.interview.InterviewResult> {
+        completeInterviewSessionCalls.add(sessionId)
+        return completeInterviewSessionResult
+    }
+
+    var evaluateGTOResult: Result<Unit> = Result.success(Unit)
+    val evaluateGTOCalls = mutableListOf<String>()
+
+    override suspend fun evaluateGTO(submissionId: String): Result<Unit> {
+        evaluateGTOCalls.add(submissionId)
+        return evaluateGTOResult
+    }
+
+    var evaluatePPDTResult: Result<Unit> = Result.success(Unit)
+    val evaluatePPDTCalls = mutableListOf<String>()
+
+    override suspend fun evaluatePPDT(submissionId: String): Result<Unit> {
+        evaluatePPDTCalls.add(submissionId)
+        return evaluatePPDTResult
+    }
+
+    var evaluateTATResult: Result<Unit> = Result.success(Unit)
+    val evaluateTATCalls = mutableListOf<String>()
+
+    override suspend fun evaluateTAT(submissionId: String): Result<Unit> {
+        evaluateTATCalls.add(submissionId)
+        return evaluateTATResult
+    }
+
+    var notifyGradingCompleteResult: Result<Unit> = Result.success(Unit)
+    val notifyGradingCompleteCalls = mutableListOf<String>()
+
+    override suspend fun notifyGradingComplete(submissionId: String): Result<Unit> {
+        notifyGradingCompleteCalls.add(submissionId)
+        return notifyGradingCompleteResult
+    }
+}
+
 class FakeDifficultyProgressionRepository(
     var recommendedDifficulty: String = "EASY"
 ) : com.ssbmax.shared.domain.repository.DifficultyProgressionRepository {
@@ -212,10 +393,14 @@ class FakeSubmissionRepository : SubmissionRepository {
     var observeSubmissionFlow: Flow<Map<String, Any>?> = flowOf(null)
     var observeUserSubmissionsFlow: Flow<List<Map<String, Any>>> = flowOf(emptyList())
     var updateStatusResult: Result<Unit> = Result.success(Unit)
+    var lastTATSubmission: TATSubmission? = null
 
     private fun unused(name: String): Nothing = error("FakeSubmissionRepository.$name not stubbed for this test")
 
-    override suspend fun submitTAT(submission: TATSubmission, batchId: String?) = submitResult
+    override suspend fun submitTAT(submission: TATSubmission, batchId: String?): Result<String> {
+        lastTATSubmission = submission
+        return submitResult
+    }
     override suspend fun submitWAT(submission: WATSubmission, batchId: String?) = submitResult
     override suspend fun submitSRT(submission: SRTSubmission, batchId: String?) = submitResult
     override suspend fun submitSDT(submission: SDTSubmission, batchId: String?) = submitResult
@@ -289,7 +474,6 @@ class FakeSubmissionRepository : SubmissionRepository {
     override fun observePPDTSubmission(submissionId: String): Flow<PPDTSubmission?> = unused("observePPDTSubmission")
     override suspend fun getPPDTResult(submissionId: String): Result<OLQAnalysisResult?> = Result.success(null)
 
-    override suspend fun archiveOldSubmissions(beforeTimestamp: Long): Result<Int> = unused("archiveOldSubmissions")
 }
 
 /**
@@ -306,10 +490,8 @@ class FakeGTORepository : com.ssbmax.shared.domain.repository.GTORepository {
     // Phase 1c (GD/Lecturette/GPE) additions -- see GTOEligibilityChecker/GTOSubmissionCoordinator.
     var canUserTakeTestResult: Result<Boolean> = Result.success(true)
     var getCompletedTestsResult: Result<List<com.ssbmax.shared.domain.model.gto.GTOTestType>> = Result.success(emptyList())
-    var recordTestUsageResult: Result<Unit> = Result.success(Unit)
     var updateProgressResult: Result<Unit> = Result.success(Unit)
     var getTestResultResult: Result<com.ssbmax.shared.domain.model.gto.GTOResult> = Result.failure(UnsupportedOperationException("not stubbed"))
-    val recordedUsage = mutableListOf<Pair<String, com.ssbmax.shared.domain.model.gto.GTOTestType>>()
     val recordedProgress = mutableListOf<Pair<String, com.ssbmax.shared.domain.model.gto.GTOTestType>>()
 
     private fun unused(name: String): Nothing = error("FakeGTORepository.$name not stubbed for this test")
@@ -344,12 +526,6 @@ class FakeGTORepository : com.ssbmax.shared.domain.repository.GTORepository {
     override suspend fun canUserTakeTest(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType) = canUserTakeTestResult
     override suspend fun getCompletedTests(userId: String) = getCompletedTestsResult
     override suspend fun getNextAvailableTest(userId: String) = unused("getNextAvailableTest")
-    override suspend fun recordTestUsage(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType, submissionId: String): Result<Unit> {
-        recordedUsage += userId to testType
-        return recordTestUsageResult
-    }
-    override suspend fun getTestUsageCount(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType) = unused("getTestUsageCount")
-    override suspend fun resetMonthlyUsage(userId: String) = unused("resetMonthlyUsage")
     override suspend fun getTestResult(submissionId: String) = getTestResultResult
     override suspend fun getUserResults(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType?) = unused("getUserResults")
     override suspend fun getLatestResult(userId: String, testType: com.ssbmax.shared.domain.model.gto.GTOTestType) = getLatestResultResult
@@ -771,11 +947,9 @@ class FakeSettings : com.russhwolf.settings.Settings {
  */
 class FakeBackgroundTaskScheduler : com.ssbmax.shared.platform.worker.BackgroundTaskScheduler {
     var cleanupScheduled = false
-    var archivalScheduled = false
     val questionGenerationRequests = mutableListOf<String>()
 
     override fun scheduleQuestionCacheCleanup() { cleanupScheduled = true }
-    override fun scheduleSubmissionArchival() { archivalScheduled = true }
     override fun scheduleInterviewQuestionGeneration(piqSubmissionId: String) {
         questionGenerationRequests += piqSubmissionId
     }
@@ -784,8 +958,12 @@ class FakeBackgroundTaskScheduler : com.ssbmax.shared.platform.worker.Background
 /** Fake for [com.ssbmax.shared.domain.repository.OirResultRepository], used by [com.ssbmax.shared.presentation.oirresult.OirResultViewModel] via `GetOirResultUseCase`. */
 class FakeOirResultRepository : com.ssbmax.shared.domain.repository.OirResultRepository {
     var oirResult: Result<com.ssbmax.shared.domain.model.OIRTestResult?> = Result.success(null)
+    var lastRequestedSubmissionId: String? = null
 
-    override suspend fun getOirResult(submissionId: String) = oirResult
+    override suspend fun getOirResult(submissionId: String): Result<com.ssbmax.shared.domain.model.OIRTestResult?> {
+        lastRequestedSubmissionId = submissionId
+        return oirResult
+    }
 }
 
 /**
@@ -795,7 +973,7 @@ class FakeOirResultRepository : com.ssbmax.shared.domain.repository.OirResultRep
  * orchestrators under test don't care which Gemini endpoint answered -- override the specific
  * `var` a test needs to fail one call while others succeed.
  */
-class FakeAIService : com.ssbmax.shared.domain.service.AIService {
+open class FakeAIService : com.ssbmax.shared.domain.service.AIService {
     var responseAnalysisResult: Result<com.ssbmax.shared.domain.service.ResponseAnalysis> =
         Result.failure(UnsupportedOperationException("not stubbed"))
     var piqQuestionsResult: Result<List<com.ssbmax.shared.domain.model.interview.InterviewQuestion>> =

@@ -30,9 +30,9 @@ data class TopicContent(
  * Collection: study_materials
  * Document ID: auto-generated
  * 
- * Query pattern: 
+ * Query pattern:
  * ```
- * firestore.collection("study_materials")
+ * firestore.collection(SsbContracts.FirestorePaths.STUDY_MATERIALS)
  *   .whereEqualTo("topicType", "OIR")
  *   .orderBy("displayOrder")
  * ```

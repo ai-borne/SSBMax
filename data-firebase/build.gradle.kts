@@ -79,8 +79,16 @@ kotlin {
     // Kotlin 2.2.20 / kotlinx-datetime Clock typealias rationale.
     sourceSets.all {
         languageSettings.optIn("kotlin.time.ExperimentalTime")
-        languageSettings.optIn("kotlinx.cinterop.ExperimentalForeignApi")
     }
+    // ExperimentalForeignApi only exists in Kotlin/Native. Opting in from
+    // `sourceSets.all` also hit the Android/JVM source sets, where the annotation
+    // class is not on the classpath, producing "w: Opt-in requirement marker
+    // 'kotlinx.cinterop.ExperimentalForeignApi' is unresolved" on every
+    // compile*KotlinAndroid task. Scope it to the native tree instead.
+    sourceSets.matching { it.name.startsWith("ios") || it.name.startsWith("apple") || it.name.startsWith("native") }
+        .configureEach {
+            languageSettings.optIn("kotlinx.cinterop.ExperimentalForeignApi")
+        }
 
     sourceSets {
         commonMain.dependencies {
@@ -107,6 +115,7 @@ kotlin {
             // FirebaseDecoder/FirebaseEncoder.
             implementation(libs.gitlive.firebase.common.internal)
             implementation(libs.gitlive.firebase.storage)
+            implementation(libs.gitlive.firebase.functions)
 
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
@@ -143,6 +152,10 @@ kotlin {
 
         androidMain.dependencies {
             implementation(project.dependencies.platform(libs.firebase.bom))
+            // SSBMaxFirebaseMessagingService (moved here from `app` so Firebase imports stay
+            // out of the app layer -- see that file's class doc).
+            implementation(libs.firebase.messaging)
+            implementation(libs.androidx.core.ktx)
         }
 
         // The iOS entry points Swift calls into (AppBootstrap's

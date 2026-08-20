@@ -1,0 +1,202 @@
+# Design-token color palette. Phase 7 (docs/plans/CrossPlatform_SSOT) — one
+# palette, two renderings (Compose Color objects + CSS custom properties /
+# tailwind.config.js).
+#
+# Reconciliation note (Phase 7, full-unification decision): KMP's
+# pre-existing `SSBColors` (navy/olive/military-gold, no dark-mode variant)
+# and web's `themeColors`/`index.css` (slate/sky, full light+dark) were two
+# different visual languages, not spelling variants of the same thing — a
+# real product decision, not a mechanical dedup. Web's palette was chosen as
+# the single source because it already had a complete light+dark pair; KMP's
+# `SSBColors` military palette is retired by this phase (see the KMP
+# consumers listed in contracts/README.md's Phase 7 note).
+#
+# `info` has no prior web token — web's UI never needed a 4th status color
+# distinct from `accent`. Rather than invent a new brand color, `info` is
+# defined equal to `accent` in both modes; KMP's `SemanticColors.informational`
+# already effectively aliased to a primary/accent role before this phase, so
+# this preserves intent rather than changing it.
+#
+# Hex values use 8-digit RRGGBBAA for tokens carrying alpha (the `Subtle`
+# tier variants) — emitters convert to each target language's native color
+# format (Kotlin 0xAARRGGBB, CSS RRGGBBAA already the CSS Color 4 order).
+schemaVersion: "1.0.0"
+
+tokens:
+  # --- Elevation ---
+  - name: bgPrimary
+    category: elevation
+    light: "#f8fafc"
+    dark: "#0b0f19"
+  - name: bgSecondary
+    category: elevation
+    light: "#ffffff"
+    dark: "#0f172a"
+  - name: bgCard
+    category: elevation
+    light: "#ffffff"
+    dark: "#1e293b"
+  - name: bgElevated
+    category: elevation
+    light: "#f1f5f9"
+    dark: "#334155"
+
+  # --- Text ---
+  - name: textPrimary
+    category: text
+    light: "#0f172a"
+    dark: "#f8fafc"
+  - name: textSecondary
+    category: text
+    light: "#475569"
+    dark: "#94a3b8"
+  - name: textMuted
+    category: text
+    light: "#94a3b8"
+    dark: "#64748b"
+
+  # --- Borders ---
+  - name: border
+    category: border
+    light: "#e2e8f0"
+    dark: "#334155"
+  - name: borderSubtle
+    category: border
+    light: "#f1f5f9"
+    dark: "#1e293b"
+
+  # --- Accent ---
+  - name: accent
+    category: accent
+    light: "#0284c7"
+    dark: "#38bdf8"
+  - name: accentHover
+    category: accent
+    light: "#0369a1"
+    dark: "#0284c7"
+  - name: accentContainer
+    category: accent
+    light: "#e0f2fe"
+    dark: "#0c4a6e"
+  - name: onAccentContainer
+    category: accent
+    light: "#0369a1"
+    dark: "#bae6fd"
+
+  # --- Status ---
+  - name: success
+    category: status
+    light: "#16a34a"
+    dark: "#22c55e"
+  - name: successContainer
+    category: status
+    light: "#dcfce7"
+    dark: "#064e3b"
+  - name: onSuccessContainer
+    category: status
+    light: "#166534"
+    dark: "#86efac"
+  - name: warning
+    category: status
+    light: "#d97706"
+    dark: "#f59e0b"
+  - name: warningContainer
+    category: status
+    light: "#fef3c7"
+    dark: "#78350f"
+  - name: onWarningContainer
+    category: status
+    light: "#92400e"
+    dark: "#fde68a"
+  - name: danger
+    category: status
+    light: "#dc2626"
+    dark: "#ef4444"
+  - name: dangerContainer
+    category: status
+    light: "#fee2e2"
+    dark: "#7f1d1d"
+  - name: onDangerContainer
+    category: status
+    light: "#991b1b"
+    dark: "#fecaca"
+  - name: info
+    category: status
+    light: "#0284c7"
+    dark: "#38bdf8"
+  - name: infoContainer
+    category: status
+    light: "#e0f2fe"
+    dark: "#0c4a6e"
+  - name: onInfoContainer
+    category: status
+    light: "#0369a1"
+    dark: "#bae6fd"
+
+  # --- Semantic tier tokens (subscription tiers: Free/Pro/Premium) ---
+  - name: gold
+    category: tier
+    light: "#d97706"
+    dark: "#f59e0b"
+  - name: goldSubtle
+    category: tier
+    light: "#d977061a"
+    dark: "#f59e0b1a"
+  - name: goldContainer
+    category: tier
+    light: "#fef3c7"
+    dark: "#78350f"
+  - name: onGoldContainer
+    category: tier
+    light: "#92400e"
+    dark: "#fde68a"
+  - name: emerald
+    category: tier
+    light: "#059669"
+    dark: "#10b981"
+  - name: emeraldSubtle
+    category: tier
+    light: "#0596691a"
+    dark: "#10b9811a"
+  - name: emeraldContainer
+    category: tier
+    light: "#dcfce7"
+    dark: "#064e3b"
+  - name: onEmeraldContainer
+    category: tier
+    light: "#166534"
+    dark: "#86efac"
+  - name: violet
+    category: tier
+    light: "#7c3aed"
+    dark: "#8b5cf6"
+  - name: violetSubtle
+    category: tier
+    light: "#7c3aed1a"
+    dark: "#8b5cf61a"
+  - name: violetContainer
+    category: tier
+    light: "#ede9fe"
+    dark: "#4c1d95"
+  - name: onVioletContainer
+    category: tier
+    light: "#5b21b6"
+    dark: "#ddd6fe"
+
+  # --- 5-Day SSB journey accent colours ---
+  - name: day1
+    category: journey
+    light: "#4f46e5"
+    dark: "#6366f1"
+  - name: day2
+    category: journey
+    light: "#7c3aed"
+    dark: "#8b5cf6"
+  - name: day34
+    category: journey
+    light: "#0d9488"
+    dark: "#14b8a6"
+  - name: day5
+    category: journey
+    light: "#d97706"
+    dark: "#f59e0b"

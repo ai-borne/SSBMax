@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.domain.model.SubmissionStatus
 import com.ssbmax.shared.domain.model.TestType
 import dev.gitlive.firebase.Firebase
@@ -22,7 +23,7 @@ import kotlin.time.Clock
  */
 class GitLiveCommonSubmissionRepository {
 
-    private val submissionsCollection = Firebase.firestore.collection(SUBMISSIONS_COLLECTION)
+    private val submissionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
     private val regressionFilters = mutableMapOf<String, OLQRegressionFilter>()
 
     suspend fun updateSubmissionStatus(submissionId: String, status: SubmissionStatus): Result<Unit> = try {
@@ -140,7 +141,6 @@ class GitLiveCommonSubmissionRepository {
             .map { snapshot -> snapshot.documents.map { it.data(FirestoreRawMapSerializer) } }
 
     private companion object {
-        const val SUBMISSIONS_COLLECTION = "submissions"
         const val FIELD_STATUS = "status"
         const val FIELD_GRADED_BY_INSTRUCTOR_ID = "gradedByInstructorId"
         const val FIELD_GRADING_TIMESTAMP = "gradingTimestamp"

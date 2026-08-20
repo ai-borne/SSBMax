@@ -1,31 +1,49 @@
 [versions]
-# Kotlin bumped 2.1.0 -> 2.2.20 (Compose Multiplatform -> 1.10.3, detekt ->
-# 1.23.8, ksp plugin below -> 2.2.20-2.0.3) because Kotlin 2.1.0's Native
-# cinterop toolchain can't parse the Xcode 26 / iOS 26.5 SDK's module maps
-# (`_c_standard_library_obsolete requires feature
-# 'found_incompatible_headers__check_search_paths'`, unknown ptrdiff_t/size_t/
-# wchar_t) -- Xcode 26 SDK support landed in Kotlin 2.2.20.
-# Compose Multiplatform pinned at 1.10.3, NOT the newer 1.11.x line: verified
-# by unzipping each version's components-resources-iosSimulatorArm64 klib and
-# reading its manifest -- 1.10.3's klib has compiler_version=2.2.20 (exact
-# match), while 1.11.0/1.11.1's klib has compiler_version=2.3.20, which our
-# Kotlin 2.2.20 KLIB resolver can't read (fails with a misleading "KLIB
-# resolver: Could not find <path>" error). Revisit once detekt has stable
-# (non-alpha) Kotlin 2.3.20 support and this can move to 2.3.20/1.11.x together.
-# agp 8.7.3 -> 8.13.2 alongside the kotlin bump below: AGP 8.7.3's bundled Lint
-# crashes analyzing Kotlin 2.2.20 code (`Found class
+# Kotlin 2.1.0 -> 2.2.20 -> 2.3.20 (Compose Multiplatform -> 1.11.1, ksp plugin
+# below -> 2.3.11). Two independent reasons, in order:
+#  (1) Kotlin 2.1.0's Native cinterop toolchain can't parse the Xcode 26 / iOS 26.5
+#      SDK's module maps (`_c_standard_library_obsolete requires feature
+#      'found_incompatible_headers__check_search_paths'`, unknown ptrdiff_t/size_t/
+#      wchar_t) -- Xcode 26 SDK support landed in Kotlin 2.2.20 and is retained in
+#      2.3.20, so that constraint is still satisfied.
+#  (2) RevenueCat's purchases-kmp (see purchasesKmp below) publishes klibs with
+#      abi_version=2.3.0 / compiler_version=2.3.20 for EVERY 3.x release (3.0.0
+#      through 3.5.0 checked manifest-by-manifest). Kotlin 2.2.20's KLIB resolver
+#      caps out at abi_version <= 2.2.0, so it SKIPS the library with a `w: KLIB
+#      resolver: ... incompatible ABI version` warning and then emits a misleading
+#      `e: KLIB resolver: Could not find <path>` error -- read the `w:` line, not
+#      the `e:` one. This broke :shared:compileKotlinIosSimulatorArm64 from commit
+#      3cae7b6b onward. Downgrading purchases-kmp to the 2.x line is NOT an option:
+#      2.x is cinterop/framework-based and fails at link with `ld: framework
+#      'PurchasesHybridCommon' not found`, i.e. it requires CocoaPods, which this
+#      repo bans (see root CLAUDE.md, "iOS dependency management: SPM only").
+# Compose Multiplatform 1.10.3 -> 1.11.1 in lockstep: verified by unzipping
+# components-resources-iosSimulatorArm64 and reading its klib manifest --
+# 1.10.3's is compiler_version=2.2.20, 1.11.0/1.11.1's is compiler_version=2.3.20
+# (abi_version=2.3.0), an exact match for Kotlin 2.3.20. The two versions must
+# always move together; a mismatch fails with the same misleading resolver error.
+# ksp 2.2.20-2.0.3 -> 2.3.11: KSP dropped the `<kotlin>-<ksp>` compound version
+# after 2.2.21-2.0.5 and now versions independently; 2.3.11's POM depends on
+# kotlin-stdlib 2.3.20 (checked directly), which is the Kotlin 2.3.20 line.
+# detekt stays at 1.23.8 (the last release under the io.gitlab.arturbosch.detekt
+# coordinate; the dev.detekt 2.0.0 line is still alpha). detekt runs its own
+# embedded Kotlin compiler for parsing and does not use the project's Kotlin
+# version, so it is unaffected by this bump -- :detekt-rules only compiles
+# against detekt-api's Kotlin 1.9 metadata, which Kotlin 2.3.20 reads fine.
+# agp 8.7.3 -> 8.13.2 (done alongside the 2.2.20 bump): AGP 8.7.3's bundled Lint
+# crashes analyzing Kotlin 2.2.20+ code (`Found class
 # org.jetbrains.kotlin.analysis.api.resolution.KaSimpleVariableAccessCall, but
 # interface was expected` inside FrequentlyChangingValueDetector) -- Lint's
 # embedded Kotlin analysis API is version-locked to AGP, not the project's own
 # Kotlin plugin version. AGP 8.13.2 explicitly supports Kotlin up to 2.3
-# (via R8 8.13.19), comfortably covering 2.2.20. Requires Gradle >= 8.13 (see
+# (via R8 8.13.19). Requires Gradle >= 8.13 (see
 # gradle/wrapper/gradle-wrapper.properties, bumped from 8.11 in lockstep).
 agp = "8.13.2"
-kotlin = "2.2.20"
+kotlin = "2.3.20"
 detekt = "1.23.8"
 
 # KMP Spike (Phase 0) — shared module only, isolated from existing app/core modules
-composeMultiplatform = "1.10.3"
+composeMultiplatform = "1.11.1"
 koin = "4.1.0"
 koinCompose = "4.1.0"
 sqldelight = "2.1.0"
@@ -43,9 +61,34 @@ multiplatformSettings = "1.3.0"
 workManager = "2.9.0"
 
 # Phase 5 (UI): KMP navigation + image loading for shared/commonMain
-navigationComposeKmp = "2.9.0-beta02"
-coil3 = "3.0.4"
+# 2.9.0-beta02 -> 2.9.2: the beta was never revisited after Phase 5; 2.9.2 is the
+# stable release of the same line.
+navigationComposeKmp = "2.9.2"
+# 3.0.4 -> 3.4.0, NOT the newer 3.5.0: 3.5.0's iOS klib is abi_version=2.4.0
+# (built by the Kotlin 2.4.0 compiler), which Kotlin 2.3.20's resolver skips with
+# the same misleading "Could not find <klib>" error described at the top of this
+# file. 3.4.0 is abi_version=2.3.0 / compiler_version=2.3.10 -- the newest release
+# this Kotlin can consume. Manifests checked individually; revisit on Kotlin 2.4.x.
+# Note this does NOT silence the "Skiko dependencies' versions are incompatible"
+# warning: coil3 3.4.0 declares skiko 0.9.22.2 while Compose Multiplatform 1.11.1
+# pulls 0.144.6, so Gradle upgrades it. Only coil3 3.5.0 declares 0.144.6, and that
+# needs Kotlin 2.4.0. Skiko is a CMP implementation detail and nothing here
+# references it directly, so the resolved-upward version is safe.
+coil3 = "3.4.0"
 lifecycleKmp = "2.9.0"
+
+# Phase 4 (RevenueCat integration): KMP artifact declared as a plain commonMain
+# `implementation()` (same as coil3/ktor-darwin above), no CocoaPods needed --
+# confirmed via RevenueCat's own cat-paywall-kmp sample. Correction to the earlier
+# note here: the iOS side is NOT pure Kotlin, it is a cinterop klib that BUNDLES
+# RevenueCat's compiled Swift objects. That is still CocoaPods-free (nothing has to
+# resolve a PurchasesHybridCommon framework), but it does mean the Kotlin/Native
+# test executable needs the platform Swift back-deployment shims on its linker
+# search path -- see the `swiftRuntimeSearchPath` workaround in shared/build.gradle.kts
+# for why the path RevenueCat bakes into the klib cannot be used.
+# All 3.x releases (3.0.0..3.5.0, manifests checked individually) are built by the
+# Kotlin 2.3.20 compiler, which is what forced the Kotlin bump above.
+purchasesKmp = "3.5.0"
 
 # AndroidX Core
 coreKtx = "1.15.0"
@@ -104,6 +147,7 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 navigation-compose-kmp = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "navigationComposeKmp" }
 coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
 coil3-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil3" }
+purchases-kmp-core = { group = "com.revenuecat.purchases", name = "purchases-kmp-core", version.ref = "purchasesKmp" }
 # Separate alias (not the app module's androidx-lifecycle-*-compose, pinned at 2.8.7 which
 # has no published iOS variant) because CMP 1.8.2's ui-uikitsimarm64 + navigation-compose-kmp
 # both transitively pull androidx.lifecycle 2.9.0 for iOS -- confirmed via a real
@@ -168,6 +212,7 @@ gitlive-firebase-firestore = { group = "dev.gitlive", name = "firebase-firestore
 gitlive-firebase-common = { group = "dev.gitlive", name = "firebase-common", version.ref = "gitliveFirebase" }
 gitlive-firebase-common-internal = { group = "dev.gitlive", name = "firebase-common-internal", version.ref = "gitliveFirebase" }
 gitlive-firebase-storage = { group = "dev.gitlive", name = "firebase-storage", version.ref = "gitliveFirebase" }
+gitlive-firebase-functions = { group = "dev.gitlive", name = "firebase-functions", version.ref = "gitliveFirebase" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatformSettings" }
@@ -224,7 +269,7 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version = "2.2.20-2.0.3" }
+ksp = { id = "com.google.devtools.ksp", version = "2.3.11" }
 google-services = { id = "com.google.gms.google-services", version = "4.4.2" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.2" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

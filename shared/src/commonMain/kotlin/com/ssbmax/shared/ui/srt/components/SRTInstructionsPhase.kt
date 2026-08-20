@@ -32,7 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
-import ssbmax.shared.generated.resources.srt_full_title
 import ssbmax.shared.generated.resources.srt_instruction_1
 import ssbmax.shared.generated.resources.srt_instruction_2
 import ssbmax.shared.generated.resources.srt_instruction_3
@@ -82,7 +81,6 @@ private fun SRTIntroCard() {
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(imageVector = Icons.Default.Psychology, contentDescription = null, modifier = Modifier.size(32.dp))
-            Text(stringResource(Res.string.srt_full_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(stringResource(Res.string.srt_subtitle), style = MaterialTheme.typography.bodyMedium)
         }
     }

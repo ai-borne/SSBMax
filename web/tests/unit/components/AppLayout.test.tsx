@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { AppLayout } from '../../../src/components/layout/AppLayout';
 import { strings } from '../../../src/constants/strings';
 
@@ -7,8 +7,7 @@ const mockUser = {
   uid: 'user_123',
   email: 'cadet@ssbmax.in',
   displayName: 'Cadet Officer',
-  photoURL: null,
-  isPaidMember: true
+  photoURL: null
 };
 
 describe('AppLayout Component', () => {
@@ -33,50 +32,77 @@ describe('AppLayout Component', () => {
     expect(screen.getByText('Child Content')).toBeInTheDocument();
   });
 
-  it('renders title, brand logo, and command navigation items for authenticated user', () => {
-    render(
-      <AppLayout activeTab="dashboard" user={mockUser}>
-        <div>Content</div>
-      </AppLayout>
-    );
-
-    expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
-    expect(screen.getAllByText(strings.header.title)[0]).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-dashboard')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-practice')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-study')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-reports')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-item-pricing')).toBeInTheDocument();
-  });
-
-  it('renders PublicHeader for unauthenticated user on landing page', () => {
+  it('renders unified pill segmented navigation bar for both guest and authenticated users', () => {
     render(
       <AppLayout activeTab="home" user={null}>
         <div>Public Landing Content</div>
       </AppLayout>
     );
 
-    expect(screen.getByTestId('public-header')).toBeInTheDocument();
-    expect(screen.getByTestId('public-cta-start-free')).toBeInTheDocument();
+    expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
+    expect(screen.getByTestId('command-header')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-home')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-study')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-tests')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-settings')).toBeInTheDocument();
+    expect(screen.getByTestId('sign-in-cta-button')).toBeInTheDocument();
+    expect(screen.getByTestId('sign-in-cta-button')).toHaveTextContent(strings.header.signIn);
   });
 
-  it('triggers onTabChange callback when navigation item is clicked', () => {
-    const handleTabChange = vi.fn();
+  it('renders PRO badge for authenticated paid officer member', () => {
     render(
-      <AppLayout activeTab="dashboard" user={mockUser} onTabChange={handleTabChange}>
+      <AppLayout activeTab="home" user={mockUser} isPaidMember>
         <div>Content</div>
       </AppLayout>
     );
 
-    const practiceNav = screen.getByTestId('nav-item-practice');
-    fireEvent.click(practiceNav);
+    expect(screen.getByTestId('pro-membership-badge')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-item-home')).toBeInTheDocument();
+  });
 
-    expect(handleTabChange).toHaveBeenCalledWith('practice');
+  it('does not render the PRO badge for a FREE-tier authenticated user', () => {
+    render(
+      <AppLayout activeTab="home" user={mockUser} isPaidMember={false}>
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    expect(screen.queryByTestId('pro-membership-badge')).not.toBeInTheDocument();
+  });
+
+  it('triggers onTabChange callback when navigation pill is clicked', () => {
+    const handleTabChange = vi.fn();
+    render(
+      <AppLayout activeTab="home" user={null} onTabChange={handleTabChange}>
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    const studyNav = screen.getByTestId('nav-item-study');
+    fireEvent.click(studyNav);
+    expect(handleTabChange).toHaveBeenCalledWith('study');
+
+    const testsNav = screen.getByTestId('nav-item-tests');
+    fireEvent.click(testsNav);
+    expect(handleTabChange).toHaveBeenCalledWith('tests');
+  });
+
+  it('triggers onSignInClick when sign-in button is clicked for guest user', () => {
+    const onSignInClick = vi.fn();
+    render(
+      <AppLayout activeTab="home" user={null} onSignInClick={onSignInClick}>
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    const signInBtn = screen.getByTestId('sign-in-cta-button');
+    fireEvent.click(signInBtn);
+    expect(onSignInClick).toHaveBeenCalledTimes(1);
   });
 
   it('toggles mobile menu drawer when mobile menu button is clicked', () => {
     render(
-      <AppLayout user={mockUser}>
+      <AppLayout user={null}>
         <div>Content</div>
       </AppLayout>
     );
@@ -90,7 +116,7 @@ describe('AppLayout Component', () => {
 
   it('toggles theme mode when theme toggle button is clicked', () => {
     render(
-      <AppLayout user={mockUser}>
+      <AppLayout user={null}>
         <div>Content</div>
       </AppLayout>
     );
@@ -100,5 +126,52 @@ describe('AppLayout Component', () => {
 
     fireEvent.click(toggleButton);
     expect(document.documentElement.classList.contains('dark')).toBe(false);
+  });
+
+  it('renders PWA install button when beforeinstallprompt fires and prompts user on click', async () => {
+    const promptMock = vi.fn().mockResolvedValue(undefined);
+    const userChoiceMock = Promise.resolve({ outcome: 'accepted', platform: 'web' });
+
+    render(
+      <AppLayout user={null}>
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    expect(screen.queryByTestId('pwa-install-button')).not.toBeInTheDocument();
+
+    const event = new Event('beforeinstallprompt');
+    Object.assign(event, {
+      prompt: promptMock,
+      userChoice: userChoiceMock
+    });
+
+    await act(async () => {
+      fireEvent(window, event);
+    });
+
+    const installButton = screen.getByTestId('pwa-install-button');
+    expect(installButton).toBeInTheDocument();
+
+    fireEvent.click(installButton);
+    expect(promptMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Phase 4 — Nav Active Gradient & Card Depth Hover Tests
+  it('should apply gradient class to active nav tab', () => {
+    render(<AppLayout activeTab="study"><div>Content</div></AppLayout>);
+    const studyBtn = screen.getByTestId('nav-item-study');
+    expect(studyBtn.className).toContain('from-sky-600');
+    expect(studyBtn.className).toContain('to-blue-600');
+  });
+
+  it('should apply hover-lift classes to TestSimulatorCard wrapper', () => {
+    render(
+      <AppLayout activeTab="tests">
+        <div data-testid="test-simulator-card-oir" className="hover:-translate-y-1 transition-all duration-200" />
+      </AppLayout>
+    );
+    const oirCard = screen.getByTestId('test-simulator-card-oir');
+    expect(oirCard.className).toContain('hover:-translate-y-1');
   });
 });

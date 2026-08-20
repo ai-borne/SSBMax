@@ -3,6 +3,7 @@ package com.ssbmax.navigation
 import androidx.navigation.compose.composable
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
+import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import com.ssbmax.shared.ui.notifications.NotificationCenterScreen
 import com.ssbmax.shared.ui.phase.Phase1DetailScreen
@@ -97,16 +98,29 @@ fun NavGraphBuilder.studyContentGraph(navController: NavHostController) {
     }
 
     // Notification Center, reachable from StudentHomeScreen's
-    // onNavigateToNotifications (wired in HomeGraph). onNotificationClick has
-    // no ported per-notification deep-link destination yet -- routes to the
-    // honest placeholder, same as the Android original's own bare
-    // `onNotificationClick = {}` default parameter (no real caller wires it
-    // to anything either).
-    composable<SSBMaxDestinations.NotificationCenter> {
+    // onNavigateToNotifications (wired in HomeGraph).
+    //
+    // deepLinks: Cloud Functions' sendNotification.js sets a push notification's
+    // actionUrl to the bare route (Routes.NOTIFICATIONS_CENTER = "notifications/center"),
+    // which both platforms forward verbatim into DeepLinkGateway -- DeepLinkEffect then
+    // builds "ssbmax://notifications/center" and calls navController.navigate(NavUri).
+    // Without this registration that throws IllegalArgumentException (caught, logged,
+    // silently dropped) since no NavDeepLink matched -- same shape as InterviewResult's
+    // registration in InterviewGraph.kt. One registration, shared by Android and iOS,
+    // since both feed the same DeepLinkGateway/DeepLinkEffect pipeline.
+    composable<SSBMaxDestinations.NotificationCenter>(
+        deepLinks = listOf(
+            navDeepLink<SSBMaxDestinations.NotificationCenter>(
+                basePath = DeepLinkParser.SCHEME + DeepLinkParser.ROUTE_NOTIFICATION_CENTER
+            )
+        )
+    ) {
         NotificationCenterScreen(
             onNavigateBack = { navController.navigateUp() },
             onNotificationClick = { notification ->
-                navController.navigate(SSBMaxDestinations.NotYetPorted("NotificationDeepLink(${notification.actionUrl})"))
+                val destination = resolveNotificationResultDestination(notification)
+                    ?: SSBMaxDestinations.NotYetPorted("NotificationDeepLink(${notification.actionUrl})")
+                navController.navigate(destination)
             }
         )
     }

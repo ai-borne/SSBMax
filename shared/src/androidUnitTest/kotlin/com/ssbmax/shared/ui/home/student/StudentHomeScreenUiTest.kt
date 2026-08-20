@@ -318,7 +318,13 @@ class StudentHomeScreenUiTest {
     private fun withTestDependencies(content: @Composable () -> Unit) {
         KoinApplication(application = { modules(module { single { mockViewModel } }) }) {
             CompositionLocalProvider(LocalNotificationPermissionController provides fakePermissionController) {
-                content()
+                // SSBMaxTheme (not a bare MaterialTheme) so LocalDesignTokens is
+                // provided -- StudentHomeSections reads it (Phase 7,
+                // docs/plans/CrossPlatform_SSOT), same requirement production
+                // rendering already satisfies via the app's root theme wrapper.
+                com.ssbmax.shared.ui.theme.SSBMaxTheme {
+                    content()
+                }
             }
         }
     }

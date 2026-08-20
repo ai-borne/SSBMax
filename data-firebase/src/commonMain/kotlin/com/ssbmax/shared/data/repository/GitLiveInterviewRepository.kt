@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.domain.constants.InterviewConstants
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.model.interview.InterviewLimits
@@ -13,6 +14,7 @@ import com.ssbmax.shared.domain.model.interview.PrerequisiteCheckResult
 import com.ssbmax.shared.domain.model.interview.QuestionCacheRepository
 import com.ssbmax.shared.domain.repository.InterviewRepository
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.firestore
@@ -23,12 +25,11 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
 /**
- * GitLive-Firebase-backed port of the Android `FirestoreInterviewRepository`. Same collections
- * (`interview_sessions`, `interview_responses`, `interview_results`, `interview_questions`,
- * `submissions`) as the Android original. Question generation delegates to
- * [InterviewQuestionGenerator], result aggregation to the top-level [aggregateInterviewResult]
- * helper — both extracted (like [GitLiveGTORepository]'s own DTO/helper split) to keep this file
- * under this repo's 300-line limit.
+ * GitLive-Firebase-backed port of the Android `FirestoreInterviewRepository`. Reads against
+ * `interview_sessions`/`interview_responses`/`interview_results`/`interview_questions` stay
+ * direct Firestore reads; writes to those same collections that used to happen client-side
+ * (question generation + result aggregation) now go through [evaluationFunctionsClient] instead
+ * (see [createSession]/[completeInterview]'s own doc).
  *
  * [checkPrerequisites] stays an unconditional `UnsupportedOperationException` stub, identical to
  * the Android original: its real check lives in `CheckInterviewPrerequisitesUseCase` (use-case
@@ -38,22 +39,29 @@ import kotlinx.datetime.toLocalDateTime
  * (its would-be use-case was confirmed dead code and deleted in the Phase 5 exit sweep), so it
  * stayed unimplemented rather than silently wrong. It's now real, following the exact
  * tier + monthly-usage pattern [com.ssbmax.shared.domain.usecase.subscription.CheckTestEligibilityUseCase]
- * uses for every other test type, keyed on the same `"Interview"` [SubscriptionLimits] entry
+ * uses for every other test type, keyed on the same `"INTERVIEW"` [SubscriptionLimits] entry
  * [com.ssbmax.shared.domain.model.TestType.IO] already maps to. `mode` is accepted (interface
  * contract) but unused -- [SubscriptionLimits]/[dev.gitlive.firebase.firestore] usage tracking
  * doesn't differentiate by interview mode, same as [getRemainingInterviews] below.
+ *
+ * [createSession]/[completeInterview] delegate to [evaluationFunctionsClient] rather than
+ * writing `interview_sessions`/`interview_questions`/`interview_results` directly --
+ * `firestore.rules` marks all three server-only (`allow write: if false`); a direct client
+ * write always returned PERMISSION_DENIED (Interview session/result server-migration plan).
+ * [questionGenerator] is still used for [generateQuestions] (unrelated preview/legacy caller)
+ * and to build the PIQ text context [evaluationFunctionsClient] hands the server.
  */
 class GitLiveInterviewRepository(
     private val questionCacheRepository: QuestionCacheRepository,
     private val questionGenerator: InterviewQuestionGenerator,
-    private val subscriptionRepository: SubscriptionRepository
+    private val subscriptionRepository: SubscriptionRepository,
+    private val evaluationFunctionsClient: EvaluationFunctionsClient
 ) : InterviewRepository {
 
-    private val sessionsCollection = Firebase.firestore.collection(COLLECTION_SESSIONS)
-    private val responsesCollection = Firebase.firestore.collection(COLLECTION_RESPONSES)
-    private val resultsCollection = Firebase.firestore.collection(COLLECTION_RESULTS)
-    private val questionsCollection = Firebase.firestore.collection(COLLECTION_QUESTIONS)
-    private val submissionsCollection = Firebase.firestore.collection(COLLECTION_SUBMISSIONS)
+    private val sessionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_SESSIONS)
+    private val responsesCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_RESPONSES)
+    private val resultsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_RESULTS)
+    private val questionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.INTERVIEW_QUESTIONS)
 
     override suspend fun checkPrerequisites(userId: String): Result<PrerequisiteCheckResult> =
         Result.failure(UnsupportedOperationException("Use CheckInterviewPrerequisitesUseCase"))
@@ -72,36 +80,19 @@ class GitLiveInterviewRepository(
 
     // ==================== Session Management ====================
 
+    /**
+     * `interview_sessions`/`interview_questions` are server-only in `firestore.rules`
+     * (`allow write: if false`) -- question generation, PIQ-context resolution, and the write
+     * all happen in the `createInterviewSession` Cloud Function now; this just forwards the
+     * request.
+     */
     override suspend fun createSession(
         userId: String,
         mode: InterviewMode,
         piqSnapshotId: String,
         consentGiven: Boolean
-    ): Result<InterviewSession> = try {
-        val questions = questionGenerator.generateQuestions(piqSnapshotId, InterviewConstants.TARGET_TOTAL_QUESTIONS)
-            .getOrElse { return Result.failure(it) }
-
-        val session = InterviewSession(
-            id = randomId(),
-            userId = userId,
-            mode = mode,
-            status = InterviewStatus.IN_PROGRESS,
-            startedAt = Clock.System.now(),
-            completedAt = null,
-            piqSnapshotId = piqSnapshotId,
-            consentGiven = consentGiven,
-            questionIds = questions.map { it.id },
-            currentQuestionIndex = 0,
-            estimatedDuration = InterviewConstants.DEFAULT_DURATION_MINUTES
-        )
-
-        val batch = Firebase.firestore.batch()
-        questions.forEach { question -> batch.set(questionsCollection.document(question.id), question.toDto()) }
-        batch.set(sessionsCollection.document(session.id), session.toDto())
-        batch.commit()
-
-        Result.success(session)
-    } catch (e: Exception) { Result.failure(e) }
+    ): Result<InterviewSession> =
+        evaluationFunctionsClient.createInterviewSession(mode, piqSnapshotId, consentGiven)
 
     override suspend fun getActiveSession(userId: String): Result<InterviewSession?> = try {
         val snapshot = sessionsCollection
@@ -113,16 +104,22 @@ class GitLiveInterviewRepository(
         Result.success(snapshot.documents.firstOrNull()?.data(InterviewSessionDto.serializer())?.toDomain())
     } catch (e: Exception) { Result.failure(e) }
 
-    override suspend fun getSession(sessionId: String): Result<InterviewSession> = try {
-        val doc = sessionsCollection.document(sessionId).get()
-        if (!doc.exists) Result.failure(IllegalStateException("Session not found: $sessionId"))
-        else Result.success(doc.data(InterviewSessionDto.serializer()).toDomain())
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun getSession(sessionId: String): Result<InterviewSession> {
+        if (!isUsableDocumentId(sessionId)) return blankDocumentIdFailure("sessionId")
+        return try {
+            val doc = sessionsCollection.document(sessionId).get()
+            if (!doc.exists) Result.failure(IllegalStateException("Session not found: $sessionId"))
+            else Result.success(doc.data(InterviewSessionDto.serializer()).toDomain())
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
-    override suspend fun updateSession(session: InterviewSession): Result<Unit> = try {
-        sessionsCollection.document(session.id).set(session.toDto())
-        Result.success(Unit)
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun updateSession(session: InterviewSession): Result<Unit> {
+        if (!isUsableDocumentId(session.id)) return blankDocumentIdFailure("session.id")
+        return try {
+            sessionsCollection.document(session.id).set(session.toDto())
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     override suspend fun abandonSession(sessionId: String): Result<Unit> = try {
         val session = getSession(sessionId).getOrElse { return Result.failure(it) }
@@ -137,11 +134,14 @@ class GitLiveInterviewRepository(
         count: Int
     ): Result<List<InterviewQuestion>> = questionGenerator.generateQuestions(piqSnapshotId, count)
 
-    override suspend fun getQuestion(questionId: String): Result<InterviewQuestion> = try {
-        val doc = questionsCollection.document(questionId).get()
-        if (!doc.exists) Result.failure(IllegalStateException("Question not found: $questionId"))
-        else Result.success(doc.data(InterviewQuestionDto.serializer()).toDomain())
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun getQuestion(questionId: String): Result<InterviewQuestion> {
+        if (!isUsableDocumentId(questionId)) return blankDocumentIdFailure("questionId")
+        return try {
+            val doc = questionsCollection.document(questionId).get()
+            if (!doc.exists) Result.failure(IllegalStateException("Question not found: $questionId"))
+            else Result.success(doc.data(InterviewQuestionDto.serializer()).toDomain())
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     override suspend fun cacheQuestions(piqSnapshotId: String, questions: List<InterviewQuestion>): Result<Unit> =
         questionCacheRepository.cachePIQQuestions(
@@ -155,11 +155,14 @@ class GitLiveInterviewRepository(
 
     // ==================== Response Management ====================
 
-    override suspend fun submitResponse(response: InterviewResponse): Result<InterviewResponse> = try {
-        val session = getSession(response.sessionId).getOrElse { return Result.failure(it) }
-        responsesCollection.document(response.id).set(response.toDto(session.userId))
-        Result.success(response)
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun submitResponse(response: InterviewResponse): Result<InterviewResponse> {
+        if (!isUsableDocumentId(response.id)) return blankDocumentIdFailure("response.id")
+        return try {
+            val session = getSession(response.sessionId).getOrElse { return Result.failure(it) }
+            responsesCollection.document(response.id).set(response.toDto(session.userId))
+            Result.success(response)
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     override suspend fun updateResponse(response: InterviewResponse): Result<InterviewResponse> =
         submitResponse(response)
@@ -174,40 +177,20 @@ class GitLiveInterviewRepository(
         Result.success(snapshot.documents.map { it.data(InterviewResponseDto.serializer()).toDomain() })
     } catch (e: Exception) { Result.failure(e) }
 
-    override suspend fun getResponse(responseId: String): Result<InterviewResponse> = try {
-        val doc = responsesCollection.document(responseId).get()
-        if (!doc.exists) Result.failure(IllegalStateException("Response not found: $responseId"))
-        else Result.success(doc.data(InterviewResponseDto.serializer()).toDomain())
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun getResponse(responseId: String): Result<InterviewResponse> {
+        if (!isUsableDocumentId(responseId)) return blankDocumentIdFailure("responseId")
+        return try {
+            val doc = responsesCollection.document(responseId).get()
+            if (!doc.exists) Result.failure(IllegalStateException("Response not found: $responseId"))
+            else Result.success(doc.data(InterviewResponseDto.serializer()).toDomain())
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     // ==================== Result Management ====================
 
-    override suspend fun completeInterview(sessionId: String): Result<InterviewResult> = try {
-        val session = getSession(sessionId).getOrElse { return Result.failure(it) }
-        val responses = getResponses(sessionId).getOrDefault(emptyList())
-        val result = aggregateInterviewResult(session, responses)
-
-        resultsCollection.document(result.id).set(result.toDto())
-        updateSession(session.copy(status = InterviewStatus.COMPLETED, completedAt = Clock.System.now()))
-
-        // Progress-tracking submission record so a completed interview shows up in "Your Progress"
-        val submissionId = "interview_${result.id}"
-        submissionsCollection.document(submissionId).set(
-            InterviewProgressSubmissionDto(
-                id = submissionId,
-                userId = session.userId,
-                testId = sessionId,
-                testType = "IO",
-                status = "COMPLETED",
-                submittedAt = result.completedAt.toEpochMilliseconds(),
-                score = (10 - result.overallRating).toFloat() * 10,
-                resultId = result.id,
-                mode = result.mode.name
-            )
-        )
-
-        Result.success(result)
-    } catch (e: Exception) { Result.failure(e) }
+    /** Same server-only rule applies to `interview_results` -- see [createSession]'s doc. */
+    override suspend fun completeInterview(sessionId: String): Result<InterviewResult> =
+        evaluationFunctionsClient.completeInterviewSession(sessionId)
 
     override suspend fun getResult(sessionId: String): Result<InterviewResult> = try {
         val snapshot = resultsCollection.where { FIELD_SESSION_ID equalTo sessionId }.limit(1).get()
@@ -216,11 +199,14 @@ class GitLiveInterviewRepository(
         Result.success(result)
     } catch (e: Exception) { Result.failure(e) }
 
-    override suspend fun getResultById(resultId: String): Result<InterviewResult> = try {
-        val doc = resultsCollection.document(resultId).get()
-        if (!doc.exists) Result.failure(IllegalStateException("Result not found: $resultId"))
-        else Result.success(doc.data(InterviewResultDto.serializer()).toDomain())
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun getResultById(resultId: String): Result<InterviewResult> {
+        if (!isUsableDocumentId(resultId)) return blankDocumentIdFailure("resultId")
+        return try {
+            val doc = resultsCollection.document(resultId).get()
+            if (!doc.exists) Result.failure(IllegalStateException("Result not found: $resultId"))
+            else Result.success(doc.data(InterviewResultDto.serializer()).toDomain())
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     override fun getUserResults(userId: String): Flow<List<InterviewResult>> =
         resultsCollection
@@ -260,12 +246,6 @@ class GitLiveInterviewRepository(
     } catch (e: Exception) { Result.failure(e) }
 
     private companion object {
-        const val COLLECTION_SESSIONS = "interview_sessions"
-        const val COLLECTION_RESPONSES = "interview_responses"
-        const val COLLECTION_RESULTS = "interview_results"
-        const val COLLECTION_QUESTIONS = "interview_questions"
-        const val COLLECTION_SUBMISSIONS = "submissions"
-
         const val FIELD_USER_ID = "userId"
         const val FIELD_STATUS = "status"
         const val FIELD_STARTED_AT = "startedAt"

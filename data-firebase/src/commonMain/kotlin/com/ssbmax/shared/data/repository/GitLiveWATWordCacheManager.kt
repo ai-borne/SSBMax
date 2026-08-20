@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.db.CachedWATWord as CachedWATWordRow
 import com.ssbmax.shared.db.SharedDatabase
 import com.ssbmax.shared.domain.model.WATWord
@@ -37,7 +38,6 @@ class GitLiveWATWordCacheManager(
     private val queries get() = database.sharedDatabaseQueries
 
     private companion object {
-        const val COLLECTION_PATH = "test_content/wat/word_batches"
         const val TARGET_CACHE_SIZE = 60 // Full WAT test size
         const val MIN_CACHE_SIZE = 20 // Minimum before resyncing
         const val DEFAULT_BATCH_ID = "batch_001"
@@ -62,7 +62,7 @@ class GitLiveWATWordCacheManager(
      * Download a specific batch from Firestore.
      */
     suspend fun downloadBatch(batchId: String): Result<Unit> = try {
-        val doc = Firebase.firestore.document("$COLLECTION_PATH/$batchId").get()
+        val doc = Firebase.firestore.document("${SsbContracts.FirestorePaths.TestContent.WAT_BATCHES}/$batchId").get()
 
         if (!doc.exists) {
             Result.failure(Exception("Batch $batchId not found in Firestore"))

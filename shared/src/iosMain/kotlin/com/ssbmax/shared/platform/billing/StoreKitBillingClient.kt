@@ -34,6 +34,12 @@ import kotlin.coroutines.resume
  * supported by Apple for subscriptions and is genuinely interop-friendly
  * today, so it's the correct choice for this shim, not a lesser one merely
  * chosen for expedience.
+ *
+ * REMOVAL TODO (Phase 4, RevenueCat integration): unbound and unused since RevenueCat's SDK
+ * (`shared/.../platform/billing/revenuecat/`) now owns the real purchase flow and wraps
+ * StoreKit internally. Fully working code, not a stub -- kept, not deleted, until RevenueCat is
+ * verified working end-to-end in production (per that plan's explicit decision point). Delete
+ * this file and its Koin binding together once that's confirmed.
  */
 @OptIn(ExperimentalForeignApi::class)
 class StoreKitBillingClient : BillingClient {

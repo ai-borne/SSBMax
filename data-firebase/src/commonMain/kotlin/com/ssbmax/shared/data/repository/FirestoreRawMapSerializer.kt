@@ -10,8 +10,7 @@ import kotlinx.serialization.encoding.Encoder
 
 /**
  * Decodes/encodes a whole Firestore document as a raw `Map<String, Any>`, resolving the blocker
- * documented in [GitLiveCommonSubmissionRepository]'s and [GitLiveSubmissionArchiveRepository]'s
- * class docs.
+ * documented in [GitLiveCommonSubmissionRepository]'s class doc.
  *
  * ## Why this works despite GitLive Firestore 2.1.0 having no public raw-Map decode/encode path
  * `DocumentSnapshot.data<reified T>()`/`data(strategy)` and `DocumentReference.set(strategy, data)`

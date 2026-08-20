@@ -7,7 +7,6 @@ import com.ssbmax.shared.platform.util.UninstalledAnalyticsTracker
 import com.ssbmax.shared.platform.util.UninstalledCrashReporter
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
-import platform.Foundation.NSBundle
 
 private var koinInstance: Koin? = null
 
@@ -37,14 +36,7 @@ fun ensureKoinStarted(
     analyticsTracker: AnalyticsTracker = UninstalledAnalyticsTracker()
 ) {
     if (koinInstance != null) return
-    // GEMINI_API_KEY reaches iOS via the GEMINI_API_KEY Xcode build setting -> Info.plist's
-    // "GeminiAPIKey" -> here, mirroring Android's local.properties -> BuildConfig path.
-    // Phase 9.0: Android's SSBMaxApplication now supplies the same property the same way
-    // (core:data's BuildConfig-reading aiModule is gone), so both platforms resolve the one
-    // KtorAIService/KtorGeminiClient binding coreInfraModule declares.
-    val geminiApiKey = NSBundle.mainBundle.objectForInfoDictionaryKey("GeminiAPIKey") as? String ?: ""
     koinInstance = startKoin {
-        properties(mapOf(com.ssbmax.shared.di.GEMINI_API_KEY_PROPERTY to geminiApiKey))
         modules(
             com.ssbmax.shared.di.sharedModule,
             // Move 2: `sharedModule` alone is an INCOMPLETE graph -- it declares
@@ -61,7 +53,7 @@ fun ensureKoinStarted(
 
 /**
  * The started [Koin] instance. Callers must call [ensureKoinStarted] first
- * (both real bridge entry points -- [com.ssbmax.shared.platform.notifications.onApnsDeviceTokenReceived]
+ * (both real bridge entry points -- [com.ssbmax.shared.platform.notifications.onFcmTokenReceived]
  * and [com.ssbmax.shared.platform.worker.registerAndScheduleBackgroundTasks]
  * -- already do this themselves before calling this getter).
  */

@@ -3,12 +3,19 @@ package com.ssbmax.shared.presentation.premium
 import com.ssbmax.shared.domain.model.BillingCycle
 import com.ssbmax.shared.domain.model.SSBMaxUser
 import com.ssbmax.shared.domain.model.SubscriptionTier
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
+import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.DomainLogger
+import com.ssbmax.shared.platform.billing.BillingCancelledException
+import com.ssbmax.shared.platform.billing.SSBMaxProductIds
+import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
 import com.ssbmax.shared.platform.settings.DeveloperSettings
+import com.ssbmax.shared.ui.theme.TierColors
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlin.time.Clock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,30 +49,60 @@ import kotlinx.coroutines.launch
  * identical lookup. Same SSOT result, avoids duplicating the
  * repository-to-tier mapping in two KMP ViewModels.
  *
- * Billing gap (explicitly NOT invented here): the Android original's
- * `upgradeToPlan()` is "visual only" -- it just flips `showComingSoonDialog`
- * to true; there is no Razorpay/Stripe/Play-Billing call anywhere in this
- * flow (see the Android file's own TODO comments). This port preserves that
- * exact placeholder behavior. `PlayBillingClient`/`StoreKitBillingClient`
- * (Phase 4 shims) are NOT wired here, matching the Android original which has
- * no working purchase flow either.
+ * Billing gap (Phase 4, RevenueCat integration -- CLOSED): the Android
+ * original's `upgradeToPlan()` was "visual only" -- it just flipped
+ * `showComingSoonDialog` to true; there was no Razorpay/Stripe/Play-Billing
+ * call anywhere in this flow. `upgradeToPlan()` now drives a real purchase
+ * through [RevenueCatClient], which wraps `PlayBillingClient`/
+ * `StoreKitBillingClient` internally (RevenueCat's own SDK talks to Play
+ * Billing/StoreKit directly -- those two shims stay unbound and unused,
+ * kept only until RevenueCat is verified working end-to-end in production,
+ * per the RevenueCat integration decision). [SSBMaxProductIds] now holds
+ * RevenueCat's real Test Store identifiers -- purchases actually go through
+ * against the Test Store today; only real Play Console/App Store Connect
+ * products (a later, separate step) are still pending.
  */
 class UpgradeViewModel(
     private val observeCurrentUser: ObserveCurrentUserUseCase,
     private val getSubscriptionTier: GetSubscriptionTierUseCase,
+    private val subscriptionRepository: SubscriptionRepository,
+    private val revenueCatClient: RevenueCatClient,
     private val developerSettings: DeveloperSettings,
     private val logger: DomainLogger
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(UpgradeUiState())
     val uiState: StateFlow<UpgradeUiState> = _uiState.asStateFlow()
 
+    private var currentUserId: String? = null
+
     private companion object {
         const val TAG = "UpgradeViewModel"
+        /** `applySubscriptionTier`'s `source` value in `functions/src/webhooks.js` (Razorpay/web). */
+        const val WEB_PAYMENT_SOURCE = "RAZORPAY"
     }
 
     init {
         observeCurrentSubscription()
         loadAvailablePlans()
+        loadStorePrices()
+    }
+
+    /** Fetches RevenueCat's store-quoted MONTHLY prices for [SSBMaxProductIds]' three paid
+     * products, so the UI can show real store prices instead of the generated pricing contract's
+     * numbers. Best-effort: failure (e.g. offline) just leaves [UpgradeUiState.storeFormattedPrices]
+     * empty, and every card falls back to the contract price -- no error surfaced for this. */
+    private fun loadStorePrices() {
+        viewModelScope.launch {
+            revenueCatClient.getOfferingPrices()
+                .onSuccess { pricesByProductId ->
+                    val byTier = SubscriptionTier.entries.mapNotNull { tier ->
+                        val productId = SSBMaxProductIds.forTier(tier) ?: return@mapNotNull null
+                        pricesByProductId[productId]?.let { tier to it.formattedPrice }
+                    }.toMap()
+                    _uiState.update { it.copy(storeFormattedPrices = byTier) }
+                }
+                .onFailure { logger.w(TAG, "Could not fetch RevenueCat offering prices: ${it.message}") }
+        }
     }
 
     private fun observeCurrentSubscription() {
@@ -76,6 +113,8 @@ class UpgradeViewModel(
     }
 
     private suspend fun loadCurrentSubscriptionFor(currentUser: SSBMaxUser?) {
+        currentUserId = currentUser?.id
+        revenueCatClient.configure(appUserId = currentUser?.id)
         _uiState.update { it.copy(isLoading = true) }
         try {
             if (currentUser == null) {
@@ -90,95 +129,58 @@ class UpgradeViewModel(
                 SubscriptionTier.FREE
             }
 
-            _uiState.update { it.copy(currentTier = tier, isLoading = false) }
+            // Client-side-only check, mirrored by web's own `SubscriptionPage.tsx` gate. Phase C
+            // (Dual-Platform Subscription Billing Hardening plan) added a *server-side* purchase
+            // gate in `razorpaySubscriptions.js`'s `createRazorpaySubscription`, but only in this
+            // direction (Razorpay creation rejects an active RevenueCat subscription) --
+            // RevenueCat purchases can't be pre-blocked server-side at all, since the store
+            // charges the user before any of our server code runs (see the plan's "Structural
+            // constraint" note). This `activeOnWebInstead` check plus `restorePurchases()`'s gate
+            // and webhook-to-webhook reconciliation are the best available mitigation for that
+            // reverse (RevenueCat-blocks-Razorpay) direction -- there is no equivalent hard block.
+            val blockedByWeb = subscriptionRepository.getSubscriptionOwnership(currentUser.id)
+                .getOrElse { SubscriptionOwnership(source = null, expiryDate = null) }
+                .let { it.source == WEB_PAYMENT_SOURCE && it.isActive(Clock.System.now().toEpochMilliseconds()) }
+
+            _uiState.update { it.copy(currentTier = tier, isLoading = false, activeOnWebInstead = blockedByWeb) }
         } catch (e: Exception) {
             logger.e(TAG, "Error in loadCurrentSubscription", e)
             _uiState.update { it.copy(currentTier = SubscriptionTier.FREE, isLoading = false) }
         }
     }
 
+    /**
+     * One card per [SubscriptionTier] (FREE/BASIC/PRO/PREMIUM) -- previously this listed
+     * "Premium (AI)" and "Premium" as two separate cards for the same tier, an SSOT violation
+     * flagged during the pricing restructure. Feature bullets come from [SubscriptionTier.features]
+     * (itself generated from the contract, see `SubscriptionTier.kt`) rather than a fourth
+     * hand-written copy, so this can't drift from the tier's real limits again.
+     */
     private fun loadAvailablePlans() {
-        // Prices sourced from SubscriptionTier domain model (single source of truth).
-        val plans = listOf(
-            SubscriptionPlan(
-                tier = SubscriptionTier.FREE,
-                name = "Basic",
-                tagline = "Get Started with SSB Prep",
-                priceMonthly = SubscriptionTier.FREE.monthlyPriceInt.toDouble(),
-                priceQuarterly = SubscriptionTier.FREE.quarterlyPriceInt?.toDouble() ?: 0.0,
-                priceAnnually = SubscriptionTier.FREE.yearlyPriceInt?.toDouble() ?: 0.0,
-                features = listOf(
-                    PlanFeature("Overview of SSB process", true),
-                    PlanFeature("Full access to all study materials", true),
-                    PlanFeature("Basic progress tracking", true),
-                    PlanFeature("Community access", true),
-                    PlanFeature("Practice tests", false),
-                    PlanFeature("AI-powered assessment", false),
-                    PlanFeature("SSB Marketplace access", false)
-                ),
-                isRecommended = false,
-                gradient = listOf("#6366f1", "#8b5cf6")
-            ),
-            SubscriptionPlan(
-                tier = SubscriptionTier.PRO,
-                name = "Pro",
-                tagline = "Accelerate Your Preparation",
-                priceMonthly = SubscriptionTier.PRO.monthlyPriceInt.toDouble(),
-                priceQuarterly = SubscriptionTier.PRO.quarterlyPriceInt?.toDouble() ?: 0.0,
-                priceAnnually = SubscriptionTier.PRO.yearlyPriceInt?.toDouble() ?: 0.0,
-                features = listOf(
-                    PlanFeature("Everything in Basic", true),
-                    PlanFeature("Unlimited practice tests", true),
-                    PlanFeature("Advanced analytics", true),
-                    PlanFeature("Test history & comparisons", true),
-                    PlanFeature("Priority support", true),
-                    PlanFeature("AI-powered assessment", false),
-                    PlanFeature("SSB Marketplace access", false)
-                ),
-                isRecommended = true,
-                gradient = listOf("#8b5cf6", "#a855f7")
-            ),
-            SubscriptionPlan(
-                tier = SubscriptionTier.PREMIUM,
-                name = "Premium (AI)",
-                tagline = "AI-Powered Excellence",
-                priceMonthly = SubscriptionTier.PREMIUM.monthlyPriceInt.toDouble(),
-                priceQuarterly = SubscriptionTier.PREMIUM.quarterlyPriceInt?.toDouble() ?: 0.0,
-                priceAnnually = SubscriptionTier.PREMIUM.yearlyPriceInt?.toDouble() ?: 0.0,
-                features = listOf(
-                    PlanFeature("Everything in Pro", true),
-                    PlanFeature("AI-based test result analysis", true),
-                    PlanFeature("Personalized feedback & tips", true),
-                    PlanFeature("Predictive success scoring", true),
-                    PlanFeature("Custom study plans", true),
-                    PlanFeature("24/7 AI mentor support", true),
-                    PlanFeature("SSB Marketplace access", false)
-                ),
-                isRecommended = false,
-                gradient = listOf("#a855f7", "#c026d3")
-            ),
-            SubscriptionPlan(
-                tier = SubscriptionTier.PREMIUM,
-                name = "Premium",
-                tagline = "Complete SSB Solution",
-                priceMonthly = SubscriptionTier.PREMIUM.monthlyPriceInt.toDouble(),
-                priceQuarterly = SubscriptionTier.PREMIUM.quarterlyPriceInt?.toDouble() ?: 0.0,
-                priceAnnually = SubscriptionTier.PREMIUM.yearlyPriceInt?.toDouble() ?: 0.0,
-                features = listOf(
-                    PlanFeature("Everything in Pro", true),
-                    PlanFeature("SSB Marketplace access", true),
-                    PlanFeature("Connect with verified assessors", true),
-                    PlanFeature("Online 1-on-1 sessions", true),
-                    PlanFeature("Enroll in physical classes", true),
-                    PlanFeature("Exclusive webinars & workshops", true),
-                    PlanFeature("Mock interview sessions", true)
-                ),
-                isRecommended = false,
-                gradient = listOf("#c026d3", "#db2777")
-            )
-        )
-
+        val plans = SubscriptionTier.entries.map(::planFor)
         _uiState.update { it.copy(availablePlans = plans) }
+    }
+
+    private data class PlanMeta(val name: String, val tagline: String, val isRecommended: Boolean)
+
+    private fun planFor(tier: SubscriptionTier): SubscriptionPlan {
+        val meta = when (tier) {
+            SubscriptionTier.FREE -> PlanMeta("Free", "Get Started with SSB Prep", isRecommended = false)
+            SubscriptionTier.BASIC -> PlanMeta("Basic", "Build Your Foundation", isRecommended = false)
+            SubscriptionTier.PRO -> PlanMeta("Pro", "Accelerate Your Preparation", isRecommended = true)
+            SubscriptionTier.PREMIUM -> PlanMeta("Premium", "Complete SSB Solution", isRecommended = false)
+        }
+        return SubscriptionPlan(
+            tier = tier,
+            name = meta.name,
+            tagline = meta.tagline,
+            priceMonthly = tier.monthlyPriceInt.toDouble(),
+            priceQuarterly = tier.quarterlyPriceInt?.toDouble() ?: 0.0,
+            priceAnnually = tier.yearlyPriceInt?.toDouble() ?: 0.0,
+            features = tier.features.map { PlanFeature(it, isIncluded = true) },
+            isRecommended = meta.isRecommended,
+            gradient = TierColors.gradient(tier)
+        )
     }
 
     fun selectBillingCycle(cycle: BillingCycle) {
@@ -186,72 +188,80 @@ class UpgradeViewModel(
     }
 
     fun upgradeToPlan(tier: SubscriptionTier) {
-        // Visual only -- show coming soon dialog. No payment gateway wired
-        // (matches the Android original; see class doc above).
-        _uiState.update { it.copy(showComingSoonDialog = true, selectedPlanForUpgrade = tier) }
-    }
+        val userId = currentUserId
+        val productId = SSBMaxProductIds.forTier(tier)
+        if (userId == null || productId == null) {
+            logger.w(TAG, "upgradeToPlan called with no signed-in user or no product for $tier")
+            return
+        }
+        if (_uiState.value.activeOnWebInstead) {
+            // Neither webhook reconciles against what the other already wrote (see
+            // `SubscriptionOwnership`'s doc comment) -- block a second, separate mobile purchase
+            // rather than risk one silently stomping the web-purchased tier/expiry.
+            logger.w(TAG, "upgradeToPlan blocked: user already has an active web (Razorpay) subscription")
+            return
+        }
 
-    fun dismissComingSoonDialog() {
-        _uiState.update { it.copy(showComingSoonDialog = false, selectedPlanForUpgrade = null) }
-    }
-}
-
-/**
- * UI State for Upgrade Screen
- */
-data class UpgradeUiState(
-    val currentTier: SubscriptionTier = SubscriptionTier.FREE,
-    val availablePlans: List<SubscriptionPlan> = emptyList(),
-    val selectedBillingCycle: BillingCycle = BillingCycle.MONTHLY,
-    val isLoading: Boolean = true,
-    val showComingSoonDialog: Boolean = false,
-    val selectedPlanForUpgrade: SubscriptionTier? = null
-)
-
-/**
- * Subscription plan details, as displayed on the upgrade screen.
- * (Distinct from `com.ssbmax.shared.domain.model.SubscriptionPlan`, the
- * simpler domain-layer plan shape used elsewhere -- this UI-only shape needs
- * per-billing-cycle pricing + gradient colors the domain model doesn't carry.)
- */
-data class SubscriptionPlan(
-    val tier: SubscriptionTier,
-    val name: String,
-    val tagline: String,
-    val priceMonthly: Double,
-    val priceQuarterly: Double,
-    val priceAnnually: Double,
-    val features: List<PlanFeature>,
-    val isRecommended: Boolean,
-    val gradient: List<String>
-) {
-    fun getPriceForCycle(cycle: BillingCycle): Double {
-        return when (cycle) {
-            BillingCycle.MONTHLY -> priceMonthly
-            BillingCycle.QUARTERLY -> priceQuarterly
-            BillingCycle.ANNUALLY -> priceAnnually
+        _uiState.update { it.copy(isPurchasing = true, purchaseError = null, selectedPlanForUpgrade = tier) }
+        viewModelScope.launch {
+            revenueCatClient.purchase(productId)
+                .onSuccess { outcome ->
+                    // Local UiState only -- deliberately NOT persisted. The optimistic
+                    // `updateSubscriptionTier` write that used to sit here was deleted in Phase 1 of
+                    // the Payment Ecosystem Hardening plan (finding C1): it depended on a Firestore
+                    // rule that let any signed-in user write their own subscription doc, i.e. grant
+                    // themselves PREMIUM for free. That rule is closed now, so the write would fail
+                    // anyway. `revenueCatWebhook.js` (Admin SDK) is the writer; this keeps the screen
+                    // feeling instant in the meantime.
+                    _uiState.update {
+                        it.copy(isPurchasing = false, currentTier = outcome.tier, selectedPlanForUpgrade = null)
+                    }
+                }
+                .onFailure { error ->
+                    if (error is BillingCancelledException) {
+                        _uiState.update { it.copy(isPurchasing = false, selectedPlanForUpgrade = null) }
+                    } else {
+                        logger.e(TAG, "Purchase failed for $tier", error)
+                        _uiState.update {
+                            it.copy(isPurchasing = false, purchaseError = error.message, selectedPlanForUpgrade = null)
+                        }
+                    }
+                }
         }
     }
 
-    fun getSavingsForCycle(cycle: BillingCycle): String? {
-        return when (cycle) {
-            BillingCycle.MONTHLY -> null
-            BillingCycle.QUARTERLY -> {
-                val savings = (priceMonthly * 3) - priceQuarterly
-                if (savings > 0) "Save ₹${savings.toInt()}" else null
-            }
-            BillingCycle.ANNUALLY -> {
-                val savings = (priceMonthly * 12) - priceAnnually
-                if (savings > 0) "Save ₹${savings.toInt()}" else null
-            }
+    fun dismissPurchaseError() {
+        _uiState.update { it.copy(purchaseError = null) }
+    }
+
+    /** Re-derives entitlements from the store (e.g. after a reinstall, or a purchase made on
+     * another device with the same RevenueCat identity) and reflects the resulting tier in local
+     * state, same as a successful [upgradeToPlan]. */
+    fun restorePurchases() {
+        val userId = currentUserId
+        if (userId == null) {
+            logger.w(TAG, "restorePurchases called with no signed-in user")
+            return
+        }
+        if (_uiState.value.activeOnWebInstead) {
+            // Same gate as upgradeToPlan -- restoring RC entitlements would otherwise silently
+            // overwrite an active Razorpay-sourced tier just like a fresh purchase would.
+            logger.w(TAG, "restorePurchases blocked: user already has an active web (Razorpay) subscription")
+            return
+        }
+
+        _uiState.update { it.copy(isRestoring = true, purchaseError = null) }
+        viewModelScope.launch {
+            revenueCatClient.restorePurchases()
+                .onSuccess { outcome ->
+                    // Local UiState only -- see the identical note in upgradeToPlan for why there is
+                    // no client-side tier write here any more.
+                    _uiState.update { it.copy(isRestoring = false, currentTier = outcome.tier) }
+                }
+                .onFailure { error ->
+                    logger.e(TAG, "Restore purchases failed", error)
+                    _uiState.update { it.copy(isRestoring = false, purchaseError = error.message) }
+                }
         }
     }
 }
-
-/**
- * Individual feature in a plan
- */
-data class PlanFeature(
-    val description: String,
-    val isIncluded: Boolean
-)

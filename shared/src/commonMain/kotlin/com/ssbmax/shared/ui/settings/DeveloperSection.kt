@@ -33,6 +33,7 @@ import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.developer_bypass_interview_prerequisites_description
 import ssbmax.shared.generated.resources.developer_bypass_interview_prerequisites_title
 import ssbmax.shared.generated.resources.developer_known_limitation_note
+import ssbmax.shared.generated.resources.developer_override_force_basic
 import ssbmax.shared.generated.resources.developer_override_force_free
 import ssbmax.shared.generated.resources.developer_override_force_premium
 import ssbmax.shared.generated.resources.developer_override_force_pro
@@ -153,6 +154,7 @@ private fun BypassInterviewPrerequisitesRow(
 private fun SubscriptionOverride.label(): String = when (this) {
     SubscriptionOverride.FOLLOW_REAL -> stringResource(Res.string.developer_override_follow_real)
     SubscriptionOverride.FORCE_FREE -> stringResource(Res.string.developer_override_force_free)
+    SubscriptionOverride.FORCE_BASIC -> stringResource(Res.string.developer_override_force_basic)
     SubscriptionOverride.FORCE_PRO -> stringResource(Res.string.developer_override_force_pro)
     SubscriptionOverride.FORCE_PREMIUM -> stringResource(Res.string.developer_override_force_premium)
 }

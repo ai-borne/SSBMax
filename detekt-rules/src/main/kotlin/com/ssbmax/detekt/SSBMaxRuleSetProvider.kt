@@ -14,7 +14,8 @@ class SSBMaxRuleSetProvider : RuleSetProvider {
             HardcodedComposeTextRule(config),
             HardcodedComposeColorRule(config),
             IconOnlyControlLabelRule(config),
-            MissingComposePreviewRule(config)
+            MissingComposePreviewRule(config),
+            RawFirestorePathLiteralRule(config)
         )
     )
 }

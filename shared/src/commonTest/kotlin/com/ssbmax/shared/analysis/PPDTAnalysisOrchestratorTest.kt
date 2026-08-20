@@ -1,5 +1,6 @@
 package com.ssbmax.shared.analysis
 
+import com.ssbmax.shared.domain.model.FeatureFlags
 import com.ssbmax.shared.domain.model.PPDTQuestion
 import com.ssbmax.shared.domain.model.PPDTSubmission
 import com.ssbmax.shared.domain.model.SubmissionStatus
@@ -9,6 +10,8 @@ import com.ssbmax.shared.domain.service.OLQScoreWithReasoning
 import com.ssbmax.shared.domain.service.ResponseAnalysis
 import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
 import com.ssbmax.shared.presentation.testing.FakeAIService
+import com.ssbmax.shared.presentation.testing.FakeEvaluationFunctionsClient
+import com.ssbmax.shared.presentation.testing.FakeFeatureFlagRepository
 import com.ssbmax.shared.presentation.testing.FakeGTORepository
 import com.ssbmax.shared.presentation.testing.FakeInterviewRepository
 import com.ssbmax.shared.presentation.testing.FakeSubmissionRepository
@@ -21,6 +24,7 @@ import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpStatusCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Phase 8 (KMP-convergence plan): characterization test pinning [PPDTAnalysisOrchestrator] --
@@ -76,7 +80,8 @@ class PPDTAnalysisOrchestratorTest {
         val orchestrator = PPDTAnalysisOrchestrator(
             submissionRepo, testContentRepo, FakeUserProfileRepository(), aiService,
             GetOLQDashboardUseCase(submissionRepo, FakeGTORepository(), FakeInterviewRepository(), RecordingLogger()),
-            noopHttpClient(), RecordingLogger()
+            noopHttpClient(), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
         )
 
         orchestrator.analyze("ppdt-1")
@@ -102,11 +107,45 @@ class PPDTAnalysisOrchestratorTest {
         val orchestrator = PPDTAnalysisOrchestrator(
             submissionRepo, testContentRepo, FakeUserProfileRepository(), aiService,
             GetOLQDashboardUseCase(submissionRepo, FakeGTORepository(), FakeInterviewRepository(), RecordingLogger()),
-            noopHttpClient(), RecordingLogger()
+            noopHttpClient(), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
         )
 
         orchestrator.analyze("ppdt-1")
 
         assertEquals(AnalysisStatus.FAILED, recordedStatus)
     }
+
+    @Test
+    fun `analyze delegates to the server-side evaluation function and skips the legacy AI path when ppdt_server_evaluation is enabled`() =
+        kotlinx.coroutines.test.runTest {
+            var legacyStatusUpdateCalled = false
+            val submissionRepo = object : com.ssbmax.shared.domain.repository.SubmissionRepository by (FakeSubmissionRepository().apply {
+                ppdtSubmissionResult = Result.success(submission(AnalysisStatus.PENDING_ANALYSIS))
+            }) {
+                override suspend fun updatePPDTAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> {
+                    legacyStatusUpdateCalled = true
+                    return Result.success(Unit)
+                }
+            }
+            val testContentRepo = FakeTestContentRepository().apply {
+                ppdtQuestionResult = Result.success(PPDTQuestion(id = "q-1", imageUrl = "", imageDescription = "desc"))
+            }
+            val aiService = FakeAIService()
+            val evaluationFunctionsClient = FakeEvaluationFunctionsClient()
+            val featureFlagRepository = FakeFeatureFlagRepository(
+                flagsResult = FeatureFlags(flags = mapOf("ppdt_server_evaluation" to true))
+            )
+            val orchestrator = PPDTAnalysisOrchestrator(
+                submissionRepo, testContentRepo, FakeUserProfileRepository(), aiService,
+                GetOLQDashboardUseCase(submissionRepo, FakeGTORepository(), FakeInterviewRepository(), RecordingLogger()),
+                noopHttpClient(), RecordingLogger(),
+                featureFlagRepository, evaluationFunctionsClient
+            )
+
+            orchestrator.analyze("ppdt-1")
+
+            assertEquals(listOf("ppdt-1"), evaluationFunctionsClient.evaluatePPDTCalls)
+            assertTrue(!legacyStatusUpdateCalled, "legacy client-side AI path (status ANALYZING/FAILED flip) must not run when the flag is on")
+        }
 }

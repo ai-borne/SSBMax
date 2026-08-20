@@ -1,0 +1,139 @@
+# Route / deep-link identifiers. KMP-authoritative
+# (shared/.../navigation/SSBMaxDestinations.kt).
+# See contracts/README.md for the compatibility policy before editing.
+schemaVersion: "1.0.0"
+
+# Inert until Phase 8 wires a remote kill-switch that reads it — recorded now
+# per contracts/README §Schema Compatibility Policy rule 5, so the contract
+# already has a home for this value when that phase lands.
+minimumSupportedAppVersion: "1.0.0"
+
+routes:
+  - name: SPLASH
+    path: splash
+  - name: LOGIN
+    path: login
+  - name: ROLE_SELECTION
+    path: role_selection
+  - name: STUDENT_HOME
+    path: student/home
+  - name: STUDENT_TESTS
+    path: student/tests
+  - name: STUDENT_SUBMISSIONS
+    path: student/submissions
+  - name: STUDENT_STUDY
+    path: student/study
+  - name: STUDENT_PROFILE
+    path: student/profile
+  - name: INSTRUCTOR_HOME
+    path: instructor/home
+  - name: INSTRUCTOR_STUDENTS
+    path: instructor/students
+  - name: INSTRUCTOR_GRADING
+    path: instructor/grading
+  - name: INSTRUCTOR_ANALYTICS
+    path: instructor/analytics
+  - name: INSTRUCTOR_STUDENT_DETAIL
+    path: "instructor/student/{studentId}"
+  - name: INSTRUCTOR_GRADING_DETAIL
+    path: "instructor/grading/{submissionId}"
+  - name: PHASE1_DETAIL
+    path: phase1/detail
+  - name: PHASE2_DETAIL
+    path: phase2/detail
+  - name: TEST_OIR
+    path: "test/oir/{testId}"
+  - name: TEST_OIR_RESULT
+    path: "test/oir/result/{submissionId}"
+  - name: TEST_OIR_REVIEW
+    path: "test/oir/review/{submissionId}"
+  - name: TEST_PPDT
+    path: "test/ppdt/{testId}"
+  - name: TEST_PPDT_RESULT
+    path: "test/ppdt/result/{submissionId}"
+  - name: TEST_TAT
+    path: "test/tat/{testId}"
+  - name: TEST_TAT_RESULT
+    path: "test/tat/result/{submissionId}"
+  - name: TEST_WAT
+    path: "test/wat/{testId}"
+  - name: TEST_WAT_RESULT
+    path: "test/wat/result/{submissionId}"
+  - name: TEST_SRT
+    path: "test/srt/{testId}"
+  - name: TEST_SRT_RESULT
+    path: "test/srt/result/{submissionId}"
+  - name: TEST_SD
+    path: "test/sd/{testId}"
+  - name: TEST_SD_RESULT
+    path: "test/sd/result/{submissionId}"
+  - name: TEST_PIQ
+    path: "test/piq/{testId}"
+  - name: TEST_PIQ_RESULT
+    path: "test/piq/result/{submissionId}"
+  - name: TEST_GTO
+    path: "test/gto/{testId}"
+  - name: TEST_GTO_GD
+    path: "test/gto/gd/{testId}"
+  - name: TEST_GTO_GD_RESULT
+    path: "test/gto/gd/result/{submissionId}"
+  - name: TEST_GTO_LECTURETTE
+    path: "test/gto/lecturette/{testId}"
+  - name: TEST_GTO_LECTURETTE_RESULT
+    path: "test/gto/lecturette/result/{submissionId}"
+  - name: TEST_GTO_GPE
+    path: "test/gto/gpe/{testId}"
+  - name: TEST_GTO_GPE_RESULT
+    path: "test/gto/gpe/result/{submissionId}"
+  - name: TEST_IO
+    path: "test/io/{testId}"
+  - name: INTERVIEW_START
+    path: interview/start
+  - name: INTERVIEW_VOICE
+    path: "interview/voice/{sessionId}"
+  - name: INTERVIEW_RESULT
+    path: "interview/result/{resultId}"
+  - name: STUDY_MATERIALS
+    path: study/materials
+  - name: STUDY_MATERIAL_CATEGORY
+    path: "study/material/{categoryId}"
+  - name: TOPIC_DETAIL
+    path: "topic/{topicId}"
+  - name: PREMIUM_UPGRADE
+    path: premium/upgrade
+  - name: NOTIFICATIONS_CENTER
+    path: notifications/center
+  - name: SETTINGS
+    path: settings
+  - name: SETTINGS_SUBSCRIPTION
+    path: settings/subscription
+  - name: ANALYTICS
+    path: analytics
+  - name: RESULTS_HISTORIC
+    path: results/historic
+  - name: USER_PROFILE
+    path: user/profile
+  - name: MARKETPLACE
+    path: marketplace
+  - name: SSB_OVERVIEW
+    path: ssb/overview
+  - name: FAQ
+    path: faq
+  - name: UPGRADE
+    path: upgrade
+  - name: PAYMENT
+    path: payment
+  - name: PAYMENT_SUCCESS
+    path: payment/success
+  - name: BATCH_JOIN
+    path: batch/join
+  - name: BATCH_CREATE
+    path: batch/create
+  - name: BATCH_DETAIL
+    path: "batch/{batchId}"
+  - name: SUBMISSION_DETAIL
+    path: "submission/{submissionId}"
+
+# Documented, not generated: SSBMaxDestinations.NotYetPorted(screen) is a
+# dev-only catch-all with no route string (SSBMaxDestinations.kt:434) and has
+# no contract entry by design.

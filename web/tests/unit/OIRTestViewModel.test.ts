@@ -7,6 +7,8 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
   let viewModel: OIRTestViewModel;
   let mockRepo: IContentRepository;
   let mockOfflineQueue: any;
+  let mockScoringService: any;
+  let mockEligibilityService: any;
 
   const sampleQuestions: OIRQuestion[] = [
     {
@@ -41,14 +43,32 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
       getTATSet: vi.fn(),
       getWATBatch: vi.fn(),
       getSRTBatch: vi.fn(),
-      getCappedBatch: vi.fn()
+      getGPEBatch: vi.fn(),
+      getOIRContentVersion: vi.fn(),
+      getAvailableBatches: vi.fn().mockResolvedValue([])
     };
+
 
     mockOfflineQueue = {
       enqueueSubmission: vi.fn().mockResolvedValue(undefined)
     };
 
-    viewModel = new OIRTestViewModel(mockRepo, mockOfflineQueue);
+    mockScoringService = {
+      submitOIRTest: vi.fn().mockResolvedValue({
+        success: true,
+        submissionId: 'sub-oir-1',
+        score: 1,
+        total: 2,
+        percentage: 50,
+        oirRating: 3
+      })
+    };
+
+    mockEligibilityService = {
+      recordTestUsage: vi.fn().mockResolvedValue({ success: true, alreadyRecorded: false, used: 1, limit: 5 })
+    };
+
+    viewModel = new OIRTestViewModel(mockRepo, mockOfflineQueue, mockScoringService, mockEligibilityService);
   });
 
   it('should load questions and initialize state correctly', async () => {
@@ -77,7 +97,32 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     expect(state.currentIndex).toBe(0);
   });
 
-  it('should submit test online and return evaluation result', async () => {
+  it('should submit test online via the server-side submitOIRTest function and return its result', async () => {
+    await viewModel.loadQuestions(0);
+    viewModel.selectOption('q1', 2);
+    viewModel.selectOption('q2', 0);
+
+    await viewModel.submitTest('user-123', true);
+    const state = viewModel.getState();
+
+    expect(mockScoringService.submitOIRTest).toHaveBeenCalledWith({
+      batchId: 'oir-batch-0',
+      userAnswers: { q1: 2, q2: 0 },
+      timeTakenSeconds: expect.any(Number)
+    });
+    expect(state.isCompleted).toBe(true);
+    expect(state.result).not.toBeNull();
+    expect(state.result?.totalQuestions).toBe(2);
+    expect(state.result?.score).toBe(1);
+    // Phase 5 (docs/plans/CrossPlatform_SSOT): quota is only charged after the score is
+    // durable server-side -- this is the first and only place web records OIR usage.
+    // Regression (OIR notification/persistence parity fix): uses the real submissionId
+    // submitOIRTest returns, not a throwaway crypto.randomUUID() with nothing behind it.
+    expect(mockEligibilityService.recordTestUsage).toHaveBeenCalledWith('OIR', 'sub-oir-1');
+  });
+
+  it('still completes and shows the result even if recordTestUsage fails (log, do not block an already-earned score)', async () => {
+    mockEligibilityService.recordTestUsage.mockRejectedValue(new Error('resource-exhausted'));
     await viewModel.loadQuestions(0);
     viewModel.selectOption('q1', 2);
     viewModel.selectOption('q2', 0);
@@ -86,8 +131,16 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     const state = viewModel.getState();
 
     expect(state.isCompleted).toBe(true);
-    expect(state.result).not.toBeNull();
-    expect(state.result?.totalQuestions).toBe(2);
+    expect(state.result?.score).toBe(1);
+  });
+
+  it('should surface an error and never fabricate a score when no batch is loaded before submit', async () => {
+    await viewModel.submitTest('user-123', true);
+    const state = viewModel.getState();
+
+    expect(mockScoringService.submitOIRTest).not.toHaveBeenCalled();
+    expect(state.isCompleted).toBe(false);
+    expect(state.error).toBeTruthy();
   });
 
   it('should enqueue submission offline when network is unavailable', async () => {

@@ -3,7 +3,6 @@ package com.ssbmax
 import android.app.Application
 import android.util.Log
 import com.ssbmax.di.appModules
-import com.ssbmax.shared.di.GEMINI_API_KEY_PROPERTY
 import com.ssbmax.shared.platform.worker.BackgroundTaskScheduler
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -29,13 +28,6 @@ private const val TAG = "SSBMaxApplication"
  *   calling WorkManager directly — same underlying WorkManager behavior on
  *   Android, but now behind the interface iOS's BGTaskScheduler actual also
  *   implements.
- * - Supply the Gemini API key as a Koin property (Phase 9.0), the way
- *   iOS's `ensureKoinStarted()` already does from its Info.plist. `shared`'s
- *   `coreInfraModule` reads it via `getProperty("GEMINI_API_KEY", "")` to
- *   build `KtorGeminiClient`; without this the key would resolve to "" and
- *   every AI evaluation would fail silently (no compile error) now that
- *   `core:data`'s `BuildConfig`-reading `aiModule` is gone.
- *
  * The old `BYPASS_SUBSCRIPTION_LIMITS`/`BYPASS_INTERVIEW_PREREQUISITES`
  * `BuildConfig` fields (Android-only, and the latter never actually wired)
  * were retired by the dev-subscription-override plan's Phase 6: the debug UI's
@@ -52,13 +44,11 @@ class SSBMaxApplication : Application() {
         startKoin {
             androidLogger()
             androidContext(this@SSBMaxApplication)
-            properties(mapOf(GEMINI_API_KEY_PROPERTY to BuildConfig.GEMINI_API_KEY))
             modules(appModules)
         }
 
         val scheduler = get<BackgroundTaskScheduler>(BackgroundTaskScheduler::class.java)
         scheduler.scheduleQuestionCacheCleanup()
-        scheduler.scheduleSubmissionArchival()
 
         Log.d(TAG, "✅ SSBMax Application initialized")
     }

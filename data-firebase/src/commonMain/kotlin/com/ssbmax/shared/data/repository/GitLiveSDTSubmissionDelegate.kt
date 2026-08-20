@@ -23,7 +23,9 @@ internal class GitLiveSDTSubmissionDelegate(private val store: GitLiveOlqResultS
 
     private val submissionsCollection get() = store.submissionsCollection
 
-    suspend fun submitSDT(submission: SDTSubmission, batchId: String?): Result<String> = try {
+    suspend fun submitSDT(submission: SDTSubmission, batchId: String?): Result<String> {
+      if (!isUsableDocumentId(submission.id)) return blankDocumentIdFailure("submission.id")
+      return try {
         val doc = SubmissionDocDto(
             id = submission.id,
             userId = submission.userId,
@@ -42,6 +44,7 @@ internal class GitLiveSDTSubmissionDelegate(private val store: GitLiveOlqResultS
                 totalTimeTakenMinutes = submission.totalTimeTakenMinutes,
                 submittedAt = submission.submittedAt,
                 status = submission.status.name,
+                analysisStatus = AnalysisStatus.PENDING_ANALYSIS.name,
                 instructorScore = submission.instructorScore?.toDto(),
                 gradedByInstructorId = submission.gradedByInstructorId,
                 gradingTimestamp = submission.gradingTimestamp
@@ -49,16 +52,20 @@ internal class GitLiveSDTSubmissionDelegate(private val store: GitLiveOlqResultS
         )
         submissionsCollection.document(submission.id).set(doc, merge = true)
         Result.success(submission.id)
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to submit SDT: ${e.message}", e))
+      }
     }
 
-    suspend fun getSDTSubmission(submissionId: String): Result<SDTSubmission?> = try {
-        val snapshot = submissionsCollection.document(submissionId).get()
-        if (!snapshot.exists) Result.success(null)
-        else Result.success(snapshot.data(SubmissionDocDto.serializer(SDTDataDto.serializer())).data.toDomain())
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to fetch SDT submission: ${e.message}", e))
+    suspend fun getSDTSubmission(submissionId: String): Result<SDTSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            val snapshot = submissionsCollection.document(submissionId).get()
+            if (!snapshot.exists) Result.success(null)
+            else Result.success(snapshot.data(SubmissionDocDto.serializer(SDTDataDto.serializer())).data.toDomain())
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to fetch SDT submission: ${e.message}", e))
+        }
     }
 
     suspend fun getLatestSDTSubmission(userId: String): Result<SDTSubmission?> = try {
@@ -78,11 +85,14 @@ internal class GitLiveSDTSubmissionDelegate(private val store: GitLiveOlqResultS
         Result.failure(Exception("Failed to fetch latest SDT submission: ${e.message}", e))
     }
 
-    suspend fun updateSDTAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> = try {
-        submissionsCollection.document(submissionId).update("$PSYCH_FIELD_DATA.analysisStatus" to status.name)
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to update SDT status: ${e.message}", e))
+    suspend fun updateSDTAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            submissionsCollection.document(submissionId).update("$PSYCH_FIELD_DATA.analysisStatus" to status.name)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to update SDT status: ${e.message}", e))
+        }
     }
 
     suspend fun updateSDTOLQResult(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> =
@@ -96,8 +106,9 @@ internal class GitLiveSDTSubmissionDelegate(private val store: GitLiveOlqResultS
      * A regression-filtered snapshot is skipped (`transform`), not mapped to `null` — see
      * [GitLivePsychTestSubmissionRepository.observeTATSubmission]'s doc for why.
      */
-    fun observeSDTSubmission(submissionId: String): Flow<SDTSubmission?> =
-        submissionsCollection.document(submissionId).snapshots
+    fun observeSDTSubmission(submissionId: String): Flow<SDTSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return kotlinx.coroutines.flow.flowOf(null)
+        return submissionsCollection.document(submissionId).snapshots
             .transform { snapshot ->
                 if (!snapshot.exists) {
                     emit(null)
@@ -108,6 +119,7 @@ internal class GitLiveSDTSubmissionDelegate(private val store: GitLiveOlqResultS
                 if (filter.shouldFilterSnapshot(dto.data.analysisStatus, dto.data.olqResult != null, snapshot.metadata)) return@transform
                 emit(dto.data.toDomain())
             }
+    }
 }
 
 // ===========================

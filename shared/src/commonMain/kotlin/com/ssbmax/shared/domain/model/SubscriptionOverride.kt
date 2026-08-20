@@ -10,6 +10,7 @@ package com.ssbmax.shared.domain.model
 enum class SubscriptionOverride {
     FOLLOW_REAL,
     FORCE_FREE,
+    FORCE_BASIC,
     FORCE_PRO,
     FORCE_PREMIUM
 }

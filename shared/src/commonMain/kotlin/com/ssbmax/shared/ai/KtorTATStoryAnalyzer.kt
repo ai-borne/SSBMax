@@ -9,11 +9,11 @@ import kotlinx.coroutines.withTimeout
 /**
  * Handles per-story TAT multimodal analysis (image bytes + story). KMP port
  * of core:data's `GeminiTATStoryAnalyzer`: same prompt + parser, but the
- * image is attached via [KtorGeminiClient]'s `inline_data` REST part instead
+ * image is attached via [GeminiClient]'s `imageBytes` parameter instead
  * of the Android SDK's `content { blob(...) }` DSL.
  */
 class KtorTATStoryAnalyzer(
-    private val client: KtorGeminiClient,
+    private val client: GeminiClient,
     private val logger: DomainLogger,
     private val responseTimeout: Long = 60_000L
 ) {

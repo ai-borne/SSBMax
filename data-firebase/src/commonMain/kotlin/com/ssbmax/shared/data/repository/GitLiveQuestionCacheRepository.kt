@@ -7,6 +7,7 @@ import com.ssbmax.shared.domain.model.interview.QuestionCacheRepository
 import com.ssbmax.shared.domain.model.interview.QuestionCacheStats
 import com.ssbmax.shared.domain.model.interview.QuestionCacheType
 import com.ssbmax.shared.domain.model.interview.QuestionSource
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.FieldValue
@@ -26,9 +27,9 @@ import kotlin.time.Duration.Companion.seconds
  */
 class GitLiveQuestionCacheRepository : QuestionCacheRepository {
 
-    private val cacheCollection = Firebase.firestore.collection(COLLECTION_CACHE)
-    private val genericCollection = Firebase.firestore.collection(COLLECTION_GENERIC)
-    private val usageCollection = Firebase.firestore.collection(COLLECTION_USAGE)
+    private val cacheCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.QUESTION_CACHE)
+    private val genericCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.GENERIC_QUESTIONS)
+    private val usageCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.QUESTION_USAGE)
 
     override suspend fun cachePIQQuestions(
         piqSnapshotId: String,
@@ -190,11 +191,6 @@ class GitLiveQuestionCacheRepository : QuestionCacheRepository {
         Result.failure(e)
     }
 
-    private companion object {
-        const val COLLECTION_CACHE = "question_cache"
-        const val COLLECTION_GENERIC = "generic_questions"
-        const val COLLECTION_USAGE = "question_usage"
-    }
 }
 
 @Serializable

@@ -1,0 +1,289 @@
+# CLAUDE.md — Web Platform (ssbmax.in)
+
+**Scope:** Instructions specific to the `web/` sub-project. Read alongside the root [`../CLAUDE.md`](../CLAUDE.md), which defines the 12 core rules, security principles, and SSB domain terminology that apply globally. Where this file conflicts with root, this file wins for web-only concerns.
+
+---
+
+## What This Sub-Project Is
+
+React 19 + TypeScript 5.7 + Vite 5.4 + Tailwind CSS 3.4 Progressive Web App deployed on Cloudflare Pages (`ssbmax.in`). Shares the same Firestore database as the Android/iOS apps — Firestore security rules are the SSOT for data access control on all three platforms.
+
+**Tech stack at a glance:**
+
+| Concern | Choice |
+|---|---|
+| Framework | React 19 (function components + hooks only — no class components) |
+| Language | TypeScript 5.7 (strict mode — `noImplicitAny`, `strictNullChecks`) |
+| Build | Vite 5.4 + path alias `@/*` → `src/*` |
+| Styling | Tailwind CSS 3.4 (utility classes only; zero inline hex codes) |
+| Icons | Lucide React |
+| Auth | Firebase Auth v10 (Google OAuth 2.0) |
+| Database | Cloud Firestore (client SDK — reads only; writes via Cloud Functions) |
+| Offline | Workbox PWA (`vite-plugin-pwa`) + IndexedDB (`OfflineQueueService`) |
+| Payments | Razorpay (order creation + HMAC webhook verification via Cloud Functions) |
+| Tests | Vitest + Testing Library + JSDOM |
+| Hosting | Cloudflare Pages (static build, edge CDN) |
+
+---
+
+## Architecture: MVVM Mirror of the KMP App
+
+The web app follows the same **MVVM + Repository + Service** layering as the KMP shared module. This is intentional — the web and mobile platforms must share a conceptual architecture so any developer familiar with one can read the other.
+
+```
+src/
+├── components/         # Dumb UI components (presentational only — zero Firebase)
+│   ├── common/         # Shared design-system atoms (Button, Badge, Skeleton…)
+│   ├── landing/        # Public marketing surface
+│   ├── layout/         # AppLayout, Header, navigation shell
+│   ├── dashboard/      # CandidateDashboard
+│   ├── practice/       # PracticeTestsPage
+│   ├── study/          # StudyMaterialPage + 5-Day SSB vertical layout
+│   ├── testRunners/    # OIRTestRunner, PsychologyTestRunner, GTOTaskGuideRunner (anti-cheat wired;
+│   │                   #   GTO/Interview capture is plain multiline textarea + char counter, no media)
+│   ├── evaluation/     # PsychologistDossier report viewer
+│   ├── reports/        # AIReportsPage — OLQ dashboard, routed via `activeTab === 'reports'` in App.tsx
+│   ├── subscription/   # SubscriptionPage + Razorpay triggers
+│   ├── settings/       # SettingsPage
+│   ├── account/        # AccountPage
+│   ├── onboarding/     # First-run onboarding
+│   └── legal/          # Privacy, Terms
+├── viewmodels/         # State containers (custom hooks returning UiState + actions)
+│   ├── useOLQDashboardViewModel.ts     # aggregates `{type}_results` into AIReportsPage's props
+│   └── useSubmissionResultViewModel.ts # polls `submissions/{id}.analysisStatus` until COMPLETED
+├── repositories/       # Firestore read wrappers + Cloud Function write wrappers
+│   ├── ContentRepository.ts    # Firestore reads (study materials, question batches)
+│   ├── SubmissionRepository.ts # wraps submit*/evaluate* callables (writes) + result-collection reads
+│   ├── FeatureFlagRepository.ts
+│   ├── SubscriptionRepository.ts
+│   └── interfaces/     # Repository TypeScript interfaces
+├── services/           # Side-effect singletons
+│   ├── AuthService.ts
+│   ├── AntiCheatService.ts
+│   ├── OfflineQueueService.ts
+│   └── RazorpayService.ts
+├── hooks/              # Reusable React hooks (useTheme, useAntiCheat, useTabRouting…)
+├── constants/
+│   ├── strings.ts      # SSOT barrel — re-exports all domain string modules
+│   ├── strings/        # Domain-scoped string files (common, landing, tests, dossier…)
+│   ├── colors.ts       # Design token SSOT — all Tailwind color aliases
+│   └── ssbSelectionProcess.ts  # Static SSB phase/test metadata
+├── config/             # Firebase app init
+└── types/              # Shared TypeScript types / interfaces
+```
+
+**Data flow (read-only path):**
+```
+Component → ViewModel hook → Repository → Firestore SDK → IndexedDB cache
+```
+
+**Data flow (write path — anti-cheat + payments):**
+```
+Component → ViewModel hook → Cloud Function (HTTPS callable) → Firestore Admin SDK
+```
+
+**Data flow (test submission + AI evaluation — Tier-2 SSOT, see root `CLAUDE.md` and `functions/CLAUDE.md`):**
+```
+Component → ViewModel → SubmissionRepository.submit*() callable → submissions/{id} doc created
+                       → SubmissionRepository.evaluate*() callable (functions/src/evaluation/*Evaluate.js)
+                       → result screen polls submissions/{id}.analysisStatus until COMPLETED
+                       → reads {type}_results/{id} once
+```
+KMP calls the exact same `evaluate*` Cloud Functions — this is the one piece of Tier-2 *decision logic* (prompt construction, scoring, quota enforcement) that is **not** hand-duplicated between web and `shared`, unlike the eligibility pre-check duplication called out in root `CLAUDE.md`.
+
+---
+
+## Non-Negotiable SSOT Rules
+
+### 1. Strings
+
+**All UI text lives in `src/constants/strings/`** — barrel-exported via `src/constants/strings.ts`.
+
+- Zero inline string literals in JSX/TSX. No exceptions.
+- To add new copy: create or extend the appropriate domain file under `strings/`, then re-export from `strings.ts`.
+- Existing domain files: `common`, `landing`, `tests`, `dossier`. Add new files for new domains; don't dump everything into `common`.
+
+### 2. Colors
+
+**All color references live in `src/constants/colors.ts`** (Tailwind class aliases and CSS custom property tokens).
+
+- Zero raw hex codes (`#FFF`, `rgba(...)`, `hsl(...)`) in component files.
+- Use Tailwind utility classes that map back to the design token, not ad-hoc `style={{ color: '#...' }}`.
+
+### 3. File Size Cap
+
+**≤ 300 lines per file.** No exceptions. If a component is growing past this, split into sub-components. If a hook is large, split into smaller composable hooks.
+
+### 4. No Firebase in Components or ViewModels
+
+Firebase SDK (`firebase/firestore`, `firebase/auth`) must not be imported inside `src/components/` or `src/viewmodels/`. All Firebase access goes through `src/repositories/` (reads) or `src/services/` (auth) or Cloud Function calls (writes).
+
+---
+
+## Component Rules
+
+- **Function components only.** No class components.
+- **Props typed with explicit interfaces** — never `any`, never untyped objects.
+- **No component-local business logic.** Logic belongs in a ViewModel hook or Service.
+- **Mobile-first layout** — design at 320px, then scale to `md:` (768px) and `lg:` (1024px+). Test at 320px before considering the task done.
+- **Touch targets ≥ 44×44px** on all interactive elements.
+- **Skeleton loaders during async resolution** — never a blank flash or layout jump (zero CLS).
+- **No heavy charting libraries.** Visualizations use inline SVG primitives (<5KB) only.
+
+---
+
+## ViewModel Rules
+
+ViewModels are **custom React hooks** that return a typed `UiState` object and action callbacks. They are the only place that orchestrates repositories, services, and local state.
+
+```ts
+// Pattern — every ViewModel follows this shape
+function useSomethingViewModel(): SomethingUiState & SomethingActions {
+  const [state, setState] = useState<SomethingUiState>(initialState);
+  // ... orchestration
+  return { ...state, onAction };
+}
+```
+
+- One ViewModel per screen/feature domain.
+- ViewModels must not import React UI (`jsx`, `tsx` components).
+- ViewModels must not import Firebase directly — call repository methods or services.
+
+---
+
+## Service Rules
+
+Services (`src/services/`) are **singletons** that encapsulate side-effectful APIs:
+
+| Service | Responsibility |
+|---|---|
+| `AuthService` | Firebase Auth sign-in / sign-out / auth state |
+| `AntiCheatService` | Context-menu suppression, DevTools blocking, tab-switch detection |
+| `OfflineQueueService` | IndexedDB queue, SHA-256 HMAC checksum, reconnect sync |
+| `RazorpayService` | Razorpay checkout SDK initialization and order flow |
+
+- Services must not import React hooks or components.
+- `OfflineQueueService` validates `auth.currentUser` before every queue flush — never flush anonymously.
+
+---
+
+## Anti-Cheating Invariants (Must Not Break)
+
+These behaviors are security controls, not UX polish. Never remove or weaken them:
+
+1. **`correctAnswerIndex` is stripped client-side** for OIR tests. Scoring is server-side via the `evaluateOIRAnswers` Cloud Function.
+2. **`AntiCheatService`** suppresses right-click, `F12`/DevTools shortcuts, paste, and drop during active test sessions.
+3. **Tab-switch violations** auto-submit the test after the configured threshold.
+4. **`OfflineQueueService` HMAC** — SHA-256 checksum computed at submission time; tampered payloads are rejected at sync time.
+5. **`AntiCheatService`** must preserve IME composition (`isComposing`) — do not block input for CJK/IME keyboards while blocking paste/drop.
+
+---
+
+## PWA & Offline Rules
+
+- **Service Worker is Workbox-managed** via `vite-plugin-pwa`. Never handwrite SW cache logic.
+- **`StaleWhileRevalidate`** for static assets and images.
+- **`NetworkFirst`** for API/Firestore calls.
+- **Auth-aware flush only** — `OfflineQueueService` checks `auth.currentUser` before syncing; if session expired, preserve queue and prompt re-auth.
+- **Offline/Online status badge** must be visible in the Header at all times.
+
+---
+
+## Security Rules (Web-Specific)
+
+These supplement the root CLAUDE.md security principles:
+
+1. **Zero secrets in client bundle.** `GEMINI_API_KEY`, `RAZORPAY_KEY_SECRET`, and Firebase service account keys never leave Cloud Functions.
+2. **HMAC payment verification** is server-side only (`functions/src/webhooks.js`). Client only triggers; it never trusts its own payment result.
+3. **CSP / HSTS headers** are defined in `web/public/_headers` and must not be loosened. `'unsafe-inline'` scripts are forbidden.
+4. **Candidate written responses** are XML-boundary-escaped before Gemini evaluation (handled in `functions/src/aiAnalysis.js`). Web client must not pre-process or modify the raw response text before sending to Cloud Functions.
+5. **CI validates security.** Every PR must pass `./scripts/validate-security.sh` (10-point audit: secret leak scan, LOC limits, HSTS/CSP/CORP headers, anti-cheat handlers, Firestore rules lockdown).
+
+---
+
+## Testing Rules
+
+**Framework:** Vitest + Testing Library + JSDOM (108+ tests across 28 files).
+
+**Commands:**
+```bash
+npm run test            # Single vitest run (CI mode)
+npm run test:watch      # Watch mode (local dev)
+npm run test:coverage   # Coverage report
+```
+
+**Test location:** `web/tests/` (mirrors `src/` structure):
+```
+tests/
+├── security/   # CSP/HSTS header tests, Firestore rules tests
+├── services/   # AntiCheatService, OfflineQueueService, AuthService
+└── unit/       # ViewModel and Repository unit tests
+```
+
+**Rules:**
+- Tests encode *why* behavior matters, not just *what* it does (root Rule 9).
+- Security tests (`tests/security/`) are mandatory for every security-surface change.
+- A phase/task is not done until `npm run test` is green. No skipped tests counted as passing.
+- Mock Firebase and Cloud Function calls in tests — never hit real Firestore from the test suite.
+
+---
+
+## Build & Dev Commands
+
+```bash
+# Local development
+npm run dev             # Vite dev server (hot reload)
+
+# Production build
+npm run build           # tsc -b && vite build (output: dist/)
+npm run preview         # Preview production bundle locally
+
+# Security audit (required before declaring any phase complete)
+../scripts/validate-security.sh
+```
+
+**Path alias:** Use `@/` for all `src/` imports — no relative `../../` climbing.
+
+```ts
+// Correct
+import { strings } from '@/constants/strings';
+import { useTheme } from '@/hooks/useTheme';
+
+// Wrong
+import { strings } from '../../constants/strings';
+```
+
+---
+
+## SSB Domain Terminology (Web Copy)
+
+Follows root CLAUDE.md exactly. In JSX string literals and `strings/` files:
+
+- Use: *Services Selection Board*, *OIR*, *PPDT*, *TAT*, *WAT*, *SRT*, *SD*, *GTO*, *Assessor Benchmark*
+- Never use: `DIPR`, `Gemini 2.5`, internal vendor names, or research jargon
+- Beginner explanations go in brackets: `OIR (Officer Intelligence Rating)`
+
+---
+
+## Key File Map (Quick Navigation)
+
+| What you need | File |
+|---|---|
+| All UI strings | `src/constants/strings.ts` + `src/constants/strings/` |
+| Color design tokens | `src/constants/colors.ts` |
+| Firebase init | `src/config/` |
+| Auth | `src/services/AuthService.ts` |
+| Anti-cheat | `src/services/AntiCheatService.ts` |
+| Offline sync | `src/services/OfflineQueueService.ts` |
+| Firestore reads | `src/repositories/ContentRepository.ts` |
+| Test submission + evaluation writes | `src/repositories/SubmissionRepository.ts` |
+| OLQ dashboard aggregation | `src/viewmodels/useOLQDashboardViewModel.ts` |
+| Submission result polling | `src/viewmodels/useSubmissionResultViewModel.ts` |
+| Tab routing | `src/hooks/useTabRouting.ts` |
+| App entry | `src/App.tsx` |
+| PWA config | `vite.config.ts` |
+| Security headers | `public/_headers` |
+| Architecture doc | `docs/architecture.md` |
+| Cloud Functions | `../functions/src/` |
+| Firestore rules | `../firestore.rules` |
+| Security audit | `../scripts/validate-security.sh` |

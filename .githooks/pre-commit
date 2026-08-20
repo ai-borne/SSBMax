@@ -187,6 +187,53 @@ if [ -n "$UI_OR_RULE_FILES" ]; then
 fi
 
 # ============================================
+# 7d. Contracts SSOT check (docs/plans/CrossPlatform_SSOT Phase 1/8)
+# ============================================
+# Phase 8: runs on every commit, not just contracts-touching ones -- it's
+# fast (a Node script diffing against a temp dir, no network) and a stale
+# generated/* can be introduced by editing SsbContracts.kt/contracts.ts/
+# contracts.cjs by hand without touching contracts/*.yaml at all, which the
+# old path-based gate would have missed entirely.
+echo "🔍 Checking contracts/ generated output is up to date..."
+if ! npm run --silent contracts:check; then
+    echo -e "${RED}❌ ERROR: generated/* is stale — run 'npm run contracts:generate' and commit the result${NC}"
+    ERRORS=$((ERRORS + 1))
+fi
+
+# ============================================
+# 8b. Run Web Platform Build & TypeScript Checks
+# ============================================
+WEB_FILES=$(echo "$STAGED_FILES" | grep -E '^web/' || true)
+if [ -n "$WEB_FILES" ]; then
+    echo "🔍 Running Web platform build & TypeScript checks..."
+    if ! (cd web && npm run build && npm test -- --run); then
+        echo -e "${RED}❌ ERROR: Web platform build or TypeScript check failed!${NC}"
+        echo "   → Run locally: cd web && npm run build && npm test"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+
+# ============================================
+# 8c. Cross-platform behavior-parity nudge (non-blocking)
+# ============================================
+# Tier 3 (ViewModels, use-case decision logic, screen flows) and Tier 2's
+# hand-duplicated eligibility/scoring *logic* (not just the Tier-1 numbers,
+# which codegen already covers) are "mirror by convention" per
+# docs/plans/CrossPlatform_SSOT §2 -- nothing else catches drift here. This
+# is a reminder, not a gate: false positives are expected and fine (an
+# Android-only rendering fix touches a ViewModel with no web equivalent).
+KMP_BEHAVIOR_FILES=$(echo "$STAGED_FILES" | grep -E '^shared/src/commonMain/.*/(domain/usecase|presentation)/.*\.kt$' || true)
+FUNCTIONS_LOGIC_FILES=$(echo "$STAGED_FILES" | grep -E '^functions/src/(eligibility|oirScoring|aiAnalysis)' || true)
+WEB_LOGIC_FILES=$(echo "$STAGED_FILES" | grep -E '^web/src/(viewmodels|repositories)/' || true)
+
+if [ -n "$KMP_BEHAVIOR_FILES$FUNCTIONS_LOGIC_FILES" ] && [ -z "$WEB_LOGIC_FILES" ]; then
+    echo -e "${YELLOW}⚠️  PARITY CHECK: this commit changes KMP/functions behavior but no web/src/viewmodels or web/src/repositories file:${NC}"
+    [ -n "$KMP_BEHAVIOR_FILES" ] && echo "$KMP_BEHAVIOR_FILES" | sed 's/^/     /'
+    [ -n "$FUNCTIONS_LOGIC_FILES" ] && echo "$FUNCTIONS_LOGIC_FILES" | sed 's/^/     /'
+    echo -e "${YELLOW}   Consider whether web needs the same fix (see root CLAUDE.md SSOT section). Not blocking.${NC}"
+fi
+
+# ============================================
 # 9. Validate commit message doesn't contain secrets
 # ============================================
 echo "🔍 Checking commit message (if available)..."

@@ -33,7 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
-import ssbmax.shared.generated.resources.wat_full_title
 import ssbmax.shared.generated.resources.wat_important
 import ssbmax.shared.generated.resources.wat_important_message
 import ssbmax.shared.generated.resources.wat_instruction_1
@@ -88,7 +87,6 @@ private fun WATIntroCard() {
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(imageVector = Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(32.dp))
-            Text(stringResource(Res.string.wat_full_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(stringResource(Res.string.wat_subtitle), style = MaterialTheme.typography.bodyMedium)
         }
     }

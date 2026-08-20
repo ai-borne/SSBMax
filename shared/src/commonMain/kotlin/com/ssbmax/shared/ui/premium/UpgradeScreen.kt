@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SupportAgent
@@ -57,6 +58,7 @@ import ssbmax.shared.generated.resources.premium_info_support
 import ssbmax.shared.generated.resources.premium_upgrade_header
 import ssbmax.shared.generated.resources.premium_upgrade_subtitle
 import ssbmax.shared.generated.resources.premium_upgrade_title
+import ssbmax.shared.generated.resources.premium_web_subscription_active
 
 /**
  * KMP port of the Android `app/.../ui/premium/UpgradeScreen.kt` -- the LIVE
@@ -65,10 +67,10 @@ import ssbmax.shared.generated.resources.premium_upgrade_title
  * `com.ssbmax.ui.upgrade`/`com.ssbmax.ui.payment` packages were NOT ported
  * (dead code, unreachable from any Android nav graph).
  *
- * Split across this file (screen shell + billing-cycle selector + info/footer)
- * and [UpgradePlanCard] (the per-plan animated card + coming-soon dialog) to
- * stay under this repo's 300-line-per-file Quality Limit -- the Android
- * original was a single 463-line file.
+ * Split across this file (screen shell + billing-cycle selector + info/footer),
+ * `UpgradePlanCard.kt` (the per-plan animated card), `PurchaseErrorDialog.kt`,
+ * and `RestorePurchasesRow.kt` to stay under this repo's 300-line-per-file
+ * Quality Limit -- the Android original was a single 463-line file.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,24 +110,7 @@ fun UpgradeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        stringResource(Res.string.premium_upgrade_header),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        stringResource(Res.string.premium_upgrade_subtitle),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                UpgradeHeader()
             }
 
             item {
@@ -136,14 +121,29 @@ fun UpgradeScreen(
                 )
             }
 
+            if (uiState.activeOnWebInstead) {
+                item {
+                    WebSubscriptionActiveBanner()
+                }
+            }
+
             items(uiState.availablePlans) { plan ->
                 AnimatedPlanCard(
                     plan = plan,
                     currentTier = uiState.currentTier,
                     selectedBillingCycle = uiState.selectedBillingCycle,
                     isVisible = isVisible,
+                    purchaseState = PlanCardPurchaseState(
+                        isPurchasing = uiState.isPurchasing && uiState.selectedPlanForUpgrade == plan.tier,
+                        storeFormattedPrice = uiState.storeFormattedPrices[plan.tier],
+                        purchaseBlocked = uiState.activeOnWebInstead
+                    ),
                     onUpgradeClick = { viewModel.upgradeToPlan(plan.tier) }
                 )
+            }
+
+            item {
+                RestorePurchasesRow(isRestoring = uiState.isRestoring, onClick = { viewModel.restorePurchases() })
             }
 
             item {
@@ -152,10 +152,59 @@ fun UpgradeScreen(
         }
     }
 
-    if (uiState.showComingSoonDialog) {
-        ComingSoonDialog(
-            planName = uiState.selectedPlanForUpgrade?.displayName ?: "Premium",
-            onDismiss = { viewModel.dismissComingSoonDialog() }
+    uiState.purchaseError?.let { message ->
+        PurchaseErrorDialog(
+            message = message,
+            onDismiss = { viewModel.dismissPurchaseError() }
+        )
+    }
+}
+
+/** Shown above the plan grid when [UpgradeUiState.activeOnWebInstead] is true -- see
+ * [UpgradeViewModel.upgradeToPlan]'s dual-purchase gate. */
+@Composable
+private fun WebSubscriptionActiveBanner(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Filled.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(Res.string.premium_web_subscription_active),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
+    }
+}
+
+@Composable
+private fun UpgradeHeader(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            stringResource(Res.string.premium_upgrade_header),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(Res.string.premium_upgrade_subtitle),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
     }
 }

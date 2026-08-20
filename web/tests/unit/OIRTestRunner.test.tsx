@@ -52,4 +52,28 @@ describe('OIRTestRunner Component Unit Tests', () => {
 
     expect(mockViewModel.selectOption).toHaveBeenCalledWith('q1', 1);
   });
+
+  it('should render Return to SSB Tests button on completion screen and trigger onExitTest when clicked', () => {
+    mockViewModel.getState.mockReturnValue({
+      questions: [],
+      currentIndex: 0,
+      answers: {},
+      isLoading: false,
+      isSubmitting: false,
+      isCompleted: true,
+      error: null,
+      result: { score: 45, totalQuestions: 50, oirRating: 1 },
+      timeRemainingSeconds: 0
+    });
+    const onExitTestSpy = vi.fn();
+
+    render(<OIRTestRunner viewModel={mockViewModel} userId="user-1" onExitTest={onExitTestSpy} />);
+
+    expect(screen.getByText(strings.oir.completedTitle)).toBeInTheDocument();
+    const returnBtn = screen.getByTestId('return-to-tests-button');
+    expect(returnBtn).toBeInTheDocument();
+
+    fireEvent.click(returnBtn);
+    expect(onExitTestSpy).toHaveBeenCalled();
+  });
 });

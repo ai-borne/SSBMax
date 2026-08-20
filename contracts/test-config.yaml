@@ -1,0 +1,69 @@
+# Per-test-type question/item counts and timers. KMP-authoritative.
+# See contracts/README.md for the compatibility policy before editing.
+schemaVersion: "1.0.0"
+
+tests:
+  - testType: OIR
+    totalQuestions: 50
+    source: shared/.../domain/model/OIRTest.kt
+
+  - testType: PPDT
+    viewingSeconds: 30
+    writingSeconds: 240
+    minChars: 200
+    maxChars: 1500
+    source: shared/.../domain/model/PPDTTest.kt
+
+  - testType: TAT
+    totalPictures: 12
+    blankCardSlideNumber: 12
+    note: "Slide 12 is a programmatic blank card, not a fetched image - the 12-slide blank card rule. See TATImageViewingPhase.kt's sequenceNumber == 12 branch."
+    viewingSeconds: 30
+    writingSeconds: 240
+    minChars: 150
+    maxChars: 1500
+    source: shared/.../domain/model/TATTest.kt
+
+  - testType: WAT
+    totalWords: 60
+    secondsPerWord: 15
+    totalSeconds: 900
+    source: shared/.../domain/model/WATTest.kt
+
+  - testType: SRT
+    totalSituations: 60
+    totalSeconds: 1800
+    source: shared/.../domain/model/SRTTest.kt
+
+  - testType: SD
+    totalQuestions: 4
+    totalSeconds: 900
+    maxWordsPerQuestion: 1000
+    source: shared/.../domain/model/SDTTest.kt
+
+  - testType: GTO_GD
+    totalSeconds: 1200
+    source: shared/.../domain/model/gto/GTOTest.kt
+  - testType: GTO_GPE
+    viewingSeconds: 60
+    planningSeconds: 1740
+    totalSeconds: 1800
+    source: shared/.../domain/model/gto/GTOTest.kt
+  - testType: GTO_LECTURETTE
+    speechSeconds: 180
+    source: shared/.../domain/model/gto/GTOTest.kt
+  - testType: GTO_PGT
+    totalSeconds: 1800
+    source: shared/.../domain/model/gto/GTOTest.kt
+  - testType: GTO_HGT
+    totalSeconds: 900
+    source: shared/.../domain/model/gto/GTOTest.kt
+  - testType: GTO_GOR
+    totalSeconds: 1200
+    source: shared/.../domain/model/gto/GTOTest.kt
+  - testType: GTO_IO
+    totalSeconds: 1800
+    source: shared/.../domain/model/gto/GTOTest.kt
+  - testType: GTO_CT
+    totalSeconds: 900
+    source: shared/.../domain/model/gto/GTOTest.kt

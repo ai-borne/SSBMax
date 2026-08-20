@@ -6,57 +6,51 @@ import com.ssbmax.shared.domain.model.interview.InterviewQuestion
 import com.ssbmax.shared.domain.model.interview.OLQ
 import com.ssbmax.shared.domain.model.interview.QuestionSource
 import com.ssbmax.shared.domain.util.NoOpLogger
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.MockRequestHandleScope
-import io.ktor.client.engine.mock.respond
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.HttpRequestData
-import io.ktor.client.request.HttpResponseData
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.content.OutgoingContent
-import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Validates [KtorAIService] end-to-end against a MockEngine: request shape
- * (token tiers, multimodal inline_data) and response parsing, for every
- * distinct request/parser combination the interface exercises. Doesn't
- * re-test the request-shape/parsing basics already covered by
- * [KtorGeminiClientTest] and [KtorGeminiResponseParserTest] for every one of
- * the 12 methods -- only what's new here: which tier each method uses, and
- * that the multimodal image part is present/absent correctly.
+ * Validates [KtorAIService] end-to-end against a fake [GeminiClient]: which
+ * tier (`maxOutputTokens`) each method uses, that the multimodal image bytes
+ * are forwarded/omitted correctly, and response parsing for every distinct
+ * parser the interface exercises.
  *
- * The MockEngine is wired to run on the same [UnconfinedTestDispatcher] that
- * `runTest` uses (via `HttpClient(MockEngine) { engine { dispatcher = ... } }`),
- * not the default `HttpClient(mockEngineInstance)` shape -- otherwise the
- * `withTimeout(...)` calls inside [KtorAIService] race
- * kotlinx-coroutines-test's auto-advance-when-idle behavior and fire
- * spuriously before the mocked response resolves.
+ * Uses [FakeGeminiClient] rather than a mocked HTTP transport (as this test
+ * did before the Gemini-proxy security fix) because [GeminiClient]'s real
+ * implementation now calls an authenticated Cloud Function via GitLive's
+ * Firebase Functions client, not raw Ktor -- there is no HTTP request to mock
+ * from `shared`'s commonTest anymore. Capturing the arguments passed to
+ * [GeminiClient.generateContent] directly is both simpler and a closer test
+ * of this class's actual contract with its dependency.
  */
 class KtorAIServiceTest {
 
-    private val json = Json { ignoreUnknownKeys = true }
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private class FakeGeminiClient(
+        private val respond: () -> Result<String> = { Result.success("ok") }
+    ) : GeminiClient {
+        var lastPrompt: String = ""
+        var lastImageBytes: ByteArray = ByteArray(0)
+        var lastTemperature: Float = -1f
+        var lastMaxOutputTokens: Int = -1
 
-    private fun serviceWith(
-        handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData
-    ): KtorAIService {
-        val httpClient = HttpClient(MockEngine) {
-            engine {
-                dispatcher = testDispatcher
-                addHandler(handler)
-            }
-            install(ContentNegotiation) { json(json) }
+        override suspend fun generateContent(
+            prompt: String,
+            imageBytes: ByteArray,
+            imageMimeType: String,
+            temperature: Float,
+            maxOutputTokens: Int
+        ): Result<String> {
+            lastPrompt = prompt
+            lastImageBytes = imageBytes
+            lastTemperature = temperature
+            lastMaxOutputTokens = maxOutputTokens
+            return respond()
         }
-        val client = KtorGeminiClient(httpClient = httpClient, apiKey = "test-key")
+    }
+
+    private fun serviceWith(client: FakeGeminiClient): KtorAIService {
         val logger = NoOpLogger()
         return KtorAIService(
             client = client,
@@ -66,22 +60,6 @@ class KtorAIServiceTest {
         )
     }
 
-    private fun MockRequestHandleScope.okResponse(text: String) = respond(
-        content = json.encodeToString(
-            GeminiGenerateContentResponse.serializer(),
-            GeminiGenerateContentResponse(
-                candidates = listOf(GeminiCandidate(content = GeminiContent(parts = listOf(GeminiPart(text = text)))))
-            )
-        ),
-        status = HttpStatusCode.OK,
-        headers = headersOf(HttpHeaders.ContentType, "application/json")
-    )
-
-    private fun bodyTextOf(request: HttpRequestData): String = when (val body = request.body) {
-        is OutgoingContent.ByteArrayContent -> body.bytes().decodeToString()
-        else -> body.toString()
-    }
-
     private val question = InterviewQuestion(
         id = "q1",
         questionText = "Tell me about a time you led a team.",
@@ -89,67 +67,59 @@ class KtorAIServiceTest {
         source = QuestionSource.GENERIC_POOL
     )
 
-    // ---- Token-tier request bodies ----
+    // ---- Token-tier request shape ----
 
     @Test
-    fun `analyzeResponse uses tier-1 maxOutputTokens of 8192`() = runTest(testDispatcher) {
-        var capturedBody = ""
-        val service = serviceWith { request ->
-            capturedBody = bodyTextOf(request)
-            okResponse(
+    fun `analyzeResponse uses tier-1 maxOutputTokens of 8192`() = runTest {
+        val client = FakeGeminiClient {
+            Result.success(
                 """{"olqScores": [{"olq": "INFLUENCE_GROUP", "score": 5.0, "reasoning": "ok"}], "overallConfidence": 70, "keyInsights": []}"""
             )
         }
-        service.analyzeResponse(question, "I organized the team.", "text").getOrThrow()
-        assertTrue(capturedBody.contains("\"maxOutputTokens\":8192"), capturedBody)
+        serviceWith(client).analyzeResponse(question, "I organized the team.", "text").getOrThrow()
+        assertEquals(8192, client.lastMaxOutputTokens)
     }
 
     @Test
-    fun `generatePIQBasedQuestions uses tier-2 maxOutputTokens of 12288`() = runTest(testDispatcher) {
-        var capturedBody = ""
-        val service = serviceWith { request ->
-            capturedBody = bodyTextOf(request)
-            okResponse("""[{"id":"q1","questionText":"Why defense?","targetOLQs":["COURAGE"]}]""")
+    fun `generatePIQBasedQuestions uses tier-2 maxOutputTokens of 12288`() = runTest {
+        val client = FakeGeminiClient {
+            Result.success("""[{"id":"q1","questionText":"Why defense?","targetOLQs":["COURAGE"]}]""")
         }
-        service.generatePIQBasedQuestions(piqData = "PIQ context", count = 1).getOrThrow()
-        assertTrue(capturedBody.contains("\"maxOutputTokens\":12288"), capturedBody)
+        serviceWith(client).generatePIQBasedQuestions(piqData = "PIQ context", count = 1).getOrThrow()
+        assertEquals(12288, client.lastMaxOutputTokens)
     }
 
     @Test
-    fun `generateFeedback uses tier-3 maxOutputTokens of 16384`() = runTest(testDispatcher) {
-        var capturedBody = ""
-        val service = serviceWith { request ->
-            capturedBody = bodyTextOf(request)
-            okResponse("Great performance overall.")
-        }
-        val result = service.generateFeedback(
+    fun `generateFeedback uses tier-3 maxOutputTokens of 16384`() = runTest {
+        val client = FakeGeminiClient { Result.success("Great performance overall.") }
+        val result = serviceWith(client).generateFeedback(
             questions = listOf(question),
             responses = listOf("I led the team."),
             olqScores = mapOf(OLQ.INFLUENCE_GROUP to 5f)
         )
         assertEquals("Great performance overall.", result.getOrThrow())
-        assertTrue(capturedBody.contains("\"maxOutputTokens\":16384"), capturedBody)
+        assertEquals(16384, client.lastMaxOutputTokens)
     }
 
     // ---- Response parsing per parser type ----
 
     @Test
-    fun `generatePIQBasedQuestions parses the question array response`() = runTest(testDispatcher) {
-        val service = serviceWith { _ ->
-            okResponse("""[{"id":"q1","questionText":"Why defense?","targetOLQs":["COURAGE"]}]""")
+    fun `generatePIQBasedQuestions parses the question array response`() = runTest {
+        val client = FakeGeminiClient {
+            Result.success("""[{"id":"q1","questionText":"Why defense?","targetOLQs":["COURAGE"]}]""")
         }
-        val result = service.generatePIQBasedQuestions(piqData = "PIQ context", count = 1).getOrThrow()
+        val result = serviceWith(client).generatePIQBasedQuestions(piqData = "PIQ context", count = 1).getOrThrow()
         assertEquals(1, result.size)
         assertEquals("Why defense?", result.first().questionText)
         assertEquals(listOf(OLQ.COURAGE), result.first().expectedOLQs)
     }
 
     @Test
-    fun `analyzeWATResponse parses the GTO analysis object response`() = runTest(testDispatcher) {
-        val service = serviceWith { _ ->
-            okResponse("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "steady"}}}""")
+    fun `analyzeWATResponse parses the GTO analysis object response`() = runTest {
+        val client = FakeGeminiClient {
+            Result.success("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "steady"}}}""")
         }
-        val result = service.analyzeWATResponse("prompt").getOrThrow()
+        val result = serviceWith(client).analyzeWATResponse("prompt").getOrThrow()
         assertEquals(1, result.olqScores.size)
         assertEquals(80, result.overallConfidence)
     }
@@ -157,48 +127,41 @@ class KtorAIServiceTest {
     // ---- Multimodal request shape ----
 
     @Test
-    fun `analyzePPDTMultimodal includes an inline_data part when imageBytes is non-empty`() = runTest(testDispatcher) {
-        var capturedBody = ""
-        val service = serviceWith { request ->
-            capturedBody = bodyTextOf(request)
-            okResponse("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "ok"}}}""")
+    fun `analyzePPDTMultimodal forwards imageBytes when non-empty`() = runTest {
+        val client = FakeGeminiClient {
+            Result.success("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "ok"}}}""")
         }
-        service.analyzePPDTMultimodal(
+        serviceWith(client).analyzePPDTMultimodal(
             imageBytes = byteArrayOf(1, 2, 3, 4),
             story = "A story",
             imageContext = PPDTImageContext(),
             candidateGender = "male"
         ).getOrThrow()
 
-        assertTrue(capturedBody.contains("\"inline_data\""), capturedBody)
-        assertTrue(capturedBody.contains("\"mime_type\":\"image/jpeg\""), capturedBody)
+        assertTrue(client.lastImageBytes.contentEquals(byteArrayOf(1, 2, 3, 4)))
     }
 
     @Test
-    fun `analyzePPDTMultimodal omits inline_data and is text-only when imageBytes is empty`() = runTest(testDispatcher) {
-        var capturedBody = ""
-        val service = serviceWith { request ->
-            capturedBody = bodyTextOf(request)
-            okResponse("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "ok"}}}""")
+    fun `analyzePPDTMultimodal forwards empty imageBytes as text-only`() = runTest {
+        val client = FakeGeminiClient {
+            Result.success("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "ok"}}}""")
         }
-        service.analyzePPDTMultimodal(
+        serviceWith(client).analyzePPDTMultimodal(
             imageBytes = ByteArray(0),
             story = "A story",
             imageContext = PPDTImageContext(),
             candidateGender = "male"
         ).getOrThrow()
 
-        assertTrue(!capturedBody.contains("\"inline_data\""), capturedBody)
+        assertTrue(client.lastImageBytes.isEmpty())
     }
 
     @Test
-    fun `analyzeTATStoryMultimodal includes an inline_data part when imageBytes is non-empty`() = runTest(testDispatcher) {
-        var capturedBody = ""
-        val service = serviceWith { request ->
-            capturedBody = bodyTextOf(request)
-            okResponse("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "ok"}}}""")
+    fun `analyzeTATStoryMultimodal forwards imageBytes when non-empty`() = runTest {
+        val client = FakeGeminiClient {
+            Result.success("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "ok"}}}""")
         }
-        service.analyzeTATStoryMultimodal(
+        serviceWith(client).analyzeTATStoryMultimodal(
             imageBytes = byteArrayOf(5, 6, 7),
             story = "A story",
             imageContext = TATImageContext(),
@@ -207,13 +170,13 @@ class KtorAIServiceTest {
             totalStories = 11
         ).getOrThrow()
 
-        assertTrue(capturedBody.contains("\"inline_data\""), capturedBody)
+        assertTrue(client.lastImageBytes.contentEquals(byteArrayOf(5, 6, 7)))
     }
 
     @Test
-    fun `isAvailable returns false not an exception when the call fails`() = runTest(testDispatcher) {
-        val service = serviceWith { respond("boom", HttpStatusCode.InternalServerError) }
-        assertEquals(false, service.isAvailable())
+    fun `isAvailable returns false not an exception when the call fails`() = runTest {
+        val client = FakeGeminiClient { Result.failure(IllegalStateException("boom")) }
+        assertEquals(false, serviceWith(client).isAvailable())
     }
 
     // ---- Ported from core:data's GeminiAIServiceTest (Phase 9.0, when KtorAIService
@@ -224,27 +187,24 @@ class KtorAIServiceTest {
     // request shape is already asserted above.
 
     @Test
-    fun `every request is temperature zero so identical submissions score identically`() =
-        runTest(testDispatcher) {
-            // WHY: SSB grading must be reproducible -- a candidate re-submitting the same
-            // story must not get a different OLQ profile. Temperature drift is invisible
-            // in output but breaks that guarantee.
-            var capturedBody = ""
-            val service = serviceWith { request ->
-                capturedBody = bodyTextOf(request)
-                okResponse("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "ok"}}}""")
-            }
-            service.analyzeWATResponse("prompt").getOrThrow()
-            assertTrue(capturedBody.contains("\"temperature\":0.0"), capturedBody)
+    fun `every request is temperature zero so identical submissions score identically`() = runTest {
+        // WHY: SSB grading must be reproducible -- a candidate re-submitting the same
+        // story must not get a different OLQ profile. Temperature drift is invisible
+        // in output but breaks that guarantee.
+        val client = FakeGeminiClient {
+            Result.success("""{"olqScores": {"COURAGE": {"score": 6.0, "confidence": 80, "reasoning": "ok"}}}""")
         }
+        serviceWith(client).analyzeWATResponse("prompt").getOrThrow()
+        assertEquals(0.0f, client.lastTemperature)
+    }
 
     @Test
-    fun `generateAdaptiveQuestions returns a failure Result when the call fails`() = runTest(testDispatcher) {
+    fun `generateAdaptiveQuestions returns a failure Result when the call fails`() = runTest {
         // WHY: this runs mid-interview; an escaping exception would kill the session
         // rather than let the caller fall back to the generic question pool.
-        val service = serviceWith { respond("boom", HttpStatusCode.InternalServerError) }
+        val client = FakeGeminiClient { Result.failure(IllegalStateException("boom")) }
 
-        val result = service.generateAdaptiveQuestions(
+        val result = serviceWith(client).generateAdaptiveQuestions(
             previousQuestions = listOf(question),
             previousResponses = listOf("I led the team."),
             weakOLQs = listOf(OLQ.COURAGE),
@@ -255,15 +215,15 @@ class KtorAIServiceTest {
     }
 
     @Test
-    fun `analyzePPDTMultimodal parses all 15 OLQ scores from a full response`() = runTest(testDispatcher) {
+    fun `analyzePPDTMultimodal parses all 15 OLQ scores from a full response`() = runTest {
         // WHY: PPDT grading is only valid on the complete OLQ set -- a parser that
         // silently returns a subset produces a plausible-looking but wrong assessment.
         val fullOlqJson = OLQ.entries.joinToString(",") { olq ->
             """"${olq.name}": {"score": 6.0, "confidence": 80, "reasoning": "n/a"}"""
         }
-        val service = serviceWith { _ -> okResponse("""{"olqScores": {$fullOlqJson}}""") }
+        val client = FakeGeminiClient { Result.success("""{"olqScores": {$fullOlqJson}}""") }
 
-        val result = service.analyzePPDTMultimodal(
+        val result = serviceWith(client).analyzePPDTMultimodal(
             imageBytes = byteArrayOf(1, 2, 3),
             story = "A story",
             imageContext = PPDTImageContext(),
@@ -274,12 +234,12 @@ class KtorAIServiceTest {
     }
 
     @Test
-    fun `analyzePPDTMultimodal returns a failure Result when the call fails`() = runTest(testDispatcher) {
+    fun `analyzePPDTMultimodal returns a failure Result when the call fails`() = runTest {
         // WHY: PPDT analysis runs in a background worker whose retry/error handling
         // depends on a failed Result; an escaping exception would crash the worker.
-        val service = serviceWith { respond("boom", HttpStatusCode.InternalServerError) }
+        val client = FakeGeminiClient { Result.failure(IllegalStateException("boom")) }
 
-        val result = service.analyzePPDTMultimodal(
+        val result = serviceWith(client).analyzePPDTMultimodal(
             imageBytes = byteArrayOf(1, 2, 3),
             story = "A story",
             imageContext = PPDTImageContext(),

@@ -27,6 +27,16 @@ data class OIRQuestion(
     val timeSeconds: Int = 60,
     val questionImageUrl: String? = null,
     val correctAnswerIds: List<String> = emptyList(),
+    /**
+     * The Firestore `test_content/oir/batches/{batchId}` doc this question was cached
+     * from. A session's questions are individually selected from a local cache pool
+     * spanning many batches (see `GitLiveOIRQuestionSelector`), not one whole batch --
+     * `evaluateOIRAnswers` (Phase 2, Web SSB Test Flow Parity plan) needs this to group
+     * a submission's answers by source batch for server-side scoring. Defaults to ""
+     * for the many pre-existing test fixtures that construct an `OIRQuestion` without
+     * caring about this field.
+     */
+    val batchId: String = "",
 ) {
     val isMultiSelect: Boolean get() = correctAnswerIds.size > 1
 }

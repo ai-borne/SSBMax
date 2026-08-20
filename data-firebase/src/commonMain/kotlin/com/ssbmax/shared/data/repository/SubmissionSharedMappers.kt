@@ -19,6 +19,21 @@ internal object SubmissionConstants {
 }
 
 /**
+ * `true` when [id] is safe to pass into a GitLive `.document(id)` call. GitLive's Firestore SDK
+ * throws an uncatchable native `FIRInvalidArgumentException` on iOS when `.document` is called
+ * with a blank id -- it crashes the app instead of failing the surrounding `Result`, so every
+ * `GitLive*Repository`/
+ * `*Delegate`/`*Store` method that takes an id param must check this *before* calling `.document`,
+ * not rely on a caller having already filtered it out (that was tried once, in
+ * `GetOLQDashboardUseCase`, and only covered the two call sites it happened to touch).
+ */
+internal fun isUsableDocumentId(id: String): Boolean = id.isNotBlank()
+
+/** Standard `Result.failure` for a blank id, matching every file's own message-wrapping style. */
+internal fun <T> blankDocumentIdFailure(paramName: String): Result<T> =
+    Result.failure(IllegalArgumentException("$paramName must not be blank"))
+
+/**
  * Wire format for [OLQAnalysisResult], shared by every OLQ-scored test type (TAT/WAT/SRT/SDT/PPDT/GTO).
  * Mirrors the Android OLQMapper.toFirestoreMap()/parseSharedOLQResult() pair.
  *

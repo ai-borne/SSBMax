@@ -144,30 +144,6 @@ interface GTORepository {
      */
     suspend fun getNextAvailableTest(userId: String): Result<GTOTestType?>
     
-    // ==================== Test Usage Tracking ====================
-    
-    /**
-     * Record test usage for subscription limits
-     */
-    suspend fun recordTestUsage(
-        userId: String,
-        testType: GTOTestType,
-        submissionId: String
-    ): Result<Unit>
-    
-    /**
-     * Get test usage count for current month
-     */
-    suspend fun getTestUsageCount(
-        userId: String,
-        testType: GTOTestType
-    ): Result<Int>
-    
-    /**
-     * Reset monthly usage counters (called on 1st of each month)
-     */
-    suspend fun resetMonthlyUsage(userId: String): Result<Unit>
-    
     // ==================== Results & Analysis ====================
     
     /**

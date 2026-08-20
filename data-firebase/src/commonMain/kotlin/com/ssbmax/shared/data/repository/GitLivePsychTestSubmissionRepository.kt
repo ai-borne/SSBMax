@@ -2,6 +2,7 @@ package com.ssbmax.shared.data.repository
 
 import com.ssbmax.shared.domain.model.SubmissionStatus
 import com.ssbmax.shared.domain.model.TATInstructorScore
+import com.ssbmax.shared.domain.model.TATQuestion
 import com.ssbmax.shared.domain.model.TATStoryResponse
 import com.ssbmax.shared.domain.model.TATSubmission
 import com.ssbmax.shared.domain.model.TestType
@@ -58,7 +59,9 @@ class GitLivePsychTestSubmissionRepository internal constructor(
     // TAT
     // ===========================
 
-    suspend fun submitTAT(submission: TATSubmission, batchId: String?): Result<String> = try {
+    suspend fun submitTAT(submission: TATSubmission, batchId: String?): Result<String> {
+      if (!isUsableDocumentId(submission.id)) return blankDocumentIdFailure("submission.id")
+      return try {
         val doc = SubmissionDocDto(
             id = submission.id,
             userId = submission.userId,
@@ -74,9 +77,11 @@ class GitLivePsychTestSubmissionRepository internal constructor(
                 userId = submission.userId,
                 testId = submission.testId,
                 stories = submission.stories.map { it.toDto() },
+                questions = submission.questions.map { it.toDto() },
                 totalTimeTakenMinutes = submission.totalTimeTakenMinutes,
                 submittedAt = submission.submittedAt,
                 status = submission.status.name,
+                analysisStatus = AnalysisStatus.PENDING_ANALYSIS.name,
                 instructorScore = submission.instructorScore?.toDto(),
                 gradedByInstructorId = submission.gradedByInstructorId,
                 gradingTimestamp = submission.gradingTimestamp
@@ -84,16 +89,20 @@ class GitLivePsychTestSubmissionRepository internal constructor(
         )
         submissionsCollection.document(submission.id).set(doc, merge = true)
         Result.success(submission.id)
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to submit TAT: ${e.message}", e))
+      }
     }
 
-    suspend fun getTATSubmission(submissionId: String): Result<TATSubmission?> = try {
-        val snapshot = submissionsCollection.document(submissionId).get()
-        if (!snapshot.exists) Result.success(null)
-        else Result.success(snapshot.data(SubmissionDocDto.serializer(TATDataDto.serializer())).data.toDomain())
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to fetch TAT submission: ${e.message}", e))
+    suspend fun getTATSubmission(submissionId: String): Result<TATSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            val snapshot = submissionsCollection.document(submissionId).get()
+            if (!snapshot.exists) Result.success(null)
+            else Result.success(snapshot.data(SubmissionDocDto.serializer(TATDataDto.serializer())).data.toDomain())
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to fetch TAT submission: ${e.message}", e))
+        }
     }
 
     suspend fun getLatestTATSubmission(userId: String): Result<TATSubmission?> = try {
@@ -113,11 +122,14 @@ class GitLivePsychTestSubmissionRepository internal constructor(
         Result.failure(Exception("Failed to fetch latest TAT submission: ${e.message}", e))
     }
 
-    suspend fun updateTATAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> = try {
-        submissionsCollection.document(submissionId).update("$PSYCH_FIELD_DATA.analysisStatus" to status.name)
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to update TAT analysis status: ${e.message}", e))
+    suspend fun updateTATAnalysisStatus(submissionId: String, status: AnalysisStatus): Result<Unit> {
+        if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+        return try {
+            submissionsCollection.document(submissionId).update("$PSYCH_FIELD_DATA.analysisStatus" to status.name)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to update TAT analysis status: ${e.message}", e))
+        }
     }
 
     /**
@@ -125,7 +137,9 @@ class GitLivePsychTestSubmissionRepository internal constructor(
      * with result metadata — same ordering guarantee as the Android original (see the domain
      * interface's doc comment on `finalizeTATAnalysisResult`).
      */
-    suspend fun finalizeTATAnalysisResult(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> = try {
+    suspend fun finalizeTATAnalysisResult(submissionId: String, olqResult: OLQAnalysisResult): Result<Unit> {
+      if (!isUsableDocumentId(submissionId)) return blankDocumentIdFailure("submissionId")
+      return try {
         val submissionDoc = submissionsCollection.document(submissionId).get()
         val userId = submissionDoc.data(SubmissionDocDto.serializer(TATDataDto.serializer())).userId
         if (userId.isEmpty()) {
@@ -141,8 +155,9 @@ class GitLivePsychTestSubmissionRepository internal constructor(
             )
             Result.success(Unit)
         }
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result.failure(Exception("Failed to finalize TAT analysis result: ${e.message}", e))
+      }
     }
 
     suspend fun getTATResult(submissionId: String): Result<OLQAnalysisResult?> = store.getOlqResult(submissionId)
@@ -155,8 +170,9 @@ class GitLivePsychTestSubmissionRepository internal constructor(
      * `trySend` in that case; emitting `null` here would incorrectly flip a shown result to
      * "Submission not found" for a merely-stale cache replay.
      */
-    fun observeTATSubmission(submissionId: String): Flow<TATSubmission?> =
-        submissionsCollection.document(submissionId).snapshots
+    fun observeTATSubmission(submissionId: String): Flow<TATSubmission?> {
+        if (!isUsableDocumentId(submissionId)) return kotlinx.coroutines.flow.flowOf(null)
+        return submissionsCollection.document(submissionId).snapshots
             .transform { snapshot ->
                 if (!snapshot.exists) {
                     emit(null)
@@ -169,6 +185,7 @@ class GitLivePsychTestSubmissionRepository internal constructor(
                 }
                 emit(dto.data.toDomain())
             }
+    }
 
     // ===========================
     // WAT (delegated)
@@ -217,6 +234,7 @@ internal data class TATDataDto(
     val userId: String = "",
     val testId: String = "",
     val stories: List<TATStoryDto> = emptyList(),
+    val questions: List<TATQuestionDto> = emptyList(),
     val totalTimeTakenMinutes: Int = 0,
     val submittedAt: Long = 0L,
     val status: String = "",
@@ -238,6 +256,19 @@ internal data class TATStoryDto(
 )
 
 @Serializable
+internal data class TATQuestionDto(
+    val id: String = "",
+    val imageUrl: String = "",
+    val cardPosition: Int = 0,
+    val imageContextJson: String = "{}",
+    val genderTag: String = "MIXED",
+    val viewingTimeSeconds: Int = 30,
+    val writingTimeMinutes: Int = 4,
+    val minCharacters: Int = 150,
+    val maxCharacters: Int = 1500
+)
+
+@Serializable
 internal data class TATInstructorScoreDto(
     val overallScore: Float = 0f,
     val thematicPerceptionScore: Float = 0f,
@@ -256,6 +287,30 @@ internal data class TATInstructorScoreDto(
 internal fun TATStoryResponse.toDto() = TATStoryDto(questionId, story, charactersCount, viewingTimeTakenSeconds, writingTimeTakenSeconds, submittedAt)
 internal fun TATStoryDto.toDomain() = TATStoryResponse(questionId, story, charactersCount, viewingTimeTakenSeconds, writingTimeTakenSeconds, submittedAt)
 
+internal fun TATQuestion.toDto() = TATQuestionDto(
+    id = id,
+    imageUrl = imageUrl,
+    cardPosition = cardPosition,
+    imageContextJson = imageContextJson,
+    genderTag = genderTag,
+    viewingTimeSeconds = viewingTimeSeconds,
+    writingTimeMinutes = writingTimeMinutes,
+    minCharacters = minCharacters,
+    maxCharacters = maxCharacters
+)
+
+internal fun TATQuestionDto.toDomain() = TATQuestion(
+    id = id,
+    imageUrl = imageUrl,
+    cardPosition = cardPosition,
+    imageContextJson = imageContextJson,
+    genderTag = genderTag,
+    viewingTimeSeconds = viewingTimeSeconds,
+    writingTimeMinutes = writingTimeMinutes,
+    minCharacters = minCharacters,
+    maxCharacters = maxCharacters
+)
+
 internal fun TATInstructorScore.toDto() = TATInstructorScoreDto(
     overallScore, thematicPerceptionScore, imaginationScore, characterDepictionScore,
     emotionalToneScore, narrativeStructureScore, feedback, storyWiseComments,
@@ -273,6 +328,7 @@ internal fun TATDataDto.toDomain(): TATSubmission = TATSubmission(
     userId = userId,
     testId = testId,
     stories = stories.map { it.toDomain() },
+    questions = questions.map { it.toDomain() },
     totalTimeTakenMinutes = totalTimeTakenMinutes,
     submittedAt = submittedAt,
     status = runCatching { SubmissionStatus.valueOf(status) }.getOrDefault(SubmissionStatus.SUBMITTED_PENDING_REVIEW),

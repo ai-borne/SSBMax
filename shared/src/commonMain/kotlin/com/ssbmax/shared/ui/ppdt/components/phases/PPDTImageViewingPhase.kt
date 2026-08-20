@@ -55,11 +55,15 @@ fun PPDTImageViewingPhase(
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         ) {
             Text(
                 text = stringResource(Res.string.ppdt_image_observe_instruction),
                 style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.padding(16.dp),
                 textAlign = TextAlign.Center
             )

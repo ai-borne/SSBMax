@@ -3,6 +3,7 @@ package com.ssbmax.shared.data.repository
 import com.russhwolf.settings.Settings
 import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.model.TestType
+import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
 import com.ssbmax.shared.domain.repository.UsageInfo
@@ -16,17 +17,17 @@ import com.ssbmax.shared.domain.repository.UsageInfo
 class FakeSubscriptionRepository : SubscriptionRepository {
     var tierResult: Result<SubscriptionTier> = Result.success(SubscriptionTier.FREE)
     var monthlyUsageResult: Result<Map<String, UsageInfo>> = Result.success(emptyMap())
-    val updateCalls = mutableListOf<SubscriptionTier>()
+    var startDateResult: Result<Long?> = Result.success(null)
+    var ownershipResult: Result<SubscriptionOwnership> = Result.success(SubscriptionOwnership(source = null, expiryDate = null))
 
     override suspend fun getSubscriptionTier(userId: String): Result<SubscriptionTier> = tierResult
 
     override suspend fun getMonthlyUsage(userId: String, month: String): Result<Map<String, UsageInfo>> =
         monthlyUsageResult
 
-    override suspend fun updateSubscriptionTier(userId: String, tier: SubscriptionTier): Result<Unit> {
-        updateCalls.add(tier)
-        return Result.success(Unit)
-    }
+    override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
+
+    override suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership> = ownershipResult
 }
 
 class FakeTestUsageRecorder : TestUsageRecorder {

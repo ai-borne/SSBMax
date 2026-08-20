@@ -1,10 +1,13 @@
 package com.ssbmax.shared.di
 
+import com.ssbmax.shared.ai.GeminiClient
+import com.ssbmax.shared.data.ai.GeminiProxyClient
 import com.ssbmax.shared.data.repository.DebugOverrideSubscriptionRepository
 import com.ssbmax.shared.data.repository.DebugOverrideTestUsageRecorder
 import com.ssbmax.shared.data.repository.GitLiveAnalyticsRepository
 import com.ssbmax.shared.data.repository.GitLiveAuthRepository
 import com.ssbmax.shared.data.repository.GitLiveDifficultyProgressionManager
+import com.ssbmax.shared.data.repository.GitLiveFeatureFlagRepository
 import com.ssbmax.shared.data.repository.GitLiveGPEImageCacheManager
 import com.ssbmax.shared.data.repository.GitLiveGradingQueueRepository
 import com.ssbmax.shared.data.repository.GitLiveGTOCollections
@@ -17,6 +20,7 @@ import com.ssbmax.shared.data.repository.GitLiveInterviewRepository
 import com.ssbmax.shared.data.repository.GitLiveNotificationCacheManager
 import com.ssbmax.shared.data.repository.GitLiveNotificationRepository
 import com.ssbmax.shared.data.repository.GitLiveOirResultRepository
+import com.ssbmax.shared.data.repository.GitLiveOIREvaluationClient
 import com.ssbmax.shared.data.repository.GitLiveOIRQuestionCacheManager
 import com.ssbmax.shared.data.repository.GitLiveOIRQuestionSelector
 import com.ssbmax.shared.data.repository.GitLivePPDTImageCacheManager
@@ -38,15 +42,18 @@ import com.ssbmax.shared.data.repository.GitLiveUserProfileRepository
 import com.ssbmax.shared.data.repository.GitLiveUserRepository
 import com.ssbmax.shared.data.repository.GitLiveWATWordCacheManager
 import com.ssbmax.shared.data.repository.InterviewQuestionGenerator
+import com.ssbmax.shared.data.service.GitLiveEvaluationFunctionsClient
 import com.ssbmax.shared.domain.model.interview.QuestionCacheRepository
 import com.ssbmax.shared.domain.repository.AnalyticsRepository
 import com.ssbmax.shared.domain.repository.AuthRepository
 import com.ssbmax.shared.domain.repository.DifficultyProgressionRepository
+import com.ssbmax.shared.domain.repository.FeatureFlagRepository
 import com.ssbmax.shared.domain.repository.GradingQueueRepository
 import com.ssbmax.shared.domain.repository.GTORepository
 import com.ssbmax.shared.domain.repository.InterviewRepository
 import com.ssbmax.shared.domain.repository.NotificationRepository
 import com.ssbmax.shared.domain.repository.OirResultRepository
+import com.ssbmax.shared.domain.repository.OIREvaluationClient
 import com.ssbmax.shared.domain.repository.StudyContentRepository
 import com.ssbmax.shared.domain.repository.StudyProgressRepository
 import com.ssbmax.shared.domain.repository.SubmissionRepository
@@ -59,6 +66,7 @@ import com.ssbmax.shared.domain.repository.TestSubmissionRepository
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
 import com.ssbmax.shared.domain.repository.UnifiedResultRepository
 import com.ssbmax.shared.domain.repository.UserProfileRepository
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.platform.isDebugBuild
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -83,6 +91,10 @@ import org.koin.dsl.module
  */
 val repositoryModule = module {
     single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
+    // Calls Gemini through the `geminiGenerateContent` Cloud Function proxy, not directly --
+    // see GeminiProxyClient's own doc comment. Bound here (not shared/CoreInfraModule) because
+    // it depends on GitLive's Firebase Functions client, which `shared` may not import.
+    single<GeminiClient> { GeminiProxyClient() }
     // GitLiveAuthRepository's userRepository constructor param has a Kotlin default
     // value (= GitLiveUserRepository()), but singleOf's reflection-based DSL ignores
     // Kotlin default parameters and always resolves every constructor param through
@@ -96,6 +108,8 @@ val repositoryModule = module {
     singleOf(::GitLiveUserRepository)
     singleOf(::GitLiveAuthRepository) bind AuthRepository::class
     singleOf(::GitLiveOirResultRepository) bind OirResultRepository::class
+    singleOf(::GitLiveOIREvaluationClient) bind OIREvaluationClient::class
+    singleOf(::GitLiveEvaluationFunctionsClient) bind EvaluationFunctionsClient::class
     singleOf(::GitLiveUserProfileRepository) bind UserProfileRepository::class
     // Phase 3/4 (KMP-convergence plan): wraps the real repository in the dev-tier-override
     // decorator only when isDebugBuild() -- fail-closed, since isDebugBuild() is false in every
@@ -108,6 +122,7 @@ val repositoryModule = module {
         val plain = GitLiveSubscriptionRepository()
         if (isDebugBuild()) DebugOverrideSubscriptionRepository(plain, get()) else plain
     }
+    singleOf(::GitLiveFeatureFlagRepository) bind FeatureFlagRepository::class
     singleOf(::GitLiveTestProgressRepository) bind TestProgressRepository::class
     singleOf(::GitLiveStudyProgressRepository) bind StudyProgressRepository::class
     singleOf(::GitLiveGradingQueueRepository) bind GradingQueueRepository::class

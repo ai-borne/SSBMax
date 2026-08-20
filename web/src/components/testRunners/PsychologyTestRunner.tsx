@@ -4,12 +4,14 @@ import { useTestTimer } from '../../hooks/useTestTimer';
 import { strings } from '../../constants/strings';
 import { useAntiCheat } from '../../hooks/useAntiCheat';
 import { AntiCheatWarningBanner } from '../common/AntiCheatWarningBanner';
-import { Clock, CheckCircle2, ChevronRight, Send, AlertTriangle, FileText, LogOut } from 'lucide-react';
+import { Clock, CheckCircle2, ChevronRight, ChevronLeft, Send, AlertTriangle, FileText, LogOut } from 'lucide-react';
+import { SubmissionResultView } from '../evaluation/SubmissionResultView';
 
 export interface PsychologyTestRunnerProps {
   viewModel: PsychologyTestViewModel;
   userId: string;
   isOnline?: boolean;
+  batchId?: string;
   onExitTest?: () => void;
 }
 
@@ -17,6 +19,7 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
   viewModel,
   userId,
   isOnline = true,
+  batchId,
   onExitTest
 }) => {
   const [state, setState] = useState<PsychologyTestState>(viewModel.getState());
@@ -26,9 +29,10 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
     const unsubscribe = viewModel.subscribe(() => {
       setState(viewModel.getState());
     });
-    viewModel.loadTestContent();
+    viewModel.loadTestContent(batchId);
     return () => unsubscribe();
-  }, [viewModel]);
+  }, [viewModel, batchId]);
+
 
   const currentSlide = state.slides[state.currentSlideIndex];
 
@@ -67,25 +71,77 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
   }
 
   if (state.error) {
+    const isPermissionError = state.error.toLowerCase().includes('permission') || state.error.toLowerCase().includes('sign in');
+    // "Monthly quota reached" is the exact message both `recordAndEnforce` (eligibility.js)
+    // and `checkQuota` (evaluation/core.js) throw -- Retry would just repeat the same
+    // rejection, so it's hidden below rather than shown as if this were a transient error.
+    const isQuotaError = state.error.toLowerCase().includes('quota reached');
     return (
-      <div className="p-6 bg-red-900/20 border border-red-700/50 rounded-lg text-red-300 flex items-center justify-between">
-        <span>{state.error}</span>
-        <button
-          onClick={() => viewModel.loadTestContent()}
-          className="px-4 py-2 bg-red-800 hover:bg-red-700 rounded text-white text-sm"
-        >
-          {strings.common.retry}
-        </button>
+      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-md mx-auto space-y-4 shadow-lg my-12">
+        <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+          {isQuotaError ? 'Monthly Limit Reached' : isPermissionError ? 'Sign-In Required' : strings.common.error}
+        </h3>
+        <p className="text-sm text-[var(--color-text-muted)]">
+          {isQuotaError ? `${state.error}. Upgrade to Officer Pass for more attempts this month.` : state.error}
+        </p>
+        <div className="flex justify-center gap-3 pt-2">
+          {onExitTest && (
+            <button
+              onClick={onExitTest}
+              className="px-4 py-2 text-xs font-semibold rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-card)]"
+            >
+              {strings.common.back}
+            </button>
+          )}
+          {!isQuotaError && (
+            <button
+              onClick={() => viewModel.loadTestContent(batchId)}
+              className="px-4 py-2 bg-[var(--color-accent)] hover:opacity-90 rounded-lg text-white text-xs font-bold"
+            >
+              {strings.common.retry}
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   if (state.isCompleted) {
     return (
-      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-lg mx-auto">
-        <CheckCircle2 className="w-16 h-16 text-[var(--color-success)] mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">{strings.psychology.completedTitle}</h2>
-        <p className="text-sm text-[var(--color-text-muted)] mb-6">{strings.psychology.completedMessage}</p>
+      <div className="p-8 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl text-center max-w-lg mx-auto space-y-6 shadow-xl my-8">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto animate-pulse">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-black text-[var(--color-text-primary)] mb-1">{strings.psychology.completedTitle}</h2>
+          <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">{strings.psychology.completedMessage}</p>
+        </div>
+
+        <div className="p-4 bg-[var(--color-bg-elevated)] rounded-xl border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] space-y-1">
+          <p className="font-bold text-[var(--color-text-primary)]">Assessor Queue Confirmation</p>
+          <p className="text-[var(--color-text-muted)]">Your responses are securely queued for 15 OLQ Factor Analysis & Psychologist Dossier evaluation.</p>
+        </div>
+
+        {state.lastSubmissionId && state.lastResultCollection && (
+          <SubmissionResultView submissionId={state.lastSubmissionId} resultCollection={state.lastResultCollection} />
+        )}
+
+        <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+          {onExitTest && (
+            <button
+              onClick={onExitTest}
+              data-testid="return-to-tests-button"
+              className="min-h-[44px] px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20 transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Return to SSB Tests</span>
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -169,7 +225,13 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
       </div>
 
       {/* Navigation Controls */}
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-2">
+        {state.isSubmitting && (
+          <p className="flex items-center text-xs text-[var(--color-text-muted)]">
+            <Clock className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+            {strings.psychology.submitting}
+          </p>
+        )}
         {state.currentSlideIndex < state.slides.length - 1 ? (
           <button
             onClick={() => handleSlideComplete()}
@@ -182,9 +244,13 @@ export const PsychologyTestRunner: React.FC<PsychologyTestRunnerProps> = ({
           <button
             onClick={() => viewModel.submitTest(userId, isOnline)}
             disabled={state.isSubmitting}
-            className="flex items-center px-6 py-2.5 bg-[var(--color-success)] hover:opacity-90 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center px-6 py-2.5 bg-[var(--color-success)] hover:opacity-90 disabled:opacity-60 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            <Send className="w-4 h-4 mr-1.5" />
+            {state.isSubmitting ? (
+              <Clock className="w-4 h-4 mr-1.5 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4 mr-1.5" />
+            )}
             {strings.psychology.finishTest}
           </button>
         )}

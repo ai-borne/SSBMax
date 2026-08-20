@@ -28,7 +28,7 @@ export const PPDTCanvasViewer: React.FC<PPDTCanvasViewerProps> = ({
     const unsubscribe = viewModel.subscribe(() => {
       setState(viewModel.getState());
     });
-    viewModel.loadTestContent();
+    viewModel.loadTestContent('batch_001');
     return () => unsubscribe();
   }, [viewModel]);
 

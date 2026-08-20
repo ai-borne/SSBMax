@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "contracts:generate": "node scripts/generate-contracts.js",
+    "contracts:check": "node scripts/generate-contracts.js --check",
+    "contracts:test": "node --test scripts/test/*.test.js"
+  },
   "dependencies": {
     "canvas": "^3.2.0",
     "firebase-admin": "^13.10.0"

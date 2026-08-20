@@ -38,8 +38,7 @@ class WorkManagerHiltIntegrationTest {
         "GTOAnalysisWorker",
         "InterviewAnalysisWorker",
         "InterviewQuestionGenerationWorker",
-        "QuestionCacheCleanupWorker",
-        "ArchivalWorker"
+        "QuestionCacheCleanupWorker"
     )
 
     @Test

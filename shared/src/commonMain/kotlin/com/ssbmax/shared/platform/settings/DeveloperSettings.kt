@@ -47,6 +47,7 @@ class DeveloperSettings(private val settings: Settings) {
     fun currentOverrideTierOrNull(): SubscriptionTier? = when (getOverride()) {
         SubscriptionOverride.FOLLOW_REAL -> null
         SubscriptionOverride.FORCE_FREE -> SubscriptionTier.FREE
+        SubscriptionOverride.FORCE_BASIC -> SubscriptionTier.BASIC
         SubscriptionOverride.FORCE_PRO -> SubscriptionTier.PRO
         SubscriptionOverride.FORCE_PREMIUM -> SubscriptionTier.PREMIUM
     }

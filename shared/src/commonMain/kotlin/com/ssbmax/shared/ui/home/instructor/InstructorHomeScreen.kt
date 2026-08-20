@@ -143,7 +143,8 @@ fun InstructorHomeScreen(
                     value = "${uiState.testsGradedToday}",
                     subtitle = stringResource(Res.string.stat_today),
                     icon = Icons.Default.Check,
-                    color = MaterialTheme.semanticColors.success,
+                    containerColor = MaterialTheme.semanticColors.success,
+                    contentColor = MaterialTheme.semanticColors.onSuccess,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -152,7 +153,8 @@ fun InstructorHomeScreen(
                     value = "${uiState.pendingGradingCount}",
                     subtitle = stringResource(Res.string.stat_to_grade),
                     icon = Icons.Default.Schedule,
-                    color = MaterialTheme.semanticColors.warning,
+                    containerColor = MaterialTheme.semanticColors.warning,
+                    contentColor = MaterialTheme.semanticColors.onWarning,
                     onClick = onNavigateToGrading,
                     modifier = Modifier.weight(1f)
                 )
@@ -162,7 +164,8 @@ fun InstructorHomeScreen(
                     value = "${uiState.avgResponseTime}h",
                     subtitle = stringResource(Res.string.stat_time),
                     icon = Icons.Default.Speed,
-                    color = MaterialTheme.semanticColors.informational,
+                    containerColor = MaterialTheme.semanticColors.informational,
+                    contentColor = MaterialTheme.semanticColors.onInformational,
                     modifier = Modifier.weight(1f)
                 )
             }

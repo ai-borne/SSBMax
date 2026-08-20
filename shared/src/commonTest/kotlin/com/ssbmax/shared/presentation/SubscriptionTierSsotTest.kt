@@ -17,6 +17,7 @@ import com.ssbmax.shared.presentation.settings.SubscriptionManagementViewModel
 import com.ssbmax.shared.presentation.settings.SubscriptionTierModel
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
 import com.ssbmax.shared.presentation.testing.FakeLogger
+import com.ssbmax.shared.presentation.testing.FakeRevenueCatClient
 import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
 import com.ssbmax.shared.presentation.testing.FakeTestProgressRepository
@@ -94,6 +95,8 @@ class SubscriptionTierSsotTest {
             val upgradeViewModel = UpgradeViewModel(
                 observeCurrentUser = observeCurrentUser,
                 getSubscriptionTier = getSubscriptionTier,
+                subscriptionRepository = subscriptionRepository,
+                revenueCatClient = FakeRevenueCatClient(),
                 developerSettings = developerSettings,
                 logger = FakeLogger()
             )
@@ -101,6 +104,7 @@ class SubscriptionTierSsotTest {
                 observeCurrentUser = observeCurrentUser,
                 getSubscriptionTier = getSubscriptionTier,
                 getMonthlyUsage = GetMonthlyUsageUseCase(subscriptionRepository),
+                subscriptionRepository = subscriptionRepository,
                 logger = FakeLogger()
             )
             testDispatcher.scheduler.advanceUntilIdle()
@@ -139,12 +143,12 @@ class SubscriptionTierSsotTest {
                 )
 
                 assertEquals(
-                    SubscriptionLimits.limitFor("Interview", tier),
+                    SubscriptionLimits.limitFor("INTERVIEW", tier),
                     managementTier.interviewTestLimit,
                     "SubscriptionTierModel's Interview limit disagreed with SubscriptionLimits SSOT for $tier"
                 )
                 assertEquals(
-                    SubscriptionLimits.limitFor("OIR Tests", tier),
+                    SubscriptionLimits.limitFor("OIR", tier),
                     managementTier.oirTestLimit,
                     "SubscriptionTierModel's OIR limit disagreed with SubscriptionLimits SSOT for $tier"
                 )

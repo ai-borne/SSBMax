@@ -32,6 +32,7 @@ local.properties
 
 # Local Gradle configuration overrides
 gradle.properties.local
+gradle.local.properties
 
 # Environment variables (contains API keys and secrets)
 .env
@@ -133,6 +134,9 @@ node_modules/
 scripts/node_modules/
 web/node_modules/
 web/dist/
+web/dev-dist/
+web/test-results/
+web/playwright-report/
 *.tsbuildinfo
 
 # ============================================

@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import com.ssbmax.shared.ui.theme.Spacing
@@ -36,6 +37,7 @@ fun StatsCard(
     icon: ImageVector,
     gradient: Brush,
     modifier: Modifier = Modifier,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     iconContentDescription: String? = null
 ) {
     Card(
@@ -59,7 +61,7 @@ fun StatsCard(
                     Icon(
                         imageVector = icon,
                         contentDescription = iconContentDescription,
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = contentColor,
                         modifier = Modifier.size(Spacing.iconSizeLarge)
                     )
 
@@ -67,13 +69,13 @@ fun StatsCard(
                         value,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = contentColor
                     )
 
                     Text(
                         subtitle,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                        color = contentColor.copy(alpha = 0.9f)
                     )
                 }
 
@@ -83,7 +85,7 @@ fun StatsCard(
                 Text(
                     title,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                    color = contentColor.copy(alpha = 0.85f)
                 )
             }
         }

@@ -13,3 +13,5 @@ ssbmax:
     active: true
   MissingComposePreview:
     active: true
+  RawFirestorePathLiteral:
+    active: true

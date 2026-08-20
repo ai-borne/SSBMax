@@ -392,5 +392,8 @@
     <ID>WildcardImport:OIRTestScoreCalculator.kt$import com.ssbmax.shared.domain.model.*</ID>
     <ID>WildcardImport:SubmissionRepository.kt$import com.ssbmax.shared.domain.model.*</ID>
     <ID>WildcardImport:SubmitOIRTestUseCase.kt$import com.ssbmax.shared.domain.model.*</ID>
+    <ID>CyclomaticComplexMethod:NotificationResultDestination.kt$fun resolveNotificationResultDestination(notification: SSBNotification): String</ID>
+    <ID>LongParameterList:SDTInProgressPhase.kt$@Composable fun SDTInProgressPhase( question: String, questionNumber: Int, totalQuestions: Int, answer: String, onAnswerChange: (String) -&gt; Unit, charCount: Int, minChars: Int, maxChars: Int, canMoveNext: Boolean, onNext: () -&gt; Unit, onSkip: () -&gt; Unit )</ID>
+    <ID>LongParameterList:SRTInProgressPhase.kt$@Composable fun SRTInProgressPhase( situation: String, timeRemaining: Int, response: String, onResponseChange: (String) -&gt; Unit, minChars: Int, maxChars: Int, canMoveNext: Boolean, onNext: () -&gt; Unit, onSkip: () -&gt; Unit )</ID>
   </CurrentIssues>
 </SmellBaseline>

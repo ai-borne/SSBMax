@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { StudyMaterialViewModel } from '../../src/viewmodels/StudyMaterialViewModel';
 import { IContentRepository } from '../../src/repositories/interfaces/IContentRepository';
-import { StudyMaterial, BatchDocument, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch } from '../../src/types/testContent';
+import { StudyMaterial, BatchDocument, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, GPEImage, OIRContentMeta } from '../../src/types/testContent';
 
 class MockContentRepository implements IContentRepository {
   async getStudyMaterials(): Promise<StudyMaterial[]> {
@@ -50,7 +50,7 @@ class MockContentRepository implements IContentRepository {
   }
 
   async getTATSet(): Promise<TATSet> {
-    return { id: 'tat-1', setName: 'Set 1', imageUrls: [], slideDurationSeconds: 240, totalSlides: 0 };
+    return { id: 'tat-1', setName: 'Set 1', imageUrls: [], imageIds: [], slideDurationSeconds: 240, totalSlides: 0 };
   }
 
   async getWATBatch(): Promise<WATBatch> {
@@ -61,10 +61,19 @@ class MockContentRepository implements IContentRepository {
     return { id: 'srt-1', situations: [], totalTimeMinutes: 30 };
   }
 
-  async getCappedBatch<T>(_collectionName: string): Promise<BatchDocument<T>> {
-    return { id: 'batch_0', batchIndex: 0, totalItems: 0, items: [] };
+  async getGPEBatch(): Promise<BatchDocument<GPEImage>> {
+    return { id: 'gpe-1', batchIndex: 0, totalItems: 0, items: [] };
+  }
+
+  async getOIRContentVersion(): Promise<OIRContentMeta> {
+    return { contentVersion: 1, batchCount: 1 };
+  }
+
+  async getAvailableBatches(): Promise<any[]> {
+    return [];
   }
 }
+
 
 describe('StudyMaterialViewModel Unit Tests', () => {
   it('should load study materials and populate categories', async () => {

@@ -17,6 +17,7 @@ import com.ssbmax.shared.domain.model.scoring.AnalysisStatus
 import com.ssbmax.shared.domain.repository.SubmissionRepository
 import com.ssbmax.shared.domain.repository.UserProfileRepository
 import com.ssbmax.shared.domain.service.AIService
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.domain.service.OLQScoreWithReasoning
 import com.ssbmax.shared.domain.service.ResponseAnalysis
 import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
@@ -53,6 +54,7 @@ class TATSynthesisWorkerTest {
     private lateinit var aiService: AIService
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var getOLQDashboard: GetOLQDashboardUseCase
+    private lateinit var evaluationFunctionsClient: EvaluationFunctionsClient
 
     private val submissionId = "tat-sub-123"
     private val userId = "user-456"
@@ -74,6 +76,8 @@ class TATSynthesisWorkerTest {
         aiService = mockk(relaxed = true)
         notificationHelper = mockk(relaxed = true)
         getOLQDashboard = mockk(relaxed = true)
+        evaluationFunctionsClient = mockk(relaxed = true)
+        coEvery { evaluationFunctionsClient.notifyGradingComplete(any()) } returns Result.success(Unit)
 
         every { workerParams.inputData } returns workDataOf(TATSynthesisWorker.KEY_SUBMISSION_ID to submissionId)
         every { workerParams.runAttemptCount } returns 0
@@ -92,6 +96,7 @@ class TATSynthesisWorkerTest {
                 single { aiService }
                 single { notificationHelper }
                 single { getOLQDashboard }
+                single { evaluationFunctionsClient }
             })
         }
     }
@@ -219,6 +224,53 @@ class TATSynthesisWorkerTest {
 
         assertEquals(ListenableWorker.Result.success(), result)
         coVerify(exactly = 1) { notificationHelper.showTATResultsReadyNotification(submissionId) }
+    }
+
+    // Regression: reported live on-device (2026-08-17) -- a TAT result's local phone notification
+    // fired correctly, but it never appeared in the centralized in-app Notification Center, because
+    // nothing here ever called the Cloud Function that writes the notifications/{id} Firestore doc
+    // the centralized list reads from (only evaluate*/core.js-routed test types did that
+    // automatically). notifyGradingComplete is the client-invoked equivalent for this
+    // legacy-client-side-graded path.
+    @Test
+    fun `notifies the centralized inbox only after finalization succeeds`() = runTest {
+        coEvery { tatStoryAssessmentDao.getBySubmissionId(submissionId) } returns buildAssessments(validCount = 6)
+        coEvery { aiService.analyzeTATResponse(any()) } returns Result.success(buildResponseAnalysis())
+        coEvery { submissionRepository.getTATSubmission(submissionId) } returns Result.success(buildSubmission())
+        every { userProfileRepository.getUserProfile(userId) } returns flowOf(Result.success(buildUserProfile()))
+
+        val result = createWorker().doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        coVerify(exactly = 1) { evaluationFunctionsClient.notifyGradingComplete(submissionId) }
+    }
+
+    @Test
+    fun `does not notify the centralized inbox when finalization fails`() = runTest {
+        coEvery { tatStoryAssessmentDao.getBySubmissionId(submissionId) } returns buildAssessments(validCount = 6)
+        coEvery { aiService.analyzeTATResponse(any()) } returns Result.success(buildResponseAnalysis())
+        coEvery { submissionRepository.getTATSubmission(submissionId) } returns Result.success(buildSubmission())
+        every { userProfileRepository.getUserProfile(userId) } returns flowOf(Result.success(buildUserProfile()))
+        coEvery { submissionRepository.finalizeTATAnalysisResult(any(), any()) } returns
+            Result.failure(Exception("Firestore unavailable"))
+
+        createWorker().doWork()
+
+        coVerify(exactly = 0) { evaluationFunctionsClient.notifyGradingComplete(any()) }
+    }
+
+    @Test
+    fun `a notifyGradingComplete failure does not fail the whole worker -- result is already durable`() = runTest {
+        coEvery { tatStoryAssessmentDao.getBySubmissionId(submissionId) } returns buildAssessments(validCount = 6)
+        coEvery { aiService.analyzeTATResponse(any()) } returns Result.success(buildResponseAnalysis())
+        coEvery { submissionRepository.getTATSubmission(submissionId) } returns Result.success(buildSubmission())
+        every { userProfileRepository.getUserProfile(userId) } returns flowOf(Result.success(buildUserProfile()))
+        coEvery { evaluationFunctionsClient.notifyGradingComplete(any()) } returns
+            Result.failure(Exception("network error"))
+
+        val result = createWorker().doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
     }
 
     @Test

@@ -1,3 +1,8 @@
+// SRP exemption to the repo's 300-LOC cap (root CLAUDE.md "Quality Limits"): Firestore security
+// rules have no import/include mechanism -- a project deploys exactly one rules file, and it must
+// contain every match block for every collection. Splitting is not possible, only simulated by
+// concatenation at build time, which would put the deployed artifact out of step with the file the
+// firestore-tests/ suite reads. Single responsibility here is "access control for this database".
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -59,100 +64,33 @@ service cloud.firestore {
       // 🔥 THIS IS THE CRITICAL FIX FOR YOUR PROFILE ERROR
       // User data subcollection (for profile, settings, etc.)
       match /data/{document} {
-        // Users can read/write their own data subcollection
-        allow read, write: if isOwner(userId);
-      }
-      
-      // Test usage tracking (for subscription limits)
-      match /test_usage/{month} {
-        // Users can read their own test usage
+        // Users can read their own data subcollection...
         allow read: if isOwner(userId);
-        
-        // Users can write their own test usage
-        // Relaxed validation: Allow updates and creates
-        // Create: Must have all fields
-        allow create: if isOwner(userId) &&
-                         request.resource.data.keys().hasAll([
-                           'oirTestsUsed', 'tatTestsUsed', 'watTestsUsed',
-                           'srtTestsUsed', 'ppdtTestsUsed', 'gtoTestsUsed',
-                           'interviewTestsUsed', 'lastUpdated'
-                         ]);
-        
-        // Update: Can update individual fields via transactions
-        allow update: if isOwner(userId) &&
-                         request.resource.data.lastUpdated is timestamp;
+
+        // ...but NOT write `subscription`. Rules are ADDITIVE: a request is allowed if any
+        // matching rule allows it, so the more specific subscription-document block below
+        // cannot revoke a write this block already granted -- its `allow write: if false` was
+        // decorative, and until this exclusion landed any signed-in user could grant themselves
+        // PREMIUM with one client-SDK write (finding C1). The exclusion must stay HERE, on the
+        // broad rule. `profile` and every other doc in this subcollection remain client-written
+        // (GitLiveUserProfileRepository) -- do not widen this to lock the whole subcollection.
+        // Pinned by firestore-tests/user_data.rules.test.mjs.
+        allow write: if isOwner(userId) && document != 'subscription';
       }
       
       // Subscription usage tracking (server-side persistence)
-      // SECURITY: Cannot be bypassed by clearing app cache
+      // Phase 5 (docs/plans/CrossPlatform_SSOT): the `recordTestUsage` callable Cloud
+      // Function (functions/src/eligibility.js, Admin SDK) is now the sole writer of
+      // usage_{month} docs -- Admin SDK bypasses these rules entirely, so clients have
+      // no write path left at all. This closes the "clear app cache to reset quota"
+      // bypass the old client-writable rules (a client could construct any counter
+      // value satisfying the increment-by-one invariant) still nominally allowed.
       match /subscription/{document} {
         // Users can read their own subscription usage
         allow read: if isOwner(userId);
-        
-        // Users can CREATE new usage document with initial values
-        // Note: Transactions may increment immediately after set(), so allow counts 0-10
-        allow create: if isOwner(userId) &&
-                        request.resource.data.userId == userId &&
-                        request.resource.data.keys().hasAll([
-                          'month', 'oirTestsUsed', 'tatTestsUsed', 'watTestsUsed',
-                          'srtTestsUsed', 'ppdtTestsUsed', 'piqTestsUsed', 'gtoTestsUsed',
-                          'interviewTestsUsed', 'sdTestsUsed', 'recordedSubmissionIds', 'lastUpdated'
-                        ]) &&
-                        // The doc id is `usage_{month}` (GitLiveTestUsageRecorder /
-                        // GitLiveSubscriptionRepository) but the `month` field itself holds the
-                        // bare value (e.g. "2026-08", no "usage_" prefix -- see
-                        // GitLiveSubscriptionRepository.getMonthlyUsage, which reads the same bare
-                        // value back). Comparing `month` directly to `document` (the doc id) can
-                        // never match and permanently denied every user's first usage write of
-                        // every month; reconstruct the doc id instead.
-                        document == 'usage_' + request.resource.data.month &&
-                        request.resource.data.recordedSubmissionIds is list &&
-                        request.resource.data.lastUpdated is int &&
-                         // Allow counts 0-10 on create (transaction may increment immediately)
-                        request.resource.data.oirTestsUsed >= 0 && request.resource.data.oirTestsUsed <= 10 &&
-                        request.resource.data.tatTestsUsed >= 0 && request.resource.data.tatTestsUsed <= 10 &&
-                        request.resource.data.watTestsUsed >= 0 && request.resource.data.watTestsUsed <= 10 &&
-                        request.resource.data.srtTestsUsed >= 0 && request.resource.data.srtTestsUsed <= 10 &&
-                        request.resource.data.ppdtTestsUsed >= 0 && request.resource.data.ppdtTestsUsed <= 10 &&
-                        request.resource.data.piqTestsUsed >= 0 && request.resource.data.piqTestsUsed <= 10 &&
-                        request.resource.data.gtoTestsUsed >= 0 && request.resource.data.gtoTestsUsed <= 10 &&
-                        request.resource.data.interviewTestsUsed >= 0 && request.resource.data.interviewTestsUsed <= 10 &&
-                        request.resource.data.sdTestsUsed >= 0 && request.resource.data.sdTestsUsed <= 10;
-        
-        // A client may record exactly one attempt: one counter increases by one,
-        // and exactly one new submission ID is appended. Existing attempts cannot
-        // be removed or replayed by changing the document directly.
-        allow update: if isOwner(userId) &&
-                         request.resource.data.userId == resource.data.userId &&
-                         request.resource.data.month == resource.data.month &&
-                         request.resource.data.lastUpdated is int &&
-                         request.resource.data.recordedSubmissionIds is list &&
-                         ((!resource.data.keys().hasAny(['recordedSubmissionIds']) &&
-                           request.resource.data.recordedSubmissionIds.size() == 1) ||
-                          (resource.data.keys().hasAny(['recordedSubmissionIds']) &&
-                           request.resource.data.recordedSubmissionIds.size() == resource.data.recordedSubmissionIds.size() + 1 &&
-                           request.resource.data.recordedSubmissionIds.hasAll(resource.data.recordedSubmissionIds))) &&
-                         request.resource.data.oirTestsUsed >= resource.data.oirTestsUsed &&
-                         request.resource.data.oirTestsUsed <= resource.data.oirTestsUsed + 1 &&
-                         request.resource.data.tatTestsUsed >= resource.data.tatTestsUsed &&
-                         request.resource.data.tatTestsUsed <= resource.data.tatTestsUsed + 1 &&
-                         request.resource.data.watTestsUsed >= resource.data.watTestsUsed &&
-                         request.resource.data.watTestsUsed <= resource.data.watTestsUsed + 1 &&
-                         request.resource.data.srtTestsUsed >= resource.data.srtTestsUsed &&
-                         request.resource.data.srtTestsUsed <= resource.data.srtTestsUsed + 1 &&
-                         request.resource.data.ppdtTestsUsed >= resource.data.ppdtTestsUsed &&
-                         request.resource.data.ppdtTestsUsed <= resource.data.ppdtTestsUsed + 1 &&
-                         request.resource.data.piqTestsUsed >= resource.data.piqTestsUsed &&
-                         request.resource.data.piqTestsUsed <= resource.data.piqTestsUsed + 1 &&
-                         request.resource.data.gtoTestsUsed >= resource.data.gtoTestsUsed &&
-                         request.resource.data.gtoTestsUsed <= resource.data.gtoTestsUsed + 1 &&
-                         request.resource.data.interviewTestsUsed >= resource.data.interviewTestsUsed &&
-                         request.resource.data.interviewTestsUsed <= resource.data.interviewTestsUsed + 1 &&
-                         request.resource.data.sdTestsUsed >= resource.data.sdTestsUsed &&
-                         request.resource.data.sdTestsUsed <= resource.data.sdTestsUsed + 1;
-        
-        // NEVER allow delete (audit trail)
-        allow delete: if false;
+
+        // Only the recordTestUsage callable function (Admin SDK) may write.
+        allow write: if false;
       }
       
       // User subscription data
@@ -289,15 +227,23 @@ service cloud.firestore {
       // Must include required fields: userId, testType, submittedAt
       // Note: 'responses' can be at root level OR nested in 'data' field (depending on test type)
       // Interview submissions may have 'resultId' instead of responses/data
-      allow create: if isAuthenticated() && 
+      // OIR (OIR Retake Seal, Phase 1+4): each attempt mints its own submission id, distinct from
+      // the durable test_sessions id (docs/plans/OIR_Retake_Seal_Execution_Plan.md), so the
+      // session doc to check is read off the submission's own nested `data.testResult.sessionId`
+      // field (OIRSubmissionMappers.kt's real write shape) -- NOT `request.resource.id`, which is
+      // now a random per-attempt id that never matches a test_sessions doc id.
+      allow create: if isAuthenticated() &&
                        request.resource.data.userId == request.auth.uid &&
                        (!request.resource.data.keys().hasAny(['testType']) ||
                         request.resource.data.testType != 'OIR' ||
-                        (exists(/databases/$(database)/documents/test_sessions/$(request.resource.id)) &&
-                         get(/databases/$(database)/documents/test_sessions/$(request.resource.id)).data.userId == request.auth.uid &&
-                         get(/databases/$(database)/documents/test_sessions/$(request.resource.id)).data.testType == 'OIR')) &&
+                        (request.resource.data.keys().hasAny(['data']) &&
+                         'testResult' in request.resource.data.data &&
+                         'sessionId' in request.resource.data.data.testResult &&
+                         exists(/databases/$(database)/documents/test_sessions/$(request.resource.data.data.testResult.sessionId)) &&
+                         get(/databases/$(database)/documents/test_sessions/$(request.resource.data.data.testResult.sessionId)).data.userId == request.auth.uid &&
+                         get(/databases/$(database)/documents/test_sessions/$(request.resource.data.data.testResult.sessionId)).data.testType == 'OIR')) &&
                        request.resource.data.keys().hasAll(['testType', 'submittedAt']) &&
-                       (request.resource.data.keys().hasAny(['responses']) || 
+                       (request.resource.data.keys().hasAny(['responses']) ||
                         request.resource.data.keys().hasAny(['data']) ||
                         request.resource.data.keys().hasAny(['resultId']));
       
@@ -320,6 +266,22 @@ service cloud.firestore {
                        resource.data.status == 'DRAFT';
     }
     
+    // ============================================
+    // ARCHIVED SUBMISSIONS
+    // ============================================
+
+    // Deny-all for clients -- Admin SDK only. Was previously written to
+    // directly by a per-device GitLiveSubmissionArchiveRepository/ArchivalWorker
+    // WorkManager job (always PERMISSION_DENIED against this rule, so nothing was
+    // ever actually archived) and by an iOS BGTaskScheduler equivalent with no
+    // execution guarantee at all. Submission archival server-migration: both
+    // client-side paths were deleted; `functions/src/archival/archiveOldSubmissions.js`
+    // (a `pubsub.schedule` Cloud Function, Admin SDK) now sweeps every user's
+    // `submissions` collection group uniformly and is the only writer.
+    match /archived_submissions/{submissionId} {
+      allow read, write: if false;
+    }
+
     // ============================================
     // GTO RESULTS (Split Architecture like Interview)
     // ============================================
@@ -406,31 +368,14 @@ service cloud.firestore {
     }
     
     // ============================================
-    // STUDY MATERIALS
-    // ============================================
-    
-    match /studyMaterials/{materialId} {
-      // All authenticated users can read study materials
-      allow read: if isAuthenticated();
-      
-      // No write access for clients
-      allow write: if false;
-    }
-    
-    // ============================================
     // USER PROGRESS
     // ============================================
-    
+
     match /user_progress/{userId} {
       // Users can read/write their own progress
       allow read, write: if isOwner(userId);
     }
-    
-    match /userProgress/{userId} {
-      // Alternative path (for compatibility)
-      allow read, write: if isOwner(userId);
-    }
-    
+
     // ============================================
     // BATCHES (SSB Marketplace)
     // ============================================
@@ -476,7 +421,24 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if false;
     }
-    
+
+    // ============================================
+    // STUDY PROGRESS (per-user, doc id `${userId}_${materialId}`)
+    // ============================================
+
+    match /study_progress/{progressId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /study_sessions/{sessionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+
     // ============================================
     // STUDY MATERIALS (Structured content)
     // ============================================
@@ -505,94 +467,89 @@ service cloud.firestore {
     
     // OIR Test Content
     match /test_content/oir/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
-    match /test_content/oir/question_batches/{batchId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
-    }
-
     match /test_content/oir/batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // WAT Test Content
     match /test_content/wat/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/wat/word_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // SRT Test Content
     match /test_content/srt/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/srt/situation_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // TAT Test Content
     match /test_content/tat/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/tat/image_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // PPDT Test Content
     match /test_content/ppdt/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/ppdt/image_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // GTO Test Content
     match /test_content/gto/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/gto/task_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // GPE (Group Planning Exercise) Test Content
     match /test_content/gto/scenarios/gpe/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/gto/scenarios/gpe/batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     // Interview Test Content
     match /test_content/interview/meta/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
     match /test_content/interview/question_batches/{batchId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
     
@@ -609,6 +566,20 @@ service cloud.firestore {
     }
     
     // ============================================
+    // REMOTE KILL-SWITCH (Phase 8, Cross-Platform SSOT plan)
+    // ============================================
+
+    match /feature_flags/{document} {
+      // Public read, unlike every other collection in this file: the version
+      // gate this doc drives runs at app launch, before a user has signed
+      // in (splash/login screens are themselves gated by it), so requiring
+      // auth here would make the kill-switch unusable for exactly the users
+      // who most need to see "update required."
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ============================================
     // INTERVIEW SYSTEM (AI-Powered Interview Module)
     // ============================================
 
@@ -621,9 +592,12 @@ service cloud.firestore {
 
     // Interview questions - authenticated users can read/write questions
     // Questions are session-specific and stored temporarily during interview
+    // Shared question bank, seeded out-of-band (console/Admin SDK) -- no client writer
+    // exists anywhere in the app (KMP or web only ever read this collection), so any
+    // authenticated user having write access was excess permission, not a feature.
     match /interview_questions/{questionId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if false;
     }
 
     // Interview responses - users can write their own responses (cannot modify olqScores/analyzedBy)
@@ -637,6 +611,13 @@ service cloud.firestore {
 
     // Webhook logs - server-side backend only (no client access)
     match /webhook_logs/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Payment records - written only by functions/src/webhooks.js via the
+    // Admin SDK (which bypasses these rules entirely). Explicit deny-all
+    // here for defense in depth, matching webhook_logs above.
+    match /payments/{paymentId} {
       allow read, write: if false;
     }
 
@@ -657,6 +638,16 @@ service cloud.firestore {
     match /generic_questions/{questionId} {
       allow read: if isAuthenticated();
       allow write: if false;  // Only admins can write via console
+    }
+
+    // Question usage log - append-only telemetry (questionId/sessionId, no
+    // userId field to scope ownership to). Clients record usage; nothing
+    // reads it back client-side (GitLiveQuestionCacheRepository.getCacheStats
+    // aggregates question_cache/generic_questions, not this collection).
+    match /question_usage/{usageId} {
+      allow read: if false;
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
     }
 
     // ============================================

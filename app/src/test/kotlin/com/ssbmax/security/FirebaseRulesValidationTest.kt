@@ -102,14 +102,26 @@ class FirebaseRulesValidationTest {
             userRules.contains("allow read: if isOwner(userId)"))
     }
 
+    /**
+     * Phase 1 (Payment Ecosystem Hardening plan, finding C1): this used to assert
+     * `allow read, write: if isOwner(userId)` -- i.e. it pinned the vulnerable shape. Firestore
+     * rules are ADDITIVE, so that broad grant silently overrode the `allow write: if false` on the
+     * subscription document further down, letting any signed-in user grant themselves PREMIUM.
+     * The exclusion has to live on THIS broad rule, because a more specific block can only ever
+     * grant more, never revoke. Read stays owner-wide, and every other document here (notably
+     * `profile`, written by GitLiveUserProfileRepository) stays client-writable -- locking the
+     * whole subcollection down would break profile saves app-wide.
+     */
     @Test
-    fun `users data subcollection is protected`() {
+    fun `users data subcollection is writable by its owner except the subscription document`() {
         val content = getRulesContent()
         val dataSubcollection = content.substringAfter("match /data/{document}")
             .substringBefore("}")
 
-        assertTrue("Data subcollection should require ownership",
-            dataSubcollection.contains("allow read, write: if isOwner(userId)"))
+        assertTrue("Data subcollection should require ownership for read",
+            dataSubcollection.contains("allow read: if isOwner(userId)"))
+        assertTrue("Data subcollection write should require ownership and exclude subscription",
+            dataSubcollection.contains("allow write: if isOwner(userId) && document != 'subscription'"))
     }
 
     @Test
@@ -140,46 +152,29 @@ class FirebaseRulesValidationTest {
     // ==================== Test Usage Tracking Tests ====================
 
     @Test
-    fun `test_usage requires all required fields`() {
+    fun `usage docs are readable by their owner`() {
         val content = getRulesContent()
-        val testUsageRules = content.substringAfter("match /subscription/{document}")
-            .substringBefore("// NEVER allow delete")
-
-        val requiredFields = listOf(
-            "oirTestsUsed", "tatTestsUsed", "watTestsUsed",
-            "srtTestsUsed", "ppdtTestsUsed", "gtoTestsUsed",
-            "interviewTestsUsed", "sdTestsUsed", "lastUpdated"
-        )
-
-        requiredFields.forEach { field ->
-            assertTrue("test_usage should require field: $field",
-                testUsageRules.contains("'$field'"))
-        }
-    }
-
-    @Test
-    fun `test_usage validates integer types and non-negative values`() {
-        val content = getRulesContent()
-        val testUsageRules = content.substringAfter("match /subscription/{document}")
-            .substringBefore("// NEVER allow delete")
-
-        // Check that oirTestsUsed has validation for >= 0
-        assertTrue("Should validate oirTestsUsed >= 0",
-            testUsageRules.contains("request.resource.data.oirTestsUsed >= 0"))
-    }
-
-    @Test
-    fun `test_usage is user-specific`() {
-        val content = getRulesContent()
-        val testUsageRules = content.substringAfter("match /subscription/{document}")
-            .substringBefore("// NEVER allow delete")
+        val usageRules = content.substringAfter("match /subscription/{document}")
+            .substringBefore("// User subscription data")
 
         assertTrue("Users should read own usage",
-            testUsageRules.contains("allow read: if isOwner(userId)"))
-        // Check for create and update (not generic write)
-        assertTrue("Users should create/update own usage",
-            testUsageRules.contains("allow create: if isOwner(userId)") ||
-            testUsageRules.contains("allow update: if isOwner(userId)"))
+            usageRules.contains("allow read: if isOwner(userId)"))
+    }
+
+    // Phase 5 (docs/plans/CrossPlatform_SSOT): the recordTestUsage callable Cloud Function
+    // (functions/src/eligibility.js, Admin SDK) is now the sole writer of usage_{month} docs --
+    // the old client-writable increment-by-one create/update rules this test class used to pin
+    // (`test_usage requires all required fields` / `validates integer types` / `is user-specific`)
+    // are gone. Admin SDK writes bypass rules entirely, so "no client write, of any shape" is the
+    // whole contract now.
+    @Test
+    fun `usage docs cannot be written by a client, of any shape`() {
+        val content = getRulesContent()
+        val usageRules = content.substringAfter("match /subscription/{document}")
+            .substringBefore("// User subscription data")
+
+        assertTrue("Clients cannot write usage docs",
+            usageRules.contains("allow write: if false"))
     }
 
     // ==================== Subscription Data Tests ====================
@@ -187,7 +182,8 @@ class FirebaseRulesValidationTest {
     @Test
     fun `subscription data is read-only from client`() {
         val content = getRulesContent()
-        val subscriptionRules = content.substringAfter("match /data/subscription")
+        val subscriptionRules = content.substringAfter("// User subscription data")
+            .substringAfter("match /data/subscription")
             .substringBefore("}")
 
         assertTrue("Clients can read subscription",
@@ -199,25 +195,33 @@ class FirebaseRulesValidationTest {
     // ==================== OIR Test Content Tests ====================
 
     @Test
-    fun `OIR metadata is read-only for authenticated users`() {
+    fun `OIR metadata is public read-only`() {
+        // Widened from isAuthenticated() to `if true` in ea4b938c so the unauthenticated
+        // Playwright E2E wiring test (scripts/e2e-ssb-wiring-test.mjs) and web's dev
+        // fallback test content can read question metadata without a login step -- test
+        // content carries no PII, only writes need to stay locked down.
         val content = getRulesContent()
         val oirMetaRules = content.substringAfter("match /test_content/oir/meta/{document}")
             .substringBefore("}")
 
-        assertTrue("Authenticated users can read OIR metadata",
-            oirMetaRules.contains("allow read: if isAuthenticated()"))
+        assertTrue("Anyone can read OIR metadata",
+            oirMetaRules.contains("allow read: if true"))
         assertTrue("Clients cannot write OIR metadata",
             oirMetaRules.contains("allow write: if false"))
     }
 
     @Test
-    fun `OIR question batches are read-only for authenticated users`() {
+    fun `OIR question batches are public read-only`() {
+        // Phase 0b (CrossPlatform_SSOT): "question_batches" was a web-only path-drift
+        // collection nobody wrote to; the KMP/web-authoritative path is "batches"
+        // (GitLiveOIRQuestionCacheManager.FIRESTORE_BATCHES).
+        // Widened from isAuthenticated() to `if true` in ea4b938c -- see rationale above.
         val content = getRulesContent()
-        val oirBatchRules = content.substringAfter("match /test_content/oir/question_batches/{batchId}")
+        val oirBatchRules = content.substringAfter("match /test_content/oir/batches/{batchId}")
             .substringBefore("}")
 
-        assertTrue("Authenticated users can read question batches",
-            oirBatchRules.contains("allow read: if isAuthenticated()"))
+        assertTrue("Anyone can read question batches",
+            oirBatchRules.contains("allow read: if true"))
         assertTrue("Clients cannot write question batches",
             oirBatchRules.contains("allow write: if false"))
     }
@@ -326,13 +330,23 @@ class FirebaseRulesValidationTest {
     @Test
     fun `study materials are read-only for authenticated users`() {
         val content = getRulesContent()
-        val studyMaterialsRules = content.substringAfter("match /studyMaterials/{materialId}")
-            .substringBefore("// USER PROGRESS")
+        val studyMaterialsRules = content.substringAfter("match /study_materials/{materialId}")
+            .substringBefore("// CONTENT VERSIONS")
 
         assertTrue("Authenticated users can read study materials",
             studyMaterialsRules.contains("allow read: if isAuthenticated()"))
         assertTrue("Clients cannot write study materials",
             studyMaterialsRules.contains("allow write: if false"))
+    }
+
+    @Test
+    fun `the orphaned camelCase studyMaterials and userProgress rule blocks were removed in Phase 2`() {
+        val content = getRulesContent()
+
+        assertFalse("studyMaterials (camelCase) was a dead alias of study_materials, removed in Phase 2 of docs/plans/CrossPlatform_SSOT",
+            content.contains("match /studyMaterials/"))
+        assertFalse("userProgress (camelCase) was a dead alias of user_progress, removed in Phase 2 of docs/plans/CrossPlatform_SSOT",
+            content.contains("match /userProgress/"))
     }
 
     // ==================== Security Best Practices Tests ====================
@@ -370,7 +384,7 @@ class FirebaseRulesValidationTest {
         val content = getRulesContent()
 
         val criticalCollections = listOf(
-            "users", "test_usage", "subscription", "test_sessions",
+            "users", "subscription", "test_sessions",
             "submissions", "test_content/oir"
         )
 

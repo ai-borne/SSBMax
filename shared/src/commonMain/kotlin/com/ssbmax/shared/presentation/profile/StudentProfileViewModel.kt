@@ -104,8 +104,8 @@ class StudentProfileViewModel(
             val phase2Completion = (phase2Tests.count { it.latestScore != null } * 33).coerceAtMost(100)
 
             _uiState.value = StudentProfileUiState(
-                userName = userProfile?.fullName ?: currentUser.displayName ?: "SSB Aspirant",
-                userEmail = userProfile?.userId ?: currentUser.email ?: "",
+                userName = userProfile?.fullName ?: currentUser.displayName,
+                userEmail = userProfile?.userId ?: currentUser.email,
                 photoUrl = userProfile?.profilePictureUrl ?: currentUser.photoUrl,
                 isPremium = subscriptionTier == SubscriptionTier.PREMIUM,
                 totalTestsAttempted = totalTestsAttempted,

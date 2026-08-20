@@ -126,7 +126,7 @@ class PIQTestViewModelTest {
     fun `submitTest blocked when eligibility limit is reached`() = runTest(testDispatcher) {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult =
-            Result.success(mapOf("PIQ Forms" to UsageInfo(used = 1, limit = 1)))
+            Result.success(mapOf("PIQ" to UsageInfo(used = 1, limit = 1)))
         val viewModel = buildViewModel()
         viewModel.initialize("piq_standard")
         testDispatcher.scheduler.advanceUntilIdle()

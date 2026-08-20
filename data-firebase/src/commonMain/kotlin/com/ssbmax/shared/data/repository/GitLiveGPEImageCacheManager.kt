@@ -1,5 +1,6 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import com.ssbmax.shared.db.CachedGPEImage as CachedGPEImageRow
 import com.ssbmax.shared.db.SharedDatabase
 import com.ssbmax.shared.domain.model.GPEQuestion
@@ -36,7 +37,6 @@ class GitLiveGPEImageCacheManager(
     private val queries get() = database.sharedDatabaseQueries
 
     private companion object {
-        const val COLLECTION_PATH = "test_content/gto/scenarios/gpe/batches"
         const val TARGET_CACHE_SIZE = 15
         const val MIN_CACHE_SIZE = 5
         const val DEFAULT_BATCH_ID = "batch_001"
@@ -55,7 +55,7 @@ class GitLiveGPEImageCacheManager(
     }
 
     suspend fun downloadBatch(batchId: String): Result<Unit> = try {
-        val doc = Firebase.firestore.document("$COLLECTION_PATH/$batchId").get()
+        val doc = Firebase.firestore.document("${SsbContracts.FirestorePaths.TestContent.GPE_BATCHES}/$batchId").get()
 
         if (!doc.exists) {
             Result.failure(Exception("Batch $batchId not found in Firestore"))

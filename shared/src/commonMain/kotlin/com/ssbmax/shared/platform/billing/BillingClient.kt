@@ -1,5 +1,7 @@
 package com.ssbmax.shared.platform.billing
 
+import com.ssbmax.shared.domain.model.SubscriptionTier
+
 /**
  * Cross-platform subscription billing: Android actual wraps Play Billing
  * (`com.android.billingclient`), iOS actual wraps StoreKit 1
@@ -58,17 +60,32 @@ data class PurchaseResult(
 )
 
 /**
- * PLACEHOLDER product IDs — not registered in either Play Console or App
- * Store Connect. Real product/price IDs are a business decision explicitly
- * out of this shim's scope (per the migration plan); swap these for the
- * real IDs before shipping billing. Matches the ID shape (not value) the
- * pre-shim mock `BillingRepository` used ("premium_monthly"/"premium_yearly").
+ * Product/package IDs, matching RevenueCat's Test Store Product Catalog exactly
+ * (Offering `default`; packages `basic_monthly`/`pro_monthly`/`premium_monthly`, one-to-one
+ * with the products of the same names) -- this is also the one place RevenueCat's purchase flow
+ * (`shared/.../platform/billing/revenuecat/`) reads product IDs from, deliberately not a second,
+ * competing ID list, per the RevenueCat integration decision ("keep RevenueCat/store product IDs
+ * centralized"). These three are real Test Store identifiers now, not placeholders -- swap only
+ * happens at the RevenueCat dashboard level (attaching real Play/App Store products to the same
+ * package identifiers) before release, not in this file. `INTERVIEW_TOPUP` stays a PLACEHOLDER:
+ * out of scope until RevenueCat's Product Catalog actually has it (explicit decision, not yet).
+ * `*_YEARLY`/`*_QUARTERLY` are out of scope too (monthly-only pricing for now).
  */
 object SSBMaxProductIds {
-    const val PREMIUM_MONTHLY = "ssbmax_premium_monthly_PLACEHOLDER"
-    const val PREMIUM_YEARLY = "ssbmax_premium_yearly_PLACEHOLDER"
+    const val BASIC_MONTHLY = "basic_monthly"
+    const val PRO_MONTHLY = "pro_monthly"
+    const val PREMIUM_MONTHLY = "premium_monthly"
+    const val INTERVIEW_TOPUP = "interview_topup_PLACEHOLDER"
 
-    val ALL = listOf(PREMIUM_MONTHLY, PREMIUM_YEARLY)
+    val ALL = listOf(BASIC_MONTHLY, PRO_MONTHLY, PREMIUM_MONTHLY, INTERVIEW_TOPUP)
+
+    /** Null for FREE -- there's no product to purchase for it. */
+    fun forTier(tier: SubscriptionTier): String? = when (tier) {
+        SubscriptionTier.FREE -> null
+        SubscriptionTier.BASIC -> BASIC_MONTHLY
+        SubscriptionTier.PRO -> PRO_MONTHLY
+        SubscriptionTier.PREMIUM -> PREMIUM_MONTHLY
+    }
 }
 
 /** Thrown when the user backs out of the platform purchase sheet. Not an error. */

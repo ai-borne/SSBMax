@@ -8,8 +8,7 @@ describe('AccountPage Component', () => {
     uid: 'test-cadet-uid-123',
     displayName: 'Cadet Vikram Sharma',
     email: 'vikram.sharma@ssbmax.in',
-    photoURL: null,
-    isPaidMember: false
+    photoURL: null
   };
 
   it('renders account page title, user details, and free tier badge', () => {
@@ -23,8 +22,7 @@ describe('AccountPage Component', () => {
   });
 
   it('displays pro officer pass badge when user is a paid member', () => {
-    const proUser = { ...mockUser, isPaidMember: true };
-    render(<AccountPage user={proUser} />);
+    render(<AccountPage user={mockUser} isPaidMember />);
 
     expect(screen.getByTestId('membership-badge')).toHaveTextContent(strings.subscription.proPlanTitle);
   });
@@ -51,5 +49,14 @@ describe('AccountPage Component', () => {
 
     fireEvent.click(screen.getByTestId('upgrade-pass-button'));
     expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies Level 2 elevation styling to user profile card', () => {
+    render(<AccountPage user={mockUser} />);
+
+    const accountPage = screen.getByTestId('account-page');
+    const profileCard = accountPage.querySelector('.rounded-3xl');
+    expect(profileCard?.className).toContain('dark:bg-slate-800/90');
+    expect(profileCard?.className).toContain('dark:border-slate-700/80');
   });
 });

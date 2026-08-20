@@ -49,4 +49,27 @@ describe('PsychologyTestRunner Component Unit Tests', () => {
 
     expect(mockViewModel.updateResponse).toHaveBeenCalledWith('wat-1', 'Leadership inspires teamwork.');
   });
+
+  it('should render Return to SSB Tests button on completion screen and trigger onExitTest when clicked', () => {
+    mockViewModel.getState.mockReturnValue({
+      testType: 'WAT',
+      slides: [],
+      currentSlideIndex: 0,
+      responses: {},
+      isLoading: false,
+      isSubmitting: false,
+      isCompleted: true,
+      error: null
+    });
+    const onExitTestSpy = vi.fn();
+
+    render(<PsychologyTestRunner viewModel={mockViewModel} userId="user-1" onExitTest={onExitTestSpy} />);
+
+    expect(screen.getByText(strings.psychology.completedTitle)).toBeInTheDocument();
+    const returnBtn = screen.getByTestId('return-to-tests-button');
+    expect(returnBtn).toBeInTheDocument();
+
+    fireEvent.click(returnBtn);
+    expect(onExitTestSpy).toHaveBeenCalled();
+  });
 });

@@ -18,38 +18,67 @@ class SubscriptionLimitsTest {
 
     @Test
     fun `FREE tier matches the Android SubscriptionRepositoryImpl limits`() {
-        assertEquals(1, SubscriptionLimits.limitFor("OIR Tests", SubscriptionTier.FREE))
-        assertEquals(1, SubscriptionLimits.limitFor("PPDT Tests", SubscriptionTier.FREE))
-        assertEquals(1, SubscriptionLimits.limitFor("PIQ Forms", SubscriptionTier.FREE))
-        assertEquals(0, SubscriptionLimits.limitFor("TAT Tests", SubscriptionTier.FREE))
-        assertEquals(0, SubscriptionLimits.limitFor("Interview", SubscriptionTier.FREE))
+        assertEquals(1, SubscriptionLimits.limitFor("OIR", SubscriptionTier.FREE))
+        assertEquals(1, SubscriptionLimits.limitFor("PPDT", SubscriptionTier.FREE))
+        assertEquals(1, SubscriptionLimits.limitFor("PIQ", SubscriptionTier.FREE))
+        assertEquals(0, SubscriptionLimits.limitFor("TAT", SubscriptionTier.FREE))
+        assertEquals(0, SubscriptionLimits.limitFor("INTERVIEW", SubscriptionTier.FREE))
     }
 
     @Test
-    fun `PRO tier matches the Android SubscriptionRepositoryImpl limits`() {
-        assertEquals(5, SubscriptionLimits.limitFor("OIR Tests", SubscriptionTier.PRO))
-        assertEquals(5, SubscriptionLimits.limitFor("PPDT Tests", SubscriptionTier.PRO))
-        assertEquals(-1, SubscriptionLimits.limitFor("PIQ Forms", SubscriptionTier.PRO))
-        assertEquals(3, SubscriptionLimits.limitFor("TAT Tests", SubscriptionTier.PRO))
-        assertEquals(1, SubscriptionLimits.limitFor("Interview", SubscriptionTier.PRO))
+    fun `BASIC tier matches the pricing-restructure monotonic limits`() {
+        assertEquals(5, SubscriptionLimits.limitFor("OIR", SubscriptionTier.BASIC))
+        assertEquals(5, SubscriptionLimits.limitFor("PPDT", SubscriptionTier.BASIC))
+        assertEquals(5, SubscriptionLimits.limitFor("PIQ", SubscriptionTier.BASIC))
+        assertEquals(5, SubscriptionLimits.limitFor("TAT", SubscriptionTier.BASIC))
+        assertEquals(1, SubscriptionLimits.limitFor("INTERVIEW", SubscriptionTier.BASIC))
     }
 
     @Test
-    fun `PREMIUM tier is unlimited for every test type except Interview`() {
-        SubscriptionLimits.testTypeKeys.filter { it != "Interview" }.forEach { key ->
-            assertEquals(-1, SubscriptionLimits.limitFor(key, SubscriptionTier.PREMIUM), "expected $key unlimited for PREMIUM")
-        }
+    fun `PRO tier matches the pricing-restructure monotonic limits`() {
+        assertEquals(8, SubscriptionLimits.limitFor("OIR", SubscriptionTier.PRO))
+        assertEquals(8, SubscriptionLimits.limitFor("PPDT", SubscriptionTier.PRO))
+        assertEquals(8, SubscriptionLimits.limitFor("PIQ", SubscriptionTier.PRO))
+        assertEquals(8, SubscriptionLimits.limitFor("TAT", SubscriptionTier.PRO))
+        assertEquals(3, SubscriptionLimits.limitFor("INTERVIEW", SubscriptionTier.PRO))
     }
 
     /**
-     * Interview is capped at 3/month even for PREMIUM — the one deliberate exception to
-     * "PREMIUM is unlimited," per the interview-limits SSOT unification (was nominally
-     * unlimited here while [com.ssbmax.shared.domain.model.interview.InterviewLimits] separately
-     * enforced 3; this table is now the only place either number lives).
+     * PREMIUM is capped, not unlimited, everywhere except PIQ -- the pricing restructure
+     * replaced the old "-1 everywhere but Interview" model with explicit per-bucket caps
+     * (OIR/PPDT/TAT/WAT/SRT/SD/GTO -> 15, INTERVIEW -> 10) so usage stays boundable.
      */
     @Test
-    fun `PREMIUM tier caps Interview at 3`() {
-        assertEquals(3, SubscriptionLimits.limitFor("Interview", SubscriptionTier.PREMIUM))
+    fun `PREMIUM tier caps every bucket except PIQ`() {
+        SubscriptionLimits.testTypeKeys.filter { it != "PIQ" && it != "INTERVIEW" }.forEach { key ->
+            assertEquals(15, SubscriptionLimits.limitFor(key, SubscriptionTier.PREMIUM), "expected $key capped at 15 for PREMIUM")
+        }
+        assertEquals(-1, SubscriptionLimits.limitFor("PIQ", SubscriptionTier.PREMIUM))
+    }
+
+    /**
+     * Interview is capped at 10/month even for PREMIUM -- the one deliberate exception to
+     * "PREMIUM is (near-)unlimited," per the interview-limits SSOT unification (this table
+     * is the only place either number lives; see [com.ssbmax.shared.domain.model.interview.InterviewLimits]).
+     */
+    @Test
+    fun `PREMIUM tier caps Interview at 10`() {
+        assertEquals(10, SubscriptionLimits.limitFor("INTERVIEW", SubscriptionTier.PREMIUM))
+    }
+
+    @Test
+    fun `limits are monotonic non-decreasing across FREE BASIC PRO PREMIUM for every bucket`() {
+        SubscriptionLimits.testTypeKeys.forEach { key ->
+            val free = SubscriptionLimits.limitFor(key, SubscriptionTier.FREE)
+            val basic = SubscriptionLimits.limitFor(key, SubscriptionTier.BASIC)
+            val pro = SubscriptionLimits.limitFor(key, SubscriptionTier.PRO)
+            val premium = SubscriptionLimits.limitFor(key, SubscriptionTier.PREMIUM)
+            // -1 means unlimited -- always the ceiling regardless of numeric ordering.
+            fun rank(n: Int) = if (n == -1) Int.MAX_VALUE else n
+            assertTrue(rank(free) <= rank(basic), "$key: FREE ($free) > BASIC ($basic)")
+            assertTrue(rank(basic) <= rank(pro), "$key: BASIC ($basic) > PRO ($pro)")
+            assertTrue(rank(pro) <= rank(premium), "$key: PRO ($pro) > PREMIUM ($premium)")
+        }
     }
 
     @Test
@@ -79,6 +108,6 @@ class SubscriptionLimitsTest {
             TestType.GTO_GD, TestType.GTO_GPE, TestType.GTO_PGT, TestType.GTO_GOR,
             TestType.GTO_HGT, TestType.GTO_LECTURETTE, TestType.GTO_IO, TestType.GTO_CT
         )
-        gtoTypes.forEach { assertEquals("GTO Tests", SubscriptionLimits.keyFor(it)) }
+        gtoTypes.forEach { assertEquals("GTO", SubscriptionLimits.keyFor(it)) }
     }
 }

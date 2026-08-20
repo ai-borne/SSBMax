@@ -24,7 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
+import com.ssbmax.shared.ui.common.SsbBackHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssbmax.shared.domain.model.SubscriptionTier
@@ -91,7 +91,7 @@ fun TATTestScreen(
     // Hardware/predictive back must go through the same exit path as the back-arrow icon --
     // otherwise it silently pops the nav stack and leaves the durable test_sessions doc stuck
     // ACTIVE (see PPDTTestScreen's identical fix for the same bug).
-    BackHandler(enabled = uiState.questions.isNotEmpty() && !uiState.isSubmitted) {
+    SsbBackHandler(enabled = uiState.questions.isNotEmpty() && !uiState.isSubmitted) {
         showExitDialog = true
     }
 
@@ -197,7 +197,7 @@ fun TATTestScreen(
 
     if (showSubmitDialog) {
         TATSubmitDialog(
-            completedStories = uiState.completedStories,
+            completedStories = uiState.storiesReadyToSubmit,
             totalStories = uiState.questions.size,
             onDismiss = { showSubmitDialog = false },
             onSubmit = { showSubmitDialog = false; viewModel.submitTest() }

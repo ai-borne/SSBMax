@@ -12,7 +12,10 @@ import com.ssbmax.shared.domain.repository.SubmissionRepository
 import com.ssbmax.shared.domain.service.ResponseAnalysis
 import com.ssbmax.shared.domain.service.OLQScoreWithReasoning
 import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
+import com.ssbmax.shared.domain.model.FeatureFlags
 import com.ssbmax.shared.presentation.testing.FakeAIService
+import com.ssbmax.shared.presentation.testing.FakeEvaluationFunctionsClient
+import com.ssbmax.shared.presentation.testing.FakeFeatureFlagRepository
 import com.ssbmax.shared.presentation.testing.FakeGTORepository
 import com.ssbmax.shared.presentation.testing.FakeInterviewRepository
 import com.ssbmax.shared.presentation.testing.FakeSubmissionRepository
@@ -78,7 +81,8 @@ class PsychAnalysisOrchestratorsTest {
         }
         val aiService = FakeAIService().apply { responseAnalysisResult = Result.success(fullOlqAnalysis()) }
         val orchestrator = WATAnalysisOrchestrator(
-            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger()
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
         )
 
         orchestrator.analyze("wat-1")
@@ -102,7 +106,8 @@ class PsychAnalysisOrchestratorsTest {
             responseAnalysisResult = Result.success(partialOlqAnalysis(missing = OLQ.STAMINA))
         }
         val orchestrator = WATAnalysisOrchestrator(
-            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger()
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
         )
 
         orchestrator.analyze("wat-1")
@@ -118,7 +123,8 @@ class PsychAnalysisOrchestratorsTest {
         }
         val aiService = FakeAIService()
         val orchestrator = WATAnalysisOrchestrator(
-            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger()
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
         )
 
         orchestrator.analyze("wat-1")
@@ -144,13 +150,36 @@ class PsychAnalysisOrchestratorsTest {
             )
         }
         val orchestrator = WATAnalysisOrchestrator(
-            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger()
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
         )
 
         orchestrator.analyze("wat-1")
 
         assertEquals(AnalysisStatus.FAILED, recordedStatus)
     }
+
+    @Test
+    fun `WAT analyze delegates to the server-side evaluation function and skips the legacy AI path when wat_server_evaluation is enabled`() =
+        kotlinx.coroutines.test.runTest {
+            val submissionRepo = FakeSubmissionRepository().apply {
+                watSubmissionResult = Result.success(watSubmission(AnalysisStatus.PENDING_ANALYSIS))
+            }
+            val aiService = FakeAIService()
+            val evaluationFunctionsClient = FakeEvaluationFunctionsClient()
+            val featureFlagRepository = FakeFeatureFlagRepository(
+                flagsResult = FeatureFlags(flags = mapOf("wat_server_evaluation" to true))
+            )
+            val orchestrator = WATAnalysisOrchestrator(
+                submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+                featureFlagRepository, evaluationFunctionsClient
+            )
+
+            orchestrator.analyze("wat-1")
+
+            assertEquals(listOf("wat-1"), evaluationFunctionsClient.evaluateWATCalls)
+            assertTrue(aiService.recordedPrompts.isEmpty(), "legacy client-side AI path must not run when the flag is on")
+        }
 
     // --- SRT ---
 
@@ -163,12 +192,55 @@ class PsychAnalysisOrchestratorsTest {
         val submissionRepo = FakeSubmissionRepository().apply { srtSubmissionResult = Result.success(submission) }
         val aiService = FakeAIService().apply { responseAnalysisResult = Result.success(fullOlqAnalysis()) }
         val orchestrator = SRTAnalysisOrchestrator(
-            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger()
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
         )
 
         orchestrator.analyze("srt-1")
 
         assertEquals(1, aiService.recordedPrompts.size)
+    }
+
+    @Test
+    fun `SRT analyze delegates to the server-side evaluation function and skips the legacy AI path when srt_server_evaluation is enabled`() =
+        kotlinx.coroutines.test.runTest {
+            val submission = SRTSubmission(
+                id = "srt-1", userId = "user-1", testId = "test-1", responses = emptyList(),
+                totalTimeTakenMinutes = 30, submittedAt = 0L, analysisStatus = AnalysisStatus.PENDING_ANALYSIS
+            )
+            val submissionRepo = FakeSubmissionRepository().apply { srtSubmissionResult = Result.success(submission) }
+            val aiService = FakeAIService()
+            val evaluationFunctionsClient = FakeEvaluationFunctionsClient()
+            val featureFlagRepository = FakeFeatureFlagRepository(
+                flagsResult = FeatureFlags(flags = mapOf("srt_server_evaluation" to true))
+            )
+            val orchestrator = SRTAnalysisOrchestrator(
+                submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+                featureFlagRepository, evaluationFunctionsClient
+            )
+
+            orchestrator.analyze("srt-1")
+
+            assertEquals(listOf("srt-1"), evaluationFunctionsClient.evaluateSRTCalls)
+            assertTrue(aiService.recordedPrompts.isEmpty(), "legacy client-side AI path must not run when the flag is on")
+        }
+
+    @Test
+    fun `SRT analyze skips submissions that are not PENDING_ANALYSIS`() = kotlinx.coroutines.test.runTest {
+        val submission = SRTSubmission(
+            id = "srt-1", userId = "user-1", testId = "test-1", responses = emptyList(),
+            totalTimeTakenMinutes = 30, submittedAt = 0L, analysisStatus = AnalysisStatus.COMPLETED
+        )
+        val submissionRepo = FakeSubmissionRepository().apply { srtSubmissionResult = Result.success(submission) }
+        val aiService = FakeAIService()
+        val orchestrator = SRTAnalysisOrchestrator(
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
+        )
+
+        orchestrator.analyze("srt-1")
+
+        assertTrue(aiService.recordedPrompts.isEmpty())
     }
 
     // --- SD ---
@@ -182,11 +254,54 @@ class PsychAnalysisOrchestratorsTest {
         val submissionRepo = FakeSubmissionRepository().apply { sdtSubmissionResult = Result.success(submission) }
         val aiService = FakeAIService().apply { responseAnalysisResult = Result.success(fullOlqAnalysis()) }
         val orchestrator = SDAnalysisOrchestrator(
-            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger()
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
         )
 
         orchestrator.analyze("sd-1")
 
         assertEquals(1, aiService.recordedPrompts.size)
+    }
+
+    @Test
+    fun `SD analyze delegates to the server-side evaluation function and skips the legacy AI path when sd_server_evaluation is enabled`() =
+        kotlinx.coroutines.test.runTest {
+            val submission = SDTSubmission(
+                id = "sd-1", userId = "user-1", testId = "test-1", responses = emptyList(),
+                totalTimeTakenMinutes = 15, submittedAt = 0L, analysisStatus = AnalysisStatus.PENDING_ANALYSIS
+            )
+            val submissionRepo = FakeSubmissionRepository().apply { sdtSubmissionResult = Result.success(submission) }
+            val aiService = FakeAIService()
+            val evaluationFunctionsClient = FakeEvaluationFunctionsClient()
+            val featureFlagRepository = FakeFeatureFlagRepository(
+                flagsResult = FeatureFlags(flags = mapOf("sd_server_evaluation" to true))
+            )
+            val orchestrator = SDAnalysisOrchestrator(
+                submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+                featureFlagRepository, evaluationFunctionsClient
+            )
+
+            orchestrator.analyze("sd-1")
+
+            assertEquals(listOf("sd-1"), evaluationFunctionsClient.evaluateSDCalls)
+            assertTrue(aiService.recordedPrompts.isEmpty(), "legacy client-side AI path must not run when the flag is on")
+        }
+
+    @Test
+    fun `SD analyze skips submissions that are not PENDING_ANALYSIS`() = kotlinx.coroutines.test.runTest {
+        val submission = SDTSubmission(
+            id = "sd-1", userId = "user-1", testId = "test-1", responses = emptyList(),
+            totalTimeTakenMinutes = 15, submittedAt = 0L, analysisStatus = AnalysisStatus.COMPLETED
+        )
+        val submissionRepo = FakeSubmissionRepository().apply { sdtSubmissionResult = Result.success(submission) }
+        val aiService = FakeAIService()
+        val orchestrator = SDAnalysisOrchestrator(
+            submissionRepo, FakeUserProfileRepository(), aiService, getOLQDashboard(submissionRepo), RecordingLogger(),
+            FakeFeatureFlagRepository(), FakeEvaluationFunctionsClient()
+        )
+
+        orchestrator.analyze("sd-1")
+
+        assertTrue(aiService.recordedPrompts.isEmpty())
     }
 }

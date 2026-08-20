@@ -68,7 +68,12 @@ allSrcFiles.forEach((filePath) => {
 // 2. Raw Hex Color Audit in JSX/TSX
 const HEX_COLOR_REGEX = /#(?:[0-9a-fA-F]{3}){1,2}\b/g;
 
-allSrcFiles.filter(f => (f.endsWith('.tsx') || f.endsWith('.ts')) && !f.includes('constants/colors.ts')).forEach((filePath) => {
+// generated/contracts.ts carries contracts/tokens.yaml's DesignTokens palette
+// (Phase 7) verbatim by design -- it's the one generated output with no
+// Kotlin/CJS equivalent besides tokens.css, and hand-editing it is already
+// forbidden by its own DO-NOT-EDIT header. Excluded here the same way
+// contracts/README.md carves generated/** out of the 300-LOC rule.
+allSrcFiles.filter(f => (f.endsWith('.tsx') || f.endsWith('.ts')) && !f.includes('constants/colors.ts') && !f.includes('/generated/')).forEach((filePath) => {
   const relPath = path.relative(WEB_SRC, filePath);
   const content = fs.readFileSync(filePath, 'utf8');
   
@@ -97,8 +102,20 @@ allSrcFiles.filter(f => f.includes('/viewmodels/')).forEach((filePath) => {
 });
 
 // 4. Strings Resource Reference Audit in Component Files
+//
+// Verified textless components: pure structural/layout wrappers or fully
+// prop-driven leaf components that render zero literal user-facing text of
+// their own (every string they display is passed in by a caller, which is
+// itself audited). Re-verify by reading the file before adding an entry here.
+const RESOURCE_AUDIT_EXEMPT = new Set([
+  'components/common/GridCardContainer.tsx',
+  'components/practice/piq/PIQChipsSelector.tsx',
+  'components/practice/runner/TestRunnerLayout.tsx'
+]);
+
 allSrcFiles.filter(f => f.includes('/components/') && f.endsWith('.tsx')).forEach((filePath) => {
   const relPath = path.relative(WEB_SRC, filePath);
+  if (RESOURCE_AUDIT_EXEMPT.has(relPath)) return;
   const content = fs.readFileSync(filePath, 'utf8');
   if (!content.includes('strings.') && !content.includes('strings')) {
     warnings.push(`[RESOURCE_AUDIT] Component ${relPath} does not import or reference centralized string resources (strings.*). Verify user-facing text is centralized.`);

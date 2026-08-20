@@ -5,6 +5,13 @@ import { authService, UserProfile } from '../../services/AuthService';
 
 export interface AccountPageProps {
   user?: UserProfile | null;
+  /**
+   * Whether the signed-in user is on a paid tier -- must come from the real
+   * `data/subscription.tier` read (`useSubscriptionViewModel`/`SubscriptionRepository`), not
+   * from `UserProfile.isPaidMember` (dead field, never populated by `AuthService`, see git
+   * history -- the same fix `AppLayout`'s badge needed).
+   */
+  isPaidMember?: boolean;
   onSignOut?: () => void;
   onEditDiagnostic?: () => void;
   onUpgradeClick?: () => void;
@@ -12,6 +19,7 @@ export interface AccountPageProps {
 
 export const AccountPage: FC<AccountPageProps> = ({
   user: initialUser,
+  isPaidMember = false,
   onSignOut,
   onEditDiagnostic,
   onUpgradeClick
@@ -39,7 +47,7 @@ export const AccountPage: FC<AccountPageProps> = ({
     }
   };
 
-  const isPro = currentUser?.isPaidMember ?? false;
+  const isPro = isPaidMember;
   const initials = currentUser?.displayName
     ? currentUser.displayName
         .split(' ')
@@ -50,7 +58,7 @@ export const AccountPage: FC<AccountPageProps> = ({
     : 'CD';
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8" data-testid="account-page">
+    <div className="max-w-4xl w-full mx-auto px-4 py-6 space-y-8" data-testid="account-page">
       {/* Header Banner */}
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider">
@@ -66,7 +74,7 @@ export const AccountPage: FC<AccountPageProps> = ({
       </div>
 
       {/* User Profile Card */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-6">
+      <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 pb-6 border-b border-slate-200 dark:border-slate-800">
           <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
             <div
@@ -87,7 +95,7 @@ export const AccountPage: FC<AccountPageProps> = ({
 
           <button
             onClick={handleSignOut}
-            className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 text-xs font-semibold transition-colors flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 text-xs font-semibold transition-colors flex items-center gap-2 min-h-[44px]"
             data-testid="sign-out-button"
           >
             <LogOut className="w-4 h-4" />
@@ -96,7 +104,7 @@ export const AccountPage: FC<AccountPageProps> = ({
         </div>
 
         {/* Subscription & Membership Status */}
-        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl ${isPro ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
               <Award className="w-6 h-6" />
@@ -112,7 +120,7 @@ export const AccountPage: FC<AccountPageProps> = ({
           {!isPro && onUpgradeClick && (
             <button
               onClick={onUpgradeClick}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-xs font-bold shadow-md"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-xs font-bold shadow-md min-h-[44px]"
               data-testid="upgrade-pass-button"
             >
               Upgrade to PRO
@@ -140,11 +148,11 @@ export const AccountPage: FC<AccountPageProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
               <span className="text-slate-500 block">Target Armed Force</span>
               <span className="font-bold text-slate-900 dark:text-slate-200 mt-0.5 block">Indian Army (SSB Board)</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
               <span className="text-slate-500 block">Entry Stream</span>
               <span className="font-bold text-slate-900 dark:text-slate-200 mt-0.5 block">CDS (Combined Defence Services)</span>
             </div>

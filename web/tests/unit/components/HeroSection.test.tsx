@@ -47,4 +47,35 @@ describe('HeroSection Component', () => {
     expect(heading?.className).toContain('dark:text-white');
     expect(heading?.className).toContain('text-slate-900');
   });
+
+  it('should apply animate-text-shimmer class to the AI gradient text span', () => {
+    const { container } = render(<HeroSection />);
+    // The <span> wrapping "AI" must carry the text shimmer animation class
+    const shimmerSpan = container.querySelector('span.animate-text-shimmer');
+    expect(shimmerSpan).toBeInTheDocument();
+    expect(shimmerSpan?.textContent?.trim()).toBe('AI');
+  });
+
+  it('should apply hover-lift and transition classes to all three hero stat cards', () => {
+    const { container } = render(<HeroSection />);
+    const statCards = container.querySelectorAll('[data-testid="hero-stat-card"]');
+    expect(statCards.length).toBe(3);
+    statCards.forEach((card) => {
+      expect(card.className).toContain('hover:-translate-y-1');
+      expect(card.className).toContain('transition-all');
+    });
+  });
+
+  it('should apply shimmer animation class to the primary CTA button', () => {
+    render(<HeroSection />);
+    const ctaBtn = screen.getByTestId('start-free-btn');
+    expect(ctaBtn.className).toContain('animate-shimmer');
+  });
+
+  it('should apply glow shadow class to the platform badge', () => {
+    const { container } = render(<HeroSection />);
+    const badge = container.querySelector('[data-testid="hero-platform-badge"]');
+    expect(badge).toBeInTheDocument();
+    expect(badge?.className).toContain('shadow-md');
+  });
 });

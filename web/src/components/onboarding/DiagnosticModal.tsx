@@ -41,18 +41,18 @@ export const DiagnosticModal: FC<DiagnosticModalProps> = ({
       data-testid="diagnostic-modal-backdrop"
     >
       <div 
-        className="w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200"
+        className="w-full max-w-lg bg-white dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl dark:shadow-slate-950/80 overflow-hidden animate-in fade-in zoom-in duration-200"
         data-testid="diagnostic-modal"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-800/80 border-b border-slate-700/60">
+        <div className="flex items-center justify-between px-6 py-4 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-700/60">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+            <div className="p-2 rounded-xl bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30">
               <Target className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-100">{strings.diagnostic.title}</h2>
-              <p className="text-xs text-slate-400">{strings.diagnostic.subtitle}</p>
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{strings.diagnostic.title}</h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{strings.diagnostic.subtitle}</p>
             </div>
           </div>
           <button 

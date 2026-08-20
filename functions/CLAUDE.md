@@ -94,6 +94,25 @@ service cloud.firestore {
 
 ---
 
+## Tier-2 Evaluation SSOT: `evaluation/` (the real pattern — read this before the generic example below)
+
+`functions/src/evaluation/` is the actual, current Tier-2 AI-evaluation architecture (Web SSB Test Flow Parity + Centralized Tier-2 Evaluation SSOT plan — tracked in `docs/plans/TestFlowParity_Tier2Evaluation_SSOT.md`, check it for current per-type Cutover status). The generic "Gemini AI Integration" pattern further down this file predates it and is kept only as a bare-Cloud-Functions teaching example — do not model a new evaluation type off it; extend the pattern here instead.
+
+**Shape:** one shared dispatcher, thin per-type wrappers.
+- `core.js` — `runEvaluation({ testType, submissionId, uid, buildPrompt, parseAndValidate, resultCollection })` owns every cross-cutting concern exactly once: auth check, ownership check (`submissions/{id}.userId === uid`), status guard (`PENDING_ANALYSIS` only — idempotent if called again), **server-side quota/eligibility re-check** against `users/{uid}/subscription/usage_{yyyy-MM}` (rejects `FAILED_PRECONDITION` over quota — this is what actually stops a client from calling an `evaluate*` callable directly and getting free Gemini evaluations regardless of tier), flip to `ANALYZING`, retry-wrapped Gemini call, result-doc write, status flip to `COMPLETED`/`FAILED`.
+- `olqPrompts.js`, `retry.js`, `validation.js`, `responseParser.js`, `geminiClient.js` — pure-function helpers `core.js` composes.
+- `ppdtEvaluate.js`, `tatEvaluate.js`, `watEvaluate.js`, `srtEvaluate.js`, `sdEvaluate.js`, `gtoEvaluate.js`, `interviewEvaluate.js` — one `https.onCall` per type, each taking only `{ submissionId }` (the function fetches the submission itself server-side — a client can't forge a payload). Each is a ~20-line wrapper supplying only its `buildPrompt`/`parseAndValidate` to `core.js::runEvaluation`. **Adding a new evaluation type or fixing a quota/retry/auth bug means changing `core.js` once, not seven files.**
+
+**SSRF guard:** `buildPrompt` for PPDT/TAT/GTO must resolve the image itself server-side from the submission's stored `questionId`/`batchId` against the known `test_content` Storage bucket. Never fetch a URL field read directly off the client-writable submission document — that's a live SSRF vector server-side (lower stakes on KMP's legacy client-side path since it's the user's own device).
+
+**TAT parallelization:** `tatEvaluate.js` runs its 12 per-story Gemini calls via `Promise.all` with a concurrency cap (~4-6, to stay under Gemini per-project QPS), then runs synthesis once after all stories resolve — not a sequential loop (worst case ~40 calls serially would blow past Cloud Functions' 9-minute ceiling). `timeoutSeconds: 540, memory: '512MB'` on this function only; other `evaluate*` functions stay at default 60s/256MB.
+
+**`evaluateOIR` doesn't exist** — `oirScoring.js::evaluateOIRAnswers` (pre-existing, now wired into both clients) is OIR's server-side path; it predates and sits outside the `core.js` dispatcher pattern since OIR is objective scoring, not Gemini evaluation.
+
+**`geminiProxy.js` is legacy but still live — do not delete it.** It's the passthrough `httpsCallable` KMP's un-cut-over legacy client-side orchestrators (`shared/.../analysis/*Orchestrator.kt`) still call directly for WAT/SRT/SD/Interview/GTO/PPDT/TAT (all "Shipped" behind a feature flag, not yet "Cutover" — see root `CLAUDE.md`). It has its own per-user hourly abuse cap since, unlike `evaluate*`, it accepts an arbitrary prompt from the client. It becomes deletable only once every type's Cutover lands and `grep -rn geminiProxy shared/ data-firebase/` returns nothing.
+
+---
+
 ## Gemini AI Integration (for Evaluation)
 
 **Pattern: Structured Prompt + JSON Response**

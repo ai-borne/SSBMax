@@ -17,6 +17,7 @@ import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.NoOpLogger
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
 import com.ssbmax.shared.presentation.testing.FakeGTORepository
+import com.ssbmax.shared.presentation.testing.FakeOIREvaluationClient
 import com.ssbmax.shared.presentation.testing.clearForTest
 import com.ssbmax.shared.presentation.testing.FakeInterviewRepository
 import com.ssbmax.shared.presentation.testing.FakeSubmissionRepository
@@ -110,9 +111,9 @@ class OIRTestViewModelTest {
 
     private fun buildViewModel(): OIRTestViewModel {
         val logger = NoOpLogger()
-        val scoreCalculator = OIRTestScoreCalculator(logger)
         val submitOIRTestUseCase = SubmitOIRTestUseCase(
-            scoreCalculator = scoreCalculator,
+            evaluationClient = FakeOIREvaluationClient(),
+            scoreCalculator = OIRTestScoreCalculator(logger),
             usageRecorder = FakeTestUsageRecorder(),
             dashboardUseCase = GetOLQDashboardUseCase(
                 submissionRepository = submissionRepository,
@@ -130,7 +131,6 @@ class OIRTestViewModelTest {
             observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
             checkTestEligibility = CheckTestEligibilityUseCase(subscriptionRepository, RecordingAnalyticsTracker()),
             getSubscriptionTier = GetSubscriptionTierUseCase(subscriptionRepository),
-            scoreCalculator = scoreCalculator,
             submitOIRTestUseCase = submitOIRTestUseCase,
             logger = logger,
             analyticsTracker = RecordingAnalyticsTracker()
@@ -190,7 +190,7 @@ class OIRTestViewModelTest {
     fun `limit reached surfaces subscription details without loading questions`() = runViewModelTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult =
-            Result.success(mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1)))
+            Result.success(mapOf("OIR" to UsageInfo(used = 1, limit = 1)))
 
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -303,7 +303,7 @@ class OIRTestViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue(state.isCompleted)
-        assertNotNull(state.sessionId)
+        assertNotNull(state.submissionId)
         assertEquals(SubscriptionTier.FREE, state.subscriptionType)
         assertNotNull(state.testResult)
         assertEquals(false, state.isTimerActive)

@@ -28,6 +28,10 @@ style:
     max: 4
   MaxLineLength:
     maxLineLength: 140
+    excludes: ['**/generated/**', '**/contracts/generated/**', '**/shared/contracts/**']
+    # Generated files (contracts/README.md "Generated-file LOC exemption",
+    # docs/plans/CrossPlatform_SSOT §4.2) mirror their YAML contract source
+    # 1:1 and must not be reformatted/split to satisfy style rules.
 
 naming:
   FunctionNaming:

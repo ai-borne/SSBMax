@@ -40,6 +40,12 @@ import kotlin.coroutines.resume
  * in front right now" problem, and one that doesn't require MainActivity to
  * change at all (unlike the permission controller's constraint, this one
  * isn't forced by an Android API registration-timing rule).
+ *
+ * REMOVAL TODO (Phase 4, RevenueCat integration): unbound and unused since RevenueCat's SDK
+ * (`shared/.../platform/billing/revenuecat/`) now owns the real purchase flow and wraps Play
+ * Billing internally. Fully working code, not a stub -- kept, not deleted, until RevenueCat is
+ * verified working end-to-end in production (per that plan's explicit decision point). Delete
+ * this file and its Koin binding together once that's confirmed.
  */
 class PlayBillingClient(context: Context) : BillingClient {
 
@@ -144,7 +150,11 @@ class PlayBillingClient(context: Context) : BillingClient {
 
     // Guard clauses are the safest, clearest shape for a billing flow; collapsing
     // them to satisfy ReturnCount would only obscure the preconditions.
-    @Suppress("ReturnCount")
+    // UnreachableCode: detekt false-positive on `?: return` elvis guards in this Kotlin/Android
+    // compiler combo -- every flagged line is a live `?:`-guarded early return, not dead code
+    // (confirmed: this file has zero call sites yet, per its own removal-TODO doc, so this was
+    // never actually a live code-review finding, just a detekt/compiler-version quirk).
+    @Suppress("ReturnCount", "UnreachableCode")
     override suspend fun purchase(productId: String): Result<PurchaseResult> {
         val activity = currentActivity
             ?: return Result.failure(IllegalStateException("No foreground Activity to launch the billing flow from"))

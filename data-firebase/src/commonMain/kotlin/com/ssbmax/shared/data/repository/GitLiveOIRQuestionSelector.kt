@@ -148,7 +148,8 @@ class GitLiveOIRQuestionSelector(
                 ?.let { runCatching { QuestionDifficulty.valueOf(it) }.getOrNull() }
                 ?: QuestionDifficulty.MEDIUM,
             timeSeconds = 60,
-            questionImageUrl = entity.questionImageUrl?.let { normalizeStorageUrl(it) }
+            questionImageUrl = entity.questionImageUrl?.let { normalizeStorageUrl(it) },
+            batchId = entity.batchId
         )
     }
 

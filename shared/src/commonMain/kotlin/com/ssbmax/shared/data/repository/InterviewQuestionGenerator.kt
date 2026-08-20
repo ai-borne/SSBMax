@@ -65,16 +65,25 @@ class InterviewQuestionGenerator(
     }
 
     /**
+     * Builds the comprehensive PIQ text context for [generateAIQuestions]'s Gemini call.
+     * Server-side `createInterviewSession`/`piqContextBuilder.js` (a port of
+     * [PIQContextBuilder]) does the equivalent resolution for the migrated session-creation
+     * path; this stays private here since it's now only this class's own legacy AI-generation
+     * fallback that needs it. Returns `null` if the PIQ submission is missing or malformed,
+     * matching [generateAIQuestions]'s own empty-list-on-failure behavior.
+     */
+    private suspend fun buildPiqContext(piqSnapshotId: String): String? {
+        val piqSubmissionMap = submissionRepository.getSubmission(piqSnapshotId).getOrNull() ?: return null
+        val piqContext = PIQContextBuilder.buildComprehensivePIQContext(piqSubmissionMap)
+        return piqContext.takeUnless { it.isBlank() || it.contains("Error processing PIQ") }
+    }
+
+    /**
      * Generate questions using AI from PIQ data, via the comprehensive [PIQContextBuilder] context
      * (all ~60 PIQ fields), matching the Android original's `generateAIQuestions`.
      */
     private suspend fun generateAIQuestions(piqSnapshotId: String, count: Int): List<InterviewQuestion> {
-        val piqSubmissionMap = submissionRepository.getSubmission(piqSnapshotId).getOrNull() ?: return emptyList()
-
-        val piqContext = PIQContextBuilder.buildComprehensivePIQContext(piqSubmissionMap)
-        if (piqContext.isBlank() || piqContext.contains("Error processing PIQ")) {
-            return emptyList()
-        }
+        val piqContext = buildPiqContext(piqSnapshotId) ?: return emptyList()
 
         val aiQuestions = aiService.generatePIQBasedQuestions(
             piqData = piqContext,

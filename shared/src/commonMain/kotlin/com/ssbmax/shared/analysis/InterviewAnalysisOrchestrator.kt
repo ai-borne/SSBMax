@@ -5,9 +5,11 @@ import com.ssbmax.shared.domain.model.interview.InterviewResponse
 import com.ssbmax.shared.domain.model.interview.InterviewStatus
 import com.ssbmax.shared.domain.model.interview.OLQ
 import com.ssbmax.shared.domain.model.interview.OLQScore
+import com.ssbmax.shared.domain.repository.FeatureFlagRepository
 import com.ssbmax.shared.domain.repository.InterviewRepository
 import com.ssbmax.shared.domain.scoring.EntryType
 import com.ssbmax.shared.domain.service.AIService
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
 import com.ssbmax.shared.domain.util.DomainLogger
 import com.ssbmax.shared.domain.validation.ValidationIntegration
@@ -19,12 +21,27 @@ import kotlinx.coroutines.delay
  * only its question's *expected* OLQs (a subset), not all 15, so the shared helper's
  * "accept only if >=14/15 OLQs present" acceptance rule doesn't apply here -- this
  * matches the Android original's own separate, simpler `analyzeResponseWithRetry`.
+ *
+ * Phase 7 Ship (Web SSB Test Flow Parity plan): behind [FEATURE_FLAG_SERVER_EVALUATION],
+ * default off. Interview keeps its per-response (not per-submission) evaluation shape,
+ * so unlike [WATAnalysisOrchestrator]/etc. the flag is checked once per session and,
+ * when on, delegates *each response* to `functions/src/evaluation/interviewEvaluate.js`
+ * via [evaluationFunctionsClient] instead of running the legacy client-side
+ * [analyzeResponseWithRetry] for that response -- the Cloud Function writes the
+ * response's `olqScores`/`confidenceScore` directly to Firestore, so the aggregation
+ * step below (which re-reads every response from [interviewRepository]) picks it up
+ * either way. One difference from the legacy path: on a server-side failure the
+ * response is left with empty `olqScores` rather than backfilled with
+ * [fallbackOLQScores] -- acceptable for a default-off canary path; the Cutover phase
+ * revisits this if bake-period data shows it matters.
  */
 class InterviewAnalysisOrchestrator(
     private val interviewRepository: InterviewRepository,
     private val aiService: AIService,
     private val getOLQDashboard: GetOLQDashboardUseCase,
-    private val logger: DomainLogger
+    private val logger: DomainLogger,
+    private val featureFlagRepository: FeatureFlagRepository,
+    private val evaluationFunctionsClient: EvaluationFunctionsClient
 ) {
     suspend fun analyze(sessionId: String) {
         val session = interviewRepository.getSession(sessionId).getOrNull() ?: run {
@@ -40,14 +57,23 @@ class InterviewAnalysisOrchestrator(
             return
         }
 
+        val useServerSideEvaluation =
+            featureFlagRepository.getFeatureFlags().isEnabled(FEATURE_FLAG_SERVER_EVALUATION)
+
         responses.forEachIndexed { index, response ->
-            val analysis = analyzeResponseWithRetry(response)
-            val updated = if (analysis != null) {
-                response.copy(olqScores = analysis, confidenceScore = analysis.values.map { it.confidence }.average().toInt())
+            if (useServerSideEvaluation) {
+                evaluationFunctionsClient.evaluateInterviewResponse(response.id, sessionId).onFailure {
+                    logger.e(TAG, "Server-side interview response evaluation failed: ${response.id}: ${it.message}")
+                }
             } else {
-                response.copy(olqScores = fallbackOLQScores(), confidenceScore = InterviewConstants.FALLBACK_CONFIDENCE)
+                val analysis = analyzeResponseWithRetry(response)
+                val updated = if (analysis != null) {
+                    response.copy(olqScores = analysis, confidenceScore = analysis.values.map { it.confidence }.average().toInt())
+                } else {
+                    response.copy(olqScores = fallbackOLQScores(), confidenceScore = InterviewConstants.FALLBACK_CONFIDENCE)
+                }
+                interviewRepository.updateResponse(updated)
             }
-            interviewRepository.updateResponse(updated)
             if (index < responses.size - 1) delay(InterviewConstants.API_CALL_DELAY_MS)
         }
 
@@ -125,5 +151,6 @@ class InterviewAnalysisOrchestrator(
 
     private companion object {
         const val TAG = "InterviewAnalysisOrchestrator"
+        const val FEATURE_FLAG_SERVER_EVALUATION = "interview_server_evaluation"
     }
 }

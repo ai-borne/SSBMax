@@ -34,6 +34,9 @@ fun NavGraphBuilder.homeGraph(navController: NavHostController, onOpenDrawer: ()
             onNavigateToSubmissions = {
                 navController.navigate(SSBMaxDestinations.StudentSubmissions)
             },
+            onNavigateToTests = {
+                navController.navigate(SSBMaxDestinations.StudentTests)
+            },
             onNavigateToNotifications = {
                 navController.navigate(SSBMaxDestinations.NotificationCenter)
             },

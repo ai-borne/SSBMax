@@ -1,12 +1,10 @@
 package com.ssbmax.shared.data.repository
 
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.CollectionReference
 import dev.gitlive.firebase.firestore.firestore
 
-internal const val GTO_COLLECTION_SUBMISSIONS = "submissions"
-internal const val GTO_COLLECTION_RESULTS = "gto_results"
-internal const val GTO_COLLECTION_USER_PROGRESS = "user_progress"
 internal const val GTO_FIELD_USER_ID = "userId"
 internal const val GTO_FIELD_TEST_TYPE = "testType"
 internal const val GTO_FIELD_STATUS = "status"
@@ -21,7 +19,7 @@ internal const val GTO_FIELD_SUBMITTED_AT = "submittedAt"
  * from the original merged class.
  */
 internal class GitLiveGTOCollections {
-    val submissions: CollectionReference = Firebase.firestore.collection(GTO_COLLECTION_SUBMISSIONS)
-    val results: CollectionReference = Firebase.firestore.collection(GTO_COLLECTION_RESULTS)
-    val progress: CollectionReference = Firebase.firestore.collection(GTO_COLLECTION_USER_PROGRESS)
+    val submissions: CollectionReference = Firebase.firestore.collection(SsbContracts.FirestorePaths.SUBMISSIONS)
+    val results: CollectionReference = Firebase.firestore.collection(SsbContracts.FirestorePaths.GTO_RESULTS)
+    val progress: CollectionReference = Firebase.firestore.collection(SsbContracts.FirestorePaths.USER_PROGRESS)
 }

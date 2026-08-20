@@ -4,21 +4,62 @@
  * Initializes Razorpay payment orders with mandatory notes metadata (userId, planId).
  */
 
-const functions = require('firebase-functions');
+// Pinned to v1 -- see eligibility.js's identical comment: the handler below uses the v1
+// two-arg `(data, context)` onCall signature (`context.auth`), and bare
+// `require('firebase-functions')` resolves to the v2 API by default on this project's
+// installed firebase-functions@7, which would silently make `context.auth` always
+// undefined and this function always reject as unauthenticated.
+const functions = require('firebase-functions/v1');
+const { PricingTiers } = require('./generated/contracts.cjs');
+
+/**
+ * planId -> order amount in paise, sourced from the generated pricing contract
+ * (contracts/pricing.yaml) -- never the client-supplied `amount` (see below). Only
+ * `{tier}_monthly` planIds exist since pricing is monthly-only for now.
+ */
+const PLAN_AMOUNTS_PAISE = Object.fromEntries(
+  PricingTiers.filter((t) => t.tier !== 'FREE').map(({ tier, monthlyInr }) => [`${tier.toLowerCase()}_monthly`, monthlyInr * 100])
+);
+
+// Same DoW-defense shape as geminiProxy.js/aiAnalysis.js's runtimeOptions -- order creation
+// had no instance cap before this (Phase 5, cost & scale guardrails). `secrets` mirrors
+// geminiProxy.js's GEMINI_API_KEY pattern -- values come from Secret Manager
+// (`firebase functions:secrets:set RAZORPAY_KEY_ID`), never from a committed .env file,
+// since unlike ENFORCE_QUOTA/FIRESTORE_BACKUP_BUCKET these are real credentials.
+const runtimeOptions = {
+  maxInstances: 10,
+  secrets: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET']
+};
 
 /**
  * Create Razorpay Order Callable Function
  */
-exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
+exports.createRazorpayOrder = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError(
       'unauthenticated',
       'User must be authenticated to create a payment order'
     );
   }
+  if (!context.app) {
+    // Same warn-only stance as geminiProxy.js's identical check -- App Check isn't wired
+    // client-side yet (Phase 1b). Flip both to a hard failed-precondition together once it is.
+    console.warn(`createRazorpayOrder: no App Check token, uid=${context.auth.uid}`);
+  }
 
   const userId = context.auth.uid;
-  const { amount = 49900, currency = 'INR', planId = 'pro_monthly' } = data || {};
+  const { currency = 'INR', planId = 'pro_monthly' } = data || {};
+
+  // Security fix (docs/plans/SubscriptionPricingRestructure.md Phase 2): the order amount is
+  // always computed server-side from `planId` -- a client-supplied `amount` is never trusted,
+  // closing the gap where a client could previously request a Razorpay order for any amount.
+  const amount = PLAN_AMOUNTS_PAISE[planId];
+  if (!amount) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      `Unknown planId '${planId}'`
+    );
+  }
 
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;

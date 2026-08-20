@@ -68,6 +68,7 @@ internal fun PPDTSubmission.toDataDto() = PPDTDataDto(
     writingTimeTakenMinutes = writingTimeTakenMinutes,
     submittedAt = submittedAt,
     status = status.name,
+    analysisStatus = AnalysisStatus.PENDING_ANALYSIS.name,
     instructorReview = instructorReview?.let {
         PPDTInstructorReviewDto(
             reviewId = it.reviewId,

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ThemeMode } from '../constants/colors';
 
 const STORAGE_KEY = 'theme';
+const THEME_CHANGE_EVENT = 'ssbmax-theme-change';
 
 export interface UseThemeReturn {
   theme: ThemeMode;
@@ -17,7 +18,8 @@ export function useTheme(): UseThemeReturn {
     if (saved === 'dark' || saved === 'light' || saved === 'system') {
       return saved as ThemeMode;
     }
-    return 'system';
+    // Default new visitors to dark — the platform's premium tactical theme
+    return 'dark';
   });
 
   const getSystemTheme = useCallback((): 'dark' | 'light' => {
@@ -53,7 +55,10 @@ export function useTheme(): UseThemeReturn {
   const setTheme = useCallback(
     (newTheme: ThemeMode) => {
       setThemeState(newTheme);
-      localStorage.setItem(STORAGE_KEY, newTheme);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, newTheme);
+        window.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT, { detail: newTheme }));
+      }
       applyTheme(newTheme);
     },
     [applyTheme]
@@ -66,18 +71,46 @@ export function useTheme(): UseThemeReturn {
   useEffect(() => {
     applyTheme(theme);
 
-    if (theme === 'system' && typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    if (typeof window === 'undefined') return;
+
+    const handleCustomChange = (e: Event) => {
+      const customEvent = e as CustomEvent<ThemeMode>;
+      if (customEvent.detail && customEvent.detail !== theme) {
+        setThemeState(customEvent.detail);
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        const val = e.newValue as ThemeMode;
+        if (val === 'dark' || val === 'light' || val === 'system') {
+          setThemeState(val);
+        }
+      }
+    };
+
+    window.addEventListener(THEME_CHANGE_EVENT, handleCustomChange);
+    window.addEventListener('storage', handleStorageChange);
+
+    let mediaQueryCleanup: (() => void) | undefined;
+    if (theme === 'system' && typeof window.matchMedia === 'function') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = () => applyTheme('system');
+      const handleMediaChange = () => applyTheme('system');
       
       if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
+        mediaQuery.addEventListener('change', handleMediaChange);
+        mediaQueryCleanup = () => mediaQuery.removeEventListener('change', handleMediaChange);
       } else if (mediaQuery.addListener) {
-        mediaQuery.addListener(handleChange);
-        return () => mediaQuery.removeListener(handleChange);
+        mediaQuery.addListener(handleMediaChange);
+        mediaQueryCleanup = () => mediaQuery.removeListener(handleMediaChange);
       }
     }
+
+    return () => {
+      window.removeEventListener(THEME_CHANGE_EVENT, handleCustomChange);
+      window.removeEventListener('storage', handleStorageChange);
+      if (mediaQueryCleanup) mediaQueryCleanup();
+    };
   }, [theme, applyTheme]);
 
   return {

@@ -1,6 +1,7 @@
 package com.ssbmax.shared.ui.home.instructor
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -37,8 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.domain.model.StudentPerformance
@@ -58,40 +58,35 @@ internal fun StatCard(
     value: String,
     subtitle: String,
     icon: ImageVector,
-    color: Color,
+    containerColor: Color,
+    contentColor: Color,
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .height(100.dp)
-            .then(
-                onClick?.let { action ->
-                    Modifier.clickable(role = Role.Button, onClick = action)
-                } ?: Modifier
-            ),
+        modifier = modifier.height(100.dp).then(
+            onClick?.let { action -> Modifier.clickable(role = Role.Button, onClick = action) } ?: Modifier
+        ),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = containerColor, contentColor = contentColor)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
 
             Column {
                 Text(
                     value,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = color
+                    color = contentColor
                 )
                 Text(
                     "$title • $subtitle",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = contentColor.copy(alpha = 0.85f)
                 )
             }
         }
@@ -140,16 +135,11 @@ internal fun StudentsTab(
 private fun StudentCard(student: StudentPerformance, onClick: () -> Unit) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                modifier = Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -276,7 +266,10 @@ private fun BatchCard(batch: BatchInfo, onClick: () -> Unit) {
                     modifier = Modifier.size(24.dp)
                 )
 
-                Badge { Text("${batch.studentCount}") }
+                Badge(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) { Text("${batch.studentCount}") }
             }
 
             Column {
@@ -292,7 +285,7 @@ private fun BatchCard(batch: BatchInfo, onClick: () -> Unit) {
                 Text(
                     stringResource(Res.string.batch_code, batch.inviteCode),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

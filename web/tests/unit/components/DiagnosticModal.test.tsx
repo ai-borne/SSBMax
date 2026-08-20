@@ -62,4 +62,12 @@ describe('DiagnosticModal Component', () => {
 
     expect(handleClose).toHaveBeenCalledTimes(2);
   });
+
+  it('applies Level 2 elevation styling to modal container', () => {
+    render(<DiagnosticModal isOpen={true} onClose={vi.fn()} onSaveProfile={vi.fn()} />);
+
+    const modal = screen.getByTestId('diagnostic-modal');
+    expect(modal.className).toContain('dark:bg-slate-800/95');
+    expect(modal.className).toContain('dark:border-slate-700/80');
+  });
 });

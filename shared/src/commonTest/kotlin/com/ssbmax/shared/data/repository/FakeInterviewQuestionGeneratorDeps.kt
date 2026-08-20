@@ -110,5 +110,4 @@ internal class FakeSubmissionRepository(
     override suspend fun updatePPDTOLQResult(submissionId: String, olqResult: OLQAnalysisResult) = unused()
     override fun observePPDTSubmission(submissionId: String) = unused()
     override suspend fun getPPDTResult(submissionId: String): Result<OLQAnalysisResult?> = unused()
-    override suspend fun archiveOldSubmissions(beforeTimestamp: Long) = unused()
 }

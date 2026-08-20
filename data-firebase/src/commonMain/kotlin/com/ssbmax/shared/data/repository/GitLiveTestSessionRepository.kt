@@ -2,6 +2,7 @@ package com.ssbmax.shared.data.repository
 
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.TestSessionRepository
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlin.time.Clock
@@ -24,7 +25,7 @@ import kotlinx.serialization.Serializable
  */
 class GitLiveTestSessionRepository : TestSessionRepository {
 
-    private val sessionsCollection = Firebase.firestore.collection(COLLECTION)
+    private val sessionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.TEST_SESSIONS)
 
     override suspend fun hasActiveTestSession(userId: String, testId: String): Result<Boolean> = try {
         val snapshot = sessionsCollection
@@ -87,7 +88,6 @@ class GitLiveTestSessionRepository : TestSessionRepository {
     }
 
     private companion object {
-        const val COLLECTION = "test_sessions"
         const val TWO_HOURS_MS = 2 * 60 * 60 * 1000L
         const val SESSION_ACTIVE = "ACTIVE"
         const val SESSION_SUBMITTED = "SUBMITTED"

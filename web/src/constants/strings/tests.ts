@@ -23,6 +23,7 @@ export const testStrings = {
     writeResponsePlaceholder: 'Write your story / response here...',
     nextSlide: 'Next Slide',
     finishTest: 'Complete & Submit',
+    submitting: 'Submitting and recording your test… this can take up to 30 seconds.',
     completedTitle: 'Psychology Test Completed',
     completedMessage: 'Your responses have been recorded and sent for AI evaluation.'
   },
@@ -53,7 +54,12 @@ export const testStrings = {
     sdDesc: '5 structured paragraphs evaluating self-awareness and career clarity.',
     interviewTitle: 'Personal Interview Questionnaire (PIQ)',
     interviewDesc: 'Comprehensive PIQ form evaluation with targeted officer probes.',
-    searchPlaceholder: 'Search practice tests...'
+    searchPlaceholder: 'Search practice tests...',
+    selectBatchTitle: 'Select Practice Set Batch',
+    selectBatchSubtitle: 'Choose from available practice sets fetched from Services Selection Board protocol database.',
+    batchDefault: 'Batch 1 (Default)',
+    confirmSelect: 'Select & Launch',
+    testCountSuffix: 'Tests'
   },
   anticheat: {
     contextMenuBlocked: 'Right-click context menu is disabled during active standardized test mode.',

@@ -166,13 +166,11 @@ class GTODtoTest {
     fun `GTOProgressDto round-trips and drops unparseable test type names instead of throwing`() {
         val dto = GTOProgressDto(
             completedTests = listOf("GROUP_DISCUSSION", "NOT_A_REAL_TYPE"),
-            testsUsedThisMonth = mapOf("GROUP_DISCUSSION" to 2, "ALSO_BOGUS" to 5),
             currentSequentialOrder = 2
         )
 
         val progress = dto.toDomain("user-1")
         assertEquals(listOf(GTOTestType.GROUP_DISCUSSION), progress.completedTests)
-        assertEquals(mapOf(GTOTestType.GROUP_DISCUSSION to 2), progress.testsUsedThisMonth)
         assertEquals(2, progress.currentSequentialOrder)
     }
 

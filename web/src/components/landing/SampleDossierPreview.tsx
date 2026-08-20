@@ -2,6 +2,7 @@ import { FC, useState } from 'react';
 import { ShieldCheck, BarChart3, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { themeColors } from '../../constants/colors';
+import { OLQ, OLQCategory } from '../../generated/contracts';
 
 export interface FactorItem {
   id: string;
@@ -10,33 +11,61 @@ export interface FactorItem {
   benchmark: number;
 }
 
+// Display label for each factor is sample/marketing copy (not the SSOT — see FACTOR_ROMAN below
+// for the OLQ-category grouping, which is derived from `generated/contracts`).
+const coreFactorMeta: Record<OLQCategory, { id: string; name: string; benchmark: number }> = {
+  INTELLECTUAL: { id: 'factor1', name: 'Factor I: Planning & Reasoning', benchmark: 7.0 },
+  SOCIAL: { id: 'factor2', name: 'Factor II: Social Adjustment', benchmark: 7.0 },
+  DYNAMIC: { id: 'factor3', name: 'Factor III: Social Effectiveness', benchmark: 7.0 },
+  CHARACTER: { id: 'factor4', name: 'Factor IV: Dynamic & Courage', benchmark: 7.0 },
+};
+
+const FACTOR_ROMAN: Record<OLQCategory, string> = {
+  INTELLECTUAL: 'Factor I',
+  SOCIAL: 'Factor II',
+  DYNAMIC: 'Factor III',
+  CHARACTER: 'Factor IV',
+};
+
+// Illustrative sample scores only (marketing preview) — not real evaluation data.
+const SAMPLE_OLQ_SCORES: Record<string, number> = {
+  EFFECTIVE_INTELLIGENCE: 8.5,
+  REASONING_ABILITY: 8.4,
+  ORGANIZING_ABILITY: 8.6,
+  POWER_OF_EXPRESSION: 8.2,
+  SOCIAL_ADJUSTMENT: 8.1,
+  COOPERATION: 8.0,
+  SENSE_OF_RESPONSIBILITY: 8.5,
+  INITIATIVE: 9.0,
+  SELF_CONFIDENCE: 8.7,
+  SPEED_OF_DECISION: 8.8,
+  INFLUENCE_GROUP: 8.6,
+  LIVELINESS: 8.2,
+  DETERMINATION: 8.7,
+  COURAGE: 8.4,
+  STAMINA: 8.3,
+};
+
+const SAMPLE_FACTOR_SCORES: Record<OLQCategory, number> = {
+  INTELLECTUAL: 8.5,
+  SOCIAL: 8.0,
+  DYNAMIC: 8.8,
+  CHARACTER: 8.2,
+};
+
 export const SampleDossierPreview: FC = () => {
   const [showDetailed15, setShowDetailed15] = useState(false);
 
-  const coreFactors: FactorItem[] = [
-    { id: 'factor1', name: 'Factor I: Planning & Reasoning', score: 8.5, benchmark: 7.0 },
-    { id: 'factor2', name: 'Factor II: Social Adjustment', score: 8.0, benchmark: 7.0 },
-    { id: 'factor3', name: 'Factor III: Social Effectiveness', score: 8.8, benchmark: 7.0 },
-    { id: 'factor4', name: 'Factor IV: Dynamic & Courage', score: 8.2, benchmark: 7.0 }
-  ];
+  const coreFactors: FactorItem[] = (Object.keys(coreFactorMeta) as OLQCategory[]).map((category) => ({
+    ...coreFactorMeta[category],
+    score: SAMPLE_FACTOR_SCORES[category],
+  }));
 
-  const olq15List = [
-    { name: 'Effective Intelligence (OLQ-1)', score: 8.5, factor: 'Factor I' },
-    { name: 'Reasoning Ability (OLQ-2)', score: 8.4, factor: 'Factor I' },
-    { name: 'Organizing Ability (OLQ-3)', score: 8.6, factor: 'Factor I' },
-    { name: 'Power of Expression (OLQ-4)', score: 8.2, factor: 'Factor I' },
-    { name: 'Social Adaptability (OLQ-5)', score: 8.1, factor: 'Factor II' },
-    { name: 'Cooperation (OLQ-6)', score: 8.0, factor: 'Factor II' },
-    { name: 'Sense of Duty (OLQ-7)', score: 8.5, factor: 'Factor II' },
-    { name: 'Initiative (OLQ-8)', score: 9.0, factor: 'Factor III' },
-    { name: 'Self Confidence (OLQ-9)', score: 8.7, factor: 'Factor III' },
-    { name: 'Speed of Decision (OLQ-10)', score: 8.8, factor: 'Factor III' },
-    { name: 'Power of Influence (OLQ-11)', score: 8.6, factor: 'Factor III' },
-    { name: 'Determination (OLQ-12)', score: 8.7, factor: 'Factor III' },
-    { name: 'Liveliness (OLQ-13)', score: 8.2, factor: 'Factor IV' },
-    { name: 'Courage (OLQ-14)', score: 8.4, factor: 'Factor IV' },
-    { name: 'Stamina (OLQ-15)', score: 8.3, factor: 'Factor IV' }
-  ];
+  const olq15List = Object.values(OLQ).map((def, idx) => ({
+    name: `${def.displayName} (OLQ-${idx + 1})`,
+    score: SAMPLE_OLQ_SCORES[def.id] ?? 8.0,
+    factor: FACTOR_ROMAN[def.category as OLQCategory],
+  }));
 
   // Inline SVG Radar Math Coordinates (Center 100, 100, Radius 70)
   const cx = 100;
@@ -61,12 +90,12 @@ export const SampleDossierPreview: FC = () => {
     .join(' ');
 
   return (
-    <section className="w-full py-12 px-4 my-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl" data-testid="sample-dossier-preview">
+    <section className="w-full py-12 px-4 my-8 bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-3xl shadow-md dark:shadow-xl dark:shadow-slate-950/60" data-testid="sample-dossier-preview">
       <div className="max-w-5xl mx-auto flex flex-col items-center">
         {/* Header Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider mb-4">
           <Eye className="w-4 h-4 text-amber-500" />
-          <span>OFFICER ASSESSOR DOSSIER PROOF</span>
+          <span>{strings.radar.proofBadge}</span>
         </div>
 
         <h2 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight text-center mb-3">
@@ -79,8 +108,8 @@ export const SampleDossierPreview: FC = () => {
         {/* 4-Factor Core vs Detailed View Container */}
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-8">
           {/* Left: Lightweight Inline SVG Radar Chart */}
-          <div className="flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-inner w-full">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">4 SSB Core Factor Radar Polygon</h3>
+          <div className="flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 w-full">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{strings.radar.polygonTitle}</h3>
             
             <svg viewBox="0 0 200 200" className="w-64 h-64 my-2" data-testid="inline-svg-radar">
               {/* Outer & Inner Grid Rings */}
@@ -117,15 +146,15 @@ export const SampleDossierPreview: FC = () => {
 
           {/* Right: Core Factors List & Expandable Toggle */}
           <div className="flex flex-col gap-4 w-full">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60">
               <div className="flex justify-between items-center mb-3">
-                <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">Assessor Recommendation Overview</h4>
+                <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">{strings.radar.recommendationOverviewTitle}</h4>
                 <span className="px-2.5 py-1 rounded-md text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 uppercase">
-                  RECOMMENDED
+                  {strings.radar.recommendationBadge}
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
-                Candidate exhibits high Factor I & III command output with strong decision speed and group initiative. Recommended for conference probe on minor social adaptability details.
+                {strings.radar.recommendationSummary}
               </p>
             </div>
 
@@ -147,7 +176,7 @@ export const SampleDossierPreview: FC = () => {
             {/* Interactive Toggle for 15 OLQ Micro Breakdown */}
             <button
               onClick={() => setShowDetailed15(!showDetailed15)}
-              className="mt-2 w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-center gap-2 transition-colors border border-slate-300/80 dark:border-slate-700"
+              className="mt-2 w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-center gap-2 transition-colors border border-slate-300/80 dark:border-slate-600/50 min-h-[44px]"
               data-testid="toggle-15-olq-btn"
             >
               <BarChart3 className="w-4 h-4 text-sky-600 dark:text-sky-400" />
@@ -159,11 +188,11 @@ export const SampleDossierPreview: FC = () => {
 
         {/* 15 OLQ Detailed Breakdown Card (Collapsible) */}
         {showDetailed15 && (
-          <div className="w-full p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 mb-8 animate-fadeIn" data-testid="detailed-15-olq-grid">
-            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-4">Complete 15 Officer Like Qualities (OLQ) Micro Scorecard</h4>
+          <div className="w-full p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 mb-8 animate-fadeIn" data-testid="detailed-15-olq-grid">
+            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-4">{strings.radar.microScorecardTitle}</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {olq15List.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between shadow-sm">
+                <div key={idx} className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm">
                   <div>
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.name}</p>
                     <span className="text-[10px] text-slate-500 font-medium">{item.factor}</span>
@@ -178,21 +207,21 @@ export const SampleDossierPreview: FC = () => {
         )}
 
         {/* Side-by-Side Candidate Response Diff Proof */}
-        <div className="w-full p-6 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-xl text-left" data-testid="response-diff-card">
+        <div className="w-full p-6 rounded-2xl bg-slate-100 dark:bg-slate-800/90 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700/80 shadow-xl dark:shadow-slate-950/60 text-left" data-testid="response-diff-card">
           <div className="flex items-center gap-2 mb-4">
-            <ShieldCheck className="w-5 h-5 text-sky-400" />
-            <h4 className="text-sm font-bold text-white">Assessor Response Comparison Diff (SRT Sample)</h4>
+            <ShieldCheck className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">{strings.radar.diffTitle}</h4>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest block mb-1">Average Candidate Response</span>
-              <p className="text-slate-300">"He informed the police station and waited for help to arrive."</p>
-              <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 rounded">Passive (Score: 6.0)</span>
+            <div className="p-3.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest block mb-1">{strings.radar.diffAvgLabel}</span>
+              <p className="text-slate-700 dark:text-slate-300">{strings.radar.diffAvgResponse}</p>
+              <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded">{strings.radar.diffAvgBadge}</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-sky-950/40 border border-sky-500/40">
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Recommended Officer Action</span>
-              <p className="text-slate-200 font-medium">"Immediately pulled emergency chain, alerted passengers, organized bucket relay, and safely extinguished fire."</p>
-              <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 rounded">Officer Grade (Score: 9.2)</span>
+            <div className="p-3.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-500/40">
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block mb-1">{strings.radar.diffRecLabel}</span>
+              <p className="text-slate-800 dark:text-slate-200 font-medium">{strings.radar.diffRecResponse}</p>
+              <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded">{strings.radar.diffRecBadge}</span>
             </div>
           </div>
         </div>
@@ -200,3 +229,4 @@ export const SampleDossierPreview: FC = () => {
     </section>
   );
 };
+

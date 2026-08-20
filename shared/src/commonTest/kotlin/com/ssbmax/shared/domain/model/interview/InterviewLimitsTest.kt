@@ -32,25 +32,25 @@ class InterviewLimitsTest {
     @Test
     fun `used above totalLimit constructs without throwing for PRO`() {
         val limits = InterviewLimits.forSubscription(SubscriptionTier.PRO, used = 5)
-        assertEquals(1, limits.totalLimit)
+        assertEquals(3, limits.totalLimit)
         assertEquals(0, limits.remaining)
     }
 
     @Test
     fun `used above totalLimit constructs without throwing for PREMIUM`() {
-        val limits = InterviewLimits.forSubscription(SubscriptionTier.PREMIUM, used = 5)
-        assertEquals(3, limits.totalLimit)
+        val limits = InterviewLimits.forSubscription(SubscriptionTier.PREMIUM, used = 15)
+        assertEquals(10, limits.totalLimit)
         assertEquals(0, limits.remaining)
     }
 
     // =========================================================================
-    // forSubscription must match SubscriptionLimits.limitFor("Interview", tier) exactly
+    // forSubscription must match SubscriptionLimits.limitFor("INTERVIEW", tier) exactly
     // =========================================================================
 
     @Test
     fun `forSubscription totalLimit matches SubscriptionLimits table for every tier`() {
         SubscriptionTier.entries.forEach { tier ->
-            val expected = SubscriptionLimits.limitFor("Interview", tier)
+            val expected = SubscriptionLimits.limitFor("INTERVIEW", tier)
             val actual = InterviewLimits.forSubscription(tier, used = 0).totalLimit
             assertEquals(expected, actual, "$tier totalLimit must match SubscriptionLimits table")
         }
@@ -62,20 +62,20 @@ class InterviewLimitsTest {
 
     @Test
     fun `hasInterviewsRemaining is false when used equals limit`() {
-        assertFalse(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PRO, used = 1))
-        assertFalse(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PREMIUM, used = 3))
+        assertFalse(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PRO, used = 3))
+        assertFalse(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PREMIUM, used = 10))
     }
 
     @Test
     fun `hasInterviewsRemaining is false when used exceeds limit`() {
-        assertFalse(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PRO, used = 2))
-        assertFalse(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PREMIUM, used = 4))
+        assertFalse(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PRO, used = 4))
+        assertFalse(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PREMIUM, used = 11))
     }
 
     @Test
     fun `hasInterviewsRemaining is true just under the limit`() {
         assertTrue(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PRO, used = 0))
-        assertTrue(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PREMIUM, used = 2))
+        assertTrue(InterviewLimits.hasInterviewsRemaining(SubscriptionTier.PREMIUM, used = 9))
     }
 
     @Test

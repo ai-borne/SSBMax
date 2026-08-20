@@ -11,6 +11,7 @@ import com.ssbmax.navigation.SSBMaxNavHost
 import com.ssbmax.shared.domain.repository.AuthRepository
 import com.ssbmax.shared.domain.util.DomainLogger
 import com.ssbmax.shared.presentation.root.AppRootViewModel
+import com.ssbmax.shared.ui.common.UpdateRequiredScreen
 import com.ssbmax.shared.ui.components.SSBMaxAppScaffold
 import com.ssbmax.shared.ui.theme.LocalThemeState
 import com.ssbmax.shared.ui.theme.SSBMaxTheme
@@ -50,6 +51,7 @@ fun SSBMaxRoot() {
     val viewModel: AppRootViewModel = koinViewModel()
     val currentTheme by viewModel.themeFlow.collectAsStateWithLifecycle()
     val themeState = remember(currentTheme) { ThemeState(currentTheme) }
+    val updateRequired by viewModel.updateRequired.collectAsStateWithLifecycle()
 
     val deepLinkGateway: DeepLinkGateway = koinInject()
     val authRepository: AuthRepository = koinInject()
@@ -57,20 +59,24 @@ fun SSBMaxRoot() {
 
     CompositionLocalProvider(LocalThemeState provides themeState) {
         SSBMaxTheme(appTheme = currentTheme) {
-            val navController = rememberNavController()
-            val pendingRoute by deepLinkGateway.pendingRoute.collectAsStateWithLifecycle()
-            val currentUser by authRepository.currentUser.collectAsStateWithLifecycle()
+            if (updateRequired) {
+                UpdateRequiredScreen()
+            } else {
+                val navController = rememberNavController()
+                val pendingRoute by deepLinkGateway.pendingRoute.collectAsStateWithLifecycle()
+                val currentUser by authRepository.currentUser.collectAsStateWithLifecycle()
 
-            DeepLinkEffect(
-                navController = navController,
-                pendingRoute = pendingRoute,
-                isAuthenticated = currentUser != null,
-                onConsume = deepLinkGateway::consume,
-                logger = logger
-            )
+                DeepLinkEffect(
+                    navController = navController,
+                    pendingRoute = pendingRoute,
+                    isAuthenticated = currentUser != null,
+                    onConsume = deepLinkGateway::consume,
+                    logger = logger
+                )
 
-            SSBMaxAppScaffold(navController = navController) { onOpenDrawer ->
-                SSBMaxNavHost(navController = navController, onOpenDrawer = onOpenDrawer)
+                SSBMaxAppScaffold(navController = navController) { onOpenDrawer ->
+                    SSBMaxNavHost(navController = navController, onOpenDrawer = onOpenDrawer)
+                }
             }
         }
     }

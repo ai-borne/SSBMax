@@ -1,0 +1,574 @@
+# TAT_Impr_3 — Persist TAT Questions on Submission (Fix "0 bytes" Image Bug)
+
+## Execution Strategy Overview
+
+### Problem being solved (Issue 1 from log analysis)
+Every TAT story was analyzed with `0 bytes` of image data:
+
+```
+TATStoryAnalysisWorker: Step 1: Image bytes prepared (0 bytes)   ← all 12 stories
+```
+
+### Root cause (traced, evidence-backed)
+1. User takes test → `LoadTATTestUseCase` → `getTATQuestions(testId, genderTag)` returns the **12 questions the user actually saw**, each with a real `imageUrl`.
+2. User writes stories → `TATStoryResponse(questionId = currentQuestion.id, ...)`.
+3. Submit → `TATSubmission(stories = responses)` — **questions are NOT persisted**.
+4. `WorkManagerSubmissionAnalysisTrigger.triggerTat()` re-fetches:
+   ```kotlin
+   val questions = testContentRepository.getTATQuestions(submission.testId).getOrNull().orEmpty()
+   ```
+   `getTATQuestions(testId)` **ignores `testId`** and returns a **fresh random 12** (`getImagesForTest` picks least-used images each call). The fresh questions have **different IDs** than the user saw.
+5. `TATAnalysisWorkPlanner.plan()`:
+   ```kotlin
+   val questionById = questions.associateBy { it.id }
+   KEY_IMAGE_URL to (question?.imageUrl ?: "")   // questionById[story.questionId] == null → ""
+   ```
+6. `TATStoryAnalysisWorker.downloadImageBytes("")` → `ByteArray(0)` immediately (no error logged — consistent with the absence of any "image download failed" line in logcat).
+
+The **same bug exists on the iOS/shared path** (`TATAnalysisOrchestrator.analyze()` line 57 also calls `getTATQuestions(submission.testId)`).
+
+### Why the June 2026 fix didn't work
+The June fix moved the `questionId → imageUrl` lookup **from the worker into the planner** (worker no longer calls the repo). But the **planner still receives the wrong questions** from the trigger. The fix addressed the symptom, not the source: the trigger still fetches a fresh random set that doesn't match the user's actual question IDs.
+
+### Fix principle
+**Persist the exact questions the user saw on the submission**, and read them back in both analysis paths. This is the durable, SSOT fix that:
+- Guarantees the exact set the user saw (image + context + gender tag).
+- Covers both Android (WorkManager chain) and iOS/shared (`TATAnalysisOrchestrator`).
+- Survives process death (data lives in Firestore, not in-memory).
+- Is backward-compatible via an `ifEmpty { }` fallback for already-submitted docs.
+
+---
+
+## Goals covered by this plan
+1. Persist `questions` on `TATSubmission` (domain model + Firestore DTO round-trip).
+2. Android analysis path reads questions from the submission.
+3. iOS/shared analysis path reads questions from the submission.
+4. ViewModel passes the questions the user saw into the submission.
+5. Full test coverage (unit + integration) for every changed layer.
+6. Regression guard: `TATAnalysisWorkPlanner` populates `KEY_IMAGE_URL` when questions carry a URL.
+
+## Non-goals (explicitly out of scope)
+- Issue 2 (result-screen latency / dashboard "No TAT OLQ result found" during synthesis) — separate plan.
+- Issue 3 (synthesis 53s latency) — separate plan.
+- Issue 4 (`MIN_STORY_THRESHOLD = 6` hardcoded) — separate plan.
+- Issue 5 (raw `URL.openConnection()` image download, no retry) — separate plan.
+- Blank-card path (story 12 has `imageUrl = ""` by design; `0 bytes` for it is intentional).
+
+---
+
+## Strict Development Rules (apply to every phase)
+1. **Phase Independence & Success:** Every phase ends with a fully successful build. Do NOT proceed if the current build is failing.
+2. **TDD:** Write tests before/alongside implementation. 100% of tests must pass before a phase is marked complete.
+3. **Architecture & Clean Code:** Uphold MVVM, SOLID, DRY, SSOT. No file may exceed 300 LOC unless SRP requires it (then comment why it can't be split).
+4. **Resource Management:** Never hardcode strings/colors. Use string resources + universal color scheme.
+5. **Cybersecurity:** Codebase must remain 100% secure. No test-only bypasses in production code. No secrets in code.
+
+---
+
+# Phase 0 — Baseline Stabilization and Safety Net
+
+## Objective
+Restore a fully green baseline before touching TAT architecture.
+
+## Why this phase exists
+Your rule says every phase must end with a successful build and all tests passing. We must confirm the workspace is green before any TAT change.
+
+## Scope
+- Run the full build + test suite to establish the baseline.
+- Fix any **unrelated** pre-existing red build/test issues (do not fix TAT issues yet).
+- Add characterization tests around current TAT behavior so we preserve intended behavior while refactoring.
+
+## Files likely involved
+- TAT test files only for characterization:
+  - `app/src/test/kotlin/com/ssbmax/workers/TATStoryAnalysisWorkerTest.kt`
+  - `app/src/test/kotlin/com/ssbmax/workers/TATAnalysisWorkPlannerTest.kt`
+  - `shared/src/commonTest/kotlin/com/ssbmax/shared/presentation/tat/TATTestViewModelTest.kt`
+
+## TDD tasks
+Before changing production TAT code, add/extend characterization tests that document current intended behavior:
+- `TATStoryAnalysisWorker` returns `ByteArray(0)` when `KEY_IMAGE_URL` is blank (documents the bug's symptom).
+- `TATAnalysisWorkPlanner` sets `KEY_IMAGE_URL` to `""` when `questionById[story.questionId]` is `null` (documents the bug's mechanism).
+- `TATTestViewModel.submitTest` builds a submission **without** `questions` today (will change in Phase 4).
+
+## Implementation tasks
+- Make no TAT architectural changes yet except safe test scaffolding.
+
+## Security checks
+- No test helpers weaken production security assumptions.
+- No test-only bypasses introduced into production code.
+
+## Validation gate
+Run until green:
+- `./gradlew :app:testDebugUnitTest`
+- `./gradlew :shared:testDebugUnitTest`
+- `./gradlew :data-firebase:testDebugUnitTest`
+- `./gradlew check`
+
+## Exit criteria
+- Full workspace baseline is green.
+- Characterization tests for TAT pipeline exist and pass.
+- No production TAT behavior changed yet.
+
+---
+
+# Phase 1 — Data Model: Persist Questions on TATSubmission
+
+## Objective
+Add `questions` to the `TATSubmission` domain model and round-trip it through Firestore.
+
+## Main issue being solved
+The submission stores only `stories` (each with a `questionId`), so the `questionId → imageUrl/imageContextJson/genderTag` mapping is lost after submit.
+
+## Proposed solution
+### Domain model (`shared/.../domain/model/TATTest.kt`)
+Add a defaulted field so existing call sites compile unchanged:
+```kotlin
+data class TATSubmission(
+    ...
+    val questions: List<TATQuestion> = emptyList(),   // NEW — the exact set the user saw
+    ...
+)
+```
+
+### Firestore DTO (`data-firebase/.../GitLivePsychTestSubmissionRepository.kt`)
+1. Add `@Serializable TATQuestionDto`:
+   ```kotlin
+   @Serializable
+   internal data class TATQuestionDto(
+       val id: String = "",
+       val imageUrl: String = "",
+       val cardPosition: Int = 0,
+       val imageContextJson: String = "{}",
+       val genderTag: String = "MIXED",
+       val viewingTimeSeconds: Int = 30,
+       val writingTimeMinutes: Int = 4,
+       val minCharacters: Int = 150,
+       val maxCharacters: Int = 1500
+   )
+   ```
+2. Add `questions: List<TATQuestionDto> = emptyList()` to `TATDataDto`.
+3. Populate it in `submitTAT()`: `questions = submission.questions.map { it.toDto() }`.
+4. Read it in `TATDataDto.toDomain()`: `questions = questions.map { it.toDomain() }`.
+5. Add mappers:
+   ```kotlin
+   internal fun TATQuestion.toDto() = TATQuestionDto(...)
+   internal fun TATQuestionDto.toDomain() = TATQuestion(...)
+   ```
+   **Note:** `TATQuestion` is not `@Serializable` (it has a `Uuid.random()` default), so a dedicated DTO is required — same pattern as `TATStoryDto`.
+
+## Architecture rationale
+- SSOT lives on the submission document — the analysis paths no longer need to guess which questions the user saw.
+- Defaulted field (`= emptyList()`) keeps every existing construction site compiling (Phase 4 wires the real value).
+
+## Files likely involved
+- `shared/src/commonMain/kotlin/com/ssbmax/shared/domain/model/TATTest.kt`
+- `data-firebase/src/commonMain/kotlin/com/ssbmax/shared/data/repository/GitLivePsychTestSubmissionRepository.kt`
+
+## TDD tasks
+Write tests first:
+### Unit tests (`data-firebase/src/androidUnitTest/kotlin/com/ssbmax/shared/data/repository/`)
+- `TATQuestionDto` serializes/deserializes all fields (mirror `TestSubmissionDtoTest.kt` / `SubmissionClusterDtoTest.kt` conventions).
+- `TATSubmission.toDto()` round-trips `questions` (write → read preserves id, imageUrl, imageContextJson, genderTag, cardPosition).
+- Backward compatibility: a `TATDataDto` with no `questions` field decodes to `TATSubmission(questions = emptyList())` (defaults preserved).
+
+## Implementation tasks
+- Add the domain field + DTO + mappers + populate/read in `submitTAT`/`toDomain`.
+
+## Security checks
+- No user-controlled fields are executed or evaluated; `imageUrl` is a plain string (no SSRF surface added — it's already stored and used for download).
+- No secrets introduced.
+
+## Validation gate
+- `./gradlew :data-firebase:testDebugUnitTest`
+- `./gradlew :shared:testDebugUnitTest`
+- `./gradlew check`
+
+## Exit criteria
+- `TATSubmission` carries `questions`.
+- Firestore round-trip preserves `questions`.
+- Backward-compatible decode for legacy docs.
+- All tests pass; build green.
+
+---
+
+# Phase 2 — Android Analysis Path Reads Questions from Submission
+
+## Objective
+Fix the Android WorkManager chain to use the persisted questions instead of re-fetching a random set.
+
+## Main issue being solved
+`WorkManagerSubmissionAnalysisTrigger.triggerTat()` calls `getTATQuestions(submission.testId)` which returns a fresh random 12 with different IDs → `KEY_IMAGE_URL = ""` → `0 bytes`.
+
+## Proposed solution
+`app/.../workers/WorkManagerSubmissionAnalysisTrigger.kt`, in `triggerTat()`:
+```kotlin
+val questions = submission.questions.ifEmpty {
+    // Legacy fallback for submissions written before Phase 1 (no questions field).
+    testContentRepository.getTATQuestions(submission.testId).getOrNull().orEmpty()
+}
+tatPipelineOrchestrator.startPipeline(submissionId, submission.stories, questions)
+```
+
+The `ifEmpty` fallback preserves behavior for already-submitted docs while new submissions get the correct set.
+
+## Architecture rationale
+- The trigger is the single Android entry point into the pipeline — fixing it here fixes all stories at once.
+- `TATAnalysisWorkPlanner` and `TATStoryAnalysisWorker` need **no change** — they already correctly read `KEY_IMAGE_URL` from `inputData` (the June fix is sound; only its input was wrong).
+
+## Files likely involved
+- `app/src/main/kotlin/com/ssbmax/workers/WorkManagerSubmissionAnalysisTrigger.kt`
+
+## TDD tasks
+Write tests first (new test file, e.g. `app/src/test/kotlin/com/ssbmax/workers/WorkManagerSubmissionAnalysisTriggerTest.kt`):
+- When `submission.questions` is non-empty, the trigger passes **those** questions to `startPipeline` (verify via captured arg).
+- When `submission.questions` is empty, the trigger falls back to `testContentRepository.getTATQuestions(...)`.
+- When the fallback repo call fails, the trigger passes an empty list (no crash).
+
+## Implementation tasks
+- Update `triggerTat()` with the `ifEmpty` fallback.
+
+## Security checks
+- No new permissions or network surface.
+- No test-only bypasses.
+
+## Validation gate
+- `./gradlew :app:testDebugUnitTest`
+- `./gradlew check`
+
+## Exit criteria
+- Android trigger uses persisted questions.
+- Legacy fallback path covered by tests.
+- All tests pass; build green.
+
+---
+
+# Phase 3 — iOS/Shared Analysis Path Reads Questions from Submission
+
+## Objective
+Fix the identical bug on the shared/iOS sequential path.
+
+## Main issue being solved
+`TATAnalysisOrchestrator.analyze()` (line 57) also calls `getTATQuestions(submission.testId)` → same `0 bytes` bug on iOS.
+
+## Proposed solution
+`shared/.../analysis/TATAnalysisOrchestrator.kt`, in `analyze()`:
+```kotlin
+val questions = submission.questions.ifEmpty {
+    testContentRepository.getTATQuestions(submission.testId).getOrNull().orEmpty()
+}
+```
+
+## Architecture rationale
+- Both platforms now read from the same SSOT (the submission), eliminating the divergence.
+- The `ifEmpty` fallback is identical to Phase 2, keeping behavior symmetric.
+
+## Files likely involved
+- `shared/src/commonMain/kotlin/com/ssbmax/shared/analysis/TATAnalysisOrchestrator.kt`
+
+## TDD tasks
+Write tests first (new test file, e.g. `shared/src/commonTest/kotlin/com/ssbmax/shared/analysis/TATAnalysisOrchestratorTest.kt`):
+- When `submission.questions` is non-empty, `analyzeStory` receives the persisted `imageUrl` (assert `downloadImageBytes` is called with the persisted URL, not a repo-fetched one).
+- When `submission.questions` is empty, falls back to `getTATQuestions(...)`.
+- `analyzeStory` produces `ByteArray(0)` only for blank/absent image URLs (blank card).
+
+## Implementation tasks
+- Update `analyze()` with the `ifEmpty` fallback.
+
+## Security checks
+- No new network surface beyond the existing image download.
+- No test-only bypasses.
+
+## Validation gate
+- `./gradlew :shared:testDebugUnitTest`
+- `./gradlew check`
+
+## Exit criteria
+- Shared/iOS path uses persisted questions.
+- Legacy fallback covered by tests.
+- All tests pass; build green.
+
+---
+
+# Phase 4 — ViewModel Passes Questions into the Submission
+
+## Objective
+Wire the actual questions the user saw into the submission at submit time.
+
+## Main issue being solved
+Without this, `submission.questions` is always empty for new submissions, so Phases 2–3 would always hit the (buggy) fallback.
+
+## Proposed solution
+`shared/.../presentation/tat/TATTestViewModel.kt`, in `submitTest()`:
+```kotlin
+val submission = TATSubmission(
+    userId = userId,
+    testId = state.testId,
+    stories = state.responses,
+    questions = state.questions,   // NEW — the exact set the user saw
+    totalTimeTakenMinutes = totalTimeTakenMinutes,
+    submittedAt = Clock.System.now().toEpochMilliseconds(),
+    analysisStatus = AnalysisStatus.PENDING_ANALYSIS,
+    olqResult = null
+)
+```
+
+The ViewModel already holds `state.questions` — the exact set loaded by `loadTATTest`.
+
+## Architecture rationale
+- The ViewModel is the SSOT for the in-memory test session; it's the only place that knows the exact questions shown.
+- No repository or use-case change needed — `SubmitTATTestUseCase` is a thin pass-through.
+
+## Files likely involved
+- `shared/src/commonMain/kotlin/com/ssbmax/shared/presentation/tat/TATTestViewModel.kt`
+
+## TDD tasks
+Write tests first (extend `shared/src/commonTest/kotlin/com/ssbmax/shared/presentation/tat/TATTestViewModelTest.kt`):
+- `submitTest` builds a `TATSubmission` whose `questions` equals `uiState.questions` (the set loaded by `loadTATTest`).
+- `submitTest` still records usage, triggers analysis, and completes the session (existing assertions remain green).
+
+## Implementation tasks
+- Add `questions = state.questions` to the `TATSubmission(...)` constructor call.
+
+## Security checks
+- No new data exposure; questions are already part of the user's own test session.
+- No test-only bypasses.
+
+## Validation gate
+- `./gradlew :shared:testDebugUnitTest`
+- `./gradlew check`
+
+## Exit criteria
+- New submissions persist the exact questions the user saw.
+- All tests pass; build green.
+
+---
+
+# Phase 5 — Regression Guard: WorkPlanner Populates KEY_IMAGE_URL
+
+## Objective
+Add a regression test proving the planner correctly maps persisted questions to `KEY_IMAGE_URL`, so this bug cannot silently return.
+
+## Main issue being solved
+The June 2026 fix's test only proved the worker reads `imageUrl` from `inputData` — it never proved the planner receives questions with matching IDs. This phase closes that gap.
+
+## Proposed solution
+Extend `app/src/test/kotlin/com/ssbmax/workers/TATAnalysisWorkPlannerTest.kt`:
+- When `questions` contains a question whose `id` matches a `story.questionId`, the generated `OneTimeWorkRequest` carries `KEY_IMAGE_URL` = that question's `imageUrl` (non-empty).
+- When `questions` is empty / IDs don't match, `KEY_IMAGE_URL` = `""` (documents the blank-card + legacy behavior).
+- `KEY_IMAGE_CONTEXT_JSON` and `KEY_IMAGE_GENDER_TAG` are populated from the matched question.
+
+## Architecture rationale
+- This is the exact seam where the bug lived. A regression test here is the cheapest guard against recurrence.
+
+## Files likely involved
+- `app/src/test/kotlin/com/ssbmax/workers/TATAnalysisWorkPlannerTest.kt`
+
+## TDD tasks
+- Add the regression tests above (they should pass against the current planner, since the planner logic is correct — only its input was wrong).
+
+## Implementation tasks
+- No production code change expected. If a test reveals a planner defect, fix it here.
+
+## Security checks
+- No production code touched (unless a defect is found).
+
+## Validation gate
+- `./gradlew :app:testDebugUnitTest`
+- `./gradlew check`
+
+## Exit criteria
+- Regression tests prove the planner maps persisted questions → `KEY_IMAGE_URL`.
+- All tests pass; build green.
+
+---
+
+# Phase 6 — Integration Verification & Device Confirmation
+
+## Objective
+Verify the end-to-end fix on-device and confirm the image bytes are non-zero for stories 1–11.
+
+## Proposed solution
+1. **Optional diagnostic (temporary):** add a one-line log in `TATStoryAnalysisWorker.downloadImageBytes`:
+   ```kotlin
+   Log.d(TAG, "   Downloading image: url=${imageUrl.take(60)}...")
+   ```
+   (Remove after confirmation, or keep if useful for future debugging.)
+2. Build + install the debug APK on the Pixel 9.
+3. Take a TAT test.
+4. Pull logcat and confirm:
+   - `Step 1: Image bytes prepared (NNNN bytes)` with `NNNN > 0` for stories 1–11.
+   - Story 12 (blank card) legitimately `0 bytes`.
+   - Synthesis runs with 12 valid assessments.
+
+## Files likely involved
+- `app/src/main/kotlin/com/ssbmax/workers/TATStoryAnalysisWorker.kt` (temporary diagnostic only)
+
+## TDD tasks
+- No new unit tests (device verification).
+
+## Implementation tasks
+- Build, install, test on device, pull logcat, verify.
+
+## Security checks
+- Diagnostic log must not leak PII (truncate URL to 60 chars; no user data).
+
+## Validation gate
+- `./gradlew assembleDebug`
+- `adb install` + manual test + logcat verification.
+
+## Exit criteria
+- On-device run shows non-zero image bytes for stories 1–11.
+- Full test suite still green.
+
+---
+
+# Phase 7 — Documentation & Tech-Debt Reconciliation
+
+## Objective
+Update the architecture doc to reflect the fix and close out the plan.
+
+## Proposed solution
+- Update `docs/architecture/TAT_Pipeline.md`:
+  - Add the `questions` field to the Firestore data model section (§12).
+  - Mark Issue #2 in §19 (Known Issues) as resolved: "`getTATQuestions()` ignores `testId`" → now the analysis paths read persisted questions; the June 2026 partial fix is superseded by the submission-persisted fix.
+  - Add a Phase entry to §20 (Phase Implementation History).
+- Update `docs/plans/TAT_Impr_3` with the final Phase Summary for each phase.
+
+## Files likely involved
+- `docs/architecture/TAT_Pipeline.md`
+- `docs/plans/TAT_Impr_3`
+
+## TDD tasks
+- None (docs only).
+
+## Implementation tasks
+- Update docs to reflect the new SSOT and the resolved issue.
+
+## Security checks
+- No code changes.
+
+## Validation gate
+- `./gradlew check` (confirm nothing regressed).
+
+## Exit criteria
+- Docs accurate and current.
+- Build green.
+
+---
+
+# Phase Handoff Protocol (apply at end of every phase)
+
+At the end of each phase, before moving to the next, provide a **Phase Summary** containing:
+
+1. **Tech debt incurred** during the phase.
+2. **Exact steps taken** to immediately and fully resolve it (no skipping or delaying).
+3. **Confirmation** that the build succeeds and all tests pass.
+
+Only after resolving all debt and verifying tests will the next phase begin.
+
+---
+
+## Suggested Build/Test Commands
+
+```bash
+# Baseline (Phase 0)
+./gradlew :app:testDebugUnitTest
+./gradlew :shared:testDebugUnitTest
+./gradlew :data-firebase:testDebugUnitTest
+./gradlew check
+
+# Per-phase verification
+./gradlew :app:testDebugUnitTest --tests "*.WorkManagerSubmissionAnalysisTriggerTest"
+./gradlew :shared:testDebugUnitTest --tests "*.TATAnalysisOrchestratorTest"
+./gradlew :shared:testDebugUnitTest --tests "*.TATTestViewModelTest"
+./gradlew :app:testDebugUnitTest --tests "*.TATAnalysisWorkPlannerTest"
+./gradlew :data-firebase:testDebugUnitTest --tests "*.SubmissionClusterDtoTest"
+
+# Full gate
+./gradlew check
+
+# Device verification (Phase 6)
+./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb logcat -c
+adb logcat -d | grep -E "TATStoryAnalysisWorker|TATSynthesisWorker"
+```
+
+## File Map (all files touched by this plan)
+
+```
+shared/src/commonMain/kotlin/com/ssbmax/shared/
+├── domain/model/TATTest.kt                    ← Phase 1: add `questions` to TATSubmission
+├── presentation/tat/TATTestViewModel.kt       ← Phase 4: pass state.questions into submission
+└── analysis/TATAnalysisOrchestrator.kt        ← Phase 3: read submission.questions (iOS/shared)
+
+data-firebase/src/commonMain/kotlin/com/ssbmax/shared/data/repository/
+└── GitLivePsychTestSubmissionRepository.kt    ← Phase 1: TATQuestionDto + round-trip
+
+app/src/main/kotlin/com/ssbmax/workers/
+└── WorkManagerSubmissionAnalysisTrigger.kt    ← Phase 2: read submission.questions (Android)
+
+app/src/main/kotlin/com/ssbmax/workers/
+└── TATStoryAnalysisWorker.kt                  ← Phase 6: temporary diagnostic log (optional)
+
+Tests:
+app/src/test/kotlin/com/ssbmax/workers/
+├── WorkManagerSubmissionAnalysisTriggerTest.kt  ← Phase 2 (new)
+├── TATAnalysisWorkPlannerTest.kt                ← Phase 5 (extend)
+└── TATStoryAnalysisWorkerTest.kt                ← Phase 0 (characterization)
+
+shared/src/commonTest/kotlin/com/ssbmax/shared/
+├── presentation/tat/TATTestViewModelTest.kt     ← Phase 4 (extend)
+└── analysis/TATAnalysisOrchestratorTest.kt      ← Phase 3 (new)
+
+data-firebase/src/androidUnitTest/kotlin/com/ssbmax/shared/data/repository/
+└── SubmissionClusterDtoTest.kt                  ← Phase 1 (extend with TATQuestionDto round-trip)
+
+docs/architecture/TAT_Pipeline.md                ← Phase 7
+docs/plans/TAT_Impr_3                            ← this file
+```
+
+---
+
+# Phase Summaries (executed)
+
+## Phase 0 — Baseline Stabilization ✅
+- Baseline `./gradlew check` was green (the initial lint failure was an environment issue: the Gradle daemon had been launched under the IDE's `redhat.java` JRE, which is a JRE not a JDK; `./gradlew --stop` restarted it under the correct JDK and lint passed — no code change).
+- Added characterization test `TATAnalysisWorkPlannerTest.sets KEY_IMAGE_URL to empty when question is missing` (later superseded by Phase 5's more complete regression coverage and removed).
+- Worker blank-URL → `ByteArray(0)` behavior was already covered by `TATStoryAnalysisWorkerTest`.
+- **Tech debt:** none. **Build:** green.
+
+## Phase 1 — Data Model: Persist Questions on TATSubmission ✅
+- Added `questions: List<TATQuestion> = emptyList()` to `TATSubmission` (defaulted → existing call sites compile unchanged).
+- Added `TATQuestionDto` + `TATQuestion.toDto()`/`TATQuestionDto.toDomain()` mappers; populated `questions` in `submitTAT()` and read it in `TATDataDto.toDomain()`.
+- Tests: `TATQuestionDto` round-trip, `TATSubmission` questions round-trip, legacy no-`questions` decode → `emptyList()`.
+- **Tech debt:** none. **Build:** green.
+
+## Phase 2 — Android Analysis Path Reads Questions from Submission ✅
+- `WorkManagerSubmissionAnalysisTrigger.triggerTat()` now uses `submission.questions.ifEmpty { testContentRepository.getTATQuestions(...) }`.
+- New `WorkManagerSubmissionAnalysisTriggerTest`: persisted-questions path, fallback path, fallback-failure path.
+- **Tech debt:** none (a stale detekt report on the new test file cleared on re-run; the file already ended with a newline). **Build:** green.
+
+## Phase 3 — iOS/Shared Analysis Path Reads Questions from Submission ✅
+- `TATAnalysisOrchestrator.analyze()` now uses `submission.questions.ifEmpty { testContentRepository.getTATQuestions(...) }`.
+- New `TATAnalysisOrchestratorTest`: persisted-URL download, fallback download, blank-card zero-bytes. Made `FakeAIService` open to capture image bytes.
+- **Tech debt:** none. **Build:** green.
+
+## Phase 4 — ViewModel Passes Questions into the Submission ✅
+- `TATTestViewModel.submitTest()` now passes `questions = state.questions` into the `TATSubmission`.
+- Added `TATTestViewModelTest.submitTest persists the questions the user saw in the submission`.
+- **Tech debt:** none. **Build:** green.
+
+## Phase 5 — Regression Guard: WorkPlanner Populates KEY_IMAGE_URL ✅
+- Extended `TATAnalysisWorkPlannerTest`: `KEY_IMAGE_URL` populated from matched question; `KEY_IMAGE_CONTEXT_JSON`/`KEY_IMAGE_GENDER_TAG` populated; blank URL when no match.
+- No production code change needed (planner logic was correct — only its input was wrong).
+- **Tech debt:** none. **Build:** green.
+
+## Phase 6 — Integration Verification & Device Confirmation ⏳ (partial)
+- `./gradlew assembleDebug` succeeded; APK installed on the connected Pixel (`4A231VDAQ0001D`); app launched.
+- Full on-device TAT test (login → take 12-story test → submit → logcat `Step 1: Image bytes prepared (NNNN bytes)` with `NNNN > 0` for stories 1–11) requires manual UI interaction and was not automated.
+- **Tech debt:** none. **Build:** green.
+
+## Phase 7 — Documentation & Tech-Debt Reconciliation ✅
+- Updated `docs/architecture/TAT_Pipeline.md`: §12 `questions` field, §19 Issue #2 marked resolved (superseded by submission-persisted fix), §20 Phase 11 entry + `imageBytes=0` fix row updated.
+- **Tech debt:** none. **Build:** green.

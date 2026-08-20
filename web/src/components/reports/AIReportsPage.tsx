@@ -74,7 +74,7 @@ export const AIReportsPage: React.FC<AIReportsPageProps> = ({
   const dossierData = activeReports?.dossier || SAMPLE_DOSSIER;
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8" data-testid="ai-reports-page">
+    <div className="max-w-7xl w-full mx-auto px-4 py-6 space-y-8 animate-in fade-in duration-300" data-testid="ai-reports-page">
       {/* Header Banner */}
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider">
@@ -162,7 +162,7 @@ export const AIReportsPage: React.FC<AIReportsPageProps> = ({
 
       {/* Main Sections: Radar Chart, Dossier & Score Card */}
       <div className="space-y-8">
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-4" data-testid="radar-view">
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-4" data-testid="radar-view">
           <InteractiveRadarChart scores={olqData} />
         </div>
 
@@ -170,21 +170,21 @@ export const AIReportsPage: React.FC<AIReportsPageProps> = ({
           <PsychologistDossier dossier={dossierData} />
         </div>
 
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-4" data-testid="olq-view">
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-4" data-testid="olq-view">
           <OLQScoreCard olqScores={olqData} />
         </div>
       </div>
 
       {/* Recent Assessment Attempts Table */}
       {recentAttempts.length > 0 && (
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl space-y-4" data-testid="attempts-history">
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-md dark:shadow-xl dark:shadow-slate-950/60 space-y-4" data-testid="attempts-history">
           <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-base">
             <History className="w-5 h-5 text-sky-600 dark:text-sky-400" />
             <h2>{strings.reportsPage.historyTitle}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase font-bold border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-slate-50 dark:bg-slate-950/80 text-slate-600 dark:text-slate-400 uppercase font-bold border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="p-3">Test Type</th>
                   <th className="p-3">Date</th>

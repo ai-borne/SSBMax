@@ -4,6 +4,7 @@ import com.ssbmax.shared.db.SharedDatabase
 import com.ssbmax.shared.domain.model.CacheStatus
 import com.ssbmax.shared.domain.model.OIRCacheReadiness
 import com.ssbmax.shared.domain.model.OIRQuestionType
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.CoroutineScope
@@ -49,7 +50,6 @@ class GitLiveOIRQuestionCacheManager(
     private var lastSyncError: String? = null
 
     private companion object {
-        const val FIRESTORE_COLLECTION = "test_content"
         const val FIRESTORE_OIR_DOC = "oir"
         const val FIRESTORE_BATCHES = "batches"
         const val FIRESTORE_META = "meta"
@@ -113,7 +113,7 @@ class GitLiveOIRQuestionCacheManager(
     /** Read `test_content/oir/meta/config`; missing or malformed metadata fails closed. */
     internal suspend fun fetchMetaConfig(): Result<MetaConfig> {
         return try {
-        val doc = Firebase.firestore.collection(FIRESTORE_COLLECTION)
+        val doc = Firebase.firestore.collection(SsbContracts.FirestorePaths.TEST_CONTENT)
             .document(FIRESTORE_OIR_DOC)
             .collection(FIRESTORE_META)
             .document(FIRESTORE_META_CONFIG)
@@ -136,7 +136,7 @@ class GitLiveOIRQuestionCacheManager(
         if (isBatchDownloaded(batchId)) {
             Result.success(Unit)
         } else {
-            val doc = Firebase.firestore.collection(FIRESTORE_COLLECTION)
+            val doc = Firebase.firestore.collection(SsbContracts.FirestorePaths.TEST_CONTENT)
                 .document(FIRESTORE_OIR_DOC)
                 .collection(FIRESTORE_BATCHES)
                 .document(batchId)

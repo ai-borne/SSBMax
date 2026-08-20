@@ -12,13 +12,27 @@ export const dossierStrings = {
   },
   radar: {
     title: '4-Factor SSB Core & 15-OLQ Radar Profile',
+    factorTitle: '15 Officer-Like Qualities (OLQ) Radar',
     subtitle: 'Interactive assessment polygon mapping candidate scores against baseline thresholds.',
     candidateScore: 'Candidate Score',
     benchmarkLabel: 'SSB Baseline Threshold (7.0)',
     selectOlqHint: 'Click or hover over an OLQ point to view detailed assessment reasoning.',
     noData: 'No OLQ radar dataset available.',
     toggleDetailed: 'Expand 15-OLQ Micro Breakdown',
-    toggleCore: 'View 4 SSB Core Factors'
+    toggleCore: 'View 4 SSB Core Factors',
+    proofBadge: 'OFFICER ASSESSOR DOSSIER PROOF',
+    polygonTitle: '4 SSB Core Factor Radar Polygon',
+    recommendationOverviewTitle: 'Assessor Recommendation Overview',
+    recommendationBadge: 'RECOMMENDED',
+    recommendationSummary: 'Candidate exhibits high Factor I & III command output with strong decision speed and group initiative. Recommended for conference probe on minor social adaptability details.',
+    microScorecardTitle: 'Complete 15 Officer Like Qualities (OLQ) Micro Scorecard',
+    diffTitle: 'Assessor Response Comparison Diff (SRT Sample)',
+    diffAvgLabel: 'Average Candidate Response',
+    diffAvgResponse: '"He informed the police station and waited for help to arrive."',
+    diffAvgBadge: 'Passive (Score: 6.0)',
+    diffRecLabel: 'Recommended Officer Action',
+    diffRecResponse: '"Immediately pulled emergency chain, alerted passengers, organized bucket relay, and safely extinguished fire."',
+    diffRecBadge: 'Officer Grade (Score: 9.2)'
   },
   dossier: {
     title: 'Military Psychologist AI Dossier',

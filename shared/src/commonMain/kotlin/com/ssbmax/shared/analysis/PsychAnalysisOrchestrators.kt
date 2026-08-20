@@ -4,10 +4,12 @@ import com.ssbmax.shared.ai.prompts.PsychologyTestPrompts
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.model.scoring.AnalysisStatus
 import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
+import com.ssbmax.shared.domain.repository.FeatureFlagRepository
 import com.ssbmax.shared.domain.repository.SubmissionRepository
 import com.ssbmax.shared.domain.repository.UserProfileRepository
 import com.ssbmax.shared.domain.scoring.ScoringUtils
 import com.ssbmax.shared.domain.service.AIService
+import com.ssbmax.shared.domain.service.EvaluationFunctionsClient
 import com.ssbmax.shared.domain.usecase.dashboard.GetOLQDashboardUseCase
 import com.ssbmax.shared.domain.util.DomainLogger
 import com.ssbmax.shared.domain.validation.ValidationIntegration
@@ -82,16 +84,36 @@ private suspend fun runPsychAnalysis(
         .onFailure { logger.w("PsychAnalysis", "Failed to invalidate dashboard cache: ${it.message}") }
 }
 
+/**
+ * Phase 4 Ship (Web SSB Test Flow Parity plan): pilots the new server-side Tier-2
+ * evaluation path behind [FEATURE_FLAG_SERVER_EVALUATION], default off. When enabled,
+ * `analyze` delegates entirely to `functions/src/evaluation/watEvaluate.js` via
+ * [evaluationFunctionsClient] instead of running [runPsychAnalysis]'s legacy
+ * client-side AI call -- the Cloud Function does its own ANALYZING/COMPLETED/FAILED
+ * flips and result write, so nothing further happens here; the caller's existing
+ * Firestore submission listener observes the result reactively either way. Both paths
+ * stay live simultaneously during the canary/bake period (see the plan's
+ * Ship/Cutover split) -- legacy code is only deleted in WAT's Cutover phase.
+ */
 class WATAnalysisOrchestrator(
     private val submissionRepository: SubmissionRepository,
     private val userProfileRepository: UserProfileRepository,
     private val aiService: AIService,
     private val getOLQDashboard: GetOLQDashboardUseCase,
-    private val logger: DomainLogger
+    private val logger: DomainLogger,
+    private val featureFlagRepository: FeatureFlagRepository,
+    private val evaluationFunctionsClient: EvaluationFunctionsClient
 ) {
     suspend fun analyze(submissionId: String) {
         val submission = submissionRepository.getWATSubmission(submissionId).getOrNull() ?: return
         if (submission.analysisStatus != AnalysisStatus.PENDING_ANALYSIS) return
+
+        if (featureFlagRepository.getFeatureFlags().isEnabled(FEATURE_FLAG_SERVER_EVALUATION)) {
+            evaluationFunctionsClient.evaluateWAT(submissionId).onFailure {
+                logger.e("PsychAnalysis", "Server-side WAT evaluation failed: $submissionId: ${it.message}")
+            }
+            return
+        }
 
         runPsychAnalysis(
             testType = TestType.WAT,
@@ -114,6 +136,10 @@ class WATAnalysisOrchestrator(
             writeResult = { submissionRepository.updateWATOLQResult(submissionId, it) }
         )
     }
+
+    private companion object {
+        const val FEATURE_FLAG_SERVER_EVALUATION = "wat_server_evaluation"
+    }
 }
 
 class SRTAnalysisOrchestrator(
@@ -121,11 +147,20 @@ class SRTAnalysisOrchestrator(
     private val userProfileRepository: UserProfileRepository,
     private val aiService: AIService,
     private val getOLQDashboard: GetOLQDashboardUseCase,
-    private val logger: DomainLogger
+    private val logger: DomainLogger,
+    private val featureFlagRepository: FeatureFlagRepository,
+    private val evaluationFunctionsClient: EvaluationFunctionsClient
 ) {
     suspend fun analyze(submissionId: String) {
         val submission = submissionRepository.getSRTSubmission(submissionId).getOrNull() ?: return
         if (submission.analysisStatus != AnalysisStatus.PENDING_ANALYSIS) return
+
+        if (featureFlagRepository.getFeatureFlags().isEnabled(FEATURE_FLAG_SERVER_EVALUATION)) {
+            evaluationFunctionsClient.evaluateSRT(submissionId).onFailure {
+                logger.e("PsychAnalysis", "Server-side SRT evaluation failed: $submissionId: ${it.message}")
+            }
+            return
+        }
 
         runPsychAnalysis(
             testType = TestType.SRT,
@@ -148,6 +183,10 @@ class SRTAnalysisOrchestrator(
             writeResult = { submissionRepository.updateSRTOLQResult(submissionId, it) }
         )
     }
+
+    private companion object {
+        const val FEATURE_FLAG_SERVER_EVALUATION = "srt_server_evaluation"
+    }
 }
 
 class SDAnalysisOrchestrator(
@@ -155,11 +194,20 @@ class SDAnalysisOrchestrator(
     private val userProfileRepository: UserProfileRepository,
     private val aiService: AIService,
     private val getOLQDashboard: GetOLQDashboardUseCase,
-    private val logger: DomainLogger
+    private val logger: DomainLogger,
+    private val featureFlagRepository: FeatureFlagRepository,
+    private val evaluationFunctionsClient: EvaluationFunctionsClient
 ) {
     suspend fun analyze(submissionId: String) {
         val submission = submissionRepository.getSDTSubmission(submissionId).getOrNull() ?: return
         if (submission.analysisStatus != AnalysisStatus.PENDING_ANALYSIS) return
+
+        if (featureFlagRepository.getFeatureFlags().isEnabled(FEATURE_FLAG_SERVER_EVALUATION)) {
+            evaluationFunctionsClient.evaluateSD(submissionId).onFailure {
+                logger.e("PsychAnalysis", "Server-side SD evaluation failed: $submissionId: ${it.message}")
+            }
+            return
+        }
 
         runPsychAnalysis(
             testType = TestType.SD,
@@ -181,5 +229,9 @@ class SDAnalysisOrchestrator(
             markFailed = { submissionRepository.updateSDTAnalysisStatus(submissionId, AnalysisStatus.FAILED) },
             writeResult = { submissionRepository.updateSDTOLQResult(submissionId, it) }
         )
+    }
+
+    private companion object {
+        const val FEATURE_FLAG_SERVER_EVALUATION = "sd_server_evaluation"
     }
 }

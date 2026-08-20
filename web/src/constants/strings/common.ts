@@ -1,3 +1,11 @@
+import { PricingTiers } from '../../generated/contracts';
+
+/** Prices are sourced from the generated pricing contract (contracts/pricing.yaml), never hand literals. */
+function priceLabel(tier: 'FREE' | 'BASIC' | 'PRO' | 'PREMIUM'): string {
+  const price = PricingTiers.find((t) => t.tier === tier)?.monthlyInr ?? 0;
+  return `₹${price} / Month`;
+}
+
 export const commonStrings = {
   common: {
     appName: 'SSBMax',
@@ -38,28 +46,102 @@ export const commonStrings = {
     paymentFailed: 'Payment verification failed.'
   },
   subscription: {
-    title: 'Officer Pass Membership Tiers',
+    title: 'Membership Tiers',
     subtitle: 'Choose your subscription plan to unlock full AI psychological dossier evaluations and unlimited SSB test batteries.',
-    freePlanTitle: 'Free Cadet Pass',
-    freePlanPrice: '₹0 / Month',
+    freePlanTitle: 'Free Plan',
+    freePlanPrice: priceLabel('FREE'),
     freePlanBadge: 'FREE',
     freeFeature1: 'Stage I OIR Test Simulators',
     freeFeature2: 'Basic Practice Tests',
     freeFeature3: 'Cached Study Materials',
     currentPlan: 'Current Active Plan',
-    proPlanTitle: 'Pro Officer Pass',
-    proPlanPrice: '₹499 / Month',
+    basicPlanTitle: 'Basic Plan',
+    basicPlanPrice: priceLabel('BASIC'),
+    basicPlanBadge: 'BASIC',
+    basicFeature1: 'Stage I OIR & PPDT Test Simulators (5/Month)',
+    basicFeature2: 'Stage II Psych Battery Starter (5/Month each)',
+    basicFeature3: 'Cached Study Materials',
+    proPlanTitle: 'Pro Plan',
+    proPlanPrice: priceLabel('PRO'),
     proPlanBadge: 'MOST POPULAR',
     proFeature1: 'Unlimited Stage II Psych Batteries (TAT, WAT, SRT, SD)',
     proFeature2: 'SSB AI Assessor Dossier Reports',
     proFeature3: '15 Officer-Like Qualities (OLQ) Radar Analytics',
     proFeature4: 'Stage I PPDT Canvas & Narration Practice',
     proFeature5: 'Priority Assessor Feedback & Cloud Sync',
-    upgradeNow: 'Upgrade to Officer Pass',
+    upgradeNow: 'Upgrade to Pro',
     processing: 'Processing Order...',
-    successBadge: 'Pro Officer Pass Active',
+    successBadge: 'Pro Membership Active',
     successMessage: 'Welcome to Pro Membership! Access unlocked across all AI evaluation engines.',
-    guarantee: '100% Refund Policy & Secure 256-Bit Razorpay Encryption'
+    guarantee: '100% Refund Policy & Secure 256-Bit Razorpay Encryption',
+    mobileSubscriptionActiveBanner:
+      'You already have an active subscription purchased through the mobile app. Manage or cancel it there before starting a new one here.',
+    renewsOn: (date: string) => `Renews on ${date}`,
+    expiresNoRenew: (date: string) => `Expires ${date} (won't auto-renew)`,
+    ribbonTitle: 'Select Your Preparation Tier',
+    ribbonSubtitle: 'Choose Free, Basic, Pro, or Premium to unlock authentic SSB test simulators & AI evaluations.',
+    ribbonFreeTitle: 'Free',
+    ribbonFreePrice: priceLabel('FREE'),
+    ribbonFreeBadge: 'FREE',
+    ribbonFreeFeature1: 'Stage I OIR Reasoning Simulators',
+    ribbonFreeFeature2: 'Basic Practice Tests & Answers',
+    ribbonFreeFeature3: 'Cached SSB Study Material Guides',
+    ribbonFreeFeature4: 'Offline Response Queueing',
+    ribbonFreeButton: 'Active Free Plan',
+    ribbonBasicTitle: 'Basic',
+    ribbonBasicPrice: priceLabel('BASIC'),
+    ribbonBasicBadge: 'BASIC',
+    ribbonBasicFeature1: 'Stage I OIR & PPDT Simulators (5/Month)',
+    ribbonBasicFeature2: 'Stage II Psych Battery Starter (5/Month each)',
+    ribbonBasicFeature3: 'GTO Task Starter (5/Month)',
+    ribbonBasicFeature4: '1 Mock Interview per Month',
+    ribbonBasicButton: 'Upgrade to Basic',
+    ribbonProTitle: 'Pro',
+    ribbonProPrice: priceLabel('PRO'),
+    ribbonProBadge: 'PRO',
+    ribbonProFeature1: 'Stage I PPDT Story Canvas & Narration',
+    ribbonProFeature2: 'Stage II Psych Battery (8/Month each: TAT, WAT, SRT, SD)',
+    ribbonProFeature3: 'AI Assessor Dossier & 15 OLQ Radar Analytics',
+    ribbonProFeature4: '8 GTO Task Simulators per Month & Tactical Guides',
+    ribbonProButton: 'Upgrade to Pro',
+    ribbonPremiumTitle: 'Premium',
+    ribbonPremiumPrice: priceLabel('PREMIUM'),
+    ribbonPremiumBadge: 'PREMIUM',
+    ribbonPremiumFeature1: 'All Pro Features Included',
+    ribbonPremiumFeature2: 'Live 1-on-1 Mock Personal Interview (10 / Month)',
+    ribbonPremiumFeature3: 'Personalized IO Assessor Probes & Audio Review',
+    ribbonPremiumFeature4: 'Priority Cloud AI Processing & 24/7 Support',
+    ribbonPremiumButton: 'Unlock Premium',
+    tierBadgeFree: 'FREE',
+    tierBadgeBasic: 'BASIC',
+    tierBadgePro: 'PRO',
+    tierBadgePremium: 'PREMIUM'
+  },
+  gto: {
+    gtoTitle: 'Stage II: GTO Outdoor & Indoor Tasks (8 Tasks)',
+    gtoSubtitle: 'Group Testing Officer evaluation covering Group Discussion, Planning, Structure Tasks, Obstacles, and Command Task.',
+    gdTitle: '1. Group Discussion (GD)',
+    gdDesc: 'Current affairs & defense scenario group discussion evaluating communication and logical reasoning.',
+    gpeTitle: '2. Group Planning Exercise (GPE)',
+    gpeDesc: 'Military map problem solving, individual solution writing, and group consensus planning.',
+    pgtTitle: '3. Progressive Group Task (PGT)',
+    pgtDesc: '4 outdoor obstacle structures with plank, rope, load, and strict GTO helper rules.',
+    hgtTitle: '4. Half Group Task (HGT)',
+    hgtDesc: 'Group divided in half to solve 1 outdoor structure under direct GTO observation.',
+    iotTitle: '5. Individual Obstacles Test (IOT)',
+    iotDesc: '10 physical outdoor obstacles scored 1 to 10 points within 3-minute limit.',
+    ctTitle: '6. Command Task (CT)',
+    ctDesc: 'Commander leadership role, subordinate selection, and obstacle execution.',
+    gorTitle: '7. Snake Race / Group Obstacle Race (GOR)',
+    gorDesc: 'Competitive group obstacle race carrying heavy tent load (snake) with group war cries.',
+    fgtTitle: '8. Final Group Task (FGT)',
+    fgtDesc: 'Final single outdoor structure task testing total group coordination and leadership.',
+    launchSimulator: 'Launch Test',
+    startPractice: 'Start Practice',
+    viewGuide: 'View SSB Guide',
+    proRequired: 'Pro Required',
+    premiumRequired: 'Premium Required',
+    limitReached: 'Monthly Limit Reached'
   },
   offline: {
     queuedMessage: 'Test response saved offline. Will sync when back online.',
@@ -73,17 +155,28 @@ export const commonStrings = {
     completed: 'Completed',
     noMaterials: 'No study materials available at the moment.',
     loadError: 'Failed to load study materials.',
-    offlineNotice: 'Viewing cached study material'
+    offlineNotice: 'Viewing cached study material',
+    authLockedTitle: 'Sign in with Google to Unlock Study Materials',
+    authLockedDesc: 'Access comprehensive guides, sample stories, PIQ templates, and assessor dossiers across all 5 days of SSB selection.',
+    signInWithGoogle: 'Sign in with Google',
+    day1Title: 'Day 1: Stage I Screening Test',
+    day2Title: 'Day 2: Stage II Psychology Battery & PIQ',
+    day3Title: 'Day 3 & 4: Stage II GTO Outdoor Tasks',
+    day5Title: 'Day 5: Stage II Interview & Board Conference',
+    skeletonLoading: 'Loading authentic SSB study materials...',
+    postAuthResuming: 'Resuming your session to open study guide...',
+    offlineFallbackBanner: 'Operating in offline mode. Showing cached study materials.'
   },
   nav: {
-    dashboard: 'Command Center',
     landing: 'Home',
+    study: 'Study',
+    tests: 'SSB Tests',
+    settings: 'Settings',
+    dashboard: 'Command Center',
     practice: 'SSB Tests',
-    study: 'Study Material',
     reports: 'AI Reports',
     pricing: 'Officer Pass',
     account: 'Account',
-    settings: 'Settings',
     privacy: 'Privacy Policy',
     terms: 'Terms & Refunds'
   },
@@ -148,7 +241,28 @@ export const commonStrings = {
     prepStatus: 'Preparation Stage',
     editDiagnostic: 'Edit Profile',
     upgradeTier: 'Upgrade Pass',
-    signOut: 'Sign Out Account'
+    signOut: 'Sign Out Account',
+    piqPrivacyWarning: 'Privacy Warning: For candidate secrecy and cybersecurity, do not enter sensitive PII (Aadhaar, Govt ID numbers, or Passport details) into form fields.'
+  },
+  faq: {
+    title: 'Frequently Asked Questions (FAQs)',
+    subtitle: 'Everything you need to know about SSBMax preparatory tools, AI dossier reports, and Officer Pass.',
+    q1: 'How does the AI Assessor Dossier evaluate 15 Officer-Like Qualities (OLQs)?',
+    a1: 'Our AI assessment engine analyzes psychological responses (TAT, WAT, SRT, SD) against Services Selection Board assessor benchmark norms to generate 4-Factor OLQ radar scores and detailed assessor feedback.',
+    q2: 'Can I practice tests offline without internet connectivity?',
+    a2: 'Yes! All study materials and test batteries auto-save progress offline via IndexedDB. Your test responses will automatically queue and sync to Cloud Firestore when you reconnect.',
+    q3: 'What is included in the Pro Officer Pass subscription?',
+    a3: 'Pro Officer Pass unlocks unlimited Stage II psychological test batteries, full AI 15-OLQ dossier generation, PPDT canvas practice, and priority assessor feedback.',
+    q4: 'Is there a money-back guarantee for subscriptions?',
+    a4: 'Yes, we offer a 100% 7-day money-back guarantee. If you are not completely satisfied with your Officer Pass, request a refund from Settings to receive a full refund via Razorpay.',
+    q5: 'How is my preparatory data kept secure and private?',
+    a5: 'All candidate data and AI dossiers are encrypted using TLS 1.3 256-bit encryption. Your psychological test responses are strictly private and never shared with third parties.'
+  },
+  legalSection: {
+    title: 'Legal Policies & Compliance',
+    subtitle: 'Review SSBMax candidate terms, privacy rights, and refund rules.',
+    viewPrivacy: 'View Privacy Policy',
+    viewTerms: 'View Terms & Refund Policy'
   },
   settings: {
     title: 'Candidate Command Settings',
@@ -173,6 +287,16 @@ export const commonStrings = {
     appVersion: 'Platform Version',
     pwaStatus: 'PWA Connectivity',
     onlineStatus: 'Network Connection Status'
+  },
+  devSettings: {
+    cardTitle: 'Developer Access Control Overrides',
+    cardSubtitle: 'Dev-build only. Override the subscription tier used by the SSB Tests page to test locked/unlocked test cards without a real payment.',
+    realLabel: 'Follow Real',
+    freeLabel: 'Force FREE (Tier 0)',
+    basicLabel: 'Force BASIC (Tier 1)',
+    proLabel: 'Force PRO (Tier 2)',
+    premiumLabel: 'Force PREMIUM (Tier 3)',
+    activeOverrideNotice: 'Active Access Control Override:',
   },
   footer: {
     rights: 'Tactical Command Platform for Defence Officers.',
@@ -204,5 +328,9 @@ export const commonStrings = {
     sec3Text: 'Candidates agree to use the platform solely for personal SSB preparation. Redistribution or unauthorized automated scraping of psychological test material and AI evaluation models is prohibited.',
     sec4Title: '4. Independent Platform Disclaimer',
     sec4Text: 'SSBMax is an independent educational preparatory platform. It is not directly affiliated with, endorsed by, or representing the Ministry of Defence or official Services Selection Boards.'
+  },
+  updateRequired: {
+    title: 'Update Required',
+    body: 'This version of SSBMax is no longer supported. Please refresh the page to load the latest version.'
   }
 } as const;

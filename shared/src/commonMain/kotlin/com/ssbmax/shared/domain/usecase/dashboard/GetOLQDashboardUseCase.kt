@@ -247,7 +247,12 @@ class GetOLQDashboardUseCase constructor(
         val ppdtJob = async {
             fetchSlot(TestType.PPDT, unavailable) {
                 val submission = submissionRepository.getLatestPPDTSubmission(userId).getOrNull()
-                val olqResult = submission?.let {
+                // A blank submissionId (stale/malformed submission doc) must never reach
+                // getPPDTResult: GitLive's Firestore `.document` call with a blank id throws an
+                // uncatchable native FIRInvalidArgumentException that crashes the whole app rather
+                // than failing the Result, so this has to be filtered out before the call, not
+                // caught after it.
+                val olqResult = submission?.takeIf { it.submissionId.isNotBlank() }?.let {
                     submissionRepository.getPPDTResult(it.submissionId).getOrNull()
                 }
                 Pair(submission, olqResult)
@@ -316,7 +321,7 @@ class GetOLQDashboardUseCase constructor(
             userId = userId,
             phase1Results = OLQDashboardData.Phase1Results(
                 // CRITICAL: Ensure sessionId matches document ID for navigation consistency
-                oirResult = oirResult?.copy(sessionId = oirSubmission?.id ?: ""),
+                oirResult = oirResult?.copy(sessionId = oirSubmission.id),
                 ppdtResult = ppdtSubmission,
                 ppdtOLQResult = ppdtOLQResult
             ),
@@ -463,7 +468,10 @@ class GetOLQDashboardUseCase constructor(
             }
         }
         
-        if (submissionId == null) {
+        // Same guard as the PPDT slot above: a blank id (stale/malformed submission doc) must
+        // never reach the get*Result() call below, since GitLive's Firestore `.document` call
+        // with a blank id throws an uncatchable native exception instead of failing the Result.
+        if (submissionId.isNullOrBlank()) {
             logger.d(TAG, "   ⚠️ No $testType submission found for user")
             return null
         }

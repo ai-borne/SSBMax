@@ -14,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -95,32 +96,43 @@ class TATSubmissionResultViewModel(
         }
     }
 
-    /** Loads OLQ result from `psych_results` (GTO pattern) once status == COMPLETED. */
+    /**
+     * Loads OLQ result from `psych_results` after submission completion.
+     * Submission metadata and the result document are written separately, so
+     * retry briefly through Firestore's eventual-consistency window.
+     */
     private suspend fun loadResult(submissionId: String) {
-        try {
-            val result = submissionRepository.getTATResult(submissionId)
-            if (result.isSuccess) {
-                val olqResult = result.getOrNull()
-                val ssbRecommendation = olqResult?.olqScores?.takeIf { it.isNotEmpty() }?.let { scores ->
-                    val validationResult = ValidationIntegration.validateScores(
-                        scores = scores,
-                        entryType = EntryType.NDA
-                    )
-                    SSBRecommendationUIModel.fromValidationResult(validationResult, EntryType.NDA)
+        repeat(30) { attempt ->
+            try {
+                val result = submissionRepository.getTATResult(submissionId)
+                if (result.isSuccess && result.getOrNull() != null) {
+                    val olqResult = result.getOrNull()!!
+                    val ssbRecommendation = olqResult.olqScores.takeIf { it.isNotEmpty() }?.let { scores ->
+                        val validationResult = ValidationIntegration.validateScores(
+                            scores = scores,
+                            entryType = EntryType.NDA
+                        )
+                        SSBRecommendationUIModel.fromValidationResult(validationResult, EntryType.NDA)
+                    }
+                    _uiState.update { currentState ->
+                        currentState.submission?.let { submission ->
+                            currentState.copy(
+                                submission = submission.copy(olqResult = olqResult),
+                                ssbRecommendation = ssbRecommendation
+                            )
+                        } ?: currentState
+                    }
+                    return
                 }
-                _uiState.update { currentState ->
-                    currentState.submission?.let { submission ->
-                        currentState.copy(submission = submission.copy(olqResult = olqResult), ssbRecommendation = ssbRecommendation)
-                    } ?: currentState
-                }
-            } else {
-                logger.w(tag, "TAT OLQ result not yet available: ${result.exceptionOrNull()?.message}")
+                if (attempt < 29) delay(2_000)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (attempt == 29) logger.e(tag, "Failed to load TAT OLQ result", e)
+                else delay(2_000)
             }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            logger.e(tag, "Failed to load TAT OLQ result", e)
         }
+        logger.w(tag, "TAT OLQ result was not available after 60 seconds: $submissionId")
     }
 }
 

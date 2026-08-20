@@ -30,7 +30,7 @@ class CheckTestEligibilityUseCaseTest {
     fun `eligible user fires no security event`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("TAT Tests" to UsageInfo(used = 0, limit = 3))
+            mapOf("TAT" to UsageInfo(used = 0, limit = 3))
         )
 
         val result = useCase(TestType.TAT, "user-1")
@@ -43,7 +43,7 @@ class CheckTestEligibilityUseCaseTest {
     fun `limit reached fires sec_limit_reached with test type and tier`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1))
+            mapOf("OIR" to UsageInfo(used = 1, limit = 1))
         )
 
         val result = useCase(TestType.OIR, "user-1")
@@ -75,7 +75,7 @@ class CheckTestEligibilityUseCaseTest {
     fun `limit reached while overridden does not fire security event`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1))
+            mapOf("OIR" to UsageInfo(used = 1, limit = 1))
         )
         val developerSettings = DeveloperSettings(FakeSettings())
         developerSettings.setOverride(SubscriptionOverride.FORCE_FREE)
@@ -96,7 +96,7 @@ class CheckTestEligibilityUseCaseTest {
     fun `limit reached with FOLLOW_REAL still fires security event`() = runTest {
         subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
         subscriptionRepository.monthlyUsageResult = Result.success(
-            mapOf("OIR Tests" to UsageInfo(used = 1, limit = 1))
+            mapOf("OIR" to UsageInfo(used = 1, limit = 1))
         )
         val developerSettings = DeveloperSettings(FakeSettings())
         val followRealUseCase = CheckTestEligibilityUseCase(
@@ -109,5 +109,51 @@ class CheckTestEligibilityUseCaseTest {
 
         assertTrue(result is TestEligibility.LimitReached)
         assertEquals(1, analyticsTracker.events.size)
+    }
+
+    /**
+     * Phase 3 (`docs/plans/SubscriptionPricingRestructure.md` step 5): a paid tier with a known
+     * `startDate` must query usage by the billing-anniversary key (`yyyy-MM-dd`, 2 dashes), not
+     * the legacy calendar-month key (`yyyy-MM`, 1 dash) -- exact date coverage of the anniversary
+     * math itself lives in `BillingPeriodTest` with an injectable clock; this only pins that
+     * `CheckTestEligibilityUseCase` actually wires `startDate` through to the query.
+     */
+    @Test
+    fun `paid tier with a known startDate queries usage by the anniversary period key`() = runTest {
+        subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
+        subscriptionRepository.startDateResult = Result.success(1_700_000_000_000L)
+        subscriptionRepository.monthlyUsageResult = Result.success(mapOf("TAT" to UsageInfo(used = 0, limit = 3)))
+
+        useCase(TestType.TAT, "user-1")
+
+        val period = subscriptionRepository.lastMonthlyUsagePeriod
+        assertEquals(2, period?.count { it == '-' }, "expected a yyyy-MM-dd anniversary key, got $period")
+    }
+
+    /** FREE tier has no `startDate` -- must keep querying the legacy calendar-month key. */
+    @Test
+    fun `FREE tier queries usage by the legacy calendar-month key`() = runTest {
+        subscriptionRepository.tierResult = Result.success(SubscriptionTier.FREE)
+        subscriptionRepository.startDateResult = Result.success(null)
+        subscriptionRepository.monthlyUsageResult = Result.success(mapOf("OIR" to UsageInfo(used = 0, limit = 1)))
+
+        useCase(TestType.OIR, "user-1")
+
+        val period = subscriptionRepository.lastMonthlyUsagePeriod
+        assertEquals(1, period?.count { it == '-' }, "expected a yyyy-MM key, got $period")
+    }
+
+    /** A `getSubscriptionStartDate` failure must fail open to the calendar-month fallback, not `NetworkError`. */
+    @Test
+    fun `startDate read failure falls back to calendar-month key not NetworkError`() = runTest {
+        subscriptionRepository.tierResult = Result.success(SubscriptionTier.PRO)
+        subscriptionRepository.startDateResult = Result.failure(Exception("offline"))
+        subscriptionRepository.monthlyUsageResult = Result.success(mapOf("TAT" to UsageInfo(used = 0, limit = 3)))
+
+        val result = useCase(TestType.TAT, "user-1")
+
+        assertTrue(result is TestEligibility.Eligible)
+        val period = subscriptionRepository.lastMonthlyUsagePeriod
+        assertEquals(1, period?.count { it == '-' }, "expected a yyyy-MM key, got $period")
     }
 }

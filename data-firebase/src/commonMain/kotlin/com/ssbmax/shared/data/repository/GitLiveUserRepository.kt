@@ -4,6 +4,7 @@ import com.ssbmax.shared.domain.model.InstructorProfile
 import com.ssbmax.shared.domain.model.SSBMaxUser
 import com.ssbmax.shared.domain.model.StudentProfile
 import com.ssbmax.shared.domain.model.UserRole
+import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +23,7 @@ import kotlin.time.Clock
 class GitLiveUserRepository {
 
     private fun userDoc(userId: String) = Firebase.firestore
-        .collection(USERS_COLLECTION)
+        .collection(SsbContracts.FirestorePaths.USERS)
         .document(userId)
 
     suspend fun saveUser(user: SSBMaxUser): Result<Unit> {
@@ -47,7 +48,7 @@ class GitLiveUserRepository {
     suspend fun getUserByEmail(email: String): Result<SSBMaxUser?> {
         return try {
             val querySnapshot = Firebase.firestore
-                .collection(USERS_COLLECTION)
+                .collection(SsbContracts.FirestorePaths.USERS)
                 .where { "email" equalTo email }
                 .limit(1)
                 .get()
@@ -111,9 +112,6 @@ class GitLiveUserRepository {
         }
     }
 
-    private companion object {
-        const val USERS_COLLECTION = "users"
-    }
 }
 
 private fun StudentProfile.toDtoMap(): Map<String, Any?> = mapOf(

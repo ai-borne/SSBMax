@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "pretest": "node verify-required-tests.mjs",
-    "test": "node --test --test-concurrency=1 *.rules.test.mjs"
+    "test": "node --test --test-concurrency=1 *.rules.test.mjs",
+    "seed:corpus": "node seed-shared-corpus.mjs",
+    "test:corpus": "node --test sharedCorpus.contract.test.mjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.1"

@@ -1,38 +1,181 @@
+/* Inter — premium typography for SSBMax web platform */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* DESIGN TOKEN SYSTEM — Single Source of Truth. All --color-* variables
+   come from contracts/tokens.yaml via generated/tokens.css (Phase 7,
+   docs/plans/CrossPlatform_SSOT). Do not hand-edit color values here —
+   edit contracts/tokens.yaml and run `node scripts/generate-contracts.js`.
+   (@import must precede all non-import rules per the CSS spec, hence
+   grouped with the other top-of-file @import above rather than near the
+   card-shadow tokens below.) */
+@import './generated/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --color-bg-primary: #f8fafc;
-  --color-bg-secondary: #ffffff;
-  --color-bg-card: #ffffff;
-  --color-bg-elevated: #f1f5f9;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
-  --color-border: #e2e8f0;
-  --color-accent: #0284c7;
-  --color-accent-hover: #0369a1;
+  /* Card shadow tokens (Phase 4 — not part of the color-token contract,
+     shadows have no KMP equivalent to unify against) */
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  --card-shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
 }
 
 .dark {
-  --color-bg-primary: #0f172a;
-  --color-bg-secondary: #1e293b;
-  --color-bg-card: #1e293b;
-  --color-bg-elevated: #334155;
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted: #64748b;
-  --color-border: #334155;
-  --color-accent: #38bdf8;
-  --color-accent-hover: #0284c7;
+  /* Card shadow tokens (Phase 4 — dark variants) */
+  --card-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 4px 20px rgba(0,0,0,0.3);
+  --card-shadow-hover: 0 8px 30px rgba(0,0,0,0.55);
 }
+
+/* ============================================================
+   GLOBAL BASE STYLES
+   ============================================================ */
 
 body {
   margin: 0;
   padding: 0;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Typography — tight tracking and heavy weight for command-level impact */
+h1, h2, h3 {
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+/* ============================================================
+   ANIMATION KEYFRAMES
+   All micro-animations defined here. Zero animation logic
+   permitted in component files.
+   ============================================================ */
+
+/* Shimmer sweep keyframes for button overlays */
+@keyframes shimmerSweep {
+  0%   { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* Metallic text shimmer keyframes for gradient text */
+@keyframes textShimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Accordion content reveal (Phase 3) */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+
+/* Shimmer animation overlay — non-destructive sweep for buttons & cards */
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.animate-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  animation: shimmerSweep 3s linear infinite;
+  pointer-events: none;
+}
+
+/* Text shimmer — vibrant multi-color gradient sweep with bright highlight */
+.animate-text-shimmer {
+  background: linear-gradient(
+    90deg,
+    #0284c7 0%,
+    #2563eb 25%,
+    #38bdf8 45%,
+    #ffffff 50%,
+    #38bdf8 55%,
+    #f59e0b 75%,
+    #0284c7 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: textShimmer 3s linear infinite;
+}
+
+.dark .animate-text-shimmer {
+  background: linear-gradient(
+    90deg,
+    #38bdf8 0%,
+    #60a5fa 25%,
+    #bae6fd 45%,
+    #ffffff 50%,
+    #bae6fd 55%,
+    #fbbf24 75%,
+    #38bdf8 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: textShimmer 3s linear infinite;
+}
+
+/* Accordion content reveal animation */
+.animate-fade-slide-in {
+  animation: fadeSlideIn 200ms ease-out forwards;
+}
+
+/* Hero section & site-wide grid pattern overlay (Phase 2 & Phase 3) */
+.hero-grid-pattern,
+.ssb-grid-pattern {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      rgba(148, 163, 184, 0.04) 39px,
+      rgba(148, 163, 184, 0.04) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 39px,
+      rgba(148, 163, 184, 0.04) 39px,
+      rgba(148, 163, 184, 0.04) 40px
+    );
+}
+
+/* Dense 24px grid pattern overlay for compact cards & ribbons */
+.ssb-grid-pattern-dense {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 23px,
+      rgba(148, 163, 184, 0.04) 23px,
+      rgba(148, 163, 184, 0.04) 24px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 23px,
+      rgba(148, 163, 184, 0.04) 23px,
+      rgba(148, 163, 184, 0.04) 24px
+    );
+}
+
