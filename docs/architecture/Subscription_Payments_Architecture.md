@@ -49,6 +49,8 @@ Four tiers, monthly billing only. Prices in INR, from `contracts/pricing.yaml`:
 
 Add-on: `INTERVIEW_TOPUP` = 99.
 
+Note the asymmetry in how product ids reach the two providers: Razorpay's app-side plan ids are **derived** (`{tier.toLowerCase()}_monthly` over this file), while RevenueCat's identically-named products are **hand-configured in the RC dashboard**. Adding or renaming a tier updates Razorpay automatically and RevenueCat not at all.
+
 Enum SSOT: `shared/.../domain/model/SubscriptionTier.kt`.
 
 ### 3.2 Monthly limits
@@ -204,7 +206,7 @@ Webhook events are deduped via `webhook_logs` (functions-only collection, never 
 
 ### 7.3 Reconciliation cron
 
-`scheduledSubscriptionReconciliation` sweeps `collectionGroup('data')` filtered by `billingCycle == 'MONTHLY'` (profile docs never set that field, so they never match), finds `tier != 'FREE' && expiryDate < now`, and writes FREE. Paginated at `BATCH_SIZE = 250`, `MAX_BATCHES_PER_RUN = 8`. No cursor doc is needed: each downgrade flips `tier` to FREE, dropping the doc out of the query, so the write is its own checkpoint.
+`scheduledSubscriptionReconciliation` sweeps `collectionGroup('data')` filtered by `billingCycle == 'MONTHLY'` (profile docs never set that field, so they never match). **Invariant:** Firestore excludes documents *missing* a filtered field, so any tier-writing path that omits `billingCycle` yields a document reconciliation can never see. All three current writers set it (`webhooks.js:70`, `lib/razorpaySubscriptionWebhook.js:108`, `revenueCatWebhook.js:194`) — nothing enforces that, so any new writer must too, finds `tier != 'FREE' && expiryDate < now`, and writes FREE. Paginated at `BATCH_SIZE = 250`, `MAX_BATCHES_PER_RUN = 8`. No cursor doc is needed: each downgrade flips `tier` to FREE, dropping the doc out of the query, so the write is its own checkpoint.
 
 **It only ever runs downhill.** There is no counterpart that repairs a user the provider says is paying — see §9.
 
@@ -263,6 +265,6 @@ No admin or ops surface exists. Answering "I paid and I'm still on Free" current
 2. **Firestore rules are additive.** A narrow `allow write: if false` never revokes a broader grant. `firestore-tests/firestoreRulesCoverage.rules.test.mjs` only scans 4-space top-level `match` blocks, which is exactly why C1 went unnoticed.
 3. **`FirebaseRulesValidationTest.kt` string-slices `firestore.rules`** on the literals `"// User data subcollection"`, `"match /users/{userId}"` and `"match /data/subscription"`. Keep those anchors intact.
 4. **`firestore.rules` cannot be split** — rules have no import mechanism; it is one deployable artifact by design, exempt from the 300-LOC cap.
-5. **Rules deploy is manual** (`firebase deploy --only firestore:rules`) and is not in CI. A rules change and its client change must land close together or the client fails silently in the field.
+5. **Rules deploy is manual** (`firebase deploy --only firestore:rules`) and is not in CI. Two undetectable failure modes follow: a rules change merges and is never deployed, or someone edits rules in the console and the repo stops matching production. Verify with the Firebase Rules API (`projects/{project}/releases` → `rulesets/{id}`) and diff against `firestore.rules`. A rules change and its client change must also land close together, or the client fails silently in the field.
 6. **Four consumers, not two.** Any change to eligibility or scoring logic must be checked against `shared`, `web/src/repositories`, `web/src/viewmodels` and `functions/`. Tier 3 has no mechanical enforcement — convention only.
 7. **Provider dashboards will not tell you the projection is wrong.** They are answering a different question (money, not access).

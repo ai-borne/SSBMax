@@ -26,12 +26,15 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 /**
- * RC entitlement identifiers -> app tier, cumulative (mirrors
- * `shared/.../platform/billing/revenuecat/RevenueCatEntitlementMapper.kt` -- the RC dashboard
- * grants basic+pro+premium together on a premium purchase, so this only has to pick the
- * highest one present, never combine tiers itself). Kept in sync by hand since this is a
- * different runtime (Node) than the Kotlin client -- both read the same three RC dashboard
- * identifiers, not a generated contract, because RC entitlement IDs aren't a `contracts/` value.
+ * RC entitlement identifiers -> app tier, cumulative (mirrors `RevenueCatEntitlementMapper.toTier`,
+ * which is an `object` INSIDE
+ * `shared/src/commonMain/kotlin/com/ssbmax/shared/platform/billing/revenuecat/RevenueCatClient.kt`
+ * -- there is no RevenueCatEntitlementMapper.kt file; the identifier constants it maps live in
+ * `RevenueCatEntitlements` in that same file. The RC dashboard grants basic+pro+premium together
+ * on a premium purchase, so this only has to pick the highest one present, never combine tiers
+ * itself). Kept in sync by hand since this is a different runtime (Node) than the Kotlin client --
+ * both read the same three RC dashboard identifiers, not a generated contract, because RC
+ * entitlement IDs aren't a `contracts/` value (finding L4 tracks closing that duplication).
  */
 function entitlementIdsToTier(entitlementIds) {
   const ids = new Set(entitlementIds || []);
