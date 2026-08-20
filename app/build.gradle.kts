@@ -297,7 +297,7 @@ dependencies {
     testImplementation("androidx.work:work-testing:2.9.0")
 
     // Real org.json for JVM unit tests — Android's stub jar throws Stub! on JSONArray/JSONObject put()
-    testImplementation("org.json:json:20231013")
+    testImplementation("org.json:json:20260719")
 
     // Robolectric for Android unit tests
     testImplementation("org.robolectric:robolectric:4.11.1")
