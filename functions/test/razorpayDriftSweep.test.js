@@ -2,7 +2,8 @@
  * Phase 7 (Payment Ecosystem Hardening plan): tests for
  * `src/subscriptions/scheduledRazorpayDriftSweep.js`. A fake Firestore (dotted-key convention,
  * mirroring `razorpaySubscriptionWebhooks.test.js`) plus a fake `fetch` standing in for Razorpay's
- * `GET /v1/subscriptions?status=active` list call -- no live network, no emulator.
+ * `GET /v1/subscriptions` list call (no `status` filter -- see `toProviderState`'s tests below for
+ * why) -- no live network, no emulator.
  */
 
 const test = require('node:test');
@@ -76,6 +77,13 @@ test('toProviderState maps a Razorpay subscription entity via the shared planIdT
   assert.deepEqual(providerState, { status: 'ACTIVE', tier: 'PREMIUM', expiryDate: 1_700_100_000_000 });
 });
 
+test('toProviderState maps every non-"active" Razorpay status to UNKNOWN, since the list endpoint has no server-side status filter', () => {
+  for (const status of ['created', 'authenticated', 'pending', 'halted', 'cancelled', 'completed', 'expired']) {
+    const { providerState } = toProviderState({ id: 'sub_x', status, notes: { userId: 'u1', planId: 'pro_monthly' }, current_end: NOW / 1000 });
+    assert.equal(providerState.status, 'UNKNOWN', `status=${status}`);
+  }
+});
+
 test('sweepRazorpayDrift repairs a user Razorpay says is active but Firestore has as FREE (the "paid but locked out" case)', async () => {
   const db = makeFakeDb({});
   const fetchImpl = makeFakeFetch([{ items: [activeSubEntity({ userId: 'u1', currentEndSec: (NOW + 100000) / 1000 })] }]);
@@ -126,6 +134,25 @@ test('sweepRazorpayDrift ignores subscription entities with no notes.userId (not
 
   assert.equal(result.repairedCount, 0);
   assert.equal(result.scannedCount, 0);
+});
+
+test('sweepRazorpayDrift skips a non-active subscription entity without ever reading Firestore for it (the list endpoint has no server-side status filter, so most returned entities are not active)', async () => {
+  // A db whose `collection('users')` throws -- proves the non-active branch below returns before
+  // ever attempting the per-user Firestore read `applyDrift`/`readStoredSubscription` would do.
+  const db = {
+    collection(name) {
+      if (name === 'ops_alerts') return { add: async () => {} };
+      throw new Error(`unexpected Firestore access for collection ${name} -- non-active entity should never reach this`);
+    }
+  };
+  const fetchImpl = makeFakeFetch([
+    { items: [{ id: 'sub_cancelled', status: 'cancelled', notes: { userId: 'u1', planId: 'pro_monthly' }, current_end: NOW / 1000 }] }
+  ]);
+
+  const result = await sweepRazorpayDrift(db, fetchImpl, CREDS, NOW);
+
+  assert.equal(result.repairedCount, 0);
+  assert.equal(result.scannedCount, 0, 'a non-active entity is not counted as scanned -- it was never considered for repair');
 });
 
 test('sweepRazorpayDrift paginates past a full first page to a shorter second page', async () => {

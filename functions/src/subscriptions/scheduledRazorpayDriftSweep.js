@@ -2,10 +2,23 @@
  * Razorpay upward drift-repair sweep (Phase 7, Payment Ecosystem Hardening plan).
  *
  * `scheduledSubscriptionReconciliation.js` only ever downgrades. Razorpay's `GET
- * /v1/subscriptions?status=active` cheaply enumerates every subscription Razorpay currently
- * considers active -- unlike RevenueCat, there's no need for a client-triggered detector on the
- * web side, so this is a server-only scheduled sweep (see `subscriptions/repairMobileEntitlement.js`
- * for RevenueCat's client-triggered counterpart and why the two mechanisms differ).
+ * /v1/subscriptions` enumerates every subscription ever created for this account -- unlike
+ * RevenueCat, there's no need for a client-triggered detector on the web side, so this is a
+ * server-only scheduled sweep (see `subscriptions/repairMobileEntitlement.js` for RevenueCat's
+ * client-triggered counterpart and why the two mechanisms differ).
+ *
+ * **No server-side status filter exists.** Verified against Razorpay's API reference
+ * (razorpay.com/docs/api/payments/subscriptions/fetch-subscriptions): the list endpoint accepts
+ * only `plan_id`/`from`/`to`/`count`/`skip` -- there is no `status` query parameter (an earlier
+ * version of this sweep sent `status=active`, which Razorpay silently ignores rather than
+ * rejecting, so it looked like it worked while actually doing nothing). `toProviderState` below
+ * filters on each returned entity's own `status` field instead -- see `lib/razorpayClient.js`'s
+ * `listSubscriptions` doc comment. Practical consequence: this sweep pages through the account's
+ * FULL subscription history every run, not just active ones, so its cost grows with total
+ * lifetime subscription count, not active-subscriber count. Not addressed in this phase -- there
+ * is no cheap way to bound it further without risking silently never repairing an old
+ * reactivated subscription; `from`/`to` date-windowing is the likely fix but needs a deliberate
+ * choice of window size against real subscription-count growth, deferred to a later phase.
  *
  * Every repair decision goes through `lib/subscriptionDrift.js`'s `resolveSubscriptionDrift` --
  * this file's job is only enumeration + I/O, never re-deriving the drift rule itself (SSOT, same
@@ -20,7 +33,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths } = require('../generated/contracts.cjs');
 const { planIdToTier } = require('../webhooks');
-const { listActiveSubscriptions } = require('../lib/razorpayClient');
+const { listSubscriptions } = require('../lib/razorpayClient');
 const { resolveSubscriptionDrift, DRIFT_ACTIONS } = require('../lib/subscriptionDrift');
 const { emitOpsAlert, ALERT_KINDS, SEVERITIES } = require('../lib/opsAlert');
 
@@ -29,27 +42,32 @@ if (!admin.apps.length) {
 }
 
 // Mirrors `scheduledSubscriptionReconciliation.js`'s BATCH_SIZE/MAX_BATCHES_PER_RUN bounding --
-// same "the persisted write is the checkpoint" reasoning does NOT apply here (a repaired doc
-// doesn't drop out of Razorpay's `status=active` list the way a downgraded doc drops out of the
-// Firestore query), so this sweep is a plain page cursor (`skip`), not a self-checkpointing one --
-// an incomplete run simply repeats already-fixed (now no-op, `NONE`-action) entries on its next
-// scheduled tick, which is cheap (one Firestore read, no write) compared to the alternative of
-// hand-rolling cursor persistence for a run that in practice finishes well within the cap.
+// same "the persisted write is the checkpoint" reasoning does NOT apply here (an entity Razorpay
+// returns stays in this unfiltered list forever, active or not, so a repaired doc never drops out
+// of it the way a downgraded doc drops out of the Firestore query), so this sweep is a plain page
+// cursor (`skip`), not a self-checkpointing one -- an incomplete run simply repeats already-fixed
+// (now no-op, `NONE`-action) entries on its next scheduled tick, which is cheap (one Firestore
+// read, no write) compared to the alternative of hand-rolling cursor persistence for a run that in
+// practice finishes well within the cap.
 const PAGE_SIZE = 100;
-const MAX_PAGES_PER_RUN = 10; // up to 1000 active Razorpay subscriptions/invocation
+const MAX_PAGES_PER_RUN = 10; // up to 1000 Razorpay subscriptions/invocation (any status; see file header)
 
 /**
- * One Razorpay active-subscription entity -> the `{status, tier, expiryDate}` shape
- * `resolveSubscriptionDrift` consumes. `notes.planId` is the app's own planId (`pro_monthly`,
- * echoed back by Razorpay from subscription-creation time, see `razorpaySubscriptions.js`), fed
- * through the same `planIdToTier` webhooks.js already uses -- not a second hand-typed mapping.
+ * One Razorpay subscription entity -> the `{status, tier, expiryDate}` shape
+ * `resolveSubscriptionDrift` consumes. `status` maps only Razorpay's own `'active'` to `'ACTIVE'`
+ * (every other status -- cancelled, expired, halted, ... -- becomes `'UNKNOWN'`, which
+ * `resolveSubscriptionDrift` always resolves to `NONE`) since the list endpoint has no
+ * server-side status filter (see file header) -- this is where that filtering actually happens.
+ * `notes.planId` is the app's own planId (`pro_monthly`, echoed back by Razorpay from
+ * subscription-creation time, see `razorpaySubscriptions.js`), fed through the same
+ * `planIdToTier` webhooks.js already uses -- not a second hand-typed mapping.
  */
 function toProviderState(subscriptionEntity) {
   const notes = subscriptionEntity?.notes || {};
   return {
     userId: notes.userId || null,
     providerState: {
-      status: 'ACTIVE',
+      status: subscriptionEntity?.status === 'active' ? 'ACTIVE' : 'UNKNOWN',
       tier: planIdToTier(notes.planId || 'pro_monthly'),
       expiryDate: typeof subscriptionEntity?.current_end === 'number' ? subscriptionEntity.current_end * 1000 : null
     }
@@ -116,10 +134,11 @@ async function applyDrift(firestoreDb, userId, providerState, stored, nowMillis)
 }
 
 /**
- * Sweeps up to `maxPages * pageSize` currently-active Razorpay subscriptions and repairs any that
- * are stranded ahead of Firestore. A Razorpay API failure on any page aborts the whole run
- * immediately -- no further pages are fetched and nothing on the failed (or later) page is
- * written, so a transient Razorpay outage never has a chance to be misread as "nothing is active."
+ * Sweeps up to `maxPages * pageSize` Razorpay subscriptions (every status -- see file header) and
+ * repairs any currently-active one that's stranded ahead of Firestore. A Razorpay API failure on
+ * any page aborts the whole run immediately -- no further pages are fetched and nothing on the
+ * failed (or later) page is written, so a transient Razorpay outage never has a chance to be
+ * misread as "nothing is active."
  */
 async function sweepRazorpayDrift(firestoreDb, fetchImpl, { keyId, keySecret }, nowMillis = Date.now(), { pageSize = PAGE_SIZE, maxPages = MAX_PAGES_PER_RUN } = {}) {
   let repairedCount = 0;
@@ -129,7 +148,7 @@ async function sweepRazorpayDrift(firestoreDb, fetchImpl, { keyId, keySecret }, 
   for (let page = 0; page < maxPages; page++) {
     let response;
     try {
-      response = await listActiveSubscriptions(fetchImpl, { keyId, keySecret, count: pageSize, skip: page * pageSize });
+      response = await listSubscriptions(fetchImpl, { keyId, keySecret, count: pageSize, skip: page * pageSize });
     } catch (apiError) {
       console.error('scheduledRazorpayDriftSweep: Razorpay API call failed, aborting run without further writes', apiError);
       return { repairedCount, conflictCount, scannedCount, completed: false, aborted: true };
@@ -138,7 +157,10 @@ async function sweepRazorpayDrift(firestoreDb, fetchImpl, { keyId, keySecret }, 
     const items = response?.items || [];
     for (const subscriptionEntity of items) {
       const { userId, providerState } = toProviderState(subscriptionEntity);
-      if (!userId) {
+      // Skip non-active entities (and ones with no notes.userId) before touching Firestore at
+      // all -- most of the account's lifetime subscription history is cancelled/expired, and
+      // resolveSubscriptionDrift would return NONE for it anyway, so this saves a wasted read.
+      if (!userId || providerState.status !== 'ACTIVE') {
         continue;
       }
       scannedCount += 1;

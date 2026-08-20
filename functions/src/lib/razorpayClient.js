@@ -39,18 +39,27 @@ async function razorpayRequest(fetchImpl, { keyId, keySecret, method = 'GET', pa
 }
 
 /**
- * One page of currently-active Razorpay subscriptions, `count`/`skip`-paginated -- the enumeration
- * primitive `scheduledRazorpayDriftSweep.js` sweeps with. Mirrors the pagination shape the
- * `docs/plans` audit's "cron pagination" scale gap already fixed for the reconciliation cron
- * (`45282b8e`), applied here to a Razorpay list call instead of a Firestore query.
+ * One page of Razorpay subscriptions, `count`/`skip`-paginated -- the enumeration primitive
+ * `scheduledRazorpayDriftSweep.js` sweeps with. Mirrors the pagination shape the `docs/plans`
+ * audit's "cron pagination" scale gap already fixed for the reconciliation cron (`45282b8e`),
+ * applied here to a Razorpay list call instead of a Firestore query.
+ *
+ * Deliberately does NOT filter by status server-side: verified against Razorpay's own API
+ * reference (razorpay.com/docs/api/payments/subscriptions/fetch-subscriptions), `GET
+ * /v1/subscriptions` accepts exactly `plan_id`/`from`/`to`/`count`/`skip` -- there is no `status`
+ * query parameter. An earlier version of this function sent `status=active`; Razorpay silently
+ * ignores unknown query params rather than rejecting the request, so that filter was a no-op that
+ * would have looked like it worked while actually paging through every subscription ever created
+ * (active, cancelled, expired, ...). The caller (`scheduledRazorpayDriftSweep.js`) filters on each
+ * returned entity's own `status` field instead.
  */
-async function listActiveSubscriptions(fetchImpl, { keyId, keySecret, count = 100, skip = 0 }) {
+async function listSubscriptions(fetchImpl, { keyId, keySecret, count = 100, skip = 0 }) {
   return razorpayRequest(fetchImpl, {
     keyId,
     keySecret,
     method: 'GET',
-    path: `/subscriptions?status=active&count=${count}&skip=${skip}`
+    path: `/subscriptions?count=${count}&skip=${skip}`
   });
 }
 
-module.exports = { razorpayAuthHeader, razorpayRequest, listActiveSubscriptions };
+module.exports = { razorpayAuthHeader, razorpayRequest, listSubscriptions };
