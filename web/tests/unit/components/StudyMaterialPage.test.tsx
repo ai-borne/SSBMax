@@ -142,7 +142,13 @@ describe('StudyMaterialPage Component', () => {
       expect(screen.getByText(strings.studyMaterial.authLockedTitle)).toBeInTheDocument();
     });
 
-    const oirCard = screen.getByTestId('study-test-card-oir');
+    // `findBy`, not `getBy`: the banner and the test cards come from DIFFERENT sources.
+    // The banner renders synchronously off the `user` prop (`!isUnlocked`), while the cards
+    // come from the ViewModel's async content load -- so waiting for the banner proves
+    // nothing about the cards. On a fast machine both land in one tick and `getByTestId`
+    // happens to work; on a loaded CI runner it fails with "Unable to find an element by:
+    // [data-testid=study-test-card-oir]" against a DOM that does contain the banner.
+    const oirCard = await screen.findByTestId('study-test-card-oir');
     fireEvent.click(oirCard);
 
     expect(signInSpy).toHaveBeenCalled();
