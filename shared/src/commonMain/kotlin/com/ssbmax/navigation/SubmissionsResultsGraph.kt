@@ -52,16 +52,8 @@ fun NavGraphBuilder.submissionsResultsGraph(navController: NavHostController) {
         HistoricResultsScreen(
             onNavigateBack = { navController.navigateUp() },
             onResultClick = { submissionId, testType ->
-                when (testType) {
-                    TestType.OIR -> navController.navigate(SSBMaxDestinations.OIRTestResult(submissionId))
-                    TestType.PPDT -> navController.navigate(SSBMaxDestinations.PPDTSubmissionResult(submissionId))
-                    TestType.TAT -> navController.navigate(SSBMaxDestinations.TATSubmissionResult(submissionId))
-                    TestType.WAT -> navController.navigate(SSBMaxDestinations.WATSubmissionResult(submissionId))
-                    TestType.SRT -> navController.navigate(SSBMaxDestinations.SRTSubmissionResult(submissionId))
-                    TestType.SD -> navController.navigate(SSBMaxDestinations.SDSubmissionResult(submissionId))
-                    TestType.IO -> navController.navigate(SSBMaxDestinations.InterviewResult(submissionId))
-                    else -> notYetPorted("TestResultScreen")
-                }
+                val destination = historicResultRoute(testType, submissionId)
+                if (destination != null) navController.navigate(destination) else notYetPorted("TestResultScreen")
             }
         )
     }
@@ -84,13 +76,7 @@ fun NavGraphBuilder.submissionsResultsGraph(navController: NavHostController) {
     // Student "All Tests" overview, reachable from SubmissionsListScreen's
     // onNavigateToTests (wired above). onNavigateToPhase
     // routes to the real Phase1Detail/Phase2Detail screens; onNavigateToTest
-    // routes to the honest placeholder for every GTO sub-test type not yet
-    // individually reachable from here (GD/Lecturette/GPE already have their
-    // own routes registered in GTOGraph, but this screen doesn't yet
-    // distinguish which GTO card maps to which -- same simplification the
-    // Android original's own nav graph makes, since
-    // `StudentTestsScreen`'s `onNavigateToTest` isn't wired to anything in
-    // `SharedNavGraph.kt` either).
+    // routes to concrete test destinations.
     composable<SSBMaxDestinations.StudentTests> {
         StudentTestsScreen(
             onNavigateToPhase = { phase ->
@@ -102,7 +88,7 @@ fun NavGraphBuilder.submissionsResultsGraph(navController: NavHostController) {
                 navController.navigate(destination)
             },
             onNavigateToTest = { testType ->
-                navController.navigate(SSBMaxDestinations.NotYetPorted("Test($testType)"))
+                navController.navigate(studentTestRoute(testType))
             }
         )
     }
@@ -128,4 +114,30 @@ fun NavGraphBuilder.submissionsResultsGraph(navController: NavHostController) {
             onNavigateBack = { navController.navigateUp() }
         )
     }
+}
+
+internal fun historicResultRoute(testType: TestType, submissionId: String): SSBMaxDestinations? = when (testType) {
+    TestType.OIR -> SSBMaxDestinations.OIRTestResult(submissionId)
+    TestType.PPDT -> SSBMaxDestinations.PPDTSubmissionResult(submissionId)
+    TestType.TAT -> SSBMaxDestinations.TATSubmissionResult(submissionId)
+    TestType.WAT -> SSBMaxDestinations.WATSubmissionResult(submissionId)
+    TestType.SRT -> SSBMaxDestinations.SRTSubmissionResult(submissionId)
+    TestType.SD -> SSBMaxDestinations.SDSubmissionResult(submissionId)
+    TestType.IO -> SSBMaxDestinations.InterviewResult(submissionId)
+    else -> null
+}
+
+internal fun studentTestRoute(testType: TestType): SSBMaxDestinations = when (testType) {
+    TestType.OIR -> SSBMaxDestinations.OIRTest("oir_standard")
+    TestType.PPDT -> SSBMaxDestinations.PPDTTest("ppdt_standard")
+    TestType.TAT -> SSBMaxDestinations.TATTest("tat_standard")
+    TestType.WAT -> SSBMaxDestinations.WATTest("wat_standard")
+    TestType.SRT -> SSBMaxDestinations.SRTTest("srt_standard")
+    TestType.SD -> SSBMaxDestinations.SDTest("sd_standard")
+    TestType.PIQ -> SSBMaxDestinations.PIQTest("piq_standard")
+    TestType.GTO_GD -> SSBMaxDestinations.GTOGDTest("gto_gd_standard")
+    TestType.GTO_LECTURETTE -> SSBMaxDestinations.GTOLecturetteTest("gto_lecturette_standard")
+    TestType.GTO_GPE -> SSBMaxDestinations.GTOGPETest("gto_gpe_standard")
+    TestType.IO -> SSBMaxDestinations.StartInterview
+    else -> SSBMaxDestinations.NotYetPorted("Test($testType)")
 }
