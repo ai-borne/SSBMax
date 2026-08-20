@@ -7,6 +7,7 @@ import { testRunnerStrings } from './strings/testRunner';
 import { piqStrings, upgradeGateStrings } from './strings/piq';
 import { studyStrings } from './strings/study';
 import { notificationStrings } from './strings/notifications';
+import { supportStrings } from './strings/support';
 
 export const strings = {
   ...commonStrings,
@@ -18,5 +19,6 @@ export const strings = {
   piq: piqStrings,
   upgradeGate: upgradeGateStrings,
   study: studyStrings,
-  notifications: notificationStrings
+  notifications: notificationStrings,
+  support: supportStrings
 } as const;

@@ -62,4 +62,19 @@ async function listSubscriptions(fetchImpl, { keyId, keySecret, count = 100, ski
   });
 }
 
-module.exports = { razorpayAuthHeader, razorpayRequest, listSubscriptions };
+/**
+ * Single-subscription fetch (Phase 9, Payment Ecosystem Hardening plan) -- the support snapshot's
+ * Razorpay half needs one subscription by id, not a page of them, so this is a second thin caller
+ * on top of `razorpayRequest` rather than a third hand-rolled HTTP client (DRY, same rationale as
+ * `listSubscriptions` above).
+ */
+async function getSubscription(fetchImpl, { keyId, keySecret, subscriptionId }) {
+  return razorpayRequest(fetchImpl, {
+    keyId,
+    keySecret,
+    method: 'GET',
+    path: `/subscriptions/${subscriptionId}`
+  });
+}
+
+module.exports = { razorpayAuthHeader, razorpayRequest, listSubscriptions, getSubscription };

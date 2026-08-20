@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type TabId = 'home' | 'study' | 'tests' | 'reports' | 'settings' | 'subscription' | 'privacy' | 'terms';
+export type TabId = 'home' | 'study' | 'tests' | 'reports' | 'settings' | 'subscription' | 'privacy' | 'terms' | 'support';
 
 export const CORE_TABS: TabId[] = ['home', 'study', 'tests', 'reports', 'settings'];
-export const VALID_TABS: TabId[] = ['home', 'study', 'tests', 'reports', 'settings', 'subscription', 'privacy', 'terms'];
+// 'support' (Phase 9, Payment Ecosystem Hardening plan) is deliberately absent from CORE_TABS and
+// AppLayout's navItems -- it's an admin-only internal tool, not a candidate-facing surface, so it
+// stays reachable via `?tab=support` without appearing in the nav bar. The real access control is
+// server-side (the `getSubscriptionSupportSnapshot` callable's admin claim check), not this
+// omission -- see `SupportSubscriptionPage.tsx`'s doc comment.
+export const VALID_TABS: TabId[] = ['home', 'study', 'tests', 'reports', 'settings', 'subscription', 'privacy', 'terms', 'support'];
 
 export const TAB_ALIASES: Record<string, TabId> = {
   practice: 'tests',
