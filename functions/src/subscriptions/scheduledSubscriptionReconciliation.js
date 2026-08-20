@@ -22,6 +22,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths } = require('../generated/contracts.cjs');
+const { deriveEffectiveTier } = require('../lib/effectiveTier');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -30,7 +31,10 @@ if (!admin.apps.length) {
 /**
  * Pure eligibility predicate, exported separately so it's testable without touching Firestore
  * query semantics at all -- mirrors the query's own filters (`tier != 'FREE' && expiryDate <
- * now`), used here as a defensive re-check on whatever the query actually returns.
+ * now`), used here as a defensive re-check on whatever the query actually returns. The actual
+ * "is this doc stale" judgment is delegated to [deriveEffectiveTier] (H1, Phase 2) -- the same
+ * function `eligibility.js` and both clients use -- so this predicate can never silently drift
+ * from what a lapsed doc reads as everywhere else.
  */
 function shouldReconcile(doc, now) {
   return (
@@ -38,7 +42,7 @@ function shouldReconcile(doc, now) {
     typeof doc.tier === 'string' &&
     doc.tier !== 'FREE' &&
     typeof doc.expiryDate === 'number' &&
-    doc.expiryDate < now
+    deriveEffectiveTier(doc.tier, doc.expiryDate, now) === 'FREE'
   );
 }
 

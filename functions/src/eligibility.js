@@ -23,6 +23,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths, SubscriptionLimits, Enums } = require('./generated/contracts.cjs');
+const { deriveEffectiveTier } = require('./lib/effectiveTier');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -111,10 +112,13 @@ function currentYearMonth() {
 }
 
 /**
- * Reads both `tier` and `startDate` (Phase 3) off the same doc in one read -- `startDate` drives
- * [currentPeriodKey]. Fails closed to `{ tier: 'FREE', startDate: null }` on any missing/malformed
- * doc, matching GitLiveSubscriptionRepository/web SubscriptionRepository's existing read-side
- * contract.
+ * Reads `tier`, `startDate` (Phase 3) and `expiryDate` (H1) off the same doc in one read --
+ * `startDate` drives [currentPeriodKey], `expiryDate` drives [deriveEffectiveTier]. The returned
+ * `tier` is already the *effective* tier -- a stored `PREMIUM` past its `expiryDate` reads as
+ * `FREE` here, matching KMP's `GitLiveSubscriptionRepository`/web's `SubscriptionRepository.ts`
+ * read-side contract, so this, "the real gate at submission time" per this file's own header
+ * comment, can no longer be tricked by a stale-but-unreconciled doc into honoring a lapsed
+ * subscription. Fails closed to `{ tier: 'FREE', startDate: null }` on any missing/malformed doc.
  */
 async function readSubscriptionDoc(firestoreDb, userId) {
   const doc = await firestoreDb
@@ -127,8 +131,10 @@ async function readSubscriptionDoc(firestoreDb, userId) {
     return { tier: 'FREE', startDate: null };
   }
   const data = doc.data();
-  const tier = Enums.SubscriptionTier.includes(data.tier) ? data.tier : 'FREE';
+  const storedTier = Enums.SubscriptionTier.includes(data.tier) ? data.tier : 'FREE';
   const startDate = typeof data.startDate === 'number' && data.startDate > 0 ? data.startDate : null;
+  const expiryDate = typeof data.expiryDate === 'number' ? data.expiryDate : null;
+  const tier = deriveEffectiveTier(storedTier, expiryDate, Date.now());
   return { tier, startDate };
 }
 
