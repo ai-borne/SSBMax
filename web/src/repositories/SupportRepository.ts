@@ -18,16 +18,21 @@ export interface SupportSnapshotAlert {
   detail: Record<string, unknown> | null;
 }
 
-/** Any of the three joined sources may degrade to `{ unavailable: true }` instead of throwing --
- * see the callable's doc comment for why. */
+/** Any of the four joined sources may degrade to `{ unavailable: true }` instead of throwing --
+ * see the callable's doc comment for why. Alerts is no exception: `readRecentAlerts` degrades the
+ * same way on a Firestore query failure (e.g. a missing composite index), so the ops_alerts field
+ * is a union, not always an array -- a caller that assumes otherwise crashes on exactly the outage
+ * this shape exists to survive. */
 export type SupportSnapshotSource = { unavailable: true; reason?: string } | Record<string, unknown>;
+
+export type SupportSnapshotAlerts = SupportSnapshotAlert[] | { unavailable: true; reason?: string };
 
 export interface SubscriptionSupportSnapshot {
   userId: string;
   firestore: SupportSnapshotSource;
   razorpay: SupportSnapshotSource | null;
   revenueCat: SupportSnapshotSource;
-  alerts: SupportSnapshotAlert[];
+  alerts: SupportSnapshotAlerts;
 }
 
 export class SupportRepository {

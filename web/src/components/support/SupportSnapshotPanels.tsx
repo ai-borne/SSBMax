@@ -41,7 +41,9 @@ export const SupportSnapshotPanels: FC<SupportSnapshotPanelsProps> = ({ snapshot
 
     <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 p-4 sm:col-span-2" data-testid="support-panel-alerts">
       <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">{strings.support.alertsPanel}</h3>
-      {snapshot.alerts.length === 0 ? (
+      {!Array.isArray(snapshot.alerts) ? (
+        <p className="text-xs text-amber-600 dark:text-amber-400">{strings.support.sourceUnavailable}</p>
+      ) : snapshot.alerts.length === 0 ? (
         <p className="text-xs text-slate-500 dark:text-slate-400">{strings.support.noAlerts}</p>
       ) : (
         <ul className="space-y-1.5">

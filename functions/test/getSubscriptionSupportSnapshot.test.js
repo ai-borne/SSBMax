@@ -35,6 +35,11 @@ function makeFakeDb(seed = {}) {
             orderBy: () => ({
               limit: () => ({
                 async get() {
+                  if (seed.__alertsQueryError) {
+                    // Mirrors a missing composite index -- exactly what production hit before the
+                    // `ops_alerts` index (userId ASC, createdAt DESC) was deployed.
+                    throw new Error('FAILED_PRECONDITION: The query requires an index.');
+                  }
                   const docs = [...alerts.entries()]
                     .filter(([, doc]) => field === 'userId' && op === '==' && doc.userId === value)
                     .sort((a, b) => b[1].createdAt - a[1].createdAt)
@@ -184,6 +189,22 @@ test('getSubscriptionSupportSnapshotForUser degrades to a partial snapshot on a 
   }
 
   assert.deepEqual(snapshot.revenueCat, { unavailable: true });
+});
+
+test('getSubscriptionSupportSnapshotForUser degrades alerts to { unavailable: true } (not a thrown error) when the ops_alerts query fails, e.g. a missing composite index', async () => {
+  // Regression test: production hit exactly this the first time the page was used live -- the
+  // `ops_alerts` composite index (userId ASC, createdAt DESC) hadn't been deployed yet, the query
+  // threw, `readRecentAlerts` correctly degraded to `{ unavailable: true }`, and the web page
+  // crashed anyway because it assumed `alerts` was always an array. Fixed on both sides; this pins
+  // the server half of that contract.
+  const db = makeFakeDb({
+    'users/user-1/data/subscription': { tier: 'FREE' },
+    __alertsQueryError: true
+  });
+
+  const snapshot = await getSubscriptionSupportSnapshotForUser(db, async () => ({ ok: true, json: async () => ({}) }), 'user-1');
+
+  assert.deepEqual(snapshot.alerts, { unavailable: true });
 });
 
 test('getSubscriptionSupportSnapshotForUser reports Razorpay/RevenueCat as unavailable (not a crash) when credentials are missing', async () => {

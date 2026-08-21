@@ -64,4 +64,28 @@ describe('SupportSubscriptionPage', () => {
     expect(screen.queryByTestId('support-error')).not.toBeInTheDocument();
     expect(screen.getAllByText(strings.support.sourceUnavailable)).toHaveLength(1);
   });
+
+  /**
+   * Live regression: the first real production lookup crashed the whole page (blank screen, no
+   * error boundary) because `alerts` degraded to `{ unavailable: true }` (the ops_alerts composite
+   * index wasn't deployed yet) and `SupportSnapshotPanels` unconditionally called `.map()` on it,
+   * assuming it was always an array. Fixed to treat alerts as a fourth degradable source, same as
+   * firestore/razorpay/revenueCat -- this pins that it renders instead of throwing.
+   */
+  it('renders the alerts panel as unavailable (not a crash) when alerts degrades to { unavailable: true }', async () => {
+    const snapshot = {
+      userId: 'user-1',
+      firestore: { tier: 'FREE' },
+      razorpay: null,
+      revenueCat: { status: 'NONE' },
+      alerts: { unavailable: true }
+    };
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: snapshot }) as any);
+
+    render(<SupportSubscriptionPage />);
+    submitLookup('user-1');
+
+    await waitFor(() => expect(screen.getByTestId('support-snapshot')).toBeInTheDocument());
+    expect(screen.getByTestId('support-panel-alerts')).toHaveTextContent(strings.support.sourceUnavailable);
+  });
 });
