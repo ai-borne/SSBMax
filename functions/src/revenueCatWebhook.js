@@ -98,6 +98,23 @@ async function processRevenueCatEvent(event, firestoreDb) {
     const subscriptionDoc = await transaction.get(subscriptionRef);
     const existingData = subscriptionDoc.exists ? subscriptionDoc.data() : {};
     const existingStartDate = existingData.startDate || null;
+    const existingLastEventAtMs = typeof existingData.lastEventAtMs === 'number' ? existingData.lastEventAtMs : null;
+
+    // M1 (Phase 11): RC's `event.event_timestamp_ms` is when the event actually happened, not when
+    // this handler ran -- a fresher event (e.g. a RENEWAL) may have already applied by the time an
+    // out-of-order-delivered older event (e.g. the EXPIRATION it superseded) arrives. `null` (no
+    // timestamp on either side) skips the check rather than treating "unknown" as "stale".
+    const eventAtMs = typeof event.event_timestamp_ms === 'number' ? event.event_timestamp_ms : null;
+    if (eventAtMs != null && existingLastEventAtMs != null && eventAtMs < existingLastEventAtMs) {
+      transaction.set(logRef, {
+        eventId,
+        userId,
+        eventType,
+        status: 'stale_ignored',
+        processedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      return { stale: true, tier: existingData.tier || 'FREE' };
+    }
 
     if (eventType === BILLING_ISSUE_EVENT_TYPE) {
       // RC's grace period is still active -- do NOT revoke tier here; EXPIRATION follows
@@ -105,7 +122,11 @@ async function processRevenueCatEvent(event, firestoreDb) {
       // the real backstop. Field-only write so an unrelated platform's source/tier/expiryDate
       // is never touched by a billing-issue notification alone.
       console.warn(`RevenueCat webhook: user ${userId} has a billing issue (event ${eventType}) -- tier unchanged`);
-      transaction.set(subscriptionRef, { billingIssueAt: Date.now() }, { merge: true });
+      transaction.set(
+        subscriptionRef,
+        { billingIssueAt: Date.now(), ...(eventAtMs != null ? { lastEventAtMs: eventAtMs } : {}) },
+        { merge: true }
+      );
       transaction.set(logRef, {
         eventId,
         userId,
@@ -154,6 +175,9 @@ async function processRevenueCatEvent(event, firestoreDb) {
     };
     if (resolved.conflict) {
       writeData.conflictDetectedAt = admin.firestore.FieldValue.serverTimestamp();
+    }
+    if (eventAtMs != null) {
+      writeData.lastEventAtMs = eventAtMs;
     }
 
     transaction.set(subscriptionRef, writeData, { merge: true });
@@ -222,6 +246,11 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
 
     if (result.rejected) {
       return res.status(200).json({ status: 'ok', warning: result.rejected });
+    }
+
+    if (result.stale) {
+      console.warn(`RevenueCat webhook: event ${eventType} (${eventId}) is older than the last applied event -- ignored`);
+      return res.status(200).json({ status: 'ok', stale: true });
     }
 
     if (result.conflict) {

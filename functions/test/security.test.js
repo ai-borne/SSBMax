@@ -162,6 +162,38 @@ test('Phase 8: an invalid Razorpay webhook signature emits a SIGNATURE_VERIFICAT
   );
 });
 
+test('Phase 11 M5: a Razorpay webhook with no stable event id is rejected, not processed under an invented id', async () => {
+  const { handleRazorpayWebhook } = require('../src/webhooks');
+  const { __resetDedupeForTests } = require('../src/lib/opsAlert');
+  __resetDedupeForTests();
+
+  function createMockRes() {
+    const res = {
+      statusCode: 200,
+      body: null,
+      status(code) { res.statusCode = code; return res; },
+      json(data) { res.body = data; return res; }
+    };
+    return res;
+  }
+
+  process.env.FUNCTIONS_EMULATOR = 'true';
+  delete process.env.RAZORPAY_WEBHOOK_SECRET;
+
+  // No `event_id` field and no `x-razorpay-event-id` header -- the exact shape the old code used
+  // to paper over with `event_${Date.now()}`.
+  const req = {
+    headers: {},
+    body: { event: 'payment.captured', payload: { payment: { entity: { id: 'pay_1', notes: { userId: 'user1' }, amount: 49900 } } } }
+  };
+  const res = createMockRes();
+
+  await handleRazorpayWebhook(req, res);
+
+  assert.equal(res.statusCode, 400, 'must be rejected rather than processed under a fabricated id');
+  assert.equal(res.body.status, 'error');
+});
+
 test('Phase 6B Gemini AI: DoW 4000 character ceiling rejection', async (t) => {
   const { analyzeResponseInline, MAX_RESPONSE_CHARACTERS } = require('../src/aiAnalysis');
 

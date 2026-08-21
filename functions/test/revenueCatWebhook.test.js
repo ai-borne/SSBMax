@@ -356,3 +356,47 @@ test('processRevenueCatEvent: rejects an unknown app_user_id even for a revoke e
 
   assert.equal(result.rejected, 'unknown_app_user_id');
 });
+
+/**
+ * M1 (Phase 11, out-of-order delivery): a stale EXPIRATION arriving after a fresher RENEWAL
+ * already applied must not revoke -- this is the exact scenario the plan states the fix for.
+ */
+test('processRevenueCatEvent (M1): a stale EXPIRATION arriving after a fresher RENEWAL does not revoke', async () => {
+  const db = makeFakeDb({
+    [USER_PATH('user1')]: { email: 'user1@example.com' },
+    [SUBSCRIPTION_PATH('user1')]: { tier: 'PRO', source: 'REVENUECAT', expiryDate: 9_999_999_999_999, startDate: 100, lastEventAtMs: 5_000 }
+  });
+  const staleExpiration = { id: 'evt_stale_exp', app_user_id: 'user1', type: 'EXPIRATION', event_timestamp_ms: 4_000 };
+
+  const result = await processRevenueCatEvent(staleExpiration, db);
+
+  assert.equal(result.stale, true);
+  assert.equal(db._store[SUBSCRIPTION_PATH('user1')].tier, 'PRO', 'the fresher RENEWAL state must survive the late EXPIRATION');
+});
+
+test('processRevenueCatEvent (M1): an event newer than lastEventAtMs is applied and bumps lastEventAtMs', async () => {
+  const db = makeFakeDb({
+    [USER_PATH('user1')]: { email: 'user1@example.com' },
+    [SUBSCRIPTION_PATH('user1')]: { tier: 'PRO', source: 'REVENUECAT', expiryDate: 9_999_999_999_999, startDate: 100, lastEventAtMs: 5_000 }
+  });
+  const freshExpiration = { id: 'evt_fresh_exp', app_user_id: 'user1', type: 'EXPIRATION', event_timestamp_ms: 6_000 };
+
+  const result = await processRevenueCatEvent(freshExpiration, db);
+
+  assert.equal(result.stale, undefined);
+  assert.equal(db._store[SUBSCRIPTION_PATH('user1')].tier, 'FREE');
+  assert.equal(db._store[SUBSCRIPTION_PATH('user1')].lastEventAtMs, 6_000);
+});
+
+test('processRevenueCatEvent (M1): no event_timestamp_ms on the event never blocks processing', async () => {
+  const db = makeFakeDb({
+    [USER_PATH('user1')]: { email: 'user1@example.com' },
+    [SUBSCRIPTION_PATH('user1')]: { tier: 'PRO', source: 'REVENUECAT', expiryDate: 9_999_999_999_999, startDate: 100, lastEventAtMs: 5_000 }
+  });
+  const event = { id: 'evt_no_ts', app_user_id: 'user1', type: 'EXPIRATION' };
+
+  const result = await processRevenueCatEvent(event, db);
+
+  assert.equal(result.stale, undefined);
+  assert.equal(db._store[SUBSCRIPTION_PATH('user1')].tier, 'FREE');
+});

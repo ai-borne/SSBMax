@@ -43,7 +43,17 @@ const ALERT_KINDS = Object.freeze({
   /** Phase 8: `functions/scripts/set-ops-alerting.js --smoke` -- never emitted by production code.
    * Exists so a human can confirm the whole pipeline (log line -> log-based metric -> alert policy
    * -> notification channel -> inbox) actually delivers, end to end, not just "the objects exist". */
-  SYNTHETIC_PROBE: 'SYNTHETIC_PROBE'
+  SYNTHETIC_PROBE: 'SYNTHETIC_PROBE',
+  /** Phase 11 (M2): the reconciliation cron's own periodic sweep found a subscription doc still
+   * carrying an unresolved `conflictDetectedAt` -- distinct from `WEBHOOK_RECONCILIATION_CONFLICT`
+   * (fired once, at the moment a webhook first detects the conflict) because this one fires on
+   * every sweep the conflict remains unresolved, which is the actual signal a human missed the
+   * first alert. */
+  UNRESOLVED_SUBSCRIPTION_CONFLICT: 'UNRESOLVED_SUBSCRIPTION_CONFLICT',
+  /** Phase 11 (M5): a Razorpay webhook request carried no stable event id (`event_id` field or
+   * `x-razorpay-event-id` header) -- rejected rather than processed under an invented id, since an
+   * invented id can never dedupe a retry of the same event. */
+  MISSING_WEBHOOK_EVENT_ID: 'MISSING_WEBHOOK_EVENT_ID'
 });
 
 const SEVERITIES = Object.freeze({ INFO: 'INFO', HIGH: 'HIGH', CRITICAL: 'CRITICAL' });

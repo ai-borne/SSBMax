@@ -8,6 +8,12 @@
  * on disk, and every correction it makes is itself a signal that some webhook (RC or Razorpay)
  * was missed, worth alerting on.
  *
+ * Two independent sweeps run on the same schedule (Phase 11, M2 adds the second):
+ * `sweepUnresolvedConflicts` re-surfaces any doc still carrying an unresolved `conflictDetectedAt`
+ * (read-only -- resolving it is a support decision, never this cron's), then
+ * `reconcileStaleSubscriptions` downgrades stale docs as it always has.
+ *
+
  * `USER_DATA_SUBCOLLECTION` ("data") is NOT exclusive to the subscription doc --
  * `GitLiveUserProfileRepository` stores user profile docs in the same `users/{uid}/data/{doc}`
  * subcollection (see firestore.rules' `match /data/{document}` comment: "for profile, settings,
@@ -143,6 +149,49 @@ async function reconcileStaleSubscriptions(db, now = Date.now(), { batchSize = B
   return finish(false);
 }
 
+// M2 (Phase 11): `conflictDetectedAt` is stamped by both webhook handlers the moment a cross-
+// platform conflict is detected, and Phase 8 already alerts at that moment
+// (`WEBHOOK_RECONCILIATION_CONFLICT`) -- but that's a one-shot alert; if it's missed (an on-call
+// gap, an inbox filter) the flag itself just sits on the doc, unread by anything, forever. This
+// sweep re-surfaces any doc still carrying an unresolved `conflictDetectedAt` on every cron tick
+// until a human (via Phase 9/10's support view) resolves it -- the same "fold it into the cron so
+// it's a recurring signal, not a single point-in-time one" idea `RECONCILIATION_CORRECTION` above
+// already uses for missed-webhook downgrades. Deliberately does NOT clear the flag or touch
+// `tier`/`source` -- resolving a genuine dual-purchase conflict is a support decision, not
+// something this sweep may make unilaterally (the same "detect, never auto-resolve" stance Phase
+// 7's `resolveSubscriptionDrift` takes on `FLAG_CONFLICT`).
+const CONFLICT_SWEEP_BATCH_SIZE = 250;
+const CONFLICT_SWEEP_MAX_BATCHES = 8;
+
+async function sweepUnresolvedConflicts(db, { batchSize = CONFLICT_SWEEP_BATCH_SIZE, maxBatches = CONFLICT_SWEEP_MAX_BATCHES } = {}) {
+  let unresolvedCount = 0;
+
+  for (let batch = 0; batch < maxBatches; batch++) {
+    const snapshot = await db
+      .collectionGroup(FirestorePaths.USER_DATA_SUBCOLLECTION)
+      .where('billingCycle', '==', 'MONTHLY')
+      .where('conflictDetectedAt', '!=', null)
+      .limit(batchSize)
+      .get();
+
+    unresolvedCount += snapshot.docs.length;
+
+    if (snapshot.docs.length < batchSize) {
+      break;
+    }
+  }
+
+  if (unresolvedCount > 0) {
+    await emitOpsAlert(db, {
+      kind: ALERT_KINDS.UNRESOLVED_SUBSCRIPTION_CONFLICT,
+      severity: SEVERITIES.HIGH,
+      detail: { unresolvedCount }
+    });
+  }
+
+  return { unresolvedCount };
+}
+
 // Bumped from the implicit 60s/256MB default to 540s (Cloud Functions v1's ceiling) -- headroom
 // for MAX_BATCHES_PER_RUN pages of sequential writes under a large stale-doc backlog. Mirrors
 // tatEvaluate.js's documented precedent for extending a single function's timeout when its own
@@ -151,7 +200,11 @@ exports.scheduledSubscriptionReconciliation = functions
   .runWith({ timeoutSeconds: 540 })
   .pubsub.schedule('every 6 hours')
   .onRun(async () => {
-    const { reconciledCount, completed } = await reconcileStaleSubscriptions(admin.firestore());
+    const db = admin.firestore();
+    const { unresolvedCount } = await sweepUnresolvedConflicts(db);
+    console.log(`[scheduledSubscriptionReconciliation] ${unresolvedCount} subscription doc(s) still carry an unresolved conflictDetectedAt`);
+
+    const { reconciledCount, completed } = await reconcileStaleSubscriptions(db);
     console.log(
       `[scheduledSubscriptionReconciliation] reconciled ${reconciledCount} stale subscription doc(s), completed=${completed}`
     );
@@ -159,6 +212,9 @@ exports.scheduledSubscriptionReconciliation = functions
   });
 
 exports.reconcileStaleSubscriptions = reconcileStaleSubscriptions;
+exports.sweepUnresolvedConflicts = sweepUnresolvedConflicts;
 exports.shouldReconcile = shouldReconcile;
 exports.BATCH_SIZE = BATCH_SIZE;
 exports.MAX_BATCHES_PER_RUN = MAX_BATCHES_PER_RUN;
+exports.CONFLICT_SWEEP_BATCH_SIZE = CONFLICT_SWEEP_BATCH_SIZE;
+exports.CONFLICT_SWEEP_MAX_BATCHES = CONFLICT_SWEEP_MAX_BATCHES;

@@ -39,8 +39,8 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-function processRazorpaySubscriptionEvent(eventType, payload, eventId, firestoreDb) {
-  return processSubEvent(eventType, payload, eventId, firestoreDb, planIdToTier);
+function processRazorpaySubscriptionEvent(eventType, payload, eventId, firestoreDb, eventAtMs = null) {
+  return processSubEvent(eventType, payload, eventId, firestoreDb, planIdToTier, eventAtMs);
 }
 
 /**
@@ -68,7 +68,23 @@ exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10, se
   }
 
   const event = req.body.event;
-  const eventId = req.body.event_id || req.headers['x-razorpay-event-id'] || `event_${Date.now()}`;
+  // M5 (Phase 11): a fabricated `event_${Date.now()}` id used to stand in for a genuinely missing
+  // event id -- but idempotency (`webhook_logs/{eventId}`) only works if the SAME id comes back on
+  // a retry. An invented id is different every time, so a retried delivery would be reprocessed as
+  // brand new instead of deduped. Reject rather than invent one.
+  const eventId = req.body.event_id || req.headers['x-razorpay-event-id'];
+
+  if (!eventId) {
+    console.error('Razorpay webhook missing a stable event id (no event_id field or x-razorpay-event-id header) -- rejecting rather than inventing one');
+    await emitOpsAlert(db, {
+      kind: ALERT_KINDS.MISSING_WEBHOOK_EVENT_ID,
+      severity: SEVERITIES.HIGH,
+      detail: { provider: 'RAZORPAY', event: event || null }
+    });
+    return res.status(400).json({ status: 'error', message: 'Missing event id' });
+  }
+
+  const eventAtMs = typeof req.body.created_at === 'number' ? req.body.created_at * 1000 : null;
 
   if (event === 'payment.captured') {
     const payment = req.body.payload?.payment?.entity;
@@ -118,7 +134,7 @@ exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10, se
     }
   } else if (RAZORPAY_SUBSCRIPTION_EVENT_TYPES.has(event)) {
     try {
-      const result = await processRazorpaySubscriptionEvent(event, req.body.payload || {}, eventId, db);
+      const result = await processRazorpaySubscriptionEvent(event, req.body.payload || {}, eventId, db, eventAtMs);
 
       if (result.warning) {
         console.warn(`Webhook warning: ${event} event missing userId in notes`);
@@ -128,6 +144,13 @@ exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10, se
       if (result.idempotent) {
         console.log(`Duplicate webhook event ${eventId} ignored (idempotent entry found)`);
         return res.status(200).json({ status: 'ok', idempotent: true });
+      }
+
+      if (result.stale) {
+        // M1 (Phase 11): a fresher event already applied since this one's `created_at` -- e.g. an
+        // out-of-order-delivered EXPIRATION arriving after a RENEWAL that already superseded it.
+        console.warn(`Razorpay subscription webhook: event ${event} (${eventId}) is older than the last applied event -- ignored`);
+        return res.status(200).json({ status: 'ok', stale: true });
       }
 
       if (result.conflict) {

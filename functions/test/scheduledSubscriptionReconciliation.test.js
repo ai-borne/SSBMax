@@ -12,6 +12,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   reconcileStaleSubscriptions,
+  sweepUnresolvedConflicts,
   shouldReconcile,
   BATCH_SIZE,
   MAX_BATCHES_PER_RUN
@@ -258,6 +259,60 @@ test('reconcileStaleSubscriptions emits exactly one RECONCILIATION_CORRECTION al
   assert.equal(staleDocs._opsAlerts[0].kind, 'RECONCILIATION_CORRECTION');
   assert.equal(staleDocs._opsAlerts[0].severity, 'INFO', 'a completed run is informational, not urgent');
   assert.deepEqual(staleDocs._opsAlerts[0].detail, { reconciledCount: 2, completed: true });
+});
+
+/**
+ * M2 (Phase 11): `conflictDetectedAt` is stamped by both webhook handlers and Phase 8 alerts once
+ * at the moment of detection -- but that's a single point-in-time alert. This sweep re-surfaces any
+ * doc still carrying the flag on every cron tick, so a missed one-shot alert (e.g. an on-call gap)
+ * doesn't let a real dual-purchase conflict sit unresolved and unnoticed forever.
+ */
+test('sweepUnresolvedConflicts finds docs with a non-null conflictDetectedAt and alerts once for the whole sweep', async () => {
+  __resetDedupeForTests();
+  const db = makeFakeDb({
+    'users/u1/data/subscription': { tier: 'PREMIUM', billingCycle: 'MONTHLY', conflictDetectedAt: 1_700_000_000_000 },
+    'users/u2/data/subscription': { tier: 'PRO', billingCycle: 'MONTHLY' } // no conflict -- must be excluded
+  });
+
+  const result = await sweepUnresolvedConflicts(db);
+
+  assert.equal(result.unresolvedCount, 1);
+  assert.equal(db._opsAlerts.length, 1);
+  assert.equal(db._opsAlerts[0].kind, 'UNRESOLVED_SUBSCRIPTION_CONFLICT');
+  assert.equal(db._opsAlerts[0].severity, 'HIGH');
+  assert.deepEqual(db._opsAlerts[0].detail, { unresolvedCount: 1 });
+});
+
+test('sweepUnresolvedConflicts never writes -- it only alerts, resolving a conflict is a support decision', async () => {
+  __resetDedupeForTests();
+  const seed = { tier: 'PREMIUM', billingCycle: 'MONTHLY', conflictDetectedAt: 1_700_000_000_000, source: 'RAZORPAY' };
+  const db = makeFakeDb({ 'users/u1/data/subscription': { ...seed } });
+
+  await sweepUnresolvedConflicts(db);
+
+  assert.deepEqual(db._docs.get('users/u1/data/subscription'), seed, 'the doc must be untouched -- this sweep only reads and alerts');
+});
+
+test('sweepUnresolvedConflicts is a no-op with no alert when nothing is unresolved', async () => {
+  __resetDedupeForTests();
+  const db = makeFakeDb({
+    'users/u1/data/subscription': { tier: 'PRO', billingCycle: 'MONTHLY' }
+  });
+
+  const result = await sweepUnresolvedConflicts(db);
+
+  assert.equal(result.unresolvedCount, 0);
+  assert.equal(db._opsAlerts.length, 0);
+});
+
+test('sweepUnresolvedConflicts never matches a profile doc sharing the same "data" subcollection', async () => {
+  const db = makeFakeDb({
+    'users/u1/data/profile': { displayName: 'Cadet', conflictDetectedAt: 1_700_000_000_000 }
+  });
+
+  const result = await sweepUnresolvedConflicts(db);
+
+  assert.equal(result.unresolvedCount, 0, 'a profile doc never sets billingCycle, so it must be excluded before conflictDetectedAt is even considered');
 });
 
 test('reconcileStaleSubscriptions alerts HIGH severity when maxBatches caps the run (more stale docs remain)', async () => {
