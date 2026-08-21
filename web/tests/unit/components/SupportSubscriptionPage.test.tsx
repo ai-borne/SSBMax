@@ -47,6 +47,16 @@ describe('SupportSubscriptionPage', () => {
     await waitFor(() => expect(screen.getByTestId('support-error')).toHaveTextContent(strings.support.genericError));
   });
 
+  it('renders a distinct "no user found" message for functions/not-found (a typo\'d email or uid, not a server fault)', async () => {
+    const error = Object.assign(new Error('No user found for that email'), { code: 'functions/not-found' });
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as any);
+
+    render(<SupportSubscriptionPage />);
+    submitLookup('nobody@example.com');
+
+    await waitFor(() => expect(screen.getByTestId('support-error')).toHaveTextContent(strings.support.userNotFound));
+  });
+
   it('renders the joined snapshot panels on a successful admin lookup, including a source marked unavailable', async () => {
     const snapshot = {
       userId: 'user-1',

@@ -11,7 +11,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   getSubscriptionSupportSnapshot,
-  getSubscriptionSupportSnapshotForUser
+  getSubscriptionSupportSnapshotForUser,
+  resolveUserId
 } = require('../src/subscriptions/getSubscriptionSupportSnapshot');
 
 function makeFakeDb(seed = {}) {
@@ -95,6 +96,45 @@ test('getSubscriptionSupportSnapshot rejects an admin call with no userId', asyn
     () => getSubscriptionSupportSnapshot.run({}, { auth: { uid: 'admin-1', token: { admin: true } } }),
     (err) => {
       assert.equal(err.code, 'invalid-argument');
+      return true;
+    }
+  );
+});
+
+test('resolveUserId passes a bare uid through unchanged (never calls Auth for a non-email input)', async () => {
+  const authAdmin = { getUserByEmail: async () => { throw new Error('should not be called'); } };
+  const result = await resolveUserId(authAdmin, 'MEkxQsweaEhNYFa0LeTJgCUDqVc2');
+  assert.equal(result, 'MEkxQsweaEhNYFa0LeTJgCUDqVc2');
+});
+
+test('resolveUserId resolves an email to a uid via Firebase Auth (a support ticket names an email, not a uid)', async () => {
+  const authAdmin = {
+    getUserByEmail: async (email) => {
+      assert.equal(email, 'candidate@example.com');
+      return { uid: 'resolved-uid-1' };
+    }
+  };
+  const result = await resolveUserId(authAdmin, 'candidate@example.com');
+  assert.equal(result, 'resolved-uid-1');
+});
+
+test('resolveUserId reports not-found for an email with no matching account (a typo, not a server fault)', async () => {
+  const authAdmin = { getUserByEmail: async () => { throw Object.assign(new Error('no user'), { code: 'auth/user-not-found' }); } };
+  await assert.rejects(
+    () => resolveUserId(authAdmin, 'nobody@example.com'),
+    (err) => {
+      assert.equal(err.code, 'not-found');
+      return true;
+    }
+  );
+});
+
+test('resolveUserId fails closed (internal) on any other Auth error, rather than falling through to treat the email as a uid', async () => {
+  const authAdmin = { getUserByEmail: async () => { throw new Error('Auth service unavailable'); } };
+  await assert.rejects(
+    () => resolveUserId(authAdmin, 'candidate@example.com'),
+    (err) => {
+      assert.equal(err.code, 'internal');
       return true;
     }
   );

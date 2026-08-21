@@ -6,8 +6,8 @@
 export const supportStrings = {
   title: 'Subscription Support Lookup',
   subtitle: 'Admin-only: joins the Firestore, Razorpay, and RevenueCat state for one user so a support ticket can be answered without switching consoles.',
-  userIdLabel: 'Firebase user ID (uid)',
-  userIdPlaceholder: 'Enter a uid...',
+  userIdLabel: 'Firebase user ID (uid) or email',
+  userIdPlaceholder: 'Enter a uid or email...',
   lookupButton: 'Look Up',
   looking: 'Looking up...',
   firestorePanel: 'Firestore (stored subscription)',
@@ -18,5 +18,6 @@ export const supportStrings = {
   sourceUnavailable: 'Unavailable -- lookup failed or credentials are not configured.',
   noAlerts: 'No ops alerts recorded for this user.',
   permissionDenied: 'Admin access required to use this tool.',
+  userNotFound: 'No user found for that uid or email.',
   genericError: 'Lookup failed. Please try again.'
 } as const;

@@ -17,6 +17,12 @@
  * A Razorpay or RevenueCat outage must not fail the whole call -- a support tool that goes dark
  * exactly when billing is broken is worthless -- so each external source degrades independently
  * to `{ unavailable: true }` rather than throwing.
+ *
+ * `data.userId` accepts a uid OR an email -- a support ticket names an email, not a Firestore
+ * uid, and making the agent translate one to the other in the Firebase Console first would defeat
+ * the tool's whole point (answer a ticket without switching consoles). An email is resolved to a
+ * uid via Firebase Auth before the join; resolution is admin-gated the same as everything else
+ * here, so this cannot be used as a general email->uid oracle by anyone but an admin.
  */
 
 const functions = require('firebase-functions/v1');
@@ -90,6 +96,33 @@ async function readRecentAlerts(firestoreDb, userId) {
   }
 }
 
+function looksLikeEmail(value) {
+  return value.includes('@');
+}
+
+/**
+ * Resolves the lookup box's input to a uid, against an injectable `authAdmin` (same testability
+ * convention as the rest of this file) -- a bare uid passes through unchanged; an email is looked
+ * up via Firebase Auth. `auth/user-not-found` becomes a `not-found` HttpsError (a wrong/typo'd
+ * email is an expected support-agent mistake, not a server fault); any other Auth error fails
+ * closed as `internal` rather than silently falling through to treating the email string itself
+ * as a uid (which would just 404 confusingly three steps later at the Firestore read).
+ */
+async function resolveUserId(authAdmin, rawInput) {
+  if (!looksLikeEmail(rawInput)) return rawInput;
+
+  try {
+    const userRecord = await authAdmin.getUserByEmail(rawInput);
+    return userRecord.uid;
+  } catch (error) {
+    if (error.code === 'auth/user-not-found') {
+      throw new functions.https.HttpsError('not-found', 'No user found for that email');
+    }
+    console.error('getSubscriptionSupportSnapshot: email->uid resolution failed', error);
+    throw new functions.https.HttpsError('internal', 'Unable to resolve user by email');
+  }
+}
+
 /**
  * The join itself, against an injectable `firestoreDb`/`fetchImpl` -- same testability
  * convention as every other callable in this plan (`repairMobileEntitlementForUser`,
@@ -119,12 +152,14 @@ exports.getSubscriptionSupportSnapshot = functions.runWith(runtimeOptions).https
     throw new functions.https.HttpsError('permission-denied', 'Admin access required');
   }
 
-  const userId = typeof data?.userId === 'string' ? data.userId.trim() : '';
-  if (!userId) {
+  const rawInput = typeof data?.userId === 'string' ? data.userId.trim() : '';
+  if (!rawInput) {
     throw new functions.https.HttpsError('invalid-argument', 'userId is required');
   }
 
+  const userId = await resolveUserId(admin.auth(), rawInput);
   return getSubscriptionSupportSnapshotForUser(db, fetch, userId);
 });
 
 exports.getSubscriptionSupportSnapshotForUser = getSubscriptionSupportSnapshotForUser;
+exports.resolveUserId = resolveUserId;

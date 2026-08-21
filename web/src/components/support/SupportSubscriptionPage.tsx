@@ -25,7 +25,9 @@ export const SupportSubscriptionPage: FC = () => {
     state.status === 'ERROR'
       ? state.code === 'functions/permission-denied'
         ? strings.support.permissionDenied
-        : strings.support.genericError
+        : state.code === 'functions/not-found'
+          ? strings.support.userNotFound
+          : strings.support.genericError
       : null;
 
   return (
