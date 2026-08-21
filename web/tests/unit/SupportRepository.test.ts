@@ -25,7 +25,8 @@ describe('SupportRepository', () => {
       firestore: { tier: 'PREMIUM' },
       razorpay: null,
       revenueCat: { status: 'NONE' },
-      alerts: []
+      alerts: { items: [], hasMore: false },
+      conflict: null
     };
     const callable = vi.fn().mockResolvedValue({ data: snapshot });
     vi.mocked(httpsCallable).mockReturnValue(callable as any);

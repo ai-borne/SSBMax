@@ -34,7 +34,7 @@ function makeFakeDb(seed = {}) {
         return {
           where: (field, op, value) => ({
             orderBy: () => ({
-              limit: () => ({
+              limit: (n) => ({
                 async get() {
                   if (seed.__alertsQueryError) {
                     // Mirrors a missing composite index -- exactly what production hit before the
@@ -44,6 +44,7 @@ function makeFakeDb(seed = {}) {
                   const docs = [...alerts.entries()]
                     .filter(([, doc]) => field === 'userId' && op === '==' && doc.userId === value)
                     .sort((a, b) => b[1].createdAt - a[1].createdAt)
+                    .slice(0, n)
                     .map(([id, data]) => ({ id, data: () => data }));
                   return { docs };
                 }
@@ -172,8 +173,9 @@ test('getSubscriptionSupportSnapshotForUser returns the joined snapshot for an a
   assert.equal(snapshot.firestore.tier, 'PREMIUM');
   assert.equal(snapshot.razorpay.id, 'sub_abc');
   assert.equal(snapshot.revenueCat.status, 'ACTIVE');
-  assert.equal(snapshot.alerts.length, 1, 'only this user\'s alerts, not another user\'s');
-  assert.equal(snapshot.alerts[0].kind, 'DRIFT_REPAIR');
+  assert.equal(snapshot.alerts.items.length, 1, 'only this user\'s alerts, not another user\'s');
+  assert.equal(snapshot.alerts.items[0].kind, 'DRIFT_REPAIR');
+  assert.equal(snapshot.alerts.hasMore, false);
 });
 
 test('getSubscriptionSupportSnapshotForUser skips the Razorpay lookup when the stored doc names no Razorpay subscription', async () => {
@@ -256,4 +258,157 @@ test('getSubscriptionSupportSnapshotForUser reports Razorpay/RevenueCat as unava
 
   assert.deepEqual(razorpayState.razorpay, { unavailable: true, reason: 'missing-credentials' });
   assert.deepEqual(razorpayState.revenueCat, { unavailable: true, reason: 'missing-credentials' });
+});
+
+// --- Phase 10 (data quality, conflict surfacing & readability) -----------------------------
+
+test('getSubscriptionSupportSnapshotForUser tags a RAZORPAY-sourced doc with no subscriptionId as dataIncomplete, not the plain null that also means "no Razorpay purchase" (issue 1, the live case)', async () => {
+  const db = makeFakeDb({
+    'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY' }
+  });
+
+  const snapshot = await getSubscriptionSupportSnapshotForUser(db, async () => ({ ok: true, json: async () => ({}) }), 'user-1');
+
+  assert.deepEqual(snapshot.razorpay, { dataIncomplete: true, reason: 'missing-subscription-id' });
+  assert.equal(snapshot.firestore.sourceKind, 'RAZORPAY_INCOMPLETE');
+});
+
+test('getSubscriptionSupportSnapshotForUser sets firestore.sourceKind matching classifySubscriptionSource for a clean RAZORPAY doc', async () => {
+  const db = makeFakeDb({
+    'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY', subscriptionId: 'sub_abc' }
+  });
+  const fetchImpl = async (url) => {
+    if (String(url).includes('razorpay.com')) {
+      return { ok: true, json: async () => ({ id: 'sub_abc', status: 'active', notes: { planId: 'pro_monthly' } }) };
+    }
+    return { ok: true, json: async () => ({ subscriber: { entitlements: {} } }) };
+  };
+  process.env.RAZORPAY_KEY_ID = 'k';
+  process.env.RAZORPAY_KEY_SECRET = 's';
+  let snapshot;
+  try {
+    snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1');
+  } finally {
+    delete process.env.RAZORPAY_KEY_ID;
+    delete process.env.RAZORPAY_KEY_SECRET;
+  }
+
+  assert.equal(snapshot.firestore.sourceKind, 'RAZORPAY');
+});
+
+test('getSubscriptionSupportSnapshotForUser sets conflict.detected true when RevenueCat independently reports an active subscription at a different tier than the stored RAZORPAY-sourced doc (issue 2, the dual-purchase case)', async () => {
+  const now = Date.now();
+  const db = makeFakeDb({
+    'users/user-1/data/subscription': { tier: 'BASIC', source: 'RAZORPAY', subscriptionId: 'sub_abc', expiryDate: now + 100000 }
+  });
+  const fetchImpl = async (url) => {
+    if (String(url).includes('razorpay.com')) {
+      return { ok: true, json: async () => ({ status: 'active', notes: { planId: 'basic_monthly' }, current_end: Math.floor((now + 100000) / 1000) }) };
+    }
+    return { ok: true, json: async () => ({ subscriber: { entitlements: { premium: { expires_date: new Date(now + 100000).toISOString() } } } }) };
+  };
+  process.env.RAZORPAY_KEY_ID = 'k';
+  process.env.RAZORPAY_KEY_SECRET = 's';
+  process.env.REVENUECAT_SECRET_KEY = 'rc';
+  let snapshot;
+  try {
+    snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1', now);
+  } finally {
+    delete process.env.RAZORPAY_KEY_ID;
+    delete process.env.RAZORPAY_KEY_SECRET;
+    delete process.env.REVENUECAT_SECRET_KEY;
+  }
+
+  assert.deepEqual(snapshot.conflict, { detected: true });
+});
+
+test('getSubscriptionSupportSnapshotForUser sets conflict.detected false when RevenueCat and Razorpay agree', async () => {
+  const now = Date.now();
+  const db = makeFakeDb({
+    'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY', subscriptionId: 'sub_abc', expiryDate: now + 100000 }
+  });
+  const fetchImpl = async (url) => {
+    if (String(url).includes('razorpay.com')) {
+      return { ok: true, json: async () => ({ status: 'active', notes: { planId: 'pro_monthly' }, current_end: Math.floor((now + 100000) / 1000) }) };
+    }
+    return { ok: true, json: async () => ({ subscriber: { entitlements: { pro: { expires_date: new Date(now + 100000).toISOString() } } } }) };
+  };
+  process.env.RAZORPAY_KEY_ID = 'k';
+  process.env.RAZORPAY_KEY_SECRET = 's';
+  process.env.REVENUECAT_SECRET_KEY = 'rc';
+  let snapshot;
+  try {
+    snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1', now);
+  } finally {
+    delete process.env.RAZORPAY_KEY_ID;
+    delete process.env.RAZORPAY_KEY_SECRET;
+    delete process.env.REVENUECAT_SECRET_KEY;
+  }
+
+  assert.deepEqual(snapshot.conflict, { detected: false });
+});
+
+test('getSubscriptionSupportSnapshotForUser sets conflict.detected false when only one provider is active', async () => {
+  const now = Date.now();
+  const db = makeFakeDb({
+    'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY', subscriptionId: 'sub_abc', expiryDate: now + 100000 }
+  });
+  const fetchImpl = async (url) => {
+    if (String(url).includes('razorpay.com')) {
+      return { ok: true, json: async () => ({ status: 'active', notes: { planId: 'pro_monthly' }, current_end: Math.floor((now + 100000) / 1000) }) };
+    }
+    return { ok: true, json: async () => ({ subscriber: { entitlements: {} } }) };
+  };
+  process.env.RAZORPAY_KEY_ID = 'k';
+  process.env.RAZORPAY_KEY_SECRET = 's';
+  process.env.REVENUECAT_SECRET_KEY = 'rc';
+  let snapshot;
+  try {
+    snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1', now);
+  } finally {
+    delete process.env.RAZORPAY_KEY_ID;
+    delete process.env.RAZORPAY_KEY_SECRET;
+    delete process.env.REVENUECAT_SECRET_KEY;
+  }
+
+  assert.deepEqual(snapshot.conflict, { detected: false });
+});
+
+test('getSubscriptionSupportSnapshotForUser sets conflict to null (never a false "no conflict") when a source needed for the comparison is unavailable', async () => {
+  const db = makeFakeDb({
+    'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY', subscriptionId: 'sub_abc' }
+  });
+  // No REVENUECAT_SECRET_KEY set -> revenueCat degrades to { unavailable: true, ... }.
+  process.env.RAZORPAY_KEY_ID = 'k';
+  process.env.RAZORPAY_KEY_SECRET = 's';
+  let snapshot;
+  try {
+    snapshot = await getSubscriptionSupportSnapshotForUser(
+      db,
+      async () => ({ ok: true, json: async () => ({ status: 'active', notes: {} }) }),
+      'user-1'
+    );
+  } finally {
+    delete process.env.RAZORPAY_KEY_ID;
+    delete process.env.RAZORPAY_KEY_SECRET;
+  }
+
+  assert.equal(snapshot.conflict, null);
+});
+
+test('getSubscriptionSupportSnapshotForUser sets alerts.hasMore true when a 21st matching doc exists (issue 5), false with exactly 20', async () => {
+  const now = Date.now();
+  const manyAlerts = {};
+  for (let i = 0; i < 21; i++) {
+    manyAlerts[`alert-${i}`] = { userId: 'user-1', kind: 'DRIFT_REPAIR', severity: 'INFO', createdAt: now - i };
+  }
+  const db = makeFakeDb({
+    'users/user-1/data/subscription': { tier: 'FREE' },
+    __alerts: manyAlerts
+  });
+
+  const snapshot = await getSubscriptionSupportSnapshotForUser(db, async () => ({ ok: true, json: async () => ({}) }), 'user-1');
+
+  assert.equal(snapshot.alerts.items.length, 20);
+  assert.equal(snapshot.alerts.hasMore, true);
 });

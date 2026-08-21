@@ -63,7 +63,8 @@ describe('SupportSubscriptionPage', () => {
       firestore: { tier: 'PREMIUM' },
       razorpay: { unavailable: true },
       revenueCat: { status: 'NONE' },
-      alerts: []
+      alerts: { items: [], hasMore: false },
+      conflict: null
     };
     vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: snapshot }) as any);
 
@@ -88,7 +89,8 @@ describe('SupportSubscriptionPage', () => {
       firestore: { tier: 'FREE' },
       razorpay: null,
       revenueCat: { status: 'NONE' },
-      alerts: { unavailable: true }
+      alerts: { unavailable: true },
+      conflict: null
     };
     vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: snapshot }) as any);
 

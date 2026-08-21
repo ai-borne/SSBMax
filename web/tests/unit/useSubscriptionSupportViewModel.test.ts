@@ -15,7 +15,8 @@ const SNAPSHOT: SubscriptionSupportSnapshot = {
   firestore: { tier: 'PREMIUM' },
   razorpay: null,
   revenueCat: { status: 'NONE' },
-  alerts: []
+  alerts: { items: [], hasMore: false },
+  conflict: null
 };
 
 /**
@@ -69,7 +70,8 @@ describe('useSubscriptionSupportViewModel', () => {
       firestore: { tier: 'PREMIUM' },
       razorpay: { unavailable: true },
       revenueCat: { status: 'NONE' },
-      alerts: []
+      alerts: { items: [], hasMore: false },
+      conflict: null
     };
     const repository = mockRepository({
       getSubscriptionSupportSnapshot: vi.fn().mockResolvedValue(partialSnapshot)

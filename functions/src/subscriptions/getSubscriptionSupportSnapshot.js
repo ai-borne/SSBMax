@@ -23,6 +23,23 @@
  * the tool's whole point (answer a ticket without switching consoles). An email is resolved to a
  * uid via Firebase Auth before the join; resolution is admin-gated the same as everything else
  * here, so this cannot be used as a general email->uid oracle by anyone but an admin.
+ *
+ * Phase 10 additions (data quality, verified live against a real production account -- see
+ * `docs/plans` payment ecosystem hardening plan, Phase 10): the join alone isn't enough, a support
+ * agent trusting an unjudged panel is how a ticket gets answered wrong, so several judgments over
+ * the joined facts are computed here, once, server-side, rather than left for the web layer to
+ * guess at:
+ *  - `firestore.sourceKind` (`lib/subscriptionSourceClassification.js`) distinguishes "no Razorpay
+ *    purchase" from "a Razorpay-sourced doc with no subscriptionId, unverifiable against Razorpay"
+ *    -- those rendered identically before this phase (issue 1). When `sourceKind` is
+ *    `RAZORPAY_INCOMPLETE`, `razorpay` is `{ dataIncomplete: true, reason }` instead of `null`.
+ *  - `conflict` (`lib/razorpayProviderState.js` + Phase 7's `resolveSubscriptionDrift`, unmodified)
+ *    flags when RevenueCat and Razorpay both independently report an active subscription that
+ *    disagrees with what's stored (issue 2) -- `null` when either side needed for the comparison
+ *    is unavailable, never a false "no conflict" from incomplete data (fail closed, Rule 6).
+ *  - `alerts` is `{ items, hasMore }` instead of a bare array (issue 5) -- `hasMore` is true when a
+ *    `RECENT_ALERTS_LIMIT + 1`th matching doc exists, so a heavily-drifted user's older alerts
+ *    don't silently vanish.
  */
 
 const functions = require('firebase-functions/v1');
@@ -30,6 +47,10 @@ const admin = require('firebase-admin');
 const { FirestorePaths } = require('../generated/contracts.cjs');
 const { getSubscription } = require('../lib/razorpayClient');
 const { fetchRevenueCatSubscriberState } = require('./repairMobileEntitlement');
+const { classifySubscriptionSource, SOURCE_KINDS } = require('../lib/subscriptionSourceClassification');
+const { normalizeRazorpayProviderState } = require('../lib/razorpayProviderState');
+const { resolveSubscriptionDrift, DRIFT_ACTIONS } = require('../lib/subscriptionDrift');
+const { planIdToTier } = require('../webhooks/paymentCaptured');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -81,19 +102,54 @@ async function readRevenueCatSubscriber(fetchImpl, secretKey, userId) {
   }
 }
 
+/**
+ * Fetches one more than `RECENT_ALERTS_LIMIT` so `hasMore` can be derived without a second
+ * (costly) count query -- issue 5: a heavily-drifted user's older alerts silently looked identical
+ * to a user who genuinely only had a few, since the panel had no way to tell "exactly 20" from
+ * "20 of many more".
+ */
 async function readRecentAlerts(firestoreDb, userId) {
   try {
     const snap = await firestoreDb
       .collection(FirestorePaths.OPS_ALERTS)
       .where('userId', '==', userId)
       .orderBy('createdAt', 'desc')
-      .limit(RECENT_ALERTS_LIMIT)
+      .limit(RECENT_ALERTS_LIMIT + 1)
       .get();
-    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    const docs = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    return { items: docs.slice(0, RECENT_ALERTS_LIMIT), hasMore: docs.length > RECENT_ALERTS_LIMIT };
   } catch (error) {
     console.error('getSubscriptionSupportSnapshot: ops_alerts read failed', error);
     return { unavailable: true };
   }
+}
+
+/**
+ * Cross-provider conflict check (issue 2) -- reuses Phase 7's `resolveSubscriptionDrift` twice,
+ * once per provider against the same stored state, rather than a second hand-written comparison.
+ * `null` (not `false`) whenever either side needed for the comparison couldn't be resolved, so an
+ * outage never reads as "confirmed no conflict" (fail closed, Rule 6). Only flagged when BOTH
+ * providers report an active subscription -- a single active provider drifting from `stored` is
+ * Phase 7's repair mechanisms' job, not a cross-provider conflict.
+ */
+function computeConflict(razorpaySourceKind, razorpayState, revenueCatState, firestoreState, nowMillis) {
+  if (firestoreState.unavailable === true || revenueCatState?.unavailable === true || razorpayState?.unavailable === true) {
+    return null;
+  }
+
+  const razorpayProviderState =
+    razorpaySourceKind === SOURCE_KINDS.RAZORPAY && razorpayState != null
+      ? normalizeRazorpayProviderState(razorpayState, planIdToTier)
+      : { status: 'UNKNOWN' };
+
+  const bothActive = razorpayProviderState.status === 'ACTIVE' && revenueCatState.status === 'ACTIVE';
+  if (!bothActive) {
+    return { detected: false };
+  }
+
+  const rcDrift = resolveSubscriptionDrift(revenueCatState, firestoreState, nowMillis);
+  const razorpayDrift = resolveSubscriptionDrift(razorpayProviderState, firestoreState, nowMillis);
+  return { detected: rcDrift.action !== DRIFT_ACTIONS.NONE || razorpayDrift.action !== DRIFT_ACTIONS.NONE };
 }
 
 function looksLikeEmail(value) {
@@ -128,20 +184,41 @@ async function resolveUserId(authAdmin, rawInput) {
  * convention as every other callable in this plan (`repairMobileEntitlementForUser`,
  * `cancelRazorpaySubscriptionForUser`).
  */
-async function getSubscriptionSupportSnapshotForUser(firestoreDb, fetchImpl, userId) {
+async function getSubscriptionSupportSnapshotForUser(firestoreDb, fetchImpl, userId, nowMillis = Date.now()) {
   const firestoreState = await readFirestoreSubscription(firestoreDb, userId);
-  const razorpaySubscriptionId =
-    firestoreState.source === 'RAZORPAY' && typeof firestoreState.subscriptionId === 'string'
-      ? firestoreState.subscriptionId
-      : null;
+  const sourceKind = firestoreState.unavailable === true ? null : classifySubscriptionSource(firestoreState);
+  const razorpaySubscriptionId = sourceKind === SOURCE_KINDS.RAZORPAY ? firestoreState.subscriptionId : null;
 
-  const [razorpayState, revenueCatState, alerts] = await Promise.all([
+  const [razorpayLookupResult, revenueCatState, alerts] = await Promise.all([
     readRazorpaySubscription(fetchImpl, process.env.RAZORPAY_KEY_ID, process.env.RAZORPAY_KEY_SECRET, razorpaySubscriptionId),
     readRevenueCatSubscriber(fetchImpl, process.env.REVENUECAT_SECRET_KEY, userId),
     readRecentAlerts(firestoreDb, userId)
   ]);
 
-  return { userId, firestore: firestoreState, razorpay: razorpayState, revenueCat: revenueCatState, alerts };
+  // Issue 1: a RAZORPAY-sourced doc with no subscriptionId (predates Phase 5's
+  // subscriptionId-at-activation write) is unverifiable against the Razorpay API -- surfaced as a
+  // distinct tag, never the plain `null` that also means "this user never touched Razorpay".
+  const razorpayState =
+    sourceKind === SOURCE_KINDS.RAZORPAY_INCOMPLETE
+      ? { dataIncomplete: true, reason: 'missing-subscription-id' }
+      : razorpayLookupResult;
+
+  const conflict = computeConflict(sourceKind, razorpayState, revenueCatState, firestoreState, nowMillis);
+
+  // `sourceKind` is nested inside `firestore` (rather than a sibling field) so the web panel that
+  // already renders `snapshot.firestore` has the classification right alongside the data it
+  // classifies -- `null` only when the Firestore read itself is `unavailable` (no doc to classify).
+  const firestoreWithSourceKind =
+    firestoreState.unavailable === true ? firestoreState : { ...firestoreState, sourceKind };
+
+  return {
+    userId,
+    firestore: firestoreWithSourceKind,
+    razorpay: razorpayState,
+    revenueCat: revenueCatState,
+    alerts,
+    conflict
+  };
 }
 
 exports.getSubscriptionSupportSnapshot = functions.runWith(runtimeOptions).https.onCall(async (data, context) => {

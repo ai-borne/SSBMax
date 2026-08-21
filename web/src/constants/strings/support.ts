@@ -19,5 +19,9 @@ export const supportStrings = {
   noAlerts: 'No ops alerts recorded for this user.',
   permissionDenied: 'Admin access required to use this tool.',
   userNotFound: 'No user found for that uid or email.',
-  genericError: 'Lookup failed. Please try again.'
+  genericError: 'Lookup failed. Please try again.',
+  razorpayDataIncomplete: 'Stored as a Razorpay subscription, but this doc predates recording a subscription ID -- cannot be verified against Razorpay directly.',
+  legacyOrUnknownSource: 'Unrecognized or missing purchase source (legacy doc).',
+  conflictDetected: 'RevenueCat and Razorpay report conflicting active subscriptions for this user -- verify manually before taking any action.',
+  moreAlertsExist: 'More alerts exist for this user -- narrow the time range or check ops_alerts directly for the full history.'
 } as const;
