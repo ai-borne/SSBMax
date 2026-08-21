@@ -208,6 +208,28 @@ test('subscription.halted marks billingIssueAt without revoking tier', async () 
   assert.ok(typeof doc.billingIssueAt === 'number');
 });
 
+/**
+ * L3 (Phase 12): before this fix, `subscription.pending` fell through the dispatcher's
+ * unrecognized-event-types branch entirely (`{ ignored: eventType }`) -- not even logged. It's
+ * Razorpay's earlier-in-the-retry-sequence sibling of `subscription.halted` (a charge failed and
+ * a retry is about to happen), so it gets identical grace-period treatment: field-only write, no
+ * tier change.
+ */
+test('subscription.pending marks billingIssueAt without revoking tier, same as subscription.halted', async () => {
+  const seed = { tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000 };
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
+  const result = await processRazorpaySubscriptionEvent('subscription.pending', activatedPayload(), 'evt_pending', db);
+
+  const doc = subscriptionDocs.get('user1');
+  assert.equal(doc.tier, 'PRO');
+  assert.ok(typeof doc.billingIssueAt === 'number');
+  assert.equal(result.success, true);
+});
+
+test('subscription.pending is in the dispatch set', () => {
+  assert.ok(RAZORPAY_SUBSCRIPTION_EVENT_TYPES.has('subscription.pending'));
+});
+
 test('subscription.paused sets willRenew:false, subscription.resumed sets willRenew:true', async () => {
   const seed = { tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000, willRenew: true };
   const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);

@@ -7,6 +7,8 @@ import com.ssbmax.shared.data.repository.GitLiveSubscriptionRepository
 import com.ssbmax.shared.data.repository.GitLiveTestUsageRecorder
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.TestUsageRecorder
+import com.ssbmax.shared.domain.util.DomainLogger
+import com.ssbmax.shared.domain.util.NoOpLogger
 import com.ssbmax.shared.platform.isDebugBuild
 import com.ssbmax.shared.platform.settings.DeveloperSettings
 import org.junit.Assert.assertTrue
@@ -24,8 +26,10 @@ import org.koin.dsl.module
  * eagerly constructs the *entire* `appModules` graph (heavy Firebase-static mocking, `app` module
  * only), and `app`'s unit tests only ever run under one variant at a time. This test instead does
  * a *targeted* `get()` -- Koin's `single { }` is lazy, so only the one binding under test (and its
- * declared deps) gets constructed, no mocking needed since neither `GitLiveSubscriptionRepository`
- * nor `GitLiveTestUsageRecorder` takes constructor params. That lets it exploit a fact real for
+ * declared deps) gets constructed, no mocking needed since `GitLiveTestUsageRecorder` takes no
+ * constructor params and `GitLiveSubscriptionRepository`'s only param ([DomainLogger], added for
+ * L2, Payment Ecosystem Hardening plan Phase 12) is satisfied by the trivial [NoOpLogger] below.
+ * That lets it exploit a fact real for
  * `:data-firebase` specifically: AGP resolves `:shared` (the module `isDebugBuild()` reads
  * `BuildConfig.DEBUG` from) per variant, so `testDebugUnitTest` and `testReleaseUnitTest` -- both
  * already part of `check` -- exercise the true debug and release values of [isDebugBuild] for real,
@@ -36,7 +40,10 @@ class RepositoryModuleDebugOverrideTest {
     private val koin = koinApplication {
         modules(
             repositoryModule,
-            module { single { DeveloperSettings(FakeInMemorySettings()) } }
+            module {
+                single { DeveloperSettings(FakeInMemorySettings()) }
+                single<DomainLogger> { NoOpLogger() }
+            }
         )
     }.koin
 

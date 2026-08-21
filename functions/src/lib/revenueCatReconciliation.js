@@ -35,13 +35,26 @@ const GRANT_EVENT_TYPES = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANG
 
 /** Event types that end an entitlement -- downgrades to FREE (single cumulative product per tier,
  * so an expiring subscription always expires the whole tier, not a partial entitlement set).
- * REFUND gets identical treatment to EXPIRATION -- both are "this entitlement is gone now". */
-const REVOKE_EVENT_TYPES = new Set(['EXPIRATION', 'REFUND']);
+ * REFUND gets identical treatment to EXPIRATION -- both are "this entitlement is gone now".
+ * SUBSCRIPTION_PAUSED (L3, Phase 12) is Google Play's explicit user-initiated pause -- unlike
+ * Razorpay's `subscription.paused` (auto-renew off, access continues to `current_end`), a paused
+ * Play subscription stops granting access immediately, so it belongs with the revokes, not a
+ * field-only write. Before this fix it fell through the dispatcher's ignored-event-types filter
+ * entirely and a paused user kept their tier indefinitely. */
+const REVOKE_EVENT_TYPES = new Set(['EXPIRATION', 'REFUND', 'SUBSCRIPTION_PAUSED']);
 
 /** RC's grace-period signal -- entitlement isn't revoked yet (EXPIRATION follows automatically
  * if the billing problem isn't resolved), but worth surfacing so a reconciliation cron/dashboard
  * can flag it. Handled in its own branch rather than the generic grant/revoke sets. */
 const BILLING_ISSUE_EVENT_TYPE = 'BILLING_ISSUE';
+
+/** L3 (Phase 12): RC's ownership-transfer signal (e.g. Play Family Library, an account merge) --
+ * structurally different from every other event type (it names OTHER users via
+ * `transferred_from`/`transferred_to`, not just `event.app_user_id`), so it's handled by its own
+ * `lib/revenueCatTransfer.js` path rather than the generic grant/revoke/billing-issue branches.
+ * Before this fix it fell through the dispatcher's ignored-event-types filter and the original
+ * owner kept their tier forever, even after RevenueCat moved the entitlement to someone else. */
+const TRANSFER_EVENT_TYPE = 'TRANSFER';
 
 /** Tier ranking for cross-platform reconciliation (higher wins on conflict). */
 const TIER_RANK = { FREE: 0, BASIC: 1, PRO: 2, PREMIUM: 3 };
@@ -92,6 +105,7 @@ module.exports = {
   GRANT_EVENT_TYPES,
   REVOKE_EVENT_TYPES,
   BILLING_ISSUE_EVENT_TYPE,
+  TRANSFER_EVENT_TYPE,
   TIER_RANK,
   isSubscriptionActive,
   resolveReconciliation

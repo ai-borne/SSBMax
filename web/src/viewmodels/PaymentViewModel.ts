@@ -6,7 +6,30 @@
 import { useState, useCallback } from 'react';
 import { RazorpayService } from '../services/RazorpayService';
 import { strings } from '../constants/strings';
-import { PricingTiers } from '../generated/contracts';
+import { PricingTiers, SubscriptionTier } from '../generated/contracts';
+
+/**
+ * L5 (Payment Ecosystem Hardening plan, Phase 12): the actual tier grant happens asynchronously,
+ * server-side, once `handleRazorpayWebhook` (`functions/src/webhooks.js`) processes the
+ * `payment.captured` event -- Razorpay's client-side checkout `onSuccess` callback only means the
+ * payment was captured, not that the grant has landed in Firestore yet. Polls `verifyTierFn`
+ * (`SubscriptionRepository.getTier`) a few times before reporting `success`, instead of reporting
+ * it the instant the checkout modal closes. Exported so it's unit-testable without real timers --
+ * pass `delayMs: 0` in tests.
+ */
+export async function waitForTierUpgrade(
+  verifyTierFn: () => Promise<SubscriptionTier>,
+  { maxAttempts = 6, delayMs = 1500 }: { maxAttempts?: number; delayMs?: number } = {}
+): Promise<SubscriptionTier> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const tier = await verifyTierFn();
+    if (tier !== 'FREE') return tier;
+    if (attempt < maxAttempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  return 'FREE';
+}
 
 /**
  * Mock/offline-testing order amount, in paise, derived from the generated pricing contract
@@ -44,7 +67,15 @@ export function usePaymentViewModel(
    * flag decides upfront which one runs, never inferred from a response shape. Defaults `false`
    * so every caller that hasn't been updated to pass the live feature-flag value keeps using the
    * existing, verified order-based path. */
-  useSubscriptionCheckout: boolean = false
+  useSubscriptionCheckout: boolean = false,
+  /** L5 (Phase 12): when provided, `initiatePayment`'s `onSuccess` polls this (via
+   * `waitForTierUpgrade`) instead of reporting `success` the instant Razorpay's checkout modal
+   * closes. Optional and defaulted `undefined` -- callers that don't pass it (older wiring,
+   * offline/mock testing) keep the previous immediate-success behavior. */
+  verifyTierFn?: () => Promise<SubscriptionTier>,
+  /** Test-only override for `waitForTierUpgrade`'s polling cadence -- production callers never
+   * pass this, so it always falls through to the real defaults (6 attempts, 1500ms apart). */
+  verifyTierPollOptions?: { maxAttempts?: number; delayMs?: number }
 ): UsePaymentViewModelReturn {
   const [state, setState] = useState<PaymentState>({
     status: 'idle',
@@ -78,12 +109,26 @@ export function usePaymentViewModel(
 
       try {
         const razorpayService = new RazorpayService();
-        const onSuccess = (paymentId: string) => {
+        const onSuccess = async (paymentId: string) => {
+          if (!verifyTierFn) {
+            // No verification wired -- keep the previous immediate-success behavior rather than
+            // inventing a fake wait with nothing to poll.
+            setState((prev) => ({
+              ...prev,
+              status: 'success',
+              paymentId,
+              isPaidMember: true,
+              errorMessage: null
+            }));
+            return;
+          }
+
+          setState((prev) => ({ ...prev, status: 'verifying', paymentId }));
+          const tier = await waitForTierUpgrade(verifyTierFn, verifyTierPollOptions);
           setState((prev) => ({
             ...prev,
             status: 'success',
-            paymentId,
-            isPaidMember: true,
+            isPaidMember: tier !== 'FREE',
             errorMessage: null
           }));
         };
@@ -151,7 +196,7 @@ export function usePaymentViewModel(
         }));
       }
     },
-    [createOrderFn, createSubscriptionFn, useSubscriptionCheckout]
+    [createOrderFn, createSubscriptionFn, useSubscriptionCheckout, verifyTierFn, verifyTierPollOptions]
   );
 
   return {

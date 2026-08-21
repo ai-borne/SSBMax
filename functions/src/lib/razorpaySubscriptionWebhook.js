@@ -23,6 +23,12 @@ const RAZORPAY_SUBSCRIPTION_REVOKE_EVENTS = new Set(['subscription.completed', '
  * one revoke event that isn't unconditional; see `isFullRefund`'s doc comment. */
 const RAZORPAY_SUBSCRIPTION_REFUND_EVENT = 'refund.processed';
 const RAZORPAY_SUBSCRIPTION_HALT_EVENT = 'subscription.halted';
+/** L3 (Phase 12): fires when a subscription charge fails and Razorpay is about to retry --
+ * earlier in the same retry sequence that `subscription.halted` sits at the end of (halted =
+ * retries exhausted, grace period over). Before this fix it fell through the dispatcher's
+ * unrecognized-event-types branch entirely (`{ ignored: eventType }`) and never even got logged.
+ * Grace period is still active here too -- same field-only, don't-revoke treatment as HALT. */
+const RAZORPAY_SUBSCRIPTION_PENDING_EVENT = 'subscription.pending';
 const RAZORPAY_SUBSCRIPTION_CANCEL_EVENT = 'subscription.cancelled';
 const RAZORPAY_SUBSCRIPTION_PAUSE_EVENT = 'subscription.paused';
 const RAZORPAY_SUBSCRIPTION_RESUME_EVENT = 'subscription.resumed';
@@ -30,6 +36,7 @@ const RAZORPAY_SUBSCRIPTION_EVENT_TYPES = new Set([
   ...RAZORPAY_SUBSCRIPTION_GRANT_EVENTS,
   ...RAZORPAY_SUBSCRIPTION_REVOKE_EVENTS,
   RAZORPAY_SUBSCRIPTION_HALT_EVENT,
+  RAZORPAY_SUBSCRIPTION_PENDING_EVENT,
   RAZORPAY_SUBSCRIPTION_CANCEL_EVENT,
   RAZORPAY_SUBSCRIPTION_PAUSE_EVENT,
   RAZORPAY_SUBSCRIPTION_RESUME_EVENT
@@ -180,8 +187,9 @@ async function processRazorpaySubscriptionEvent(eventType, payload, eventId, fir
           resolvedTier: resolved.tier
         });
       }
-    } else if (eventType === RAZORPAY_SUBSCRIPTION_HALT_EVENT) {
-      // Razorpay's grace period is still active -- do NOT revoke tier here; `completed` follows
+    } else if (eventType === RAZORPAY_SUBSCRIPTION_HALT_EVENT || eventType === RAZORPAY_SUBSCRIPTION_PENDING_EVENT) {
+      // Razorpay's grace period is still active for both events (pending = a retry is about to
+      // happen; halted = retries exhausted) -- do NOT revoke tier here; `completed` follows
       // automatically if unresolved, and Phase F's cron is the real backstop. Field-only write,
       // same rationale as `revenueCatWebhook.js`'s BILLING_ISSUE branch.
       console.warn(`Razorpay subscription webhook: user ${ctx.userId} has a billing issue (event ${eventType}) -- tier unchanged`);
@@ -219,6 +227,7 @@ module.exports = {
   RAZORPAY_SUBSCRIPTION_REVOKE_EVENTS,
   RAZORPAY_SUBSCRIPTION_REFUND_EVENT,
   RAZORPAY_SUBSCRIPTION_HALT_EVENT,
+  RAZORPAY_SUBSCRIPTION_PENDING_EVENT,
   RAZORPAY_SUBSCRIPTION_CANCEL_EVENT,
   RAZORPAY_SUBSCRIPTION_PAUSE_EVENT,
   RAZORPAY_SUBSCRIPTION_RESUME_EVENT,

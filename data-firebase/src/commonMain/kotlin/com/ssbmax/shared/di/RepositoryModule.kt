@@ -122,7 +122,7 @@ val repositoryModule = module {
     // CheckInterviewPrerequisitesUseCase, SubscriptionManagementViewModel, UpgradeViewModel) with
     // zero edits at those call sites.
     single<SubscriptionRepository> {
-        val plain = GitLiveSubscriptionRepository()
+        val plain = GitLiveSubscriptionRepository(get())
         if (isDebugBuild()) DebugOverrideSubscriptionRepository(plain, get()) else plain
     }
     singleOf(::GitLiveFeatureFlagRepository) bind FeatureFlagRepository::class

@@ -4,6 +4,7 @@ import { strings } from '../../constants/strings';
 import { usePaymentViewModel } from '../../viewmodels/PaymentViewModel';
 import { useSubscriptionOwnership, isActiveMobileSubscription } from '../../viewmodels/useSubscriptionOwnership';
 import { SUBSCRIPTION_TIERS } from '../../constants/ssbSelectionProcess';
+import { SubscriptionRepository } from '../../repositories/SubscriptionRepository';
 
 type CancelStatus = 'idle' | 'confirming' | 'cancelling' | 'success' | 'error';
 
@@ -38,7 +39,11 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({
   useSubscriptionCheckout = false,
   cancelSubscriptionFn
 }) => {
-  const paymentVM = usePaymentViewModel(createOrderFn, createSubscriptionFn, useSubscriptionCheckout);
+  // L5 (Payment Ecosystem Hardening plan, Phase 12): only wired when a real userId is known --
+  // an anonymous/mock render (no userId, e.g. offline testing) keeps `usePaymentViewModel`'s
+  // previous immediate-success fallback rather than polling a tier read that has nothing to key on.
+  const verifyTierFn = userId ? () => new SubscriptionRepository().getTier(userId) : undefined;
+  const paymentVM = usePaymentViewModel(createOrderFn, createSubscriptionFn, useSubscriptionCheckout, verifyTierFn);
   const { status, errorMessage, initiatePayment } = paymentVM;
   const isLoading = status === 'creating_order' || status === 'checkout_open' || status === 'verifying';
 

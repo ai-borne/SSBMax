@@ -17,7 +17,6 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const crypto = require('crypto');
 const { FirestorePaths } = require('./generated/contracts.cjs');
 const { emitOpsAlert, ALERT_KINDS, SEVERITIES } = require('./lib/opsAlert');
 const {
@@ -25,34 +24,17 @@ const {
   GRANT_EVENT_TYPES,
   REVOKE_EVENT_TYPES,
   BILLING_ISSUE_EVENT_TYPE,
+  TRANSFER_EVENT_TYPE,
   isSubscriptionActive,
   resolveReconciliation
 } = require('./lib/revenueCatReconciliation');
+const { processRevenueCatTransferEvent } = require('./lib/revenueCatTransfer');
+const { verifySignature, SIGNATURE_FRESHNESS_WINDOW_MS } = require('./lib/revenueCatSignature');
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
-
-function verifySignature(req, secret) {
-  const header = req.headers['x-revenuecat-webhook-signature'];
-  if (!header) return false;
-
-  const match = /^t=(\d+),v1=([0-9a-f]+)$/.exec(header);
-  if (!match) return false;
-  const [, timestamp, signature] = match;
-
-  const rawBody = req.rawBody ? req.rawBody.toString('utf-8') : JSON.stringify(req.body);
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(`${timestamp}.${rawBody}`)
-    .digest('hex');
-
-  const bufA = Buffer.from(signature, 'utf-8');
-  const bufB = Buffer.from(expectedSignature, 'utf-8');
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
-}
 
 /**
  * Applies one already-validated RC event (grant/revoke/billing-issue) to Firestore. Split out
@@ -229,7 +211,12 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
     return res.status(200).json({ status: 'ok', warning: 'missing_id_or_app_user_id' });
   }
 
-  if (!GRANT_EVENT_TYPES.has(eventType) && !REVOKE_EVENT_TYPES.has(eventType) && eventType !== BILLING_ISSUE_EVENT_TYPE) {
+  if (
+    !GRANT_EVENT_TYPES.has(eventType) &&
+    !REVOKE_EVENT_TYPES.has(eventType) &&
+    eventType !== BILLING_ISSUE_EVENT_TYPE &&
+    eventType !== TRANSFER_EVENT_TYPE
+  ) {
     // Every other event type (CANCELLATION, TEST, paywall analytics, ...) doesn't change what
     // tier is granted right now -- CANCELLATION only turns off auto-renew, access continues
     // until the already-scheduled EXPIRATION event.
@@ -237,6 +224,18 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
   }
 
   try {
+    // L3 (Phase 12): TRANSFER names OTHER users (transferred_from/transferred_to), not just
+    // event.app_user_id -- it needs its own multi-doc transaction, not the generic single-doc path.
+    if (eventType === TRANSFER_EVENT_TYPE) {
+      const transferResult = await processRevenueCatTransferEvent(event, db);
+      if (transferResult.idempotent) {
+        console.log(`Duplicate RevenueCat webhook event ${eventId} ignored (idempotent entry found)`);
+      } else {
+        console.log(`RevenueCat webhook: TRANSFER revoked ${transferResult.revokedUserIds.length} prior owner(s) (${eventId})`);
+      }
+      return res.status(200).json({ status: 'ok' });
+    }
+
     const result = await processRevenueCatEvent(event, db);
 
     if (result.idempotent) {
@@ -271,9 +270,13 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
 });
 
 // Re-exported for backward compatibility -- these now live in lib/revenueCatReconciliation.js
-// (Phase 8's 300-LOC split), but every existing test/caller imports them from this module.
+// (Phase 8's 300-LOC split) or lib/revenueCatSignature.js (Phase 12's), but every existing
+// test/caller imports them from this module.
 exports.entitlementIdsToTier = entitlementIdsToTier;
 exports.verifySignature = verifySignature;
+exports.SIGNATURE_FRESHNESS_WINDOW_MS = SIGNATURE_FRESHNESS_WINDOW_MS;
 exports.isSubscriptionActive = isSubscriptionActive;
 exports.resolveReconciliation = resolveReconciliation;
 exports.processRevenueCatEvent = processRevenueCatEvent;
+exports.TRANSFER_EVENT_TYPE = TRANSFER_EVENT_TYPE;
+exports.processRevenueCatTransferEvent = processRevenueCatTransferEvent;
