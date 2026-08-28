@@ -6,21 +6,25 @@
 //
 // Slugs match real search-query phrasing ("ssb oir test preparation") rather than internal
 // naming ("day-1") -- see HIGH 5's fix.
+//
+// Phase 3: the actual (topicId, path) pairs now live in contentRoutes.json, not here --
+// scripts/generateSitemap.mjs (plain Node, no TS loader available) needs the exact same
+// list to build sitemap.xml/llms.txt without drifting from what react-router serves, so JSON
+// is the one file both the app and the build scripts read. This module stays the typed
+// entry point everything under src/ imports.
 import type { ContentBundleTopicId } from '../generated/contentBundle';
+import routesJson from './contentRoutes.json';
 
 export interface ContentRoute {
   topicId: ContentBundleTopicId;
   path: string;
 }
 
-export const CONTENT_ROUTES: ContentRoute[] = [
-  { topicId: 'SSB_OVERVIEW', path: '/study/ssb-selection-process-guide' },
-  { topicId: 'OIR', path: '/study/ssb-oir-test-preparation' },
-  { topicId: 'PPDT', path: '/study/ssb-ppdt-picture-perception-discussion-test' },
-  { topicId: 'PIQ_FORM', path: '/study/ssb-piq-form-guide' },
-  { topicId: 'PSYCHOLOGY', path: '/study/ssb-psychology-tests-tat-wat-srt-sd' },
-  { topicId: 'GTO', path: '/study/ssb-gto-tasks-guide' },
-  { topicId: 'INTERVIEW', path: '/study/ssb-personal-interview-guide' },
-  { topicId: 'CONFERENCE', path: '/study/ssb-conference-day-guide' },
-  { topicId: 'MEDICALS', path: '/study/ssb-medical-examination-guide' },
-];
+export const CONTENT_ROUTES: ContentRoute[] = routesJson as ContentRoute[];
+
+/**
+ * Production origin, used to build absolute canonical/OG URLs and the sitemap.
+ * scripts/generateSitemap.mjs hardcodes the same value (plain Node script, no TS import) --
+ * update both if the domain ever changes.
+ */
+export const SITE_BASE_URL = 'https://ssbmax.in';

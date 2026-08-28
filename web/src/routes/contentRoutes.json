@@ -1,0 +1,11 @@
+[
+  { "topicId": "SSB_OVERVIEW", "path": "/study/ssb-selection-process-guide" },
+  { "topicId": "OIR", "path": "/study/ssb-oir-test-preparation" },
+  { "topicId": "PPDT", "path": "/study/ssb-ppdt-picture-perception-discussion-test" },
+  { "topicId": "PIQ_FORM", "path": "/study/ssb-piq-form-guide" },
+  { "topicId": "PSYCHOLOGY", "path": "/study/ssb-psychology-tests-tat-wat-srt-sd" },
+  { "topicId": "GTO", "path": "/study/ssb-gto-tasks-guide" },
+  { "topicId": "INTERVIEW", "path": "/study/ssb-personal-interview-guide" },
+  { "topicId": "CONFERENCE", "path": "/study/ssb-conference-day-guide" },
+  { "topicId": "MEDICALS", "path": "/study/ssb-medical-examination-guide" }
+]

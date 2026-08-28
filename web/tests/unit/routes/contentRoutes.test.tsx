@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { CONTENT_ROUTES } from '../../../src/routes/contentRoutes';
+import { CONTENT_SEO } from '../../../src/routes/contentSeo';
 import { StudyTopicPage } from '../../../src/routes/StudyTopicPage';
 import { contentBundle } from '../../../src/generated/contentBundle';
 
@@ -35,6 +36,15 @@ describe('CONTENT_ROUTES', () => {
       const topic = contentBundle[topicId];
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(topic.title);
       expect(document.body.textContent).toContain(topic.introduction.split('\n')[0].slice(0, 30));
+    });
+
+    it(`sets document.title to its real SEO title for ${path} (Phase 3, HIGH 5)`, () => {
+      render(
+        <MemoryRouter initialEntries={[path]}>
+          <StudyTopicPage topicId={topicId} />
+        </MemoryRouter>
+      );
+      expect(document.title).toBe(CONTENT_SEO[topicId].title);
     });
   }
 });

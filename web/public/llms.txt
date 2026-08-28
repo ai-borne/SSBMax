@@ -1,0 +1,15 @@
+# SSBMax
+
+> SSB (Services Selection Board) preparation for Indian Armed Forces officer selection -- psychology tests, GTO tasks, and interview preparation guides.
+
+## Guides
+
+- [SSB_OVERVIEW](https://ssbmax.in/study/ssb-selection-process-guide)
+- [OIR](https://ssbmax.in/study/ssb-oir-test-preparation)
+- [PPDT](https://ssbmax.in/study/ssb-ppdt-picture-perception-discussion-test)
+- [PIQ_FORM](https://ssbmax.in/study/ssb-piq-form-guide)
+- [PSYCHOLOGY](https://ssbmax.in/study/ssb-psychology-tests-tat-wat-srt-sd)
+- [GTO](https://ssbmax.in/study/ssb-gto-tasks-guide)
+- [INTERVIEW](https://ssbmax.in/study/ssb-personal-interview-guide)
+- [CONFERENCE](https://ssbmax.in/study/ssb-conference-day-guide)
+- [MEDICALS](https://ssbmax.in/study/ssb-medical-examination-guide)

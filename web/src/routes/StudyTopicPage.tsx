@@ -2,6 +2,9 @@ import { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { strings } from '../constants/strings';
 import { contentBundle, ContentBundleTopicId } from '../generated/contentBundle';
+import { CONTENT_ROUTES, SITE_BASE_URL } from './contentRoutes';
+import { CONTENT_SEO } from './contentSeo';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 
 export interface StudyTopicPageProps {
   topicId: ContentBundleTopicId;
@@ -15,6 +18,14 @@ export interface StudyTopicPageProps {
  */
 export const StudyTopicPage: FC<StudyTopicPageProps> = ({ topicId }) => {
   const topic = contentBundle[topicId];
+  const seo = CONTENT_SEO[topicId];
+  const path = CONTENT_ROUTES.find((r) => r.topicId === topicId)?.path ?? '';
+
+  useDocumentMeta({
+    title: topic && seo ? seo.title : strings.contentTopic.notFound,
+    description: topic && seo ? seo.description : strings.contentTopic.notFound,
+    url: `${SITE_BASE_URL}${path}`,
+  });
 
   if (!topic) {
     return (
