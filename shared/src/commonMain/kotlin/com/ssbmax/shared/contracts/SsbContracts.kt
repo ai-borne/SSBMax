@@ -54,6 +54,7 @@ object SsbContracts {
         const val FEATURE_FLAGS = "feature_flags"
         const val FEATURE_FLAGS_CONFIG_DOC_ID = "config"
         const val OPS_ALERTS = "ops_alerts"
+        const val ANALYTICS_DAILY = "analytics_daily"
 
         object TestContent {
             const val OIR_BATCHES = "test_content/oir/batches"

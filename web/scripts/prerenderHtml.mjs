@@ -50,6 +50,17 @@ export function buildContentPageJsonLdScripts({ topic, seo, path, siteBaseUrl = 
   return buildContentPageJsonLd({ topic, seo, path, siteBaseUrl }).map(serializeJsonLd);
 }
 
+/**
+ * Cloudflare Web Analytics beacon (Phase 8, ai_search_readiness plan): these prerendered
+ * pages are the actual GEO landing pages, so traffic/referrer data must come from here, not
+ * only the hydrated app shell -- see index.html's copy of this tag for the CSP rationale
+ * (external script src, no inline-script hash needed). Empty token renders a harmless no-op
+ * tag rather than omitting it, matching index.html's fallback stance.
+ */
+function buildCfBeaconScriptTag(cfBeaconToken) {
+  return `<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "${escapeHtml(cfBeaconToken)}"}'></script>`;
+}
+
 function buildMaterialHtml(material) {
   return `
         <div>
@@ -65,7 +76,7 @@ function buildMaterialHtml(material) {
  * SPA route would show for in-app navigation -- but ships zero JS, so there is no hydration
  * mismatch to guard against (Blocker 2).
  */
-export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBaseUrl = SITE_BASE_URL }) {
+export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBaseUrl = SITE_BASE_URL, cfBeaconToken = '' }) {
   const url = `${siteBaseUrl}${path}`;
   const cssLinks = cssHrefs.map((href) => `<link rel="stylesheet" href="${escapeHtml(href)}" />`).join('\n    ');
   const jsonLdScripts = buildContentPageJsonLdScripts({ topic, seo, path, siteBaseUrl });
@@ -102,6 +113,7 @@ export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBase
       <h1>${escapeHtml(topic.title)}</h1>
       <div>${escapeHtml(topic.introduction)}</div>${materialsHtml}
     </article>
+    ${buildCfBeaconScriptTag(cfBeaconToken)}
   </body>
 </html>
 `;
@@ -124,7 +136,7 @@ function buildFaqQuestionHtml({ question, answer }) {
 }
 
 /** Full static HTML document for the /faq route. Mirrors FaqPage.tsx's structure, non-hydrated (Blocker 2). */
-export function buildFaqPageHtml({ faq, cssHrefs = [], siteBaseUrl = SITE_BASE_URL }) {
+export function buildFaqPageHtml({ faq, cssHrefs = [], siteBaseUrl = SITE_BASE_URL, cfBeaconToken = '' }) {
   const url = `${siteBaseUrl}/faq`;
   const cssLinks = cssHrefs.map((href) => `<link rel="stylesheet" href="${escapeHtml(href)}" />`).join('\n    ');
   const jsonLdScripts = buildFaqPageJsonLdScripts({ faq, siteBaseUrl });
@@ -154,6 +166,7 @@ export function buildFaqPageHtml({ faq, cssHrefs = [], siteBaseUrl = SITE_BASE_U
       <div>${faq.questions.map(buildFaqQuestionHtml).join('\n')}
       </div>
     </article>
+    ${buildCfBeaconScriptTag(cfBeaconToken)}
   </body>
 </html>
 `;

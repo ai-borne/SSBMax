@@ -2,6 +2,7 @@
   "schemaVersion": "1.0.0",
   "generatedBy": "node scripts/generate-contracts.js",
   "paths": [
+    "analytics_daily",
     "archived_submissions",
     "config",
     "content_versions",

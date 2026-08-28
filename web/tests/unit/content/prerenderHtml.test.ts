@@ -46,11 +46,18 @@ describe('buildContentPageHtml, for every real content route', () => {
     const seo = seoTable[topicId];
 
     describe(topicId, () => {
-      const html = buildContentPageHtml({ topic, seo, path, cssHrefs: ['/assets/index-abc123.css'] });
+      const html = buildContentPageHtml({ topic, seo, path, cssHrefs: ['/assets/index-abc123.css'], cfBeaconToken: 'test-token' });
 
-      it('is a genuinely static document -- no hydration/module scripts (Blocker 2), only inert JSON-LD', () => {
-        expect(html).not.toMatch(/<script(?!\s+type="application\/ld\+json")/);
+      // Phase 8: the Cloudflare Web Analytics beacon is a deliberate, allowlisted exception --
+      // an external script src (no inline body, so no hydration payload and no CSP hash
+      // needed), not a relaxation of Blocker 2's "no hydration/module scripts" rule.
+      it('is a genuinely static document -- no hydration/module scripts (Blocker 2), only inert JSON-LD and the CF beacon', () => {
+        expect(html).not.toMatch(/<script(?!\s+type="application\/ld\+json")(?!\s+defer\s+src="https:\/\/static\.cloudflareinsights\.com)/);
         expect(html).not.toContain('__INITIAL_DATA__');
+      });
+
+      it('embeds the Cloudflare Web Analytics beacon with the given token', () => {
+        expect(html).toContain('<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{"token": "test-token"}\'></script>');
       });
 
       it('embeds this route\'s exact JSON-LD blocks, each valid JSON (Phase 6)', () => {
@@ -102,11 +109,15 @@ describe('buildContentPageHtml, for every real content route', () => {
 });
 
 describe('buildFaqPageHtml (Phase 7)', () => {
-  const html = buildFaqPageHtml({ faq, cssHrefs: ['/assets/index-abc123.css'] });
+  const html = buildFaqPageHtml({ faq, cssHrefs: ['/assets/index-abc123.css'], cfBeaconToken: 'test-token' });
 
-  it('is a genuinely static document -- no hydration/module scripts, only inert JSON-LD', () => {
-    expect(html).not.toMatch(/<script(?!\s+type="application\/ld\+json")/);
+  it('is a genuinely static document -- no hydration/module scripts, only inert JSON-LD and the CF beacon', () => {
+    expect(html).not.toMatch(/<script(?!\s+type="application\/ld\+json")(?!\s+defer\s+src="https:\/\/static\.cloudflareinsights\.com)/);
     expect(html).not.toContain('__INITIAL_DATA__');
+  });
+
+  it('embeds the Cloudflare Web Analytics beacon with the given token', () => {
+    expect(html).toContain('<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{"token": "test-token"}\'></script>');
   });
 
   it('embeds the FAQPage JSON-LD block, valid JSON', () => {
@@ -136,5 +147,25 @@ describe('buildFaqPageHtml (Phase 7)', () => {
   it('is well-formed enough to be a real HTML document', () => {
     expect(html).toMatch(/^<!DOCTYPE html>/);
     expect(html).toContain('<h1>');
+  });
+});
+
+describe('Cloudflare Web Analytics beacon defaults (Phase 8)', () => {
+  it('renders a harmless empty-token beacon when cfBeaconToken is omitted, matching index.html\'s unset-env fallback', () => {
+    const [{ topicId, path }] = routes;
+    const html = buildContentPageHtml({ topic: contentBundle[topicId], seo: seoTable[topicId], path, cssHrefs: [] });
+    expect(html).toContain('data-cf-beacon=\'{"token": ""}\'');
+  });
+
+  it('HTML-escapes the token so it cannot break out of the data-cf-beacon attribute', () => {
+    const [{ topicId, path }] = routes;
+    const html = buildContentPageHtml({
+      topic: contentBundle[topicId],
+      seo: seoTable[topicId],
+      path,
+      cssHrefs: [],
+      cfBeaconToken: `"><script>alert(1)</script>`
+    });
+    expect(html).not.toContain('<script>alert(1)</script>');
   });
 });

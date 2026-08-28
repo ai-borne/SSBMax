@@ -633,6 +633,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Analytics daily signup counters (Phase 8, ai_search_readiness plan) - written only by
+    // functions/src/analytics/recordSignup.js via the Admin SDK, read only through the
+    // admin-gated getAnalyticsSummary callable. Same defense-in-depth stance as ops_alerts above.
+    match /analytics_daily/{dateId} {
+      allow read, write: if false;
+    }
+
     // Interview results - users can read their own results
     match /interview_results/{resultId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;

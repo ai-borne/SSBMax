@@ -23,6 +23,7 @@ export interface BuildContentPageHtmlInput {
   path: string;
   cssHrefs?: string[];
   siteBaseUrl?: string;
+  cfBeaconToken?: string;
 }
 
 export interface FaqQuestion {
@@ -47,5 +48,5 @@ export function buildContentPageJsonLdScripts(input: {
   path: string;
   siteBaseUrl?: string;
 }): string[];
-export function buildFaqPageHtml(input: { faq: FaqBundle; cssHrefs?: string[]; siteBaseUrl?: string }): string;
+export function buildFaqPageHtml(input: { faq: FaqBundle; cssHrefs?: string[]; siteBaseUrl?: string; cfBeaconToken?: string }): string;
 export function buildFaqPageJsonLdScripts(input: { faq: FaqBundle; siteBaseUrl?: string }): string[];

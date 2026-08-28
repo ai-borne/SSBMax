@@ -12,6 +12,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SSBMax" />
     <meta name="description" content="SSBMax - Enterprise SSB Interview Preparation & Psychological Testing Platform" />
+    <meta name="google-site-verification" content="%VITE_GSC_VERIFICATION_CODE%" />
     <title>SSBMax - Armed Forces Selection Board Preparation</title>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"SSBMax","url":"https://ssbmax.in","description":"SSB (Services Selection Board) preparation platform for Indian Armed Forces officer selection.","logo":"https://ssbmax.in/apple-touch-icon.png"}</script>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"SSBMax","url":"https://ssbmax.in"}</script>
@@ -19,5 +20,10 @@
   <body class="bg-slate-900 text-slate-50 min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Cloudflare Web Analytics (Phase 8, ai_search_readiness plan): cookie-less, no client
+         script writes anything, external script src so no CSP hash needed (see public/_headers'
+         script-src). Empty token (unset VITE_CF_BEACON_TOKEN, e.g. local/demo builds) makes the
+         beacon a harmless no-op, same fallback stance as src/config/firebase.ts's demo project. -->
+    <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "%VITE_CF_BEACON_TOKEN%"}'></script>
   </body>
 </html>

@@ -10,6 +10,7 @@ import { notificationStrings } from './strings/notifications';
 import { supportStrings } from './strings/support';
 import { contentTopicStrings } from './strings/contentTopic';
 import { publicFaqStrings } from './strings/faq';
+import { analyticsStrings } from './strings/analytics';
 
 export const strings = {
   ...commonStrings,
@@ -24,5 +25,6 @@ export const strings = {
   notifications: notificationStrings,
   support: supportStrings,
   ...contentTopicStrings,
-  ...publicFaqStrings
+  ...publicFaqStrings,
+  analytics: analyticsStrings
 } as const;

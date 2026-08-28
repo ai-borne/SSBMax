@@ -36,6 +36,12 @@ if (cssHrefs.length === 0) {
   throw new Error('prerenderContentRoutes: no dist/assets/*.css found -- did `vite build` run first?');
 }
 
+// Phase 8 (ai_search_readiness plan): same Cloudflare Web Analytics token index.html embeds
+// via Vite's %VITE_...% HTML replacement -- this script runs as plain Node, outside Vite's
+// pipeline, so it reads the identical env var directly. Empty when unset (local/CI builds
+// without Pages env vars configured) -- see buildCfBeaconScriptTag's doc comment.
+const cfBeaconToken = process.env.VITE_CF_BEACON_TOKEN || '';
+
 // Phase 6, Regression 1: dist/_headers already exists here -- `vite build` copies
 // public/_headers into dist/ verbatim before this script runs. Every route's CSP hash
 // allowance is appended to it, never replacing the base policy on disk.
@@ -49,7 +55,7 @@ for (const { topicId, path } of routes) {
   if (!topic) throw new Error(`prerenderContentRoutes: no contentBundle entry for topicId "${topicId}"`);
   if (!seo) throw new Error(`prerenderContentRoutes: no contentSeo entry for topicId "${topicId}"`);
 
-  const html = buildContentPageHtml({ topic, seo, path, cssHrefs, siteBaseUrl: SITE_BASE_URL });
+  const html = buildContentPageHtml({ topic, seo, path, cssHrefs, siteBaseUrl: SITE_BASE_URL, cfBeaconToken });
   const outDir = join(DIST_DIR, ...path.split('/').filter(Boolean));
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, 'index.html'), html);
@@ -64,7 +70,7 @@ for (const { topicId, path } of routes) {
 // FAQ (Phase 7): a singleton route, not part of the topic-shaped contentBundle/contentRoutes
 // loop above -- same static/non-hydrated approach and per-route CSP hash allowance.
 {
-  const faqHtml = buildFaqPageHtml({ faq, cssHrefs, siteBaseUrl: SITE_BASE_URL });
+  const faqHtml = buildFaqPageHtml({ faq, cssHrefs, siteBaseUrl: SITE_BASE_URL, cfBeaconToken });
   const faqOutDir = join(DIST_DIR, 'faq');
   mkdirSync(faqOutDir, { recursive: true });
   writeFileSync(join(faqOutDir, 'index.html'), faqHtml);

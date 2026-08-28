@@ -48,6 +48,7 @@ export const FirestorePaths = {
   FEATURE_FLAGS: "feature_flags",
   FEATURE_FLAGS_CONFIG_DOC_ID: "config",
   OPS_ALERTS: "ops_alerts",
+  ANALYTICS_DAILY: "analytics_daily",
   TestContent: {
     OIR_BATCHES: "test_content/oir/batches",
     OIR_META_CONFIG: "test_content/oir/meta/config",

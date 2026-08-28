@@ -34,6 +34,8 @@ const { scheduledSubscriptionReconciliation } = require('./subscriptions/schedul
 const { scheduledRazorpayDriftSweep } = require('./subscriptions/scheduledRazorpayDriftSweep');
 const { repairMobileEntitlement } = require('./subscriptions/repairMobileEntitlement');
 const { getSubscriptionSupportSnapshot } = require('./subscriptions/getSubscriptionSupportSnapshot');
+const { recordSignup } = require('./analytics/recordSignup');
+const { getAnalyticsSummary } = require('./analytics/getAnalyticsSummary');
 const { evaluateGTO } = require('./evaluation/gtoEvaluate');
 const { evaluatePPDT } = require('./evaluation/ppdtEvaluate');
 const { evaluateTAT } = require('./evaluation/tatEvaluate');
@@ -160,3 +162,10 @@ exports.submitGTOTest = submitGTOTest;
 // trusts a client-supplied score), matching KMP's SubmitOIRTestUseCase's score-then-persist shape.
 exports.submitOIRTest = submitOIRTest;
 exports.submitInterviewResponse = submitInterviewResponse;
+
+// Phase 8 (ai_search_readiness plan, "Measurement & Instrumentation"): signup counter and its
+// admin-only read. Auth-required write, admin-claim-gated read -- see analytics/recordSignup.js
+// and analytics/getAnalyticsSummary.js's doc comments for why this is a counter, not an event
+// log, and why traffic/referrer segmentation is intentionally NOT duplicated here.
+exports.recordSignup = recordSignup;
+exports.getAnalyticsSummary = getAnalyticsSummary;

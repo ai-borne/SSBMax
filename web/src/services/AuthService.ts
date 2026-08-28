@@ -1,12 +1,14 @@
-import { 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  signOut as firebaseSignOut, 
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
+  getAdditionalUserInfo,
   User,
   Auth
 } from 'firebase/auth';
 import { auth as defaultAuth } from '../config/firebase';
+import { AnalyticsRepository } from '../repositories/AnalyticsRepository';
 
 export interface UserProfile {
   uid: string;
@@ -17,9 +19,11 @@ export interface UserProfile {
 
 export class AuthService {
   private auth: Auth;
+  private analyticsRepository: AnalyticsRepository;
 
-  constructor(authInstance: Auth = defaultAuth) {
+  constructor(authInstance: Auth = defaultAuth, analyticsRepository: AnalyticsRepository = new AnalyticsRepository()) {
     this.auth = authInstance;
+    this.analyticsRepository = analyticsRepository;
   }
 
   /**
@@ -29,8 +33,19 @@ export class AuthService {
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
-    
+
     const result = await signInWithPopup(this.auth, provider);
+
+    // Phase 8 (ai_search_readiness plan): signup-rate is the one metric root CLAUDE.md's
+    // MEDIUM 8 fix requires measuring before/after un-gating Study. `isNewUser` is Firebase
+    // Auth's own signal for "this uid was just created", not a heuristic we compute -- fired
+    // fire-and-forget so an analytics outage can never block a real sign-in.
+    if (getAdditionalUserInfo(result)?.isNewUser) {
+      this.analyticsRepository.recordSignup().catch((error) => {
+        console.error('AuthService: recordSignup failed (sign-in still succeeded)', error);
+      });
+    }
+
     return this.mapFirebaseUser(result.user);
   }
 

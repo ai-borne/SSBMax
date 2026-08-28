@@ -7,6 +7,7 @@ import { StudyMaterialPage } from './components/study/StudyMaterialPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { SubscriptionPage } from './components/subscription/SubscriptionPage';
 import { SupportSubscriptionPage } from './components/support/SupportSubscriptionPage';
+import { AnalyticsDashboardPage } from './components/analytics/AnalyticsDashboardPage';
 import { PaymentService } from './services/PaymentService';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { TermsAndRefunds } from './components/legal/TermsAndRefunds';
@@ -218,6 +219,7 @@ export const App: FC = () => {
             <TermsAndRefunds onBackClick={handleBackToHome} />
           )}
           {activeTab === 'support' && <SupportSubscriptionPage />}
+          {activeTab === 'analytics' && <AnalyticsDashboardPage />}
         </>
       )}
     </AppLayout>
