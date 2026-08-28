@@ -7,7 +7,7 @@
     "predev": "npm run generate:content && npm run generate:seo",
     "dev": "vite",
     "prebuild": "npm run generate:content && npm run generate:seo",
-    "build": "tsc -b && vite build && node scripts/write-version.mjs",
+    "build": "tsc -b && vite build && node scripts/prerenderContentRoutes.mjs && node scripts/write-version.mjs",
     "preview": "vite preview",
     "pretest": "npm run generate:content && npm run generate:seo",
     "test": "vitest run --exclude '**/sharedCorpusEmulator.test.ts' --exclude '**/tests/e2e/**'",

@@ -1,0 +1,84 @@
+// Phase 5 (docs/plans/i-just-watched-a-nested-russell.md): exercises the pure builders
+// behind scripts/prerenderContentRoutes.mjs directly (see that file's comment on why the
+// write-to-dist/ script is split out). Covers the phase's stated exit gate -- "each route's
+// generated HTML contains expected content via non-JS fetch" -- against the real content
+// bundle/routes/SEO tables the build actually uses, so a topic with thin or missing content
+// fails here rather than shipping a hollow public page.
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { buildContentPageHtml, escapeHtml, findCssAssets, SITE_BASE_URL } from '../../../scripts/prerenderHtml.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(__dirname, '..', '..', '..');
+
+const contentBundle = JSON.parse(readFileSync(join(ROOT, 'src', 'generated', 'contentBundle.json'), 'utf8'));
+const routes = JSON.parse(readFileSync(join(ROOT, 'src', 'routes', 'contentRoutes.json'), 'utf8'));
+const seoTable = JSON.parse(readFileSync(join(ROOT, 'src', 'routes', 'contentSeo.json'), 'utf8'));
+
+describe('escapeHtml', () => {
+  it('escapes HTML-significant characters', () => {
+    expect(escapeHtml(`<script>alert('x')&"y"</script>`)).toBe(
+      '&lt;script&gt;alert(&#39;x&#39;)&amp;&quot;y&quot;&lt;/script&gt;'
+    );
+  });
+});
+
+describe('findCssAssets', () => {
+  it('returns an empty list when the directory does not exist, instead of throwing', () => {
+    expect(findCssAssets('/does/not/exist')).toEqual([]);
+  });
+});
+
+describe('buildContentPageHtml, for every real content route', () => {
+  for (const { topicId, path } of routes) {
+    const topic = contentBundle[topicId];
+    const seo = seoTable[topicId];
+
+    describe(topicId, () => {
+      const html = buildContentPageHtml({ topic, seo, path, cssHrefs: ['/assets/index-abc123.css'] });
+
+      it('is a genuinely static document -- zero <script> tags (Blocker 2: no hydration)', () => {
+        expect(html.toLowerCase()).not.toContain('<script');
+        expect(html).not.toContain('__INITIAL_DATA__');
+      });
+
+      it('contains the real topic title and introduction text, not a placeholder', () => {
+        expect(html).toContain(escapeHtml(topic.title));
+        expect(html).toContain(escapeHtml(topic.introduction));
+      });
+
+      it('contains every material title and body for this topic', () => {
+        for (const material of topic.materials) {
+          expect(html).toContain(escapeHtml(material.title));
+          expect(html).toContain(escapeHtml(material.contentMarkdown));
+        }
+      });
+
+      it('carries the exact SEO title/description as <title>, meta, OG, and Twitter tags', () => {
+        expect(html).toContain(`<title>${escapeHtml(seo.title)}</title>`);
+        expect(html).toContain(`<meta name="description" content="${escapeHtml(seo.description)}" />`);
+        expect(html).toContain(`<meta property="og:title" content="${escapeHtml(seo.title)}" />`);
+        expect(html).toContain(`<meta name="twitter:title" content="${escapeHtml(seo.title)}" />`);
+      });
+
+      it('sets a canonical link matching this route\'s permanent URL', () => {
+        expect(html).toContain(`<link rel="canonical" href="${SITE_BASE_URL}${path}" />`);
+      });
+
+      it('links the given CSS asset so a human visitor still sees styled content', () => {
+        expect(html).toContain('<link rel="stylesheet" href="/assets/index-abc123.css" />');
+      });
+
+      it('defaults to the dark theme with no JS required to apply it', () => {
+        expect(html).toContain('<html lang="en" class="dark">');
+      });
+
+      it('is well-formed enough to be a real HTML document', () => {
+        expect(html).toMatch(/^<!DOCTYPE html>/);
+        expect(html).toContain('<h1>');
+      });
+    });
+  }
+});
