@@ -36,7 +36,15 @@ function buildMetricPayload() {
   return {
     name: METRIC_TYPE,
     description: 'Count of functions/src/lib/opsAlert.js [ops_alert] log lines, by kind/severity.',
-    filter: `resource.type="cloud_function" AND severity>=ERROR AND textPayload:"[ops_alert]" AND (${alertKindPattern()})`,
+    // gen2 functions run as Cloud Run revisions, not `cloud_function` (verified live 2026-08-28:
+    // `[ops_alert]` log entries carry `resource.type="cloud_run_revision"`, `logName` ending
+    // `run.googleapis.com%2Fstderr`). Also verified live that a plain-text (non-JSON) stderr line
+    // from these functions does NOT carry Cloud Logging severity ERROR -- `console.error` alone
+    // isn't enough for that promotion here -- so `severity>=ERROR` excluded every real
+    // `[ops_alert]` line ever emitted since this filter was written (Phase 8, 2026-08-20). Dropped
+    // rather than "fixed" to some other severity value: `textPayload:"[ops_alert]"` plus the
+    // kind-pattern clause already scope this precisely, so no severity gate is needed at all.
+    filter: `resource.type="cloud_run_revision" AND textPayload:"[ops_alert]" AND (${alertKindPattern()})`,
     metricDescriptor: {
       metricKind: 'DELTA',
       valueType: 'INT64',
@@ -63,7 +71,10 @@ function buildNotificationChannelPayload(email) {
 
 /** One alert-policy condition over the log-based metric, optionally scoped to a severity set. */
 function metricFilter(severities) {
-  const base = `resource.type="cloud_function" AND metric.type="logging.googleapis.com/user/${METRIC_TYPE}"`;
+  // Must match the resource type the metric's own time series are actually recorded under --
+  // see buildMetricPayload's comment (verified live 2026-08-28: `cloud_run_revision`, not
+  // `cloud_function`, for gen2 functions).
+  const base = `resource.type="cloud_run_revision" AND metric.type="logging.googleapis.com/user/${METRIC_TYPE}"`;
   if (!severities) return base;
   const values = severities.map((s) => `metric.label.severity="${s}"`).join(' OR ');
   return `${base} AND (${values})`;
