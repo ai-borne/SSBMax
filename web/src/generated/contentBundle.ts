@@ -2,7 +2,7 @@
 // `npm run generate:content` / `scripts/generateContentBundle.mjs` from the git-authored
 // content/ directory -- see docs/plans/i-just-watched-a-nested-russell.md Phase 1/2). Not
 // itself regenerated; kept hand-written since the shape is stable and small.
-import contentBundleJson from './contentBundle.json';
+import contentBundleJson from './contentBundle.json' with { type: 'json' };
 
 export interface ContentTopicMaterial {
   id: string;

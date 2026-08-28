@@ -13,7 +13,7 @@
 // is the one file both the app and the build scripts read. This module stays the typed
 // entry point everything under src/ imports.
 import type { ContentBundleTopicId } from '../generated/contentBundle';
-import routesJson from './contentRoutes.json';
+import routesJson from './contentRoutes.json' with { type: 'json' };
 
 export interface ContentRoute {
   topicId: ContentBundleTopicId;

@@ -8,7 +8,7 @@
 // data, JSON so the plain-Node prerender script can read it without a TS loader -- same
 // split as contentRoutes.json/contentRoutes.ts) to bake meta tags into static HTML.
 import type { ContentBundleTopicId } from '../generated/contentBundle';
-import contentSeoJson from './contentSeo.json';
+import contentSeoJson from './contentSeo.json' with { type: 'json' };
 
 export interface ContentSeo {
   title: string;
