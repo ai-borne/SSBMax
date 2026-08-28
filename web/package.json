@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:corpus": "vitest run tests/unit/contracts/sharedCorpusEmulator.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "content:validate": "node scripts/validate-content.mjs"
   },
   "dependencies": {
     "firebase": "^10.14.1",

@@ -7,7 +7,11 @@
     "setup": "node setup-firestore.js",
     "oir:health": "node check-oir-content-health.js",
     "oir:meta:dry-run": "node set-oir-meta-config.js",
-    "test:oir": "node test-oir-tooling.js"
+    "test:oir": "node test-oir-tooling.js",
+    "content:publish": "node content/publishContent.js",
+    "content:publish:write": "node content/publishContent.js --write",
+    "test:content": "node --test test/content-parser.test.js test/content-publish.emulator.test.js",
+    "test:content:emulator": "firebase emulators:exec --only firestore --project demo-ssbmax --config ../firebase.json \"npm run test:content\""
   },
   "dependencies": {
     "firebase-admin": "^12.0.0",

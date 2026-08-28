@@ -3,8 +3,10 @@ package com.ssbmax.shared.presentation.topic
 /**
  * The Conference topic's introduction text, split out of
  * [TopicContentLoader] purely to keep both files under the repo's 300-line
- * Quality Limit -- no behavior change from having it inline. Same content,
- * unchanged, as the Android original's `TopicContentLoader.getIntroduction("CONFERENCE")`.
+ * Quality Limit -- no behavior change from having it inline.
+ *
+ * GENERATED from content/topics/CONFERENCE.md by
+ * scripts/content/generateKmpFallback.js -- do not hand-edit.
  */
 internal fun conferenceIntroduction(): String = """
     **The Conference: Final Stage of SSB Selection**
@@ -114,4 +116,4 @@ internal fun conferenceIntroduction(): String = """
     **Success Rate:**
 
     Approximately 3-5% of screened-in candidates get recommended. The conference ensures only the most suitable candidates proceed to commissioning.
-""".trimIndent()
+    """.trimIndent()

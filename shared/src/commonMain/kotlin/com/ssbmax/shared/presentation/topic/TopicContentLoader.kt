@@ -3,12 +3,15 @@ package com.ssbmax.shared.presentation.topic
 import com.ssbmax.shared.domain.model.TestType
 
 /**
- * KMP port of the Android `app/.../ui/topic/TopicContentLoader.kt` -- static
+ * KMP port of the Android app/.../ui/topic/TopicContentLoader.kt -- static
  * per-topic introduction text + test list (local fallback content). The
  * Conference topic's introduction (by far the largest single block of text)
  * is split into [conferenceIntroduction] to keep this file under the repo's
  * 300-line Quality Limit, same rationale the Android original itself states
- * for splitting `StudyMaterialsProvider` out of this file.
+ * for splitting StudyMaterialsProvider out of this file.
+ *
+ * GENERATED from the content/topics markdown files by scripts/content/generateKmpFallback.js
+ * -- do not hand-edit; edit the markdown source and regenerate instead.
  */
 object TopicContentLoader {
 
@@ -47,7 +50,7 @@ object TopicContentLoader {
                 Duration: 30-40 minutes
                 Questions: 40-50 questions
                 Difficulty: Moderate to High
-            """.trimIndent()
+                """.trimIndent()
             "PPDT" -> """
                 Picture Perception and Description Test (PPDT) assesses your perception,
                 imagination, and ability to construct a meaningful story from an ambiguous picture.
@@ -63,7 +66,7 @@ object TopicContentLoader {
                 2. Write a story in 4 minutes
                 3. Group discussion on stories
                 4. Final narration
-            """.trimIndent()
+                """.trimIndent()
             "PIQ_FORM" -> """
                 Personal Information Questionnaire (PIQ) is a comprehensive form that captures
                 your personal details, educational background, family information, and interests.
@@ -80,7 +83,7 @@ object TopicContentLoader {
                 - Be consistent with your responses
                 - Prepare to explain any gaps
                 - Know your PIQ thoroughly for interview
-            """.trimIndent()
+                """.trimIndent()
             "PSYCHOLOGY" -> """
                 Psychology Tests assess your personality traits, mental makeup, and suitability
                 for a career in the Armed Forces. These tests reveal your true self through
@@ -97,7 +100,7 @@ object TopicContentLoader {
                 - Personality traits
                 - Response patterns under stress
                 - Leadership potential
-            """.trimIndent()
+                """.trimIndent()
             "GTO" -> """
                 Group Testing Officer (GTO) tasks evaluate your performance in group settings
                 and assess practical implementation of leadership qualities.
@@ -113,7 +116,7 @@ object TopicContentLoader {
 
                 Duration: 3 days (Day 3-5)
                 Focus: Teamwork, leadership, problem-solving
-            """.trimIndent()
+                """.trimIndent()
             "INTERVIEW" -> """
                 Personal Interview is conducted by the Interviewing Officer (IO) to assess
                 your personality, motivation, and suitability for commissioned service.
@@ -131,8 +134,7 @@ object TopicContentLoader {
                 - Stay updated with current affairs
                 - Express genuine interest
                 - Maintain eye contact
-            """.trimIndent()
-            "CONFERENCE" -> conferenceIntroduction()
+                """.trimIndent()
             "MEDICALS" -> """
                 Medical Examination ensures you meet the physical and medical standards
                 required for commissioned service in the Armed Forces.
@@ -152,7 +154,7 @@ object TopicContentLoader {
                 - Chronic diseases
 
                 Tip: Maintain good health throughout preparation
-            """.trimIndent()
+                """.trimIndent()
             "SSB_OVERVIEW" -> """
                 The Services Selection Board (SSB) is a 5-day comprehensive assessment
                 process to select suitable candidates for commissioned service in the
@@ -172,7 +174,8 @@ object TopicContentLoader {
                 - Mental alertness
 
                 Success rate: Approximately 3-5% of screened candidates
-            """.trimIndent()
+                """.trimIndent()
+            "CONFERENCE" -> conferenceIntroduction()
             else -> "Detailed information about this topic will be available soon."
         }
     }
