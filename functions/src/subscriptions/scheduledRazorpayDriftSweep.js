@@ -53,8 +53,12 @@ const PAGE_SIZE = 100;
 const MAX_PAGES_PER_RUN = 10; // up to 1000 Razorpay subscriptions/invocation (any status; see file header)
 
 /**
- * One Razorpay subscription entity -> the `{status, tier, expiryDate}` shape
- * `resolveSubscriptionDrift` consumes. `status` maps only Razorpay's own `'active'` to `'ACTIVE'`
+ * One Razorpay subscription entity -> the `{status, tier, expiryDate, subscriptionId}` shape
+ * `resolveSubscriptionDrift` consumes (`subscriptionId` passes straight through unused by drift
+ * resolution itself -- `applyDrift` below writes it into the repaired doc so a REPAIR_UP never
+ * produces a `source: 'RAZORPAY'` doc with no `subscriptionId`, which `getSubscriptionSupportSnapshot`'s
+ * `dataIncomplete`/`missing-subscription-id` check would otherwise immediately flag). `status` maps
+ * only Razorpay's own `'active'` to `'ACTIVE'`
  * (every other status -- cancelled, expired, halted, ... -- becomes `'UNKNOWN'`, which
  * `resolveSubscriptionDrift` always resolves to `NONE`) since the list endpoint has no
  * server-side status filter (see file header) -- this is where that filtering actually happens.
@@ -69,7 +73,8 @@ function toProviderState(subscriptionEntity) {
     providerState: {
       status: subscriptionEntity?.status === 'active' ? 'ACTIVE' : 'UNKNOWN',
       tier: planIdToTier(notes.planId || 'pro_monthly'),
-      expiryDate: typeof subscriptionEntity?.current_end === 'number' ? subscriptionEntity.current_end * 1000 : null
+      expiryDate: typeof subscriptionEntity?.current_end === 'number' ? subscriptionEntity.current_end * 1000 : null,
+      subscriptionId: subscriptionEntity?.id || null
     }
   };
 }
@@ -106,6 +111,7 @@ async function applyDrift(firestoreDb, userId, providerState, stored, nowMillis)
         expiryDate: drift.expiryDate,
         billingCycle: 'MONTHLY',
         source: 'RAZORPAY',
+        subscriptionId: providerState.subscriptionId || null,
         willRenew: true,
         billingIssueAt: null
       },

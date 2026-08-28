@@ -74,7 +74,7 @@ function activeSubEntity({ userId, planId = 'pro_monthly', currentEndSec }) {
 test('toProviderState maps a Razorpay subscription entity via the shared planIdToTier, never a second hand-typed mapping', () => {
   const { userId, providerState } = toProviderState(activeSubEntity({ userId: 'u1', planId: 'premium_monthly', currentEndSec: 1_700_100_000 }));
   assert.equal(userId, 'u1');
-  assert.deepEqual(providerState, { status: 'ACTIVE', tier: 'PREMIUM', expiryDate: 1_700_100_000_000 });
+  assert.deepEqual(providerState, { status: 'ACTIVE', tier: 'PREMIUM', expiryDate: 1_700_100_000_000, subscriptionId: 'sub_u1' });
 });
 
 test('toProviderState maps every non-"active" Razorpay status to UNKNOWN, since the list endpoint has no server-side status filter', () => {
@@ -96,6 +96,7 @@ test('sweepRazorpayDrift repairs a user Razorpay says is active but Firestore ha
   assert.equal(written.tier, 'PRO');
   assert.equal(written.billingCycle, 'MONTHLY');
   assert.equal(written.source, 'RAZORPAY');
+  assert.equal(written.subscriptionId, 'sub_u1', 'a repaired doc must carry subscriptionId or getSubscriptionSupportSnapshot immediately flags it dataIncomplete/missing-subscription-id');
   assert.equal(db._opsAlerts.length, 1, 'every repair calls emitOpsAlert exactly once');
   assert.equal(db._opsAlerts[0].kind, 'DRIFT_REPAIR');
 });
