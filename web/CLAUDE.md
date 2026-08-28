@@ -210,6 +210,7 @@ These supplement the root CLAUDE.md security principles:
 npm run test            # Single vitest run (CI mode)
 npm run test:watch      # Watch mode (local dev)
 npm run test:coverage   # Coverage report
+npm run test:e2e        # Playwright, against a real browser
 ```
 
 **Test location:** `web/tests/` (mirrors `src/` structure):
@@ -217,7 +218,8 @@ npm run test:coverage   # Coverage report
 tests/
 ├── security/   # CSP/HSTS header tests, Firestore rules tests
 ├── services/   # AntiCheatService, OfflineQueueService, AuthService
-└── unit/       # ViewModel and Repository unit tests
+├── unit/       # ViewModel and Repository unit tests
+└── e2e/        # Playwright specs (playwright.config.ts, testDir-scoped to just this folder)
 ```
 
 **Rules:**
@@ -225,6 +227,11 @@ tests/
 - Security tests (`tests/security/`) are mandatory for every security-surface change.
 - A phase/task is not done until `npm run test` is green. No skipped tests counted as passing.
 - Mock Firebase and Cloud Function calls in tests — never hit real Firestore from the test suite.
+- `npm run test:e2e` runs against a real Chromium via Playwright, not JSDOM — `playwright.config.ts`'s
+  `webServer` starts `npm run dev` itself and waits for it, so no manual server start is needed
+  locally or in CI. It is a required step in `web-ci` (`.github/workflows/main-ci.yml`); do not run
+  Playwright with no config/testDir argument outside this project — Playwright's own default testDir
+  would also match the Vitest files under `tests/unit/` and crash trying to load them.
 
 ---
 

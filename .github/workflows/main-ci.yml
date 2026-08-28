@@ -540,7 +540,7 @@ jobs:
   web-ci:
     name: Web Platform CI (ssbmax-web)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -562,6 +562,23 @@ jobs:
       - name: Run Web Unit Tests
         working-directory: web
         run: npm test
+
+      # Playwright's own browser + OS deps, not npm packages -- must be installed
+      # separately from `npm ci`. Chromium only: playwright.config.ts declares a
+      # single chromium project, and every e2e spec (tests/e2e/) already runs there.
+      - name: Install Playwright Browsers
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config.ts's webServer starts `npm run dev` itself and waits for it
+      # to answer -- no separate "start the app" step needed here. This suite was
+      # previously never run in CI (silently red-free rather than green); scoping
+      # testDir to tests/e2e (playwright.config.ts) is what made `test:e2e` safe to
+      # run at all, since without it Playwright's default testDir also matched every
+      # Vitest unit test file and crashed trying to load them.
+      - name: Run Web E2E Tests
+        working-directory: web
+        run: npm run test:e2e
 
       - name: Build Web Production Artifacts
         working-directory: web
