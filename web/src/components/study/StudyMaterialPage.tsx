@@ -1,5 +1,5 @@
 import { FC, useEffect, useState } from 'react';
-import { BookOpen, Search, Lock, ShieldCheck } from 'lucide-react';
+import { BookOpen, Search, ShieldCheck } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { StudyMaterialViewModel } from '../../viewmodels/StudyMaterialViewModel';
 import { ContentRepository } from '../../repositories/ContentRepository';
@@ -9,7 +9,6 @@ import { StudyDayAccordion, StudyDayAccordionSection } from './StudyDayAccordion
 import { authService, UserProfile } from '../../services/AuthService';
 import { ssbDayConfigs } from './ssbDayData';
 import { filterMaterialsForTestCard } from '../../utils/materialMatcher';
-import { usePostAuthResume, savePostAuthResume } from '../../hooks/usePostAuthResume';
 
 export interface StudyMaterialPageProps {
   viewModel?: StudyMaterialViewModel;
@@ -66,21 +65,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
     };
   }, [vm, authUser]);
 
-  usePostAuthResume({
-    user: authUser,
-    materialsLoaded,
-    onOpenMaterial: (targetId: string) => {
-      const all = vm.getMaterials();
-      const matched = all.find((m) => m.id === targetId || m.testTypeId === targetId);
-      if (matched) {
-        setSelectedMaterial(matched);
-        onSelectMaterial?.(matched);
-      }
-    },
-  });
-
   const rawMaterials = vm.getMaterials();
-  const isUnlocked = Boolean(authUser);
 
   const handleToggleComplete = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -88,10 +73,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
     setRefreshState((prev) => prev + 1);
   };
 
-  const handleAuthTrigger = async (targetId?: string) => {
-    if (targetId) {
-      savePostAuthResume(targetId);
-    }
+  const handleSoftCtaSignIn = async () => {
     try {
       await authService.signInWithGoogle();
     } catch {
@@ -100,18 +82,8 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
   };
 
   const openMaterial = (material: StudyMaterial) => {
-    if (!isUnlocked) {
-      handleAuthTrigger(material.id);
-      return;
-    }
     setSelectedMaterial(material);
     onSelectMaterial?.(material);
-  };
-
-  const handleCardClick = (_testTypeId: string) => {
-    if (!isUnlocked) {
-      handleAuthTrigger(_testTypeId);
-    }
   };
 
   const handleToggleAccordion = (dayNum: string) => {
@@ -169,30 +141,30 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
         </div>
       </div>
 
-      {/* Auth Banner for Unauthenticated Candidates */}
-      {!isUnlocked && (
+      {/* Soft CTA: content is fully public, sign-in only offers progress sync */}
+      {!authUser && (
         <div
           className="bg-gradient-to-r from-sky-900/90 to-blue-900/90 border border-sky-500/30 rounded-2xl p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg"
-          data-testid="auth-locked-banner"
+          data-testid="soft-signin-cta-banner"
         >
           <div className="flex items-start gap-3">
             <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-300 border border-sky-400/30">
-              <Lock className="w-5 h-5" />
+              <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-sm font-black tracking-wide text-white">
-                {strings.studyMaterial.authLockedTitle}
+                {strings.studyMaterial.softCtaTitle}
               </h3>
               <p className="text-xs text-sky-100/80 leading-relaxed mt-0.5 max-w-xl">
-                {strings.studyMaterial.authLockedDesc}
+                {strings.studyMaterial.softCtaDesc}
               </p>
             </div>
           </div>
 
           <button
-            onClick={() => handleAuthTrigger()}
+            onClick={handleSoftCtaSignIn}
             className="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-all shadow-md shadow-sky-500/20 min-h-[44px] flex items-center justify-center gap-2 whitespace-nowrap"
-            data-testid="auth-banner-sign-in-btn"
+            data-testid="soft-signin-cta-btn"
           >
             <ShieldCheck className="w-4 h-4" />
             <span>{strings.studyMaterial.signInWithGoogle}</span>
@@ -221,9 +193,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
               key={section.dayNumber}
               section={section}
               isOpen={expandedDay === section.dayNumber}
-              isUnlocked={isUnlocked}
               onToggle={handleToggleAccordion}
-              onCardClick={handleCardClick}
               onSelectMaterial={openMaterial}
               isMaterialCompleted={(id) => vm.isCompleted(id)}
               onToggleCompleted={handleToggleComplete}

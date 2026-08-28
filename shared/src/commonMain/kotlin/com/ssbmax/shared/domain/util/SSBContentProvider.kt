@@ -54,7 +54,7 @@ object SSBContentProvider {
                     - Situation Reaction Test (SRT) - 60 situations
                     - Self Description Test (SD) - Write about yourself
 
-                    **Day 3-5: GTO Tasks & Interview**
+                    **Day 3-4: GTO Tasks**
                     - Group Discussion (GD)
                     - Group Planning Exercise (GPE)
                     - Progressive Group Task (PGT)
@@ -63,9 +63,9 @@ object SSBContentProvider {
                     - Command Task
                     - Final Group Task (FGT)
                     - Lecturette
-                    - Personal Interview with IO (30-45 minutes)
 
-                    **Day 5: Conference**
+                    **Day 5: Interview & Conference**
+                    - Personal Interview with IO (30-45 minutes)
                     - All assessors discuss your performance
                     - Final recommendation decided
                     - Results declared same day

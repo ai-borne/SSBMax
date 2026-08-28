@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { Calendar, ChevronDown, Lock } from 'lucide-react';
+import { Calendar, ChevronDown } from 'lucide-react';
 import { StudyTestCard, SSBTestCardInfo } from './StudyTestCard';
 import { StudyMaterial } from '../../types/testContent';
 import { SSBDayNumber } from '../../constants/ssbSelectionProcess';
@@ -18,9 +18,7 @@ export interface StudyDayAccordionSection {
 export interface StudyDayAccordionProps {
   section: StudyDayAccordionSection;
   isOpen: boolean;
-  isUnlocked: boolean;
   onToggle: (dayNumber: string) => void;
-  onCardClick: (testTypeId: string) => void;
   onSelectMaterial: (material: StudyMaterial) => void;
   isMaterialCompleted: (materialId: string) => boolean;
   onToggleCompleted: (materialId: string, e: React.MouseEvent) => void;
@@ -46,9 +44,7 @@ function getDayAccentClasses(dayNumber: SSBDayNumber): {
 export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
   section,
   isOpen,
-  isUnlocked,
   onToggle,
-  onCardClick,
   onSelectMaterial,
   isMaterialCompleted,
   onToggleCompleted,
@@ -88,12 +84,6 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
               <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${accent.badge}`}>
                 {section.stageBadge}
               </span>
-              {!isUnlocked && (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                  <Lock className="w-3 h-3" />
-                  <span>{strings.study.accordion.oauthRequired}</span>
-                </span>
-              )}
             </div>
             <h3 className="text-lg font-black text-slate-900 dark:text-white">
               {section.title}
@@ -134,8 +124,6 @@ export const StudyDayAccordion: FC<StudyDayAccordionProps> = ({
               <StudyTestCard
                 key={cardInfo.testTypeId}
                 cardInfo={cardInfo}
-                isUnlocked={isUnlocked}
-                onCardClick={onCardClick}
                 onSelectMaterial={onSelectMaterial}
                 isMaterialCompleted={isMaterialCompleted}
                 onToggleCompleted={onToggleCompleted}

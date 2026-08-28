@@ -13,8 +13,8 @@ Indian Armed Forces.
 5-Day breakdown:
 - Day 1: Screening (OIR & PPDT)
 - Day 2: Psychology Tests
-- Day 3-5: GTO Tasks & Interview
-- Day 5: Conference & Results
+- Day 3-4: GTO Tasks
+- Day 5: Interview & Conference
 
 What SSB assesses:
 - 15 Officer Like Qualities (OLQs)

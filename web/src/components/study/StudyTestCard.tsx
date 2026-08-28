@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { Lock, FileText, CheckCircle, Clock, ChevronRight } from 'lucide-react';
+import { FileText, CheckCircle, Clock, ChevronRight } from 'lucide-react';
 import { StudyMaterial } from '../../types/testContent';
 import { AccessTier } from '../../constants/ssbSelectionProcess';
 import { strings } from '../../constants/strings';
@@ -17,8 +17,6 @@ export interface SSBTestCardInfo {
 
 export interface StudyTestCardProps {
   cardInfo: SSBTestCardInfo;
-  isUnlocked: boolean;
-  onCardClick: (testTypeId: string) => void;
   onSelectMaterial: (material: StudyMaterial) => void;
   isMaterialCompleted: (materialId: string) => boolean;
   onToggleCompleted: (materialId: string, e: React.MouseEvent) => void;
@@ -26,8 +24,6 @@ export interface StudyTestCardProps {
 
 export const StudyTestCard: FC<StudyTestCardProps> = ({
   cardInfo,
-  isUnlocked,
-  onCardClick,
   onSelectMaterial,
   isMaterialCompleted,
   onToggleCompleted,
@@ -58,8 +54,7 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
 
   return (
     <div
-      onClick={() => onCardClick(cardInfo.testTypeId)}
-      className="bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 rounded-2xl p-5 shadow-[var(--card-shadow)] hover:-translate-y-1 hover:shadow-[var(--card-shadow-hover)] transition-all flex flex-col justify-between group cursor-pointer"
+      className="bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-sky-500/50 dark:hover:border-sky-500/50 rounded-2xl p-5 shadow-[var(--card-shadow)] hover:-translate-y-1 hover:shadow-[var(--card-shadow-hover)] transition-all flex flex-col justify-between group"
       data-testid={`study-test-card-${cardInfo.testTypeId}`}
     >
       <div>
@@ -75,15 +70,6 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
               {getTierBadgeLabel()}
             </span>
           </div>
-          {!isUnlocked && (
-            <span
-              className="flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30"
-              data-testid={`locked-badge-${cardInfo.testTypeId}`}
-            >
-              <Lock className="w-3 h-3" />
-              <span>{strings.study.testCard.locked}</span>
-            </span>
-          )}
         </div>
 
         <h4 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors mb-1">
@@ -110,11 +96,7 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
                   key={mat.id}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (!isUnlocked) {
-                      onCardClick(cardInfo.testTypeId);
-                    } else {
-                      onSelectMaterial(mat);
-                    }
+                    onSelectMaterial(mat);
                   }}
                   className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/60 dark:border-slate-800 hover:border-sky-500/40 flex items-center justify-between gap-2 transition-all cursor-pointer min-h-[44px]"
                   data-testid={`nested-material-item-${mat.id}`}
@@ -129,25 +111,21 @@ export const StudyTestCard: FC<StudyTestCardProps> = ({
                     </span>
                   </div>
 
-                  {isUnlocked ? (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => onToggleCompleted(mat.id, e)}
-                        className={`p-1.5 rounded-lg text-[10px] font-bold transition-all min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                          isDone
-                            ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                        }`}
-                        title={isDone ? strings.study.testCard.markCompleted : strings.study.testCard.markAsRead}
-                        data-testid={`toggle-completed-${mat.id}`}
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                      <ChevronRight className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                    </div>
-                  ) : (
-                    <Lock className="w-3.5 h-3.5 text-amber-500" />
-                  )}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => onToggleCompleted(mat.id, e)}
+                      className={`p-1.5 rounded-lg text-[10px] font-bold transition-all min-h-[44px] min-w-[44px] flex items-center justify-center ${
+                        isDone
+                          ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                      }`}
+                      title={isDone ? strings.study.testCard.markCompleted : strings.study.testCard.markAsRead}
+                      data-testid={`toggle-completed-${mat.id}`}
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                    </button>
+                    <ChevronRight className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                  </div>
                 </div>
               );
             })

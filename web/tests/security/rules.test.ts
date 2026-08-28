@@ -24,6 +24,15 @@ describe('Phase 4: Database & Storage Rules Access Control Security', () => {
     expect(content).toContain('allow read, write: if false;');
   });
 
+  it('allows public read (never write) of study_materials -- the Study tab is unauthenticated content, not a security boundary', () => {
+    const content = fs.readFileSync(firestoreRulesPath, 'utf-8');
+    const match = content.match(/match \/study_materials\/\{materialId\} \{([^}]*)\}/);
+
+    expect(match).not.toBeNull();
+    expect(match?.[1]).toContain('allow read: if true;');
+    expect(match?.[1]).toContain('allow write: if false;');
+  });
+
   it('should enforce strict storage.rules for assets and 10MB upload limits', () => {
     expect(fs.existsSync(storageRulesPath)).toBe(true);
     const content = fs.readFileSync(storageRulesPath, 'utf-8');

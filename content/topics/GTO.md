@@ -18,5 +18,5 @@ Tasks include:
 - Final Group Task (FGT)
 - Lecturette
 
-Duration: 3 days (Day 3-5)
+Duration: 2 days (Day 3-4)
 Focus: Teamwork, leadership, problem-solving

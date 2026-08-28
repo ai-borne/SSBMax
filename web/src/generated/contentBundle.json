@@ -65,7 +65,7 @@
   "GTO": {
     "id": "GTO",
     "title": "Group Testing Officer Tasks",
-    "introduction": "Group Testing Officer (GTO) tasks evaluate your performance in group settings \nand assess practical implementation of leadership qualities.\n\nTasks include:\n- Group Discussion\n- Group Planning Exercise\n- Progressive Group Task (PGT)\n- Half Group Task (HGT)\n- Command Task\n- Final Group Task (FGT)\n- Lecturette\n\nDuration: 3 days (Day 3-5)\nFocus: Teamwork, leadership, problem-solving",
+    "introduction": "Group Testing Officer (GTO) tasks evaluate your performance in group settings \nand assess practical implementation of leadership qualities.\n\nTasks include:\n- Group Discussion\n- Group Planning Exercise\n- Progressive Group Task (PGT)\n- Half Group Task (HGT)\n- Command Task\n- Final Group Task (FGT)\n- Lecturette\n\nDuration: 2 days (Day 3-4)\nFocus: Teamwork, leadership, problem-solving",
     "materials": [
       {
         "id": "gto_1",
@@ -732,7 +732,7 @@
   "SSB_OVERVIEW": {
     "id": "SSB_OVERVIEW",
     "title": "Overview of SSB",
-    "introduction": "The Services Selection Board (SSB) is a 5-day comprehensive assessment \nprocess to select suitable candidates for commissioned service in the \nIndian Armed Forces.\n\n5-Day breakdown:\n- Day 1: Screening (OIR & PPDT)\n- Day 2: Psychology Tests\n- Day 3-5: GTO Tasks & Interview\n- Day 5: Conference & Results\n\nWhat SSB assesses:\n- 15 Officer Like Qualities (OLQs)\n- Leadership potential\n- Personality traits\n- Physical fitness\n- Mental alertness\n\nSuccess rate: Approximately 3-5% of screened candidates",
+    "introduction": "The Services Selection Board (SSB) is a 5-day comprehensive assessment \nprocess to select suitable candidates for commissioned service in the \nIndian Armed Forces.\n\n5-Day breakdown:\n- Day 1: Screening (OIR & PPDT)\n- Day 2: Psychology Tests\n- Day 3-4: GTO Tasks\n- Day 5: Interview & Conference\n\nWhat SSB assesses:\n- 15 Officer Like Qualities (OLQs)\n- Leadership potential\n- Personality traits\n- Physical fitness\n- Mental alertness\n\nSuccess rate: Approximately 3-5% of screened candidates",
     "materials": [
       {
         "id": "ssb_1",

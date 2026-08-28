@@ -444,8 +444,11 @@ service cloud.firestore {
     // ============================================
     
     match /study_materials/{materialId} {
-      // All authenticated users can read study materials
-      allow read: if isAuthenticated();
+      // Study content is public -- the web Study tab and its content routes
+      // read this collection unauthenticated (docs/plans/i-just-watched-a-nested-russell.md
+      // Phase 4: un-gating). Study material was never behind auth for a security
+      // reason, only a lead-capture one, which is now a soft CTA instead.
+      allow read: if true;
       allow write: if false;
     }
     

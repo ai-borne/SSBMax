@@ -6,7 +6,6 @@ import { StudyMaterialViewModel } from '../../../src/viewmodels/StudyMaterialVie
 import { IContentRepository } from '../../../src/repositories/interfaces/IContentRepository';
 import { StudyMaterial } from '../../../src/types/testContent';
 import { UserProfile, authService } from '../../../src/services/AuthService';
-import { POST_AUTH_RESUME_KEY } from '../../../src/hooks/usePostAuthResume';
 
 const mockMaterials: StudyMaterial[] = [
   {
@@ -132,32 +131,29 @@ describe('StudyMaterialPage Component', () => {
     expect(screen.getByTestId('study-test-card-fgt')).toBeInTheDocument();
   });
 
-  it('displays auth lock banner and triggers post-auth payload save when unauthenticated candidate clicks card', async () => {
+  it('shows a non-blocking soft sign-in CTA (not a content lock) for unauthenticated visitors', async () => {
     const signInSpy = vi.spyOn(authService, 'signInWithGoogle').mockImplementation(async () => mockUser);
     const vm = new StudyMaterialViewModel(new MockContentRepository());
     render(<StudyMaterialPage viewModel={vm} user={null} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('auth-locked-banner')).toBeInTheDocument();
-      expect(screen.getByText(strings.studyMaterial.authLockedTitle)).toBeInTheDocument();
+      expect(screen.getByTestId('soft-signin-cta-banner')).toBeInTheDocument();
+      expect(screen.getByText(strings.studyMaterial.softCtaTitle)).toBeInTheDocument();
     });
 
-    // `findBy`, not `getBy`: the banner and the test cards come from DIFFERENT sources.
-    // The banner renders synchronously off the `user` prop (`!isUnlocked`), while the cards
-    // come from the ViewModel's async content load -- so waiting for the banner proves
-    // nothing about the cards. On a fast machine both land in one tick and `getByTestId`
-    // happens to work; on a loaded CI runner it fails with "Unable to find an element by:
-    // [data-testid=study-test-card-oir]" against a DOM that does contain the banner.
-    const oirCard = await screen.findByTestId('study-test-card-oir');
-    fireEvent.click(oirCard);
+    // Study content is public: an unauthenticated visitor can open a material directly,
+    // with no sign-in redirect and no gating on the click.
+    const matItem = await screen.findByTestId('nested-material-item-mat_1');
+    fireEvent.click(matItem);
+    expect(screen.getByTestId('study-reader-modal')).toBeInTheDocument();
+    expect(signInSpy).not.toHaveBeenCalled();
 
+    // The CTA button itself still offers sign-in, for progress sync.
+    fireEvent.click(screen.getByTestId('soft-signin-cta-btn'));
     expect(signInSpy).toHaveBeenCalled();
-    const stored = sessionStorage.getItem(POST_AUTH_RESUME_KEY);
-    expect(stored).not.toBeNull();
-    expect(stored).toContain('oir');
   });
 
-  it('opens accessible StudyReaderModal when unlocked nested material item is clicked', async () => {
+  it('opens accessible StudyReaderModal when a nested material item is clicked', async () => {
     const handleSelect = vi.fn();
     const vm = new StudyMaterialViewModel(new MockContentRepository());
     render(<StudyMaterialPage viewModel={vm} user={mockUser} onSelectMaterial={handleSelect} />);
