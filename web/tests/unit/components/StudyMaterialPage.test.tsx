@@ -141,6 +141,12 @@ describe('StudyMaterialPage Component', () => {
       expect(screen.getByText(strings.studyMaterial.softCtaTitle)).toBeInTheDocument();
     });
 
+    // No trace of the old hard-lock UI: no locked badges, no "OAuth Required" copy,
+    // anywhere in the unauthenticated render.
+    expect(screen.queryByTestId('locked-badge-oir')).not.toBeInTheDocument();
+    expect(screen.queryByText('Google OAuth Required')).not.toBeInTheDocument();
+    expect(screen.queryByText('Locked')).not.toBeInTheDocument();
+
     // Study content is public: an unauthenticated visitor can open a material directly,
     // with no sign-in redirect and no gating on the click.
     const matItem = await screen.findByTestId('nested-material-item-mat_1');
@@ -148,9 +154,15 @@ describe('StudyMaterialPage Component', () => {
     expect(screen.getByTestId('study-reader-modal')).toBeInTheDocument();
     expect(signInSpy).not.toHaveBeenCalled();
 
-    // The CTA button itself still offers sign-in, for progress sync.
+    // "Mark as read" -- previously an unlocked-only affordance -- also works unauthenticated.
+    const toggleBtn = screen.getByTestId('toggle-completed-mat_1');
+    fireEvent.click(toggleBtn);
+    expect(vm.isCompleted('mat_1')).toBe(true);
+
+    // The CTA button itself still offers sign-in, for progress sync -- and only the CTA
+    // triggers it, nothing content-related does.
     fireEvent.click(screen.getByTestId('soft-signin-cta-btn'));
-    expect(signInSpy).toHaveBeenCalled();
+    expect(signInSpy).toHaveBeenCalledTimes(1);
   });
 
   it('opens accessible StudyReaderModal when a nested material item is clicked', async () => {
