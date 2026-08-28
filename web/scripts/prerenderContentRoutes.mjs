@@ -9,10 +9,11 @@
 // file at the exact path is what makes these routes servable at all on a cold load --
 // Cloudflare Pages resolves a request to a matching static asset before any redirect logic,
 // so this file wins over nothing rather than needing to win over a catch-all.
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { buildContentPageHtml, findCssAssets, SITE_BASE_URL } from './prerenderHtml.mjs';
+import { buildContentPageHtml, buildContentPageJsonLdScripts, findCssAssets, SITE_BASE_URL } from './prerenderHtml.mjs';
+import { buildContentRouteHeaderBlock } from './cspHeaders.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -27,6 +28,12 @@ if (cssHrefs.length === 0) {
   throw new Error('prerenderContentRoutes: no dist/assets/*.css found -- did `vite build` run first?');
 }
 
+// Phase 6, Regression 1: dist/_headers already exists here -- `vite build` copies
+// public/_headers into dist/ verbatim before this script runs. Every route's CSP hash
+// allowance is appended to it, never replacing the base policy on disk.
+const HEADERS_PATH = join(DIST_DIR, '_headers');
+const baseHeadersFileContent = readFileSync(HEADERS_PATH, 'utf8');
+
 let written = 0;
 for (const { topicId, path } of routes) {
   const topic = contentBundle[topicId];
@@ -38,7 +45,12 @@ for (const { topicId, path } of routes) {
   const outDir = join(DIST_DIR, ...path.split('/').filter(Boolean));
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, 'index.html'), html);
+
+  const jsonLdScripts = buildContentPageJsonLdScripts({ topic, seo, path, siteBaseUrl: SITE_BASE_URL });
+  const headerBlock = buildContentRouteHeaderBlock({ path, jsonLdScripts, baseHeadersFileContent });
+  appendFileSync(HEADERS_PATH, headerBlock);
+
   written += 1;
 }
 
-console.log(`Prerendered ${written} static content page(s) into dist/.`);
+console.log(`Prerendered ${written} static content page(s) into dist/, each with its own CSP script-src hash allowance.`);

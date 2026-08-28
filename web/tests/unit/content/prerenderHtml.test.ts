@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { buildContentPageHtml, escapeHtml, findCssAssets, SITE_BASE_URL } from '../../../scripts/prerenderHtml.mjs';
+import { buildContentPageHtml, buildContentPageJsonLdScripts, escapeHtml, findCssAssets, SITE_BASE_URL } from '../../../scripts/prerenderHtml.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..', '..');
@@ -39,9 +39,18 @@ describe('buildContentPageHtml, for every real content route', () => {
     describe(topicId, () => {
       const html = buildContentPageHtml({ topic, seo, path, cssHrefs: ['/assets/index-abc123.css'] });
 
-      it('is a genuinely static document -- zero <script> tags (Blocker 2: no hydration)', () => {
-        expect(html.toLowerCase()).not.toContain('<script');
+      it('is a genuinely static document -- no hydration/module scripts (Blocker 2), only inert JSON-LD', () => {
+        expect(html).not.toMatch(/<script(?!\s+type="application\/ld\+json")/);
         expect(html).not.toContain('__INITIAL_DATA__');
+      });
+
+      it('embeds this route\'s exact JSON-LD blocks, each valid JSON (Phase 6)', () => {
+        const jsonLdScripts = buildContentPageJsonLdScripts({ topic, seo, path });
+        expect(jsonLdScripts.length).toBeGreaterThan(0);
+        for (const json of jsonLdScripts) {
+          expect(html).toContain(`<script type="application/ld+json">${json}</script>`);
+          expect(() => JSON.parse(json)).not.toThrow();
+        }
       });
 
       it('contains the real topic title and introduction text, not a placeholder', () => {

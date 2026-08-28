@@ -10,6 +10,7 @@
 // (contentBundle.json / contentRoutes.json / contentSeo.json) keeps a single data source
 // without requiring a TS loader or an SSR bundle step in a plain Node script.
 import { readdirSync } from 'node:fs';
+import { buildContentPageJsonLd, serializeJsonLd } from './jsonLd.mjs';
 
 export const SITE_BASE_URL = 'https://ssbmax.in';
 
@@ -40,6 +41,15 @@ export function findCssAssets(distDir) {
   return entries.filter((name) => name.endsWith('.css')).map((name) => `/assets/${name}`);
 }
 
+/**
+ * Exact serialized JSON-LD strings embedded in one content page's <head>, in embed order.
+ * The one place this is computed -- scripts/cspHeaders.mjs hashes these same strings to
+ * build the per-route CSP allowance, so page and hash can never drift apart (Regression 1).
+ */
+export function buildContentPageJsonLdScripts({ topic, seo, path, siteBaseUrl = SITE_BASE_URL }) {
+  return buildContentPageJsonLd({ topic, seo, path, siteBaseUrl }).map(serializeJsonLd);
+}
+
 function buildMaterialHtml(material) {
   return `
         <div>
@@ -58,6 +68,7 @@ function buildMaterialHtml(material) {
 export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBaseUrl = SITE_BASE_URL }) {
   const url = `${siteBaseUrl}${path}`;
   const cssLinks = cssHrefs.map((href) => `<link rel="stylesheet" href="${escapeHtml(href)}" />`).join('\n    ');
+  const jsonLdScripts = buildContentPageJsonLdScripts({ topic, seo, path, siteBaseUrl });
   const materialsHtml = topic.materials.length > 0
     ? `
       <section>
@@ -83,6 +94,7 @@ export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBase
     <meta name="twitter:title" content="${escapeHtml(seo.title)}" />
     <meta name="twitter:description" content="${escapeHtml(seo.description)}" />
     ${cssLinks}
+    ${jsonLdScripts.map((json) => `<script type="application/ld+json">${json}</script>`).join('\n    ')}
   </head>
   <body class="bg-slate-900 text-slate-50 min-h-screen">
     <article class="max-w-3xl mx-auto px-4 py-8 sm:py-12">

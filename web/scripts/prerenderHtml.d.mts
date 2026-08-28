@@ -29,3 +29,9 @@ export const SITE_BASE_URL: string;
 export function escapeHtml(value: unknown): string;
 export function findCssAssets(distDir: string): string[];
 export function buildContentPageHtml(input: BuildContentPageHtmlInput): string;
+export function buildContentPageJsonLdScripts(input: {
+  topic: ContentTopic;
+  seo: ContentSeo;
+  path: string;
+  siteBaseUrl?: string;
+}): string[];
