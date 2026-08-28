@@ -8,6 +8,7 @@ import { piqStrings, upgradeGateStrings } from './strings/piq';
 import { studyStrings } from './strings/study';
 import { notificationStrings } from './strings/notifications';
 import { supportStrings } from './strings/support';
+import { contentTopicStrings } from './strings/contentTopic';
 
 export const strings = {
   ...commonStrings,
@@ -20,5 +21,6 @@ export const strings = {
   upgradeGate: upgradeGateStrings,
   study: studyStrings,
   notifications: notificationStrings,
-  support: supportStrings
+  support: supportStrings,
+  ...contentTopicStrings
 } as const;

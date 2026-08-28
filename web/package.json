@@ -4,21 +4,26 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "predev": "npm run generate:content",
     "dev": "vite",
+    "prebuild": "npm run generate:content",
     "build": "tsc -b && vite build && node scripts/write-version.mjs",
     "preview": "vite preview",
+    "pretest": "npm run generate:content",
     "test": "vitest run --exclude '**/sharedCorpusEmulator.test.ts' --exclude '**/tests/e2e/**'",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:corpus": "vitest run tests/unit/contracts/sharedCorpusEmulator.test.ts",
     "test:e2e": "playwright test",
-    "content:validate": "node scripts/validate-content.mjs"
+    "content:validate": "node scripts/validate-content.mjs",
+    "generate:content": "node scripts/generateContentBundle.mjs"
   },
   "dependencies": {
     "firebase": "^10.14.1",
     "lucide-react": "^0.469.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^6.30.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
