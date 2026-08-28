@@ -12,7 +12,14 @@
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { buildContentPageHtml, buildContentPageJsonLdScripts, findCssAssets, SITE_BASE_URL } from './prerenderHtml.mjs';
+import {
+  buildContentPageHtml,
+  buildContentPageJsonLdScripts,
+  buildFaqPageHtml,
+  buildFaqPageJsonLdScripts,
+  findCssAssets,
+  SITE_BASE_URL,
+} from './prerenderHtml.mjs';
 import { buildContentRouteHeaderBlock } from './cspHeaders.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -22,6 +29,7 @@ const DIST_DIR = join(ROOT, 'dist');
 const contentBundle = JSON.parse(readFileSync(join(ROOT, 'src', 'generated', 'contentBundle.json'), 'utf8'));
 const routes = JSON.parse(readFileSync(join(ROOT, 'src', 'routes', 'contentRoutes.json'), 'utf8'));
 const seoTable = JSON.parse(readFileSync(join(ROOT, 'src', 'routes', 'contentSeo.json'), 'utf8'));
+const faq = JSON.parse(readFileSync(join(ROOT, 'src', 'generated', 'faqBundle.json'), 'utf8'));
 
 const cssHrefs = findCssAssets(DIST_DIR);
 if (cssHrefs.length === 0) {
@@ -50,6 +58,20 @@ for (const { topicId, path } of routes) {
   const headerBlock = buildContentRouteHeaderBlock({ path, jsonLdScripts, baseHeadersFileContent });
   appendFileSync(HEADERS_PATH, headerBlock);
 
+  written += 1;
+}
+
+// FAQ (Phase 7): a singleton route, not part of the topic-shaped contentBundle/contentRoutes
+// loop above -- same static/non-hydrated approach and per-route CSP hash allowance.
+{
+  const faqHtml = buildFaqPageHtml({ faq, cssHrefs, siteBaseUrl: SITE_BASE_URL });
+  const faqOutDir = join(DIST_DIR, 'faq');
+  mkdirSync(faqOutDir, { recursive: true });
+  writeFileSync(join(faqOutDir, 'index.html'), faqHtml);
+
+  const faqJsonLdScripts = buildFaqPageJsonLdScripts({ faq, siteBaseUrl: SITE_BASE_URL });
+  const faqHeaderBlock = buildContentRouteHeaderBlock({ path: '/faq', jsonLdScripts: faqJsonLdScripts, baseHeadersFileContent });
+  appendFileSync(HEADERS_PATH, faqHeaderBlock);
   written += 1;
 }
 

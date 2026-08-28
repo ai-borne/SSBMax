@@ -1,9 +1,9 @@
 package com.ssbmax.shared.presentation.topic
 
 /**
- * The Conference topic's introduction text, split out of
- * [TopicContentLoader] purely to keep both files under the repo's 300-line
- * Quality Limit -- no behavior change from having it inline.
+ * The CONFERENCE topic's introduction text, split out of [TopicContentLoader]
+ * purely to keep every generated file under the repo's 300-line Quality
+ * Limit -- no behavior change from having it inline.
  *
  * GENERATED from content/topics/CONFERENCE.md by
  * scripts/content/generateKmpFallback.js -- do not hand-edit.

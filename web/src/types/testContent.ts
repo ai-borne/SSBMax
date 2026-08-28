@@ -121,6 +121,8 @@ export interface StudyMaterial {
   createdAt: string;
   dayNumber?: '1' | '2' | '3-4' | '5';
   testTypeId?: 'oir' | 'ppdt' | 'piq' | 'tat' | 'wat' | 'srt' | 'sd' | 'gd' | 'gpe' | 'pgt' | 'hgt' | 'iot' | 'command_task' | 'snake_race' | 'fgt' | 'interview' | 'conference';
+  /** Raw Firestore `topicType` (e.g. "GTO", "PSYCHOLOGY") -- see constants/topicTypeMapping.ts. */
+  topicType?: string;
 }
 
 export interface BatchDocument<T> {

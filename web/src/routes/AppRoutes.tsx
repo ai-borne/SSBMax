@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import App from '../App';
 import { StudyTopicPage } from './StudyTopicPage';
+import { FaqPage } from './FaqPage';
 import { CONTENT_ROUTES } from './contentRoutes';
 
 /**
@@ -17,6 +18,7 @@ export const AppRoutes: FC = () => (
     {CONTENT_ROUTES.map(({ topicId, path }) => (
       <Route key={path} path={path} element={<StudyTopicPage topicId={topicId} />} />
     ))}
+    <Route path="/faq" element={<FaqPage />} />
     <Route path="*" element={<App />} />
   </Routes>
 );

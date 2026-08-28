@@ -1,4 +1,5 @@
 import { StudyMaterial } from '../types/testContent';
+import { testTypeIdsForTopicType } from '../constants/topicTypeMapping';
 
 export interface TestCardMatcherOptions {
   testTypeId?: StudyMaterial['testTypeId'];
@@ -37,18 +38,12 @@ export function filterMaterialsForTestCard(
     } else if (material.testTypeId && targetTypes.has(material.testTypeId)) {
       typeMatches = true;
     } else {
-      // Fallback matching over category or tags if testTypeId was not explicitly parsed
-      const categoryLower = (material.category || '').toLowerCase();
-      const tagsLower = (material.tags || []).map((t) => t.toLowerCase());
-      for (const targetType of targetTypes) {
-        if (
-          categoryLower.includes(targetType) ||
-          tagsLower.some((t) => t.includes(targetType))
-        ) {
-          typeMatches = true;
-          break;
-        }
-      }
+      // Explicit fallback (Phase 7, MEDIUM 4c): a coarse topicType (GTO, PSYCHOLOGY) that
+      // covers several testTypeIds and so has no single material.testTypeId still matches
+      // any card whose testTypeId it legitimately covers, per the exhaustive static table in
+      // constants/topicTypeMapping.ts -- no fuzzy category/tag substring guessing.
+      const topicTestTypeIds = testTypeIdsForTopicType(material.topicType);
+      typeMatches = topicTestTypeIds.some((id) => targetTypes.has(id));
     }
 
     if (!typeMatches) {

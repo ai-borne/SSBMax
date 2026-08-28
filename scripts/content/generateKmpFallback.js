@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 /**
- * Regenerates the two Kotlin files that hold KMP's offline fallback prose
+ * Regenerates the Kotlin files that hold KMP's offline fallback prose
  * for topic introductions from content/topics/*.md, so the fallback stops
  * drifting from the git-authored source of truth (HIGH 4b,
  * docs/plans/i-just-watched-a-nested-russell.md — the fallback must be
  * PRESERVED, never deleted: there is no Firestore offline persistence on
  * KMP, so this is the only offline guarantee).
  *
- * CONFERENCE is split into its own file purely to keep both under the
- * repo's 300-line Quality Limit (unchanged rationale from the files this
- * replaces). Run after `npm run content:publish:write` whenever
- * content/topics/*.md changes.
+ * Each topic's introduction is written to its own TopicIntro<Key>.kt file
+ * (one `internal fun xIntroduction(): String`) to keep every generated file
+ * under the repo's 300-line Quality Limit -- Phase 7 expanded every topic's
+ * prose to genuine guide depth, so the old "only CONFERENCE needs its own
+ * file" split no longer holds; this generalizes that same pattern to all
+ * topics instead of special-casing one. Run after
+ * `npm run content:publish:write` whenever content/topics/*.md changes.
  */
 
 const fs = require('fs');
@@ -21,27 +24,31 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const TOPICS_DIR = path.join(ROOT, 'content', 'topics');
 const TOPIC_DIR = path.join(ROOT, 'shared/src/commonMain/kotlin/com/ssbmax/shared/presentation/topic');
 const LOADER_PATH = path.join(TOPIC_DIR, 'TopicContentLoader.kt');
-const CONFERENCE_PATH = path.join(TOPIC_DIR, 'TopicContentLoaderConference.kt');
 
-// testType key -> { label used in getTopicInfo's `when`, TestType list literal }
+// testType key -> { label used in getTopicInfo's `when`, TestType list literal, fn: intro function name }
 const TOPIC_DISPATCH = {
-  OIR: { label: '"Officer Intelligence Rating"', tests: 'listOf(TestType.OIR)' },
-  PPDT: { label: '"Picture Perception & Description Test"', tests: 'listOf(TestType.PPDT)' },
-  PIQ_FORM: { label: '"Personal Information Questionnaire"', tests: 'listOf(TestType.PIQ)' },
-  PSYCHOLOGY: { label: '"Psychology Tests"', tests: 'listOf(TestType.TAT, TestType.WAT, TestType.SRT, TestType.SD)' },
+  OIR: { label: '"Officer Intelligence Rating"', tests: 'listOf(TestType.OIR)', fn: 'oirIntroduction' },
+  PPDT: { label: '"Picture Perception & Description Test"', tests: 'listOf(TestType.PPDT)', fn: 'ppdtIntroduction' },
+  PIQ_FORM: { label: '"Personal Information Questionnaire"', tests: 'listOf(TestType.PIQ)', fn: 'piqFormIntroduction' },
+  PSYCHOLOGY: {
+    label: '"Psychology Tests"',
+    tests: 'listOf(TestType.TAT, TestType.WAT, TestType.SRT, TestType.SD)',
+    fn: 'psychologyIntroduction',
+  },
   GTO: {
     label: '"Group Testing Officer Tasks"',
     tests: 'listOf(TestType.GTO_GD, TestType.GTO_GPE, TestType.GTO_PGT, TestType.GTO_GOR, TestType.GTO_HGT, TestType.GTO_LECTURETTE, TestType.GTO_IO, TestType.GTO_CT)',
+    fn: 'gtoIntroduction',
   },
-  INTERVIEW: { label: '"Interview Preparation"', tests: 'listOf(TestType.IO)' },
-  CONFERENCE: { label: '"Conference"', tests: 'emptyList()' },
-  MEDICALS: { label: '"Medical Examination"', tests: 'emptyList()' },
-  SSB_OVERVIEW: { label: '"Overview of SSB"', tests: 'emptyList()' },
+  INTERVIEW: { label: '"Interview Preparation"', tests: 'listOf(TestType.IO)', fn: 'interviewIntroduction' },
+  CONFERENCE: { label: '"Conference"', tests: 'emptyList()', fn: 'conferenceIntroduction' },
+  MEDICALS: { label: '"Medical Examination"', tests: 'emptyList()', fn: 'medicalsIntroduction' },
+  SSB_OVERVIEW: { label: '"Overview of SSB"', tests: 'emptyList()', fn: 'ssbOverviewIntroduction' },
 };
 
-// getTopicInfo() dispatches "PIQ_FORM"/"PIQ" and "PIQ_FORM" together, and
-// GTO's TestType list is long enough to need its own line — keep the
-// hand-authored dispatch shape rather than generating a lossy generic one.
+// getTopicInfo() dispatches "PIQ_FORM"/"PIQ" together, and GTO's TestType
+// list is long enough to need its own line — keep the hand-authored
+// dispatch shape rather than generating a lossy generic one.
 const DISPATCH_LINES = [
   `            "OIR" -> TopicInfo(${TOPIC_DISPATCH.OIR.label}, getIntroduction(testType), getStudyMaterials(testType), ${TOPIC_DISPATCH.OIR.tests})`,
   `            "PPDT" -> TopicInfo(${TOPIC_DISPATCH.PPDT.label}, getIntroduction(testType), getStudyMaterials(testType), ${TOPIC_DISPATCH.PPDT.tests})`,
@@ -71,6 +78,16 @@ function loadTopics() {
   return topics;
 }
 
+/** File name for one topic's split-out introduction file, e.g. TopicIntroPiqForm.kt. */
+function introFileName(key) {
+  const pascal = key
+    .toLowerCase()
+    .split('_')
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join('');
+  return `TopicIntro${pascal}.kt`;
+}
+
 function generate() {
   const topics = loadTopics();
   for (const key of Object.keys(TOPIC_DISPATCH)) {
@@ -78,8 +95,7 @@ function generate() {
   }
 
   const introCases = Object.keys(TOPIC_DISPATCH)
-    .filter((k) => k !== 'CONFERENCE')
-    .map((k) => `            "${k}" -> ${kotlinTripleQuoted(topics[k], 16)}`)
+    .map((k) => `            "${k}" -> ${TOPIC_DISPATCH[k].fn}()`)
     .join('\n');
 
   const loaderKt = `package com.ssbmax.shared.presentation.topic
@@ -88,11 +104,10 @@ import com.ssbmax.shared.domain.model.TestType
 
 /**
  * KMP port of the Android app/.../ui/topic/TopicContentLoader.kt -- static
- * per-topic introduction text + test list (local fallback content). The
- * Conference topic's introduction (by far the largest single block of text)
- * is split into [conferenceIntroduction] to keep this file under the repo's
- * 300-line Quality Limit, same rationale the Android original itself states
- * for splitting StudyMaterialsProvider out of this file.
+ * per-topic introduction text + test list (local fallback content). Each
+ * topic's introduction prose lives in its own TopicIntro<Topic>.kt file
+ * (one function each) to keep every generated file under the repo's
+ * 300-line Quality Limit.
  *
  * GENERATED from the content/topics markdown files by scripts/content/generateKmpFallback.js
  * -- do not hand-edit; edit the markdown source and regenerate instead.
@@ -108,7 +123,6 @@ ${DISPATCH_LINES.join('\n')}
     private fun getIntroduction(testType: String): String {
         return when (testType.uppercase()) {
 ${introCases}
-            "CONFERENCE" -> conferenceIntroduction()
             else -> "Detailed information about this topic will be available soon."
         }
     }
@@ -129,22 +143,39 @@ data class TopicInfo(
 )
 `;
 
-  const conferenceKt = `package com.ssbmax.shared.presentation.topic
+  fs.writeFileSync(LOADER_PATH, loaderKt);
+
+  const writtenIntroFiles = [];
+  for (const key of Object.keys(TOPIC_DISPATCH)) {
+    const { fn } = TOPIC_DISPATCH[key];
+    const fileName = introFileName(key);
+    const filePath = path.join(TOPIC_DIR, fileName);
+    const kt = `package com.ssbmax.shared.presentation.topic
 
 /**
- * The Conference topic's introduction text, split out of
- * [TopicContentLoader] purely to keep both files under the repo's 300-line
- * Quality Limit -- no behavior change from having it inline.
+ * The ${key} topic's introduction text, split out of [TopicContentLoader]
+ * purely to keep every generated file under the repo's 300-line Quality
+ * Limit -- no behavior change from having it inline.
  *
- * GENERATED from content/topics/CONFERENCE.md by
+ * GENERATED from content/topics/${key}.md by
  * scripts/content/generateKmpFallback.js -- do not hand-edit.
  */
-internal fun conferenceIntroduction(): String = ${kotlinTripleQuoted(topics.CONFERENCE, 4)}
+internal fun ${fn}(): String = ${kotlinTripleQuoted(topics[key], 4)}
 `;
+    fs.writeFileSync(filePath, kt);
+    writtenIntroFiles.push(fileName);
+  }
 
-  fs.writeFileSync(LOADER_PATH, loaderKt);
-  fs.writeFileSync(CONFERENCE_PATH, conferenceKt);
-  console.log(`Regenerated ${path.relative(ROOT, LOADER_PATH)} and ${path.relative(ROOT, CONFERENCE_PATH)} from content/topics/*.md`);
+  // Remove the old pre-Phase-7 CONFERENCE-only split file if it's still on disk
+  // under its previous name, now superseded by TopicIntroConference.kt above.
+  const legacyConferencePath = path.join(TOPIC_DIR, 'TopicContentLoaderConference.kt');
+  if (fs.existsSync(legacyConferencePath)) {
+    fs.unlinkSync(legacyConferencePath);
+  }
+
+  console.log(
+    `Regenerated ${path.relative(ROOT, LOADER_PATH)} and ${writtenIntroFiles.length} topic intro file(s) from content/topics/*.md`
+  );
 }
 
 if (require.main === module) {

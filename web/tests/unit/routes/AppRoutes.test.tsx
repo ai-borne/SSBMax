@@ -64,4 +64,14 @@ describe('AppRoutes', () => {
       expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     });
   }
+
+  it('renders FaqPage, not App, at /faq (Phase 7)', () => {
+    render(
+      <MemoryRouter initialEntries={['/faq']}>
+        <AppRoutes />
+      </MemoryRouter>
+    );
+    expect(screen.queryByTestId('hero-section')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+  });
 });

@@ -11,10 +11,13 @@ vi.mock('firebase/firestore', () => ({
     data: () => null
   }),
   getDocs: vi.fn().mockResolvedValue({
-    forEach: vi.fn()
+    forEach: vi.fn(),
+    docs: []
   }),
   query: vi.fn(),
-  limit: vi.fn()
+  limit: vi.fn(),
+  orderBy: vi.fn(),
+  where: vi.fn()
 }));
 
 vi.mock('../../src/config/firebase', () => ({
@@ -36,24 +39,24 @@ describe('ContentRepository Unit Tests', () => {
     expect(materials[0]).toHaveProperty('category');
   });
 
-  it('should parse testTypeId and dayNumber from Firestore snapshots with topicType fallback', async () => {
+  it('should derive testTypeId from an explicit topicType field for unambiguous topics, and dayNumber from Firestore snapshots', async () => {
     const mockDocSnapshots = [
       {
         id: 'doc_1',
         data: () => ({
-          title: 'Firestore TAT Guide',
-          topicType: 'tat',
-          dayNumber: '2',
-          summary: 'TAT summary text'
+          title: 'Firestore PPDT Guide',
+          topicType: 'PPDT',
+          dayNumber: '1',
+          summary: 'PPDT summary text'
         })
       },
       {
         id: 'doc_2',
         data: () => ({
-          title: 'Firestore PPDT Guide',
-          category: 'PPDT Stage 1',
+          title: 'Firestore OIR Guide',
+          topicType: 'OIR',
           dayNumber: 1,
-          summary: 'PPDT summary text'
+          summary: 'OIR summary text'
         })
       }
     ];
@@ -64,16 +67,44 @@ describe('ContentRepository Unit Tests', () => {
 
     const materials = await repository.getStudyMaterials();
     expect(materials).toHaveLength(2);
-    expect(materials[0].testTypeId).toBe('tat');
-    expect(materials[0].dayNumber).toBe('2');
-    expect(materials[1].testTypeId).toBe('ppdt');
+    expect(materials[0].testTypeId).toBe('ppdt');
+    expect(materials[0].dayNumber).toBe('1');
+    expect(materials[1].testTypeId).toBe('oir');
     expect(materials[1].dayNumber).toBe('1');
   });
 
+  it('does not guess a testTypeId for a topicType covering several test types (Phase 7, no fuzzy fallback)', async () => {
+    const mockDocSnapshots = [
+      { id: 'gto_1', data: () => ({ title: 'GTO Guide', topicType: 'GTO', category: 'GTO Preparation' }) },
+      { id: 'psy_1', data: () => ({ title: 'Psychology Guide', topicType: 'PSYCHOLOGY', category: 'Psychology Tests' }) }
+    ];
+    vi.mocked(getDocs).mockResolvedValueOnce({
+      forEach: (callback: (doc: any) => void) => mockDocSnapshots.forEach(callback)
+    } as any);
+
+    const materials = await repository.getStudyMaterials();
+    expect(materials[0].testTypeId).toBeUndefined();
+    expect(materials[0].topicType).toBe('GTO');
+    expect(materials[1].testTypeId).toBeUndefined();
+    expect(materials[1].topicType).toBe('PSYCHOLOGY');
+  });
+
+  it('does not mis-map MEDICALS onto the conference testTypeId (Phase 7 regression, MEDIUM 4c)', async () => {
+    const mockDocSnapshots = [
+      { id: 'med_1', data: () => ({ title: 'Medical Guide', topicType: 'MEDICALS', category: 'SSB Preparation' }) }
+    ];
+    vi.mocked(getDocs).mockResolvedValueOnce({
+      forEach: (callback: (doc: any) => void) => mockDocSnapshots.forEach(callback)
+    } as any);
+
+    const materials = await repository.getStudyMaterials();
+    expect(materials[0].testTypeId).toBeUndefined();
+    expect(materials[0].testTypeId).not.toBe('conference');
+  });
+
   it('should return study material by id from fallback when not found', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({
-      exists: () => false,
-      data: () => null
+    vi.mocked(getDocs).mockResolvedValueOnce({
+      docs: []
     } as any);
 
     const material = await repository.getStudyMaterialById('ssb-overview-01');
@@ -81,16 +112,19 @@ describe('ContentRepository Unit Tests', () => {
     expect(material?.id).toBe('ssb-overview-01');
   });
 
-  it('should return study material by id from Firestore snapshot when found', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({
-      exists: () => true,
-      id: 'doc_wat',
-      data: () => ({
-        title: 'Firestore WAT Guide',
-        testTypeId: 'wat',
-        dayNumber: '2',
-        summary: 'WAT guide summary'
-      })
+  it('should return study material by id from Firestore, looked up by the id field (not doc path)', async () => {
+    vi.mocked(getDocs).mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'doc_wat',
+          data: () => ({
+            title: 'Firestore WAT Guide',
+            testTypeId: 'wat',
+            dayNumber: '2',
+            summary: 'WAT guide summary'
+          })
+        }
+      ]
     } as any);
 
     const material = await repository.getStudyMaterialById('doc_wat');
@@ -101,9 +135,8 @@ describe('ContentRepository Unit Tests', () => {
   });
 
   it('should return null for non-existent material id', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({
-      exists: () => false,
-      data: () => null
+    vi.mocked(getDocs).mockResolvedValueOnce({
+      docs: []
     } as any);
 
     const material = await repository.getStudyMaterialById('invalid_id_999');

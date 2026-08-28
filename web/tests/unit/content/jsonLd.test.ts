@@ -12,6 +12,7 @@ import {
   buildBreadcrumbListJsonLd,
   buildCourseJsonLd,
   buildContentPageJsonLd,
+  buildFaqPageJsonLd,
   serializeJsonLd,
   SITE_BASE_URL,
 } from '../../../scripts/jsonLd.mjs';
@@ -21,6 +22,7 @@ const ROOT = join(__dirname, '..', '..', '..');
 const contentBundle = JSON.parse(readFileSync(join(ROOT, 'src', 'generated', 'contentBundle.json'), 'utf8'));
 const routes = JSON.parse(readFileSync(join(ROOT, 'src', 'routes', 'contentRoutes.json'), 'utf8'));
 const seoTable = JSON.parse(readFileSync(join(ROOT, 'src', 'routes', 'contentSeo.json'), 'utf8'));
+const faq = JSON.parse(readFileSync(join(ROOT, 'src', 'generated', 'faqBundle.json'), 'utf8'));
 
 describe('buildOrganizationJsonLd', () => {
   it('has the required @type, name, and url', () => {
@@ -89,5 +91,26 @@ describe('buildContentPageJsonLd + serializeJsonLd', () => {
       const json = serializeJsonLd(node);
       expect(JSON.parse(json)).toEqual(node);
     }
+  });
+});
+
+describe('buildFaqPageJsonLd (Phase 7)', () => {
+  it('emits one Question/Answer mainEntity per FAQ entry, matching the real content/faq.md questions', () => {
+    const node = buildFaqPageJsonLd({ faq });
+    expect(node['@context']).toBe('https://schema.org');
+    expect(node['@type']).toBe('FAQPage');
+    const mainEntity = node.mainEntity as Array<{ '@type': string; name: string; acceptedAnswer: { '@type': string; text: string } }>;
+    expect(mainEntity).toHaveLength(faq.questions.length);
+    mainEntity.forEach((entry, i) => {
+      expect(entry['@type']).toBe('Question');
+      expect(entry.name).toBe(faq.questions[i].question);
+      expect(entry.acceptedAnswer['@type']).toBe('Answer');
+      expect(entry.acceptedAnswer.text).toBe(faq.questions[i].answer);
+    });
+  });
+
+  it('is JSON-serializable round-trip', () => {
+    const node = buildFaqPageJsonLd({ faq });
+    expect(JSON.parse(serializeJsonLd(node))).toEqual(node);
   });
 });

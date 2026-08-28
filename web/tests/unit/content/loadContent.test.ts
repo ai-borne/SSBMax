@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { parseContentFile, assertPublishable, PLACEHOLDER_BODY, loadTopics, loadStudyMaterials } from '../../../scripts/loadContent.mjs';
+import {
+  parseContentFile,
+  assertPublishable,
+  PLACEHOLDER_BODY,
+  loadTopics,
+  loadStudyMaterials,
+  loadFaq,
+  parseFaqQuestions,
+} from '../../../scripts/loadContent.mjs';
 
 describe('parseContentFile', () => {
   it('parses frontmatter + body to the exact expected structure', () => {
@@ -38,6 +46,39 @@ describe('loadTopics / loadStudyMaterials (reads the real content/ directory)', 
     for (const t of topics) {
       expect(t.meta.topicType).toBeTruthy();
       expect(typeof t.body).toBe('string');
+    }
+  });
+});
+
+describe('parseFaqQuestions', () => {
+  it('splits "## Question" headings and their following text into {question, answer} pairs', () => {
+    const body = '## First question?\n\nFirst answer.\n\n## Second question?\n\nSecond answer,\nacross two lines.';
+    const questions = parseFaqQuestions(body, 'fixture.md');
+    expect(questions).toEqual([
+      { question: 'First question?', answer: 'First answer.' },
+      { question: 'Second question?', answer: 'Second answer,\nacross two lines.' },
+    ]);
+  });
+
+  it('throws when a question has no answer text', () => {
+    expect(() => parseFaqQuestions('## Only a question\n', 'fixture.md')).toThrow(/no answer/);
+  });
+
+  it('throws when no "## " heading is found at all', () => {
+    expect(() => parseFaqQuestions('Just a paragraph, no headings.', 'fixture.md')).toThrow(/no "## Question" headings/);
+  });
+});
+
+describe('loadFaq (reads the real content/faq.md)', () => {
+  it('loads the real FAQ file with SEO metadata and at least 5 structured questions', () => {
+    const faq = loadFaq();
+    expect(faq.meta.title).toBeTruthy();
+    expect(faq.meta.seoTitle).toBeTruthy();
+    expect(faq.meta.seoDescription).toBeTruthy();
+    expect(faq.questions.length).toBeGreaterThanOrEqual(5);
+    for (const q of faq.questions) {
+      expect(q.question.length).toBeGreaterThan(0);
+      expect(q.answer.length).toBeGreaterThan(0);
     }
   });
 });

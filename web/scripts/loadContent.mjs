@@ -60,3 +60,46 @@ export function loadTopics() {
 export function loadStudyMaterials() {
   return loadDir(join(CONTENT_ROOT, 'study-materials'));
 }
+
+const FAQ_QUESTION_RE = /^##\s+(.+)$/;
+
+/**
+ * Splits the FAQ body into {question, answer} pairs on "## " headings (Phase 7). Kept out
+ * of content/topics or content/study-materials deliberately -- FAQ is a web-only public
+ * page, not a per-TestType topic, so it must not enter scripts/content/publishContent.js's
+ * topic_content/study_materials sync (that would put a non-TestType "FAQ" doc in front of
+ * KMP's ContentFeatureFlags dispatch for no reason).
+ */
+export function parseFaqQuestions(body, sourcePath) {
+  const lines = body.split('\n');
+  const questions = [];
+  let current = null;
+  for (const line of lines) {
+    const match = FAQ_QUESTION_RE.exec(line);
+    if (match) {
+      current = { question: match[1].trim(), answer: '' };
+      questions.push(current);
+    } else if (current) {
+      current.answer += (current.answer ? '\n' : '') + line;
+    }
+  }
+  for (const q of questions) {
+    q.answer = q.answer.trim();
+  }
+  if (questions.length === 0) {
+    throw new Error(`${sourcePath}: no "## Question" headings found in FAQ body`);
+  }
+  const empty = questions.find((q) => !q.answer);
+  if (empty) {
+    throw new Error(`${sourcePath}: FAQ question "${empty.question}" has no answer`);
+  }
+  return questions;
+}
+
+/** content/faq.md -- a single, top-level file (not a directory of docs like topics/study-materials). */
+export function loadFaq() {
+  const sourcePath = join(CONTENT_ROOT, 'faq.md');
+  const { meta, body } = parseContentFile(readFileSync(sourcePath, 'utf8'), sourcePath);
+  const questions = parseFaqQuestions(body, sourcePath);
+  return { sourcePath, meta, body, questions };
+}

@@ -8,7 +8,15 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { buildContentPageHtml, buildContentPageJsonLdScripts, escapeHtml, findCssAssets, SITE_BASE_URL } from '../../../scripts/prerenderHtml.mjs';
+import {
+  buildContentPageHtml,
+  buildContentPageJsonLdScripts,
+  buildFaqPageHtml,
+  buildFaqPageJsonLdScripts,
+  escapeHtml,
+  findCssAssets,
+  SITE_BASE_URL,
+} from '../../../scripts/prerenderHtml.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..', '..');
@@ -16,6 +24,7 @@ const ROOT = join(__dirname, '..', '..', '..');
 const contentBundle = JSON.parse(readFileSync(join(ROOT, 'src', 'generated', 'contentBundle.json'), 'utf8'));
 const routes = JSON.parse(readFileSync(join(ROOT, 'src', 'routes', 'contentRoutes.json'), 'utf8'));
 const seoTable = JSON.parse(readFileSync(join(ROOT, 'src', 'routes', 'contentSeo.json'), 'utf8'));
+const faq = JSON.parse(readFileSync(join(ROOT, 'src', 'generated', 'faqBundle.json'), 'utf8'));
 
 describe('escapeHtml', () => {
   it('escapes HTML-significant characters', () => {
@@ -90,4 +99,42 @@ describe('buildContentPageHtml, for every real content route', () => {
       });
     });
   }
+});
+
+describe('buildFaqPageHtml (Phase 7)', () => {
+  const html = buildFaqPageHtml({ faq, cssHrefs: ['/assets/index-abc123.css'] });
+
+  it('is a genuinely static document -- no hydration/module scripts, only inert JSON-LD', () => {
+    expect(html).not.toMatch(/<script(?!\s+type="application\/ld\+json")/);
+    expect(html).not.toContain('__INITIAL_DATA__');
+  });
+
+  it('embeds the FAQPage JSON-LD block, valid JSON', () => {
+    const jsonLdScripts = buildFaqPageJsonLdScripts({ faq });
+    expect(jsonLdScripts).toHaveLength(1);
+    expect(html).toContain(`<script type="application/ld+json">${jsonLdScripts[0]}</script>`);
+    expect(() => JSON.parse(jsonLdScripts[0])).not.toThrow();
+  });
+
+  it('contains every question and answer from content/faq.md, not a placeholder', () => {
+    for (const { question, answer } of faq.questions) {
+      expect(html).toContain(escapeHtml(question));
+      expect(html).toContain(escapeHtml(answer));
+    }
+  });
+
+  it('carries the FAQ SEO title/description as <title>, meta, OG, and Twitter tags', () => {
+    expect(html).toContain(`<title>${escapeHtml(faq.seoTitle)}</title>`);
+    expect(html).toContain(`<meta name="description" content="${escapeHtml(faq.seoDescription)}" />`);
+    expect(html).toContain(`<meta property="og:title" content="${escapeHtml(faq.seoTitle)}" />`);
+  });
+
+  it('sets a canonical link matching /faq', () => {
+    expect(html).toContain(`<link rel="canonical" href="${SITE_BASE_URL}/faq" />`);
+  });
+
+  it('is well-formed enough to be a real HTML document', () => {
+    expect(html).toMatch(/^<!DOCTYPE html>/);
+    expect(html).toContain('<h1>');
+  });
 });

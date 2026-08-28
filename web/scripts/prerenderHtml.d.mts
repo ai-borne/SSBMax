@@ -25,6 +25,18 @@ export interface BuildContentPageHtmlInput {
   siteBaseUrl?: string;
 }
 
+export interface FaqQuestion {
+  question: string;
+  answer: string;
+}
+
+export interface FaqBundle {
+  title: string;
+  seoTitle: string;
+  seoDescription: string;
+  questions: FaqQuestion[];
+}
+
 export const SITE_BASE_URL: string;
 export function escapeHtml(value: unknown): string;
 export function findCssAssets(distDir: string): string[];
@@ -35,3 +47,5 @@ export function buildContentPageJsonLdScripts(input: {
   path: string;
   siteBaseUrl?: string;
 }): string[];
+export function buildFaqPageHtml(input: { faq: FaqBundle; cssHrefs?: string[]; siteBaseUrl?: string }): string;
+export function buildFaqPageJsonLdScripts(input: { faq: FaqBundle; siteBaseUrl?: string }): string[];

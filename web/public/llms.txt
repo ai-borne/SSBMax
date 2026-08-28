@@ -4,6 +4,7 @@
 
 ## Guides
 
+- [FAQ](https://ssbmax.in/faq)
 - [SSB_OVERVIEW](https://ssbmax.in/study/ssb-selection-process-guide)
 - [OIR](https://ssbmax.in/study/ssb-oir-test-preparation)
 - [PPDT](https://ssbmax.in/study/ssb-ppdt-picture-perception-discussion-test)

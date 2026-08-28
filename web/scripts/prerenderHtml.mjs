@@ -10,7 +10,7 @@
 // (contentBundle.json / contentRoutes.json / contentSeo.json) keeps a single data source
 // without requiring a TS loader or an SSR bundle step in a plain Node script.
 import { readdirSync } from 'node:fs';
-import { buildContentPageJsonLd, serializeJsonLd } from './jsonLd.mjs';
+import { buildContentPageJsonLd, buildFaqPageJsonLd, serializeJsonLd } from './jsonLd.mjs';
 
 export const SITE_BASE_URL = 'https://ssbmax.in';
 
@@ -101,6 +101,58 @@ export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBase
       <a href="/">Back to home</a>
       <h1>${escapeHtml(topic.title)}</h1>
       <div>${escapeHtml(topic.introduction)}</div>${materialsHtml}
+    </article>
+  </body>
+</html>
+`;
+}
+
+/**
+ * Exact serialized JSON-LD strings embedded in the static /faq page's <head> -- mirrors
+ * buildContentPageJsonLdScripts so scripts/cspHeaders.mjs can hash it the same way.
+ */
+export function buildFaqPageJsonLdScripts({ faq, siteBaseUrl = SITE_BASE_URL }) {
+  return [serializeJsonLd(buildFaqPageJsonLd({ faq, siteBaseUrl }))];
+}
+
+function buildFaqQuestionHtml({ question, answer }) {
+  return `
+      <div>
+        <h2>${escapeHtml(question)}</h2>
+        <p>${escapeHtml(answer)}</p>
+      </div>`;
+}
+
+/** Full static HTML document for the /faq route. Mirrors FaqPage.tsx's structure, non-hydrated (Blocker 2). */
+export function buildFaqPageHtml({ faq, cssHrefs = [], siteBaseUrl = SITE_BASE_URL }) {
+  const url = `${siteBaseUrl}/faq`;
+  const cssLinks = cssHrefs.map((href) => `<link rel="stylesheet" href="${escapeHtml(href)}" />`).join('\n    ');
+  const jsonLdScripts = buildFaqPageJsonLdScripts({ faq, siteBaseUrl });
+
+  return `<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(faq.seoTitle)}</title>
+    <meta name="description" content="${escapeHtml(faq.seoDescription)}" />
+    <link rel="canonical" href="${escapeHtml(url)}" />
+    <meta property="og:title" content="${escapeHtml(faq.seoTitle)}" />
+    <meta property="og:description" content="${escapeHtml(faq.seoDescription)}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="${escapeHtml(url)}" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="${escapeHtml(faq.seoTitle)}" />
+    <meta name="twitter:description" content="${escapeHtml(faq.seoDescription)}" />
+    ${cssLinks}
+    ${jsonLdScripts.map((json) => `<script type="application/ld+json">${json}</script>`).join('\n    ')}
+  </head>
+  <body class="bg-slate-900 text-slate-50 min-h-screen">
+    <article class="max-w-3xl mx-auto px-4 py-8 sm:py-12">
+      <a href="/">Back to home</a>
+      <h1>${escapeHtml(faq.title)}</h1>
+      <div>${faq.questions.map(buildFaqQuestionHtml).join('\n')}
+      </div>
     </article>
   </body>
 </html>

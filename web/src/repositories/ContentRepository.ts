@@ -1,10 +1,11 @@
-import { collection, doc, getDoc, getDocs, query, limit } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, limit, orderBy, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { FirestorePaths } from '../generated/contracts';
 import { IContentRepository } from './interfaces/IContentRepository';
 import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, TestBatchInfo, GPEImage, OIRContentMeta } from '../types/testContent';
 import { ContentUnavailableError } from '../types/errors';
 import { getFallbackStudyMaterials, getFallbackStudyMaterialById } from '../constants/fallbackStudyMaterials';
+import { primaryTestTypeIdForTopicType } from '../constants/topicTypeMapping';
 import {
   mapDocToWATBatch,
   mapDocToSRTBatch,
@@ -25,7 +26,9 @@ import {
 export class ContentRepository implements IContentRepository {
   async getStudyMaterials(): Promise<StudyMaterial[]> {
     try {
-      const querySnapshot = await getDocs(query(collection(db, FirestorePaths.STUDY_MATERIALS), limit(50)));
+      const querySnapshot = await getDocs(
+        query(collection(db, FirestorePaths.STUDY_MATERIALS), orderBy('displayOrder'), limit(50))
+      );
       const materials: StudyMaterial[] = [];
       querySnapshot.forEach((docSnap) => {
         materials.push(this.mapDocToStudyMaterial(docSnap.id, docSnap.data()));
@@ -37,10 +40,16 @@ export class ContentRepository implements IContentRepository {
     }
   }
 
+  // KMP (GitLiveStudyContentRepository.getStudyMaterial) looks a material up by its `id`
+  // field, not by Firestore doc path -- aligned here (Phase 7, MEDIUM 4c) so both clients
+  // resolve the same document even if a doc's path ever diverges from its `id` field.
   async getStudyMaterialById(id: string): Promise<StudyMaterial | null> {
     try {
-      const docSnap = await getDoc(doc(db, FirestorePaths.STUDY_MATERIALS, id));
-      if (!docSnap.exists()) {
+      const querySnapshot = await getDocs(
+        query(collection(db, FirestorePaths.STUDY_MATERIALS), where('id', '==', id), limit(1))
+      );
+      const docSnap = querySnapshot.docs[0];
+      if (!docSnap) {
         return getFallbackStudyMaterialById(id);
       }
       return this.mapDocToStudyMaterial(docSnap.id, docSnap.data());
@@ -51,7 +60,7 @@ export class ContentRepository implements IContentRepository {
   }
 
   private mapDocToStudyMaterial(id: string, data: Record<string, any>): StudyMaterial {
-    const rawTestType = data.testTypeId || data.topicType || data.category;
+    const topicType = typeof data.topicType === 'string' ? data.topicType : undefined;
     const content = data.contentMarkdown || data.introduction || data.content || '';
     const readTime = typeof data.readTime === 'number'
       ? data.readTime
@@ -62,33 +71,21 @@ export class ContentRepository implements IContentRepository {
     return {
       id,
       title: data.title || '',
-      category: data.category || data.topicType || 'General',
+      category: data.category || topicType || 'General',
       summary: data.summary || (content ? content.slice(0, 150) + '...' : ''),
       contentMarkdown: content,
       estimatedReadTimeMinutes: readTime,
       tags: data.tags || [],
       createdAt: typeof data.lastUpdated === 'number' ? new Date(data.lastUpdated).toISOString() : data.createdAt || new Date().toISOString(),
       dayNumber: data.dayNumber ? (String(data.dayNumber) as StudyMaterial['dayNumber']) : undefined,
-      testTypeId: this.parseTestTypeId(rawTestType)
+      topicType,
+      // Explicit testTypeId field wins if the document ever carries one directly;
+      // otherwise derive it from topicType via the explicit table (see
+      // constants/topicTypeMapping.ts) -- undefined, not guessed, when topicType maps to
+      // more than one testTypeId (GTO, PSYCHOLOGY) or none (MEDICALS, SSB_OVERVIEW).
+      testTypeId: (typeof data.testTypeId === 'string' ? data.testTypeId : undefined) as StudyMaterial['testTypeId']
+        ?? primaryTestTypeIdForTopicType(topicType)
     };
-  }
-
-  private parseTestTypeId(val: unknown): StudyMaterial['testTypeId'] {
-    if (typeof val !== 'string') return undefined;
-    const norm = val.trim().toLowerCase().replace(/[\s-]+/g, '_');
-    const valid: StudyMaterial['testTypeId'][] = [
-      'oir', 'ppdt', 'piq', 'tat', 'wat', 'srt', 'sd', 'gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt', 'interview', 'conference'
-    ];
-    if (valid.includes(norm as StudyMaterial['testTypeId'])) return norm as StudyMaterial['testTypeId'];
-    const keywordMap: Array<[string, StudyMaterial['testTypeId']]> = [
-      ['oir', 'oir'], ['ppdt', 'ppdt'], ['piq', 'piq'], ['tat', 'tat'], ['psychology', 'tat'],
-      ['wat', 'wat'], ['srt', 'srt'], ['sd', 'sd'], ['self', 'sd'], ['gd', 'gd'], ['discussion', 'gd'],
-      ['gpe', 'gpe'], ['planning', 'gpe'], ['pgt', 'pgt'], ['hgt', 'hgt'], ['iot', 'iot'], ['obstacle', 'iot'],
-      ['command', 'command_task'], ['snake', 'snake_race'], ['gor', 'snake_race'], ['fgt', 'fgt'],
-      ['interview', 'interview'], ['conference', 'conference'], ['medicals', 'conference']
-    ];
-    const match = keywordMap.find(([kw]) => norm.includes(kw));
-    return match ? match[1] : undefined;
   }
 
   /**

@@ -20,20 +20,21 @@ describe('loadContentRoutes', () => {
 });
 
 describe('buildSitemapXml', () => {
-  it('includes the homepage plus every content route as an absolute URL', () => {
+  it('includes the homepage, /faq, and every content route as an absolute URL', () => {
     const routes = loadContentRoutes();
     const xml = buildSitemapXml(routes);
     expect(xml).toContain(`<loc>${SITE_BASE_URL}</loc>`);
+    expect(xml).toContain(`<loc>${SITE_BASE_URL}/faq</loc>`);
     for (const r of routes) {
       expect(xml).toContain(`<loc>${SITE_BASE_URL}${r.path}</loc>`);
     }
   });
 
-  it('emits exactly one <url> entry per route plus the homepage -- no drift, no duplicates', () => {
+  it('emits exactly one <url> entry per route plus the homepage and /faq -- no drift, no duplicates', () => {
     const routes = loadContentRoutes();
     const xml = buildSitemapXml(routes);
     const matches = xml.match(/<url>/g) ?? [];
-    expect(matches.length).toBe(routes.length + 1);
+    expect(matches.length).toBe(routes.length + 2);
   });
 
   it('is well-formed enough to parse as XML (balanced tags)', () => {

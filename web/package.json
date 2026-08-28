@@ -4,12 +4,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "predev": "npm run generate:content && npm run generate:seo",
+    "predev": "npm run generate:content && npm run generate:faq && npm run generate:seo",
     "dev": "vite",
-    "prebuild": "npm run generate:content && npm run generate:seo",
+    "prebuild": "npm run generate:content && npm run generate:faq && npm run generate:seo",
     "build": "tsc -b && vite build && node scripts/prerenderContentRoutes.mjs && node scripts/write-version.mjs",
     "preview": "vite preview",
-    "pretest": "npm run generate:content && npm run generate:seo",
+    "pretest": "npm run generate:content && npm run generate:faq && npm run generate:seo",
     "test": "vitest run --exclude '**/sharedCorpusEmulator.test.ts' --exclude '**/tests/e2e/**'",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -17,6 +17,7 @@
     "test:e2e": "playwright test",
     "content:validate": "node scripts/validate-content.mjs",
     "generate:content": "node scripts/generateContentBundle.mjs",
+    "generate:faq": "node scripts/generateFaqBundle.mjs",
     "generate:seo": "node scripts/generateSeoFiles.mjs"
   },
   "dependencies": {

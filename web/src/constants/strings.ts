@@ -9,6 +9,7 @@ import { studyStrings } from './strings/study';
 import { notificationStrings } from './strings/notifications';
 import { supportStrings } from './strings/support';
 import { contentTopicStrings } from './strings/contentTopic';
+import { publicFaqStrings } from './strings/faq';
 
 export const strings = {
   ...commonStrings,
@@ -22,5 +23,6 @@ export const strings = {
   study: studyStrings,
   notifications: notificationStrings,
   support: supportStrings,
-  ...contentTopicStrings
+  ...contentTopicStrings,
+  ...publicFaqStrings
 } as const;

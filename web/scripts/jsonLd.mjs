@@ -72,6 +72,26 @@ export function buildContentPageJsonLd({ topic, seo, path, siteBaseUrl = SITE_BA
   ];
 }
 
+/**
+ * FAQPage node for /faq (Phase 7, deferred from Phase 6) -- one Question/Answer pair per
+ * mainEntity entry, straight from the same parsed {question, answer} pairs the visible page
+ * renders, so the structured data can never drift from the displayed text.
+ */
+export function buildFaqPageJsonLd({ faq, siteBaseUrl = SITE_BASE_URL }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.questions.map(({ question, answer }) => ({
+      '@type': 'Question',
+      name: question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: answer,
+      },
+    })),
+  };
+}
+
 /** Serializes a JSON-LD node exactly as embedded in HTML -- the one string both the page and its CSP hash are derived from. */
 export function serializeJsonLd(node) {
   return JSON.stringify(node);
