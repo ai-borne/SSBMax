@@ -106,6 +106,10 @@ async function processPaymentCaptured(payment, eventId, firestoreDb) {
   const amountPaid = payment?.amount || 0;
   const currency = payment?.currency || 'INR';
 
+  if (isSubscriptionLinkedPayment(payment)) {
+    return { subscriptionLinked: true };
+  }
+
   if (!userId) {
     return { warning: 'missing_user_id' };
   }
@@ -116,10 +120,6 @@ async function processPaymentCaptured(payment, eventId, firestoreDb) {
 
   if (!payment?.id) {
     return { missingPaymentId: true };
-  }
-
-  if (isSubscriptionLinkedPayment(payment)) {
-    return { subscriptionLinked: true };
   }
 
   const logRef = firestoreDb.collection(FirestorePaths.WEBHOOK_LOGS).doc(eventId);

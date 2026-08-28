@@ -176,3 +176,15 @@ test('missing userId in notes is a warning, not a hard failure', async () => {
   const result = await processPaymentCaptured(paymentEntity({ notes: {} }), 'evt_9', db);
   assert.equal(result.warning, 'missing_user_id');
 });
+
+test('a subscription-linked payment missing userId in notes is still skipped as subscriptionLinked, not misreported as missing_user_id', async () => {
+  // Subscription-family charges are the subscription-family handler's responsibility and never
+  // carry `notes.userId` themselves -- the isSubscriptionLinkedPayment check must run before the
+  // userId check, or every genuinely subscription-linked payment falls into the warning branch
+  // instead of being cleanly skipped here.
+  const { db, subscriptionDocs } = makeFakeDb();
+  const result = await processPaymentCaptured(paymentEntity({ invoice_id: 'inv_2', notes: {} }), 'evt_10', db);
+  assert.equal(result.subscriptionLinked, true);
+  assert.equal(result.warning, undefined);
+  assert.equal(subscriptionDocs.has('user1'), false);
+});

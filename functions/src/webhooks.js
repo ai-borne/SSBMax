@@ -167,6 +167,8 @@ exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10, se
       console.error('Transaction error during Razorpay subscription webhook processing:', txError);
       return res.status(500).json({ status: 'error', message: 'Internal processing error' });
     }
+  } else {
+    console.log(`Razorpay webhook: unhandled event type "${event}" (${eventId}) -- acknowledged, no action taken`);
   }
 
   return res.status(200).json({ status: 'ok' });
