@@ -43,6 +43,8 @@ object SsbContracts {
         const val TEST_SESSIONS = "test_sessions"
         const val CONTENT_VERSIONS = "content_versions"
         const val TOPIC_CONTENT = "topic_content"
+        const val TOPIC_SECTIONS = "topic_sections"
+        const val STUDY_MATERIAL_SECTIONS = "study_material_sections"
         const val HEALTH_CHECK = "health_check"
         const val PAYMENTS = "payments"
         const val WEBHOOK_LOGS = "webhook_logs"

@@ -422,6 +422,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // D2 side documents (docs/plans/write-the-phased-plan-wobbly-pancake.md
+    // Phase 5): structured DocumentModel published alongside -- never onto --
+    // topic_content / study_materials. Mirrors topic_content's rule exactly,
+    // fetched only when a topic/material detail screen is actually opened.
+    match /topic_sections/{topicId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /study_material_sections/{materialId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
     // ============================================
     // STUDY PROGRESS (per-user, doc id `${userId}_${materialId}`)
     // ============================================

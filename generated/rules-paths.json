@@ -26,6 +26,7 @@
     "psych_results",
     "question_cache",
     "question_usage",
+    "study_material_sections",
     "study_materials",
     "study_progress",
     "study_sessions",
@@ -48,6 +49,7 @@
     "test_content/wat/word_batches",
     "test_sessions",
     "topic_content",
+    "topic_sections",
     "user_progress",
     "users",
     "webhook_logs"

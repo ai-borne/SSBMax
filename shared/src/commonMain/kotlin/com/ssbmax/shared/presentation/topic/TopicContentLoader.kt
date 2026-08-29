@@ -1,6 +1,7 @@
 package com.ssbmax.shared.presentation.topic
 
 import com.ssbmax.shared.domain.model.TestType
+import com.ssbmax.shared.ui.content.blocks.DocumentModel
 
 /**
  * KMP port of the Android app/.../ui/topic/TopicContentLoader.kt -- static
@@ -44,6 +45,28 @@ object TopicContentLoader {
             "MEDICALS" -> medicalsIntroduction()
             "SSB_OVERVIEW" -> ssbOverviewIntroduction()
             else -> "Detailed information about this topic will be available soon."
+        }
+    }
+
+    /**
+     * Structured twin of [getIntroduction] (Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md)
+     * -- the offline-fallback [DocumentModel] every topic now has, generated from the exact same
+     * content/topics markdown source. `null` for a testType with no [TopicInfo] entry above (the
+     * pre-existing "SSB Topic" catch-all), matching [com.ssbmax.shared.presentation.topic.TopicViewModel]'s
+     * "no structured model for this topic" contract.
+     */
+    fun getStructuredIntroduction(testType: String): DocumentModel? {
+        return when (testType.uppercase()) {
+            "OIR" -> oirIntroductionSections()
+            "PPDT" -> ppdtIntroductionSections()
+            "PIQ_FORM" -> piqFormIntroductionSections()
+            "PSYCHOLOGY" -> psychologyIntroductionSections()
+            "GTO" -> gtoIntroductionSections()
+            "INTERVIEW" -> interviewIntroductionSections()
+            "CONFERENCE" -> conferenceIntroductionSections()
+            "MEDICALS" -> medicalsIntroductionSections()
+            "SSB_OVERVIEW" -> ssbOverviewIntroductionSections()
+            else -> null
         }
     }
 

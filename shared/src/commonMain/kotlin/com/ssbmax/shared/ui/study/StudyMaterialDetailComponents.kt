@@ -96,18 +96,26 @@ internal fun MaterialHeaderCard(material: StudyMaterialContent, modifier: Modifi
 }
 
 /**
- * Renders either the HTML PIQ form (via [HtmlContentView]) or markdown
- * content (via [MarkdownText]), matching the Android original's
- * `content.startsWith("<!DOCTYPE html>")`/`startsWith("<html")` branch.
+ * Renders the HTML PIQ form (via [HtmlContentView]), the structured [sections] model (via
+ * [DocumentView], Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md -- same
+ * sections-over-markdown precedent as [com.ssbmax.shared.ui.topic.IntroductionTab]), or plain
+ * markdown [content] (via [MarkdownText]) as the fallback, matching the Android original's
+ * `content.startsWith("<!DOCTYPE html>")`/`startsWith("<html")` branch for the HTML case.
  */
 @Composable
-internal fun MaterialBodyContent(content: String, modifier: Modifier = Modifier) {
+internal fun MaterialBodyContent(
+    content: String,
+    sections: com.ssbmax.shared.ui.content.blocks.DocumentModel? = null,
+    modifier: Modifier = Modifier
+) {
     if (content.startsWith("<!DOCTYPE html>") || content.startsWith("<html")) {
         Card(modifier = modifier.fillMaxWidth()) {
             Box(modifier = Modifier.fillMaxWidth().height(2000.dp)) {
                 HtmlContentView(htmlContent = content, modifier = Modifier.fillMaxSize())
             }
         }
+    } else if (sections != null) {
+        com.ssbmax.shared.ui.content.DocumentView(model = sections, modifier = modifier.fillMaxWidth())
     } else {
         Card(modifier = modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

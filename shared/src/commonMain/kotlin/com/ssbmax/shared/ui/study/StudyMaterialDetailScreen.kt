@@ -140,7 +140,7 @@ fun StudyMaterialDetailScreen(
 
                     item { MaterialHeaderCard(material = material) }
 
-                    item { MaterialBodyContent(content = material.content) }
+                    item { MaterialBodyContent(content = material.content, sections = material.sections) }
 
                     if (material.tags.isNotEmpty()) {
                         item { TagsSection(tags = material.tags) }

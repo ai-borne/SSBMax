@@ -106,6 +106,43 @@ class TopicViewModelTest {
     }
 
     @Test
+    fun `loadTopic falls back to the generated structured model when no D2 side document is published`() = runTest(testDispatcher) {
+        // OIR is the one topic behind ContentFeatureFlags.isStructuredRenderingEnabled today --
+        // Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md's exit criterion that a
+        // missing side document falls back to the generated offline copy, not a blank section.
+        studyContentRepository.topicSectionsResult = Result.success(null)
+        val viewModel = buildViewModel()
+
+        viewModel.loadTopic("OIR")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val sections = viewModel.uiState.value.introductionSections
+        assertEquals(TopicContentLoader.getStructuredIntroduction("OIR"), sections)
+    }
+
+    @Test
+    fun `loadTopic prefers the D2 side document over the generated fallback when one is published`() = runTest(testDispatcher) {
+        val cloudModel = com.ssbmax.shared.ui.content.blocks.DocumentModel(
+            sections = listOf(
+                com.ssbmax.shared.ui.content.blocks.DocSection(
+                    id = "topics/OIR.md#root",
+                    slug = "intro",
+                    heading = null,
+                    level = 0,
+                    blocks = listOf(com.ssbmax.shared.ui.content.blocks.ParagraphBlock("Cloud-authored intro"))
+                )
+            )
+        )
+        studyContentRepository.topicSectionsResult = Result.success(cloudModel)
+        val viewModel = buildViewModel()
+
+        viewModel.loadTopic("OIR")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(cloudModel, viewModel.uiState.value.introductionSections)
+    }
+
+    @Test
     fun `loadTopic for INTERVIEW also loads past interview history`() = runTest(testDispatcher) {
         interviewRepository.userResultsFlow = flowOf(
             listOf(

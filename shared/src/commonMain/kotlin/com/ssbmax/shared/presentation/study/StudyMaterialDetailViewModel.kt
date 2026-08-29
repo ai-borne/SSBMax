@@ -1,11 +1,14 @@
 package com.ssbmax.shared.presentation.study
 
+import com.ssbmax.shared.domain.config.ContentFeatureFlags
 import com.ssbmax.shared.domain.model.StudyProgress
+import com.ssbmax.shared.domain.repository.StudyContentRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.study.GetStudyMaterialDetailUseCase
 import com.ssbmax.shared.domain.usecase.study.GetStudyProgressUseCase
 import com.ssbmax.shared.domain.usecase.study.SaveStudyProgressUseCase
 import com.ssbmax.shared.domain.usecase.study.TrackStudySessionUseCase
+import com.ssbmax.shared.ui.content.blocks.DocumentModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +62,8 @@ class StudyMaterialDetailViewModel(
     private val saveStudyProgress: SaveStudyProgressUseCase,
     private val trackStudySession: TrackStudySessionUseCase,
     private val getStudyProgress: GetStudyProgressUseCase,
-    private val observeCurrentUser: ObserveCurrentUserUseCase
+    private val observeCurrentUser: ObserveCurrentUserUseCase,
+    private val studyContentRepository: StudyContentRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(StudyMaterialDetailUiState())
     val uiState: StateFlow<StudyMaterialDetailUiState> = _uiState.asStateFlow()
@@ -90,7 +94,8 @@ class StudyMaterialDetailViewModel(
                         content = cloudMaterial.contentMarkdown,
                         isPremium = cloudMaterial.isPremium,
                         tags = emptyList(),
-                        relatedMaterials = emptyList()
+                        relatedMaterials = emptyList(),
+                        sections = structuredSectionsFor(cloudMaterial.topicType, materialId)
                     )
                 } ?: run {
                     if (materialId == "piq_form_reference") {
@@ -133,6 +138,20 @@ class StudyMaterialDetailViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * D2 side document `study_material_sections/{materialId}` (Phase 5, docs/plans/
+     * write-the-phased-plan-wobbly-pancake.md), fetched only when a material's detail screen is
+     * actually opened. Unlike [com.ssbmax.shared.presentation.topic.TopicViewModel]'s topic
+     * intros, study-material bodies have no generated offline fallback (out of scope for this
+     * plan -- see its "Out of scope" section) -- a missing/failed fetch here means null, which
+     * [StudyMaterialContent.sections] callers must treat as "render [StudyMaterialContent.content]
+     * as markdown instead," same as today.
+     */
+    private suspend fun structuredSectionsFor(topicType: String, materialId: String): DocumentModel? {
+        if (!ContentFeatureFlags.isStructuredRenderingEnabled(topicType)) return null
+        return studyContentRepository.getStudyMaterialSections(materialId).getOrNull()
     }
 
     private fun startStudySession() {
@@ -199,7 +218,12 @@ data class StudyMaterialContent(
     val content: String,
     val isPremium: Boolean,
     val tags: List<String>,
-    val relatedMaterials: List<RelatedMaterial>
+    val relatedMaterials: List<RelatedMaterial>,
+    /** Structured twin of [content] (Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md)
+     * -- null unless a `study_material_sections` side document exists and the topic is behind
+     * [com.ssbmax.shared.domain.config.ContentFeatureFlags.isStructuredRenderingEnabled]; render
+     * [content] as markdown when null, same as before this field existed. */
+    val sections: DocumentModel? = null
 )
 
 /**

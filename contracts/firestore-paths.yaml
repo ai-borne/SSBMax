@@ -57,6 +57,12 @@ collections:
     path: content_versions
   - name: TOPIC_CONTENT
     path: topic_content
+  - name: TOPIC_SECTIONS
+    path: topic_sections
+    note: "D2 side document (docs/plans/write-the-phased-plan-wobbly-pancake.md Phase 5) -- structured DocumentModel for a topic intro, published alongside (never onto) topic_content."
+  - name: STUDY_MATERIAL_SECTIONS
+    path: study_material_sections
+    note: "D2 side document (docs/plans/write-the-phased-plan-wobbly-pancake.md Phase 5) -- structured DocumentModel for a study material body, published alongside (never onto) study_materials."
   - name: HEALTH_CHECK
     path: health_check
     note: "Connectivity-check doc read by ops scripts (scripts/verify-indexes.js, scripts/setup-firestore.js), not by app code."

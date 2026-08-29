@@ -37,6 +37,8 @@ export const FirestorePaths = {
   TEST_SESSIONS: "test_sessions",
   CONTENT_VERSIONS: "content_versions",
   TOPIC_CONTENT: "topic_content",
+  TOPIC_SECTIONS: "topic_sections",
+  STUDY_MATERIAL_SECTIONS: "study_material_sections",
   HEALTH_CHECK: "health_check",
   PAYMENTS: "payments",
   WEBHOOK_LOGS: "webhook_logs",

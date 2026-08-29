@@ -172,17 +172,16 @@ class TopicViewModel(
         }
 
         val testProgress = loadTestProgress(userId)
+        // D4 forbids parsing `data.introduction` (live Firestore markdown) into a DocumentModel
+        // at runtime, so this fetches the D2 side document instead -- see the function's doc.
+        val structuredIntroduction = structuredIntroductionFor(testType)
 
         _uiState.update {
             it.copy(
                 testType = testType,
                 topicTitle = data.title,
                 introduction = data.introduction,
-                // D4 forbids parsing `data.introduction` (live Firestore markdown) into a
-                // DocumentModel at runtime, so the pilot's generated model is used here too --
-                // it mirrors the same content/topics/OIR.md source Firestore was published
-                // from. Phase 5 replaces this with a real structured side document fetch.
-                introductionSections = structuredIntroductionFor(testType),
+                introductionSections = structuredIntroduction,
                 studyMaterials = materials,
                 availableTests = getTestsForTopic(testType),
                 testCompletionStatus = testProgress?.status,
@@ -198,13 +197,14 @@ class TopicViewModel(
         try {
             val topicInfo = TopicContentLoader.getTopicInfo(testType)
             val testProgress = loadTestProgress(userId)
+            val structuredIntroduction = structuredIntroductionFor(testType)
 
             _uiState.update {
                 it.copy(
                     testType = testType,
                     topicTitle = topicInfo.title,
                     introduction = topicInfo.introduction,
-                    introductionSections = structuredIntroductionFor(testType),
+                    introductionSections = structuredIntroduction,
                     studyMaterials = topicInfo.studyMaterials,
                     availableTests = topicInfo.tests,
                     testCompletionStatus = testProgress?.status,
@@ -220,17 +220,21 @@ class TopicViewModel(
         }
     }
 
-    /** Only OIR has a generated [com.ssbmax.shared.ui.content.blocks.DocumentModel] today
-     * (Phase 2 pilot) -- every other topic, or OIR with the flag off, falls back to null and
-     * keeps rendering [TopicUiState.introduction] as markdown text, same as before this flag
-     * existed. Shared by both [loadFromLocal] and [applyCloudContent] -- see the latter's call
-     * site for why the same generated model is used regardless of content source. */
-    private fun structuredIntroductionFor(testType: String): com.ssbmax.shared.ui.content.blocks.DocumentModel? {
+    /**
+     * Prefers the D2 side document `topic_sections/{testType}` (Phase 5, docs/plans/
+     * write-the-phased-plan-wobbly-pancake.md) fetched via [studyContentRepository], falling
+     * back to [TopicContentLoader.getStructuredIntroduction]'s generated offline copy of the
+     * exact same source (never a network call). Returns null -- same as before Phase 5 -- only
+     * when the topic isn't behind the [ContentFeatureFlags.isStructuredRenderingEnabled]
+     * rollout flag, so [TopicUiState.introduction] keeps rendering as markdown text for
+     * everything not yet flagged on. Shared by both [loadFromLocal] and [applyCloudContent] so
+     * the same resolution order applies regardless of which tier the rest of the screen's
+     * content came from.
+     */
+    private suspend fun structuredIntroductionFor(testType: String): com.ssbmax.shared.ui.content.blocks.DocumentModel? {
         if (!ContentFeatureFlags.isStructuredRenderingEnabled(testType)) return null
-        return when (testType.uppercase()) {
-            "OIR" -> oirIntroductionSections()
-            else -> null
-        }
+        val cloudSections = studyContentRepository.getTopicSections(testType).getOrNull()
+        return cloudSections ?: TopicContentLoader.getStructuredIntroduction(testType)
     }
 
     private suspend fun loadTestProgress(userId: String?): TestProgress? {

@@ -790,6 +790,8 @@ class FakeStudyContentRepository : com.ssbmax.shared.domain.repository.StudyCont
     var topicContentFlow: Flow<Result<Any>> = flowOf(Result.success(Unit))
     var studyMaterialResult: Result<com.ssbmax.shared.domain.model.CloudStudyMaterial> =
         Result.success(com.ssbmax.shared.domain.model.CloudStudyMaterial(id = "mat-1", title = "Material"))
+    var topicSectionsResult: Result<com.ssbmax.shared.ui.content.blocks.DocumentModel?> = Result.success(null)
+    var studyMaterialSectionsResult: Result<com.ssbmax.shared.ui.content.blocks.DocumentModel?> = Result.success(null)
 
     private fun unused(name: String): Nothing = error("FakeStudyContentRepository.$name not stubbed for this test")
 
@@ -797,6 +799,8 @@ class FakeStudyContentRepository : com.ssbmax.shared.domain.repository.StudyCont
     override suspend fun getStudyMaterials(topicType: String) = unused("getStudyMaterials")
     override suspend fun getStudyMaterial(materialId: String) = studyMaterialResult
     override suspend fun refreshContent(topicType: String) = unused("refreshContent")
+    override suspend fun getTopicSections(topicType: String) = topicSectionsResult
+    override suspend fun getStudyMaterialSections(materialId: String) = studyMaterialSectionsResult
 }
 
 /** Fake for [com.ssbmax.shared.domain.repository.StudyProgressRepository], used by [com.ssbmax.shared.presentation.study.StudyMaterialDetailViewModel]'s use cases. */

@@ -19,9 +19,13 @@
 const fs = require('fs');
 const path = require('path');
 const { parseContentFile } = require('./parseContentFile');
+const { parseDocument } = require('./parseDocument');
+const { documentModelToKotlin } = require('./kotlinCodegen');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const TOPICS_DIR = path.join(ROOT, 'content', 'topics');
+const CONTENT_DIR = path.join(ROOT, 'content');
+const TOPICS_DIR = path.join(CONTENT_DIR, 'topics');
+const SLUGS_LOCK_PATH = path.join(CONTENT_DIR, 'slugs.lock.json');
 const TOPIC_DIR = path.join(ROOT, 'shared/src/commonMain/kotlin/com/ssbmax/shared/presentation/topic');
 const LOADER_PATH = path.join(TOPIC_DIR, 'TopicContentLoader.kt');
 
@@ -88,19 +92,53 @@ function introFileName(key) {
   return `TopicIntro${pascal}.kt`;
 }
 
-function generate() {
+/** File name for one topic's generated structured DocumentModel, e.g. TopicIntroOirStructured.kt. */
+function structuredFileName(key) {
+  return introFileName(key).replace(/\.kt$/, 'Structured.kt');
+}
+
+/** Structured-fallback function name for one topic, e.g. oirIntroductionSections. */
+function structuredFnName(key) {
+  return `${TOPIC_DISPATCH[key].fn}Sections`;
+}
+
+/**
+ * `check`: verify-only mode (mirrors `generate-contracts.js --check` / `buildSlugLock.js
+ * --check`) -- computes every generated file's content but never writes; returns the list of
+ * paths that differ from what's committed instead. Used by generateKmpFallback.drift.test.js so
+ * a `content/topics/*.md` edit that nobody regenerated the fallback for fails CI loudly rather
+ * than shipping a KMP offline fallback that has silently drifted from git (Phase 5, docs/plans/
+ * write-the-phased-plan-wobbly-pancake.md).
+ */
+function generate({ check = false } = {}) {
   const topics = loadTopics();
+  const slugsLock = JSON.parse(fs.readFileSync(SLUGS_LOCK_PATH, 'utf8'));
   for (const key of Object.keys(TOPIC_DISPATCH)) {
     if (!topics[key]) throw new Error(`content/topics/${key}.md missing or empty — cannot regenerate fallback`);
   }
+
+  const drifted = [];
+  const writeFile = (filePath, content) => {
+    if (!check) {
+      fs.writeFileSync(filePath, content);
+      return;
+    }
+    const current = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null;
+    if (current !== content) drifted.push(path.relative(ROOT, filePath));
+  };
 
   const introCases = Object.keys(TOPIC_DISPATCH)
     .map((k) => `            "${k}" -> ${TOPIC_DISPATCH[k].fn}()`)
     .join('\n');
 
+  const structuredCases = Object.keys(TOPIC_DISPATCH)
+    .map((k) => `            "${k}" -> ${structuredFnName(k)}()`)
+    .join('\n');
+
   const loaderKt = `package com.ssbmax.shared.presentation.topic
 
 import com.ssbmax.shared.domain.model.TestType
+import com.ssbmax.shared.ui.content.blocks.DocumentModel
 
 /**
  * KMP port of the Android app/.../ui/topic/TopicContentLoader.kt -- static
@@ -127,6 +165,20 @@ ${introCases}
         }
     }
 
+    /**
+     * Structured twin of [getIntroduction] (Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md)
+     * -- the offline-fallback [DocumentModel] every topic now has, generated from the exact same
+     * content/topics markdown source. \`null\` for a testType with no [TopicInfo] entry above (the
+     * pre-existing "SSB Topic" catch-all), matching [com.ssbmax.shared.presentation.topic.TopicViewModel]'s
+     * "no structured model for this topic" contract.
+     */
+    fun getStructuredIntroduction(testType: String): DocumentModel? {
+        return when (testType.uppercase()) {
+${structuredCases}
+            else -> null
+        }
+    }
+
     private fun getStudyMaterials(testType: String): List<StudyMaterialItem> {
         return StudyMaterialsProvider.getStudyMaterials(testType)
     }
@@ -143,7 +195,7 @@ data class TopicInfo(
 )
 `;
 
-  fs.writeFileSync(LOADER_PATH, loaderKt);
+  writeFile(LOADER_PATH, loaderKt);
 
   const writtenIntroFiles = [];
   for (const key of Object.keys(TOPIC_DISPATCH)) {
@@ -162,9 +214,46 @@ data class TopicInfo(
  */
 internal fun ${fn}(): String = ${kotlinTripleQuoted(topics[key], 4)}
 `;
-    fs.writeFileSync(filePath, kt);
+    writeFile(filePath, kt);
     writtenIntroFiles.push(fileName);
+
+    const structuredModel = parseDocument(topics[key], {
+      sourcePath: `topics/${key}.md`,
+      existingSlugs: slugsLock,
+    });
+    const structuredFn = structuredFnName(key);
+    const structuredFileNm = structuredFileName(key);
+    const structuredKt = `package com.ssbmax.shared.presentation.topic
+
+import com.ssbmax.shared.ui.content.blocks.CalloutBlock
+import com.ssbmax.shared.ui.content.blocks.ComparisonBlock
+import com.ssbmax.shared.ui.content.blocks.DocSection
+import com.ssbmax.shared.ui.content.blocks.DocumentModel
+import com.ssbmax.shared.ui.content.blocks.LabelValue
+import com.ssbmax.shared.ui.content.blocks.ListBlock
+import com.ssbmax.shared.ui.content.blocks.ParagraphBlock
+import com.ssbmax.shared.ui.content.blocks.SpecTableBlock
+import com.ssbmax.shared.ui.content.blocks.SubheadingBlock
+import com.ssbmax.shared.ui.content.blocks.TableBlock
+import com.ssbmax.shared.ui.content.blocks.TimelineBlock
+
+/**
+ * The ${key} topic's structured offline-fallback [DocumentModel] (Phase 5, docs/plans/
+ * write-the-phased-plan-wobbly-pancake.md), split out of [TopicContentLoader] purely to keep
+ * every generated file under the repo's 300-line Quality Limit -- no behavior change from
+ * having it inline. Must stay in lockstep with [${TOPIC_DISPATCH[key].fn}]'s plain-text twin
+ * (same source file).
+ *
+ * GENERATED from content/topics/${key}.md via scripts/content/parseDocument.js -- do not
+ * hand-edit.
+ */
+internal fun ${structuredFn}(): DocumentModel = ${documentModelToKotlin(structuredModel)}
+`;
+    writeFile(path.join(TOPIC_DIR, structuredFileNm), structuredKt);
+    writtenIntroFiles.push(structuredFileNm);
   }
+
+  if (check) return drifted;
 
   // Remove the old pre-Phase-7 CONFERENCE-only split file if it's still on disk
   // under its previous name, now superseded by TopicIntroConference.kt above.
@@ -176,11 +265,24 @@ internal fun ${fn}(): String = ${kotlinTripleQuoted(topics[key], 4)}
   console.log(
     `Regenerated ${path.relative(ROOT, LOADER_PATH)} and ${writtenIntroFiles.length} topic intro file(s) from content/topics/*.md`
   );
+  return [];
 }
 
 if (require.main === module) {
   try {
-    generate();
+    const check = process.argv.includes('--check');
+    const drifted = generate({ check });
+    if (check) {
+      if (drifted.length) {
+        console.error(
+          `KMP offline fallback is out of date (${drifted.length} file(s) differ). Run ` +
+          `\`node scripts/content/generateKmpFallback.js\` and commit the result:\n` +
+          drifted.map((f) => `  - ${f}`).join('\n')
+        );
+        process.exit(1);
+      }
+      console.log('KMP offline fallback is up to date.');
+    }
   } catch (e) {
     console.error('generateKmpFallback failed:', e.message);
     process.exit(1);

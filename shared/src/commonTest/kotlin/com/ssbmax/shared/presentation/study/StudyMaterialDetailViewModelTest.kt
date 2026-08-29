@@ -58,7 +58,8 @@ class StudyMaterialDetailViewModelTest {
         saveStudyProgress = SaveStudyProgressUseCase(studyProgressRepository),
         trackStudySession = TrackStudySessionUseCase(studyProgressRepository),
         getStudyProgress = GetStudyProgressUseCase(studyProgressRepository),
-        observeCurrentUser = ObserveCurrentUserUseCase(authRepository)
+        observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
+        studyContentRepository = studyContentRepository
     )
 
     @Test
@@ -78,6 +79,51 @@ class StudyMaterialDetailViewModelTest {
         assertEquals("SSB Expert", state.material?.author) // blank author falls back
         assertEquals("10 min read", state.material?.readTime) // blank readTime falls back
         assertEquals("session-1", state.activeSessionId)
+    }
+
+    @Test
+    fun `loadMaterial falls back to markdown when the D2 side document is missing`() = runTest(testDispatcher) {
+        // OIR is the one topic behind ContentFeatureFlags.isStructuredRenderingEnabled today --
+        // Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md's exit criterion that a
+        // missing side document renders markdown, not a blank screen.
+        studyContentRepository.studyMaterialResult = Result.success(
+            CloudStudyMaterial(id = "mat-1", title = "OIR Basics", topicType = "OIR", contentMarkdown = "# Hello")
+        )
+        studyContentRepository.studyMaterialSectionsResult = Result.success(null)
+        val viewModel = buildViewModel()
+
+        viewModel.loadMaterial("mat-1")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.material)
+        assertEquals(null, state.material?.sections)
+        assertEquals("# Hello", state.material?.content)
+    }
+
+    @Test
+    fun `loadMaterial uses the D2 side document's DocumentModel when one is published`() = runTest(testDispatcher) {
+        val model = com.ssbmax.shared.ui.content.blocks.DocumentModel(
+            sections = listOf(
+                com.ssbmax.shared.ui.content.blocks.DocSection(
+                    id = "study-materials/oir_1.md#0",
+                    slug = "intro",
+                    heading = null,
+                    level = 0,
+                    blocks = listOf(com.ssbmax.shared.ui.content.blocks.ParagraphBlock("Hello"))
+                )
+            )
+        )
+        studyContentRepository.studyMaterialResult = Result.success(
+            CloudStudyMaterial(id = "mat-1", title = "OIR Basics", topicType = "OIR", contentMarkdown = "# Hello")
+        )
+        studyContentRepository.studyMaterialSectionsResult = Result.success(model)
+        val viewModel = buildViewModel()
+
+        viewModel.loadMaterial("mat-1")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(model, viewModel.uiState.value.material?.sections)
     }
 
     @Test
