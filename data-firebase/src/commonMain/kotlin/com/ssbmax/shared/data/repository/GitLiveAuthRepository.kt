@@ -9,6 +9,7 @@ import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.FirebaseUser
 import dev.gitlive.firebase.auth.GoogleAuthProvider
 import dev.gitlive.firebase.auth.auth
+import dev.gitlive.firebase.functions.functions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -137,6 +138,28 @@ class GitLiveAuthRepository(
             // No manual currentUser patch needed -- authStateChanged emits null
             // as soon as Firebase's own sign-out completes.
             Firebase.auth.signOut()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // No cascade here -- functions/src/account/requestAccountDeletion.js only sets the
+    // grace-period timestamp and disables the Auth account server-side. Never call
+    // Firebase.auth.currentUser?.delete() client-side: that has no cascade and races the
+    // scheduled purge (see root CLAUDE.md's four-consumer SSOT section).
+    override suspend fun requestAccountDeletion(): Result<Unit> {
+        return try {
+            Firebase.functions.httpsCallable("requestAccountDeletion").invoke()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun cancelAccountDeletion(): Result<Unit> {
+        return try {
+            Firebase.functions.httpsCallable("cancelAccountDeletion").invoke()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

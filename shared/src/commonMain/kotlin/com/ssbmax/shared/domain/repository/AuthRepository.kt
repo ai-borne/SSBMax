@@ -56,6 +56,19 @@ interface AuthRepository {
     suspend fun signOut(): Result<Unit>
 
     /**
+     * Request account deletion: server sets a grace-period timestamp and
+     * disables the Auth account (`functions/src/account/requestAccountDeletion.js`).
+     * The actual data cascade runs server-side after the grace period expires.
+     */
+    suspend fun requestAccountDeletion(): Result<Unit>
+
+    /**
+     * Cancel a pending account deletion within the grace period, re-enabling
+     * the Auth account (`functions/src/account/cancelAccountDeletion.js`).
+     */
+    suspend fun cancelAccountDeletion(): Result<Unit>
+
+    /**
      * Check if user is authenticated
      */
     suspend fun isAuthenticated(): Boolean

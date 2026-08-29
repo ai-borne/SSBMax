@@ -3,7 +3,9 @@ package com.ssbmax.shared.presentation.auth
 import com.ssbmax.shared.domain.model.GoogleSignInData
 import com.ssbmax.shared.domain.model.SSBMaxUser
 import com.ssbmax.shared.domain.model.UserRole
+import com.ssbmax.shared.domain.usecase.auth.CancelAccountDeletionUseCase
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
+import com.ssbmax.shared.domain.usecase.auth.RequestAccountDeletionUseCase
 import com.ssbmax.shared.domain.usecase.auth.SignInWithGoogleUseCase
 import com.ssbmax.shared.domain.usecase.auth.SignOutUseCase
 import com.ssbmax.shared.domain.usecase.auth.UpdateUserRoleUseCase
@@ -36,11 +38,54 @@ class AuthViewModel(
     private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
     private val updateUserRoleUseCase: UpdateUserRoleUseCase,
     private val signOutUseCase: SignOutUseCase,
-    private val observeCurrentUserUseCase: ObserveCurrentUserUseCase
+    private val observeCurrentUserUseCase: ObserveCurrentUserUseCase,
+    private val requestAccountDeletionUseCase: RequestAccountDeletionUseCase,
+    private val cancelAccountDeletionUseCase: CancelAccountDeletionUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Initial)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    private val _accountDeletionState = MutableStateFlow<AccountDeletionState>(AccountDeletionState.Idle)
+    val accountDeletionState: StateFlow<AccountDeletionState> = _accountDeletionState.asStateFlow()
+
+    /** Show the irreversibility confirmation dialog before calling [confirmAccountDeletion]. */
+    fun showAccountDeletionConfirmation() {
+        _accountDeletionState.update { AccountDeletionState.ConfirmPending }
+    }
+
+    /** Dismiss the confirmation dialog without requesting deletion. */
+    fun dismissAccountDeletionConfirmation() {
+        _accountDeletionState.update { AccountDeletionState.Idle }
+    }
+
+    /** User confirmed deletion: request the grace-period deletion server-side. */
+    fun confirmAccountDeletion() {
+        viewModelScope.launch {
+            _accountDeletionState.update { AccountDeletionState.Loading }
+            requestAccountDeletionUseCase()
+                .onSuccess { _accountDeletionState.update { AccountDeletionState.DeletionPending } }
+                .onFailure { error ->
+                    _accountDeletionState.update {
+                        AccountDeletionState.Error(error.message ?: "Failed to request account deletion")
+                    }
+                }
+        }
+    }
+
+    /** Cancel a pending account deletion within the grace period. */
+    fun cancelAccountDeletion() {
+        viewModelScope.launch {
+            _accountDeletionState.update { AccountDeletionState.Loading }
+            cancelAccountDeletionUseCase()
+                .onSuccess { _accountDeletionState.update { AccountDeletionState.Idle } }
+                .onFailure { error ->
+                    _accountDeletionState.update {
+                        AccountDeletionState.Error(error.message ?: "Failed to cancel account deletion")
+                    }
+                }
+        }
+    }
 
     /**
      * Handle the result of the platform's Google Sign-In flow (obtained via
@@ -123,4 +168,13 @@ sealed class AuthUiState {
     data class Success(val user: SSBMaxUser) : AuthUiState()
     data class NeedsRoleSelection(val user: SSBMaxUser) : AuthUiState()
     data class Error(val message: String) : AuthUiState()
+}
+
+/** Shared Android/iOS state for the Delete Account confirm → grace-window → cancel flow. */
+sealed class AccountDeletionState {
+    data object Idle : AccountDeletionState()
+    data object ConfirmPending : AccountDeletionState()
+    data object Loading : AccountDeletionState()
+    data object DeletionPending : AccountDeletionState()
+    data class Error(val message: String) : AccountDeletionState()
 }

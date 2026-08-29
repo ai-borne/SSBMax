@@ -65,6 +65,8 @@ class FakeAuthRepository(
         { Result.failure(UnsupportedOperationException("not stubbed")) }
     var updateUserRoleResult: Result<Unit> = Result.success(Unit)
     var signOutResult: Result<Unit> = Result.success(Unit)
+    var requestAccountDeletionResult: Result<Unit> = Result.success(Unit)
+    var cancelAccountDeletionResult: Result<Unit> = Result.success(Unit)
     var isAuthenticatedResult: Boolean = true
 
     override suspend fun signIn(email: String, password: String) = signInResult
@@ -73,6 +75,8 @@ class FakeAuthRepository(
     override suspend fun handleGoogleSignInResult(data: GoogleSignInData) = handleGoogleSignInResultFn(data)
     override suspend fun updateUserRole(role: UserRole) = updateUserRoleResult
     override suspend fun signOut() = signOutResult
+    override suspend fun requestAccountDeletion() = requestAccountDeletionResult
+    override suspend fun cancelAccountDeletion() = cancelAccountDeletionResult
     override suspend fun isAuthenticated() = isAuthenticatedResult
 }
 
