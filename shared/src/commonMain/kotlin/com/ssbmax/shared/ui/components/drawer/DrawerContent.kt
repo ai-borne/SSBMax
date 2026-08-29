@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -29,7 +30,9 @@ import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.cd_collapse
 import ssbmax.shared.generated.resources.cd_expand
 import ssbmax.shared.generated.resources.drawer_account
+import ssbmax.shared.generated.resources.drawer_cancel_deletion
 import ssbmax.shared.generated.resources.drawer_conference
+import ssbmax.shared.generated.resources.drawer_delete_account
 import ssbmax.shared.generated.resources.drawer_gto_tests
 import ssbmax.shared.generated.resources.drawer_interview
 import ssbmax.shared.generated.resources.drawer_medicals
@@ -77,6 +80,8 @@ fun DrawerContent(
     onTogglePhase1: () -> Unit,
     onTogglePhase2: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
+    isDeletionPending: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -184,6 +189,14 @@ fun DrawerContent(
             icon = Icons.AutoMirrored.Filled.Logout,
             title = stringResource(Res.string.drawer_sign_out),
             onClick = onSignOut
+        )
+
+        DrawerMenuItem(
+            icon = Icons.Default.DeleteForever,
+            title = stringResource(
+                if (isDeletionPending) Res.string.drawer_cancel_deletion else Res.string.drawer_delete_account
+            ),
+            onClick = onDeleteAccount
         )
 
         Spacer(modifier = Modifier.size(1.dp))

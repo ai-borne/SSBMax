@@ -1153,6 +1153,16 @@
     <string name="drawer_quick_access">Quick Access</string>
     <string name="drawer_account">Account</string>
     <string name="drawer_sign_out">Sign Out</string>
+    <string name="drawer_delete_account">Delete Account</string>
+    <string name="drawer_cancel_deletion">Cancel Deletion</string>
+    <string name="delete_account_confirm_title">Delete your Candidate Account?</string>
+    <string name="delete_account_confirm_body">Your account will be scheduled for permanent deletion, including all test submissions, AI dossier reports, and profile data. You have %1$d days to change your mind -- sign back in and cancel from Settings. After that, deletion cannot be undone.</string>
+    <string name="delete_account_confirm_checkbox">I understand this cannot be undone after the %1$d-day grace period.</string>
+    <string name="delete_account_confirm_button">Yes, Delete My Account</string>
+    <string name="delete_account_cancel_button">Cancel</string>
+    <string name="delete_account_failed">Failed to schedule account deletion. Please try again.</string>
+    <string name="deletion_pending_banner">Account deletion scheduled. You can cancel anytime within the grace period.</string>
+    <string name="cancel_deletion_failed">Failed to cancel account deletion. Please try again.</string>
     <string name="drawer_phase1_title">Phase 1 - Screening Tests (Day 1)</string>
     <string name="drawer_oir_test">OIR Test</string>
     <string name="drawer_ppdt">PPDT</string>

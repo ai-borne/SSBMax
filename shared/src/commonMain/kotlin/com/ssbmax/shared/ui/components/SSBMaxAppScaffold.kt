@@ -11,6 +11,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,8 +27,13 @@ import com.ssbmax.navigation.SSBMaxDestinations
 import com.ssbmax.navigation.isAuthScreen
 import com.ssbmax.shared.domain.model.UserRole
 import com.ssbmax.shared.domain.repository.AuthRepository
+import com.ssbmax.shared.presentation.auth.AccountDeletionState
+import com.ssbmax.shared.presentation.auth.AuthViewModel
 import com.ssbmax.shared.presentation.profile.UserProfileViewModel
+import com.ssbmax.shared.ui.components.account.DeleteAccountConfirmDialog
+import com.ssbmax.shared.ui.components.account.DeletionPendingDialog
 import com.ssbmax.shared.ui.components.drawer.SSBMaxDrawer
+import com.ssbmax.shared.ui.gto.common.GTOErrorDialog
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -83,9 +89,11 @@ fun SSBMaxAppScaffold(
 
     val authRepository: AuthRepository = koinInject()
     val profileViewModel: UserProfileViewModel = koinViewModel()
+    val authViewModel: AuthViewModel = koinViewModel()
 
     val currentUser by authRepository.currentUser.collectAsState()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
+    val accountDeletionState by authViewModel.accountDeletionState.collectAsStateWithLifecycle()
     val userRole = currentUser?.role ?: UserRole.STUDENT
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -93,6 +101,8 @@ fun SSBMaxAppScaffold(
 
     var phase1Expanded by remember { mutableStateOf(false) }
     var phase2Expanded by remember { mutableStateOf(false) }
+    var isCancellingDeletion by remember { mutableStateOf(false) }
+    var showDeletionPendingDialog by remember { mutableStateOf(false) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -158,6 +168,15 @@ fun SSBMaxAppScaffold(
                                 popUpTo(0) { inclusive = true }
                             }
                         }
+                    },
+                    isDeletionPending = accountDeletionState is AccountDeletionState.DeletionPending,
+                    onDeleteAccount = {
+                        scope.launch { drawerState.close() }
+                        if (accountDeletionState is AccountDeletionState.DeletionPending) {
+                            showDeletionPendingDialog = true
+                        } else {
+                            authViewModel.showAccountDeletionConfirmation()
+                        }
                     }
                 )
             }
@@ -172,5 +191,45 @@ fun SSBMaxAppScaffold(
                 content({ scope.launch { drawerState.open() } })
             }
         }
+    }
+
+    // Account-deletion confirm/pending/error UI (shared across Android/iOS, docs/plans/AccountDeletion.md
+    // Phase 4) -- rendered outside the drawer so it survives the drawer closing on tap.
+    // `showDeletionPendingDialog` is purely local dialog-visibility state, kept separate from
+    // `accountDeletionState` itself -- dismissing this banner must never reset the ViewModel back
+    // to Idle, since the account's server-side deletion request is still pending either way and
+    // the drawer entry's "Cancel Deletion" label is derived from `accountDeletionState` directly.
+    LaunchedEffect(accountDeletionState) {
+        if (accountDeletionState is AccountDeletionState.DeletionPending) {
+            showDeletionPendingDialog = true
+        }
+    }
+
+    when (val state = accountDeletionState) {
+        is AccountDeletionState.ConfirmPending -> DeleteAccountConfirmDialog(
+            isLoading = false,
+            onDismiss = authViewModel::dismissAccountDeletionConfirmation,
+            onConfirm = authViewModel::confirmAccountDeletion
+        )
+        is AccountDeletionState.Loading -> if (isCancellingDeletion) {
+            DeletionPendingDialog(isLoading = true, onDismiss = {}, onCancelDeletion = {})
+        } else {
+            DeleteAccountConfirmDialog(isLoading = true, onDismiss = {}, onConfirm = {})
+        }
+        is AccountDeletionState.DeletionPending -> if (showDeletionPendingDialog) {
+            DeletionPendingDialog(
+                isLoading = false,
+                onDismiss = { showDeletionPendingDialog = false },
+                onCancelDeletion = {
+                    isCancellingDeletion = true
+                    authViewModel.cancelAccountDeletion()
+                }
+            )
+        }
+        is AccountDeletionState.Error -> {
+            isCancellingDeletion = false
+            GTOErrorDialog(message = state.message, onDismiss = authViewModel::dismissAccountDeletionConfirmation)
+        }
+        AccountDeletionState.Idle -> Unit
     }
 }
