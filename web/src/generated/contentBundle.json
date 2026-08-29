@@ -5665,6 +5665,388 @@
           "Teamwork"
         ],
         "displayOrder": 9
+      },
+      {
+        "id": "gto_10",
+        "title": "Individual Obstacles Test Guide",
+        "category": "GTO Preparation",
+        "summary": "Individual Obstacles Test is the one GTO task scored purely on individual physical performance rather than group behaviour. Candidates attempt a course of 10 outdoor obstacles of increasing...",
+        "sections": {
+          "sections": [
+            {
+              "id": "study-materials/gto_10.md#root",
+              "slug": "intro",
+              "heading": null,
+              "level": 0,
+              "blocks": [
+                {
+                  "type": "subheading",
+                  "level": 1,
+                  "text": "Individual Obstacles Test (IOT) Guide"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "Individual Obstacles Test is the one GTO task scored purely on individual physical performance rather than group behaviour. Candidates attempt a course of 10 outdoor obstacles of increasing difficulty, one at a time, within a fixed time limit. Each obstacle cleared successfully earns fixed points; there is no team to coordinate and no plan to negotiate — only technique, fitness, and composure under a ticking clock."
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#1",
+              "slug": "iot-format-and-structure",
+              "heading": "IOT Format and Structure",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Duration**: Roughly 3-4 minutes per candidate"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Obstacles**: 10 standard outdoor obstacles, arranged in increasing difficulty"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Attempt Order**: Candidates generally choose their own sequence within the course"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Scoring**: Fixed points per obstacle, awarded only on correct, safe completion"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Supervision**: GTO and assistants observe technique and safety at each obstacle"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Repeat Attempts**: Usually one attempt per obstacle within the time window"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#2",
+              "slug": "what-makes-iot-different-from-other-gto-tasks",
+              "heading": "What Makes IOT Different from Other GTO Tasks",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**IOT vs Group Tasks (PGT/HGT/Snake Race)**:"
+                },
+                {
+                  "type": "table",
+                  "rows": [
+                    [
+                      "Aspect",
+                      "Group Tasks",
+                      "IOT"
+                    ],
+                    [
+                      "Unit of Assessment",
+                      "Group + individual role",
+                      "Individual only"
+                    ],
+                    [
+                      "Skill Tested",
+                      "Leadership, cooperation, planning",
+                      "Physical fitness, technique, composure"
+                    ],
+                    [
+                      "Helping Materials",
+                      "Planks, ropes, drums",
+                      "None — obstacles are fixed structures"
+                    ],
+                    [
+                      "Failure Consequence",
+                      "Group setback",
+                      "Personal point loss only"
+                    ],
+                    [
+                      "Time Pressure",
+                      "Shared across group",
+                      "Personal, strict per-candidate window"
+                    ]
+                  ]
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Critical Insight**: IOT cannot be talked through. No amount of ideas or communication skill substitutes for practiced physical execution here."
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#3",
+              "slug": "the-10-obstacles",
+              "heading": "The 10 Obstacles",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "While exact obstacle names and layout vary by centre, IOT courses are drawn from a standard set of physical challenges:"
+                },
+                {
+                  "type": "list",
+                  "items": [
+                    "**Balancing Structures**: Narrow beams or ropes crossed without falling",
+                    "**Wall/Vertical Obstacles**: Climbing over walls of varying height",
+                    "**Long Jump / Ditch Crossing**: Clearing a horizontal gap",
+                    "**Tarzan Swing / Rope Obstacles**: Using a rope to cross a gap or descend",
+                    "**Net Climbing**: Scaling a cargo-style net structure",
+                    "**Tunnel / Crawl Obstacles**: Moving through a low, confined space quickly",
+                    "**High Jump Bar**: Clearing a raised bar without dislodging it",
+                    "**Burma Bridge / Rope Bridge**: Crossing on suspended rope supports",
+                    "**Commando Crawl**: Crawling under an obstacle close to the ground",
+                    "**Final Sprint/Jump**: A concluding obstacle combining speed and one physical skill"
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "marker": "Note",
+                  "text": "Specific obstacles and order differ across boards; the underlying skills (balance, climbing, jumping, crawling, upper-body strength) stay consistent."
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#4",
+              "slug": "iot-process-and-approach",
+              "heading": "IOT Process and Approach",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Phase 1: Course Briefing (1-2 minutes)"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**What Happens**:\n- GTO explains obstacle sequence and any rules for that centre\n- Points value per obstacle may be indicated\n- Safety instructions given for higher-risk obstacles"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Your Focus**:\n- Note which obstacles look attemptable versus risky for you\n- Mentally sequence your approach if choice is allowed\n- Ask for clarification on any obstacle you don't understand"
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Phase 2: Attempt Window (3-4 minutes)"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**What Happens**:\n- You move through the course attempting obstacles in the fixed time\n- GTO/assistants watch technique and award points per clearance\n- Clock runs continuously across all obstacles"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Your Actions**:\n- Start with obstacles you're confident about to bank points early\n- Commit fully to each attempt — hesitant, half-effort attempts fail more often\n- Move on immediately after a clear success or a decided skip; don't linger"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Time Discipline**: Every second spent deciding is a second not spent attempting."
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Phase 3: Completion (Remaining time)"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**What Happens**:\n- Time expires or all obstacles attempted\n- GTO notes final tally and observed technique/safety"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Your Behavior**:\n- Finish the attempt you're on safely rather than rushing the very last seconds\n- Maintain composure regardless of how many obstacles you cleared"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#5",
+              "slug": "effective-iot-strategies",
+              "heading": "Effective IOT Strategies",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Strategy 1: Bank Easy Points First"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Sequence Wisely**:\n- Attempt obstacles you're most confident about early\n- Build momentum and confidence before harder obstacles\n- Avoid spending your best energy on the hardest obstacle first if choice is allowed"
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Strategy 2: Decide, Don't Deliberate"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Fast Risk Assessment**:\n- Look at an obstacle for 2-3 seconds and decide: attempt or skip\n- A skipped obstacle costs only its points; a failed, unsafe attempt can cost time and injury risk\n- \"I can clear this cleanly\" vs \"I'm not confident\" — commit to the answer immediately"
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Strategy 3: Technique Over Force"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Efficient Movement**:\n- Use proper form for climbing, jumping, and crawling rather than raw effort alone\n- Controlled momentum clears obstacles more reliably than a rushed lunge\n- Practised technique reduces both failure rate and injury risk"
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Strategy 4: Composure Under the Clock"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Mental Control**:\n- A missed obstacle should not affect performance on the next one\n- Treat each obstacle as an independent attempt\n- Visible frustration or panic is itself a negative signal to the GTO"
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Strategy 5: Safety First, Always"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Non-Negotiable**:\n- Never attempt an obstacle in a way that risks a fall from height or a bad landing\n- A cautious, controlled clearance beats a reckless one that risks injury\n- GTO values sensible risk-taking, not recklessness"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#6",
+              "slug": "what-gto-assesses-in-iot",
+              "heading": "What GTO Assesses in IOT",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Obstacles Cleared** (50%):\n- Raw count and difficulty of obstacles successfully completed"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Technique and Control** (25%):\n- Form, balance, and control during each attempt\n- Efficient rather than wasteful movement"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Composure and Decision-Making** (15%):\n- Quick, sensible attempt-or-skip decisions\n- Staying steady after a failed attempt"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Safety Awareness** (10%):\n- No reckless or unsafe attempts\n- Sensible judgment about personal limits"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#7",
+              "slug": "iot-performance-indicators",
+              "heading": "IOT Performance Indicators",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Excellent Performance**:\n- Cleared most or all obstacles with clean technique\n- Quick, confident decisions on each obstacle\n- No unsafe attempts\n- Maintained composure throughout"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Good Performance**:\n- Cleared a majority of obstacles\n- Mostly efficient technique with minor hesitation\n- Recovered composure quickly after any miss"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Average Performance**:\n- Cleared roughly half the obstacles\n- Some hesitation or wasted time deciding\n- Occasional loss of composure after a miss"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Weak Performance**:\n- Cleared very few obstacles\n- Visible panic, rushed or unsafe attempts\n- Time lost to indecision rather than attempts"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#8",
+              "slug": "iot-preparation-strategy",
+              "heading": "IOT Preparation Strategy",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Physical Readiness**:\n- Running for cardiovascular endurance\n- Upper body and grip strength for climbing and rope obstacles\n- Core strength and balance training for beam/bridge obstacles\n- Practice controlled jumping and landing technique"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Mental Readiness**:\n- Build comfort with quick attempt-or-skip decisions under time pressure\n- Practice staying composed immediately after a failed attempt\n- Visualize the course as a series of independent attempts, not one continuous test"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Practice Approach**:\n- Train on an obstacle course if accessible, or simulate individual elements (wall climbs, balance beams, crawling under low bars)\n- Time yourself on short circuits to build comfort with the clock\n- Focus conditioning on functional fitness over pure gym strength"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#9",
+              "slug": "iot-day-tips",
+              "heading": "IOT Day Tips",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Before IOT**:\n- Warm up thoroughly — this is a physical test with real injury risk if muscles are cold\n- Positive, focused mindset: \"One obstacle at a time\"\n- Wear appropriate footwear and clothing for movement"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**During IOT**:\n- Decide fast, commit fully, move on immediately\n- Use proper technique over raw force\n- Stay composed after any miss\n- Never risk an unsafe attempt for extra points"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**After IOT**:\n- Don't dwell on missed obstacles going into the next GTO task\n- Stay physically loose for tasks later the same day"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#10",
+              "slug": "self-assessment-after-iot",
+              "heading": "Self-Assessment After IOT",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Critical Questions**:\n- Did I clear obstacles I had practiced and was confident about?\n- Did I make fast, sensible attempt-or-skip decisions instead of hesitating?\n- Did I stay composed after any failed attempt?\n- Did I avoid any unsafe or reckless attempt?"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Honest Evaluation**:\n- Identify which obstacle types need more physical preparation\n- Note whether hesitation or physical limitation cost more points\n- Carry composure lessons into the remaining GTO tasks"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_10.md#11",
+              "slug": "conclusion",
+              "heading": "Conclusion",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "Individual Obstacles Test is a straightforward physical assessment inside an otherwise group-heavy GTO series: fitness, technique, and quick decision-making under a strict clock. Excel in IOT through consistent physical conditioning, decisive attempt-or-skip judgment, controlled technique, and composure that carries you cleanly into the next task."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Success Formula**: Physical Conditioning + Fast Decisions + Controlled Technique + Composure + Safety = IOT Success"
+                },
+                {
+                  "type": "callout",
+                  "marker": "Remember",
+                  "text": "IOT is the one GTO task where preparation is almost entirely in your own hands — daily fitness discipline in the weeks before SSB pays off directly here."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Next Step**: Carry the same composure and decisiveness into Command Task, where you lead others through a similar physical obstacle."
+                }
+              ]
+            }
+          ]
+        },
+        "estimatedReadTimeMinutes": 13,
+        "tags": [
+          "GTO",
+          "Individual Task",
+          "Physical Fitness"
+        ],
+        "displayOrder": 10
       }
     ]
   },

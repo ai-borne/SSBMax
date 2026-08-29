@@ -29,7 +29,7 @@ export class ContentRepository implements IContentRepository {
   async getStudyMaterials(): Promise<StudyMaterial[]> {
     try {
       const querySnapshot = await getDocs(
-        query(collection(db, FirestorePaths.STUDY_MATERIALS), orderBy('displayOrder'), limit(50))
+        query(collection(db, FirestorePaths.STUDY_MATERIALS), orderBy('displayOrder'), limit(500))
       );
       const materials: StudyMaterial[] = [];
       querySnapshot.forEach((docSnap) => {
