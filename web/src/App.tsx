@@ -18,6 +18,7 @@ import { AIReportsPage } from './components/reports/AIReportsPage';
 import { SubmissionResultView } from './components/evaluation/SubmissionResultView';
 import { OIRSubmissionResultView } from './components/evaluation/OIRSubmissionResultView';
 import { useOLQDashboardViewModel } from './viewmodels/useOLQDashboardViewModel';
+import { useUserProfileViewModel } from './viewmodels/useUserProfileViewModel';
 import { resolveNotificationResultTarget, NotificationResultTarget } from './utils/notificationResultRoute';
 import type { SSBMaxNotification } from './types/notification';
 import { strings } from './constants/strings';
@@ -55,6 +56,8 @@ export const App: FC = () => {
 
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   useEffect(() => authService.onAuthStateChanged(setCurrentUser), []);
+
+  const { profile: userProfile, isLoading: isUserProfileLoading } = useUserProfileViewModel(currentUser?.uid);
 
   const { tier: realTier, usage } = useSubscriptionViewModel(authService.getCurrentUser()?.uid, devTierOverride);
   const paymentService = useMemo(() => new PaymentService(), []);
@@ -216,7 +219,12 @@ export const App: FC = () => {
               isPro={isPaidMember}
               isGuest={!currentUser}
               userEmail={currentUser?.email}
-              userName={currentUser?.displayName}
+              userName={userProfile?.fullName ?? currentUser?.displayName}
+              hasProfile={userProfile !== null}
+              isProfileLoading={isUserProfileLoading}
+              age={userProfile?.age}
+              gender={userProfile?.gender}
+              entryType={userProfile?.entryType}
               onSignOut={() => authService.signOut()}
               devTierOverride={devTierOverride}
               onUpgrade={() => setActiveTab('subscription')}

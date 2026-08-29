@@ -2,15 +2,30 @@ import { FC } from 'react';
 import { User, ShieldAlert, Sparkles, LogOut, Edit3, Award, Target } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { GridCardContainer } from '../common/GridCardContainer';
+import { Gender, EntryType } from '../../types/userProfile';
+
+const GENDER_LABELS: Record<Gender, string> = {
+  MALE: 'Male',
+  FEMALE: 'Female',
+  OTHER: 'Other'
+};
+
+const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
+  ENTRY_10_PLUS_2: '10+2 Entry',
+  GRADUATE: 'Graduate Entry',
+  SERVICE: 'Service Entry'
+};
 
 export interface AccountSectionProps {
   userEmail?: string | null;
   userName?: string | null;
   isGuest?: boolean;
   isPro?: boolean;
-  targetBoard?: string;
-  entryStream?: string;
-  prepStatus?: string;
+  age?: number;
+  gender?: Gender;
+  entryType?: EntryType;
+  hasProfile?: boolean;
+  isProfileLoading?: boolean;
   onEditDiagnostic?: () => void;
   onUpgrade?: () => void;
   onSignOut?: () => void;
@@ -21,9 +36,11 @@ export const AccountSection: FC<AccountSectionProps> = ({
   userName = 'Officer Cadet Candidate',
   isGuest = true,
   isPro = false,
-  targetBoard = 'Indian Army (SSB)',
-  entryStream = 'CDS Entry',
-  prepStatus = 'Intermediate Prep',
+  age,
+  gender,
+  entryType,
+  hasProfile = false,
+  isProfileLoading = false,
   onEditDiagnostic,
   onUpgrade,
   onSignOut,
@@ -78,22 +95,42 @@ export const AccountSection: FC<AccountSectionProps> = ({
           </span>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
-          <span className="text-slate-500 dark:text-slate-400 block font-medium flex items-center gap-1">
-            <Target className="w-3.5 h-3.5 text-sky-500" />
-            <span>{strings.account.targetBoard}</span>
-          </span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200 block" data-testid="account-target-board">
-            {targetBoard} ({entryStream})
-          </span>
-        </div>
+        {isProfileLoading ? (
+          <>
+            <div className="sm:col-span-2 h-14 rounded-xl bg-slate-100 dark:bg-slate-800/80 animate-pulse" data-testid="account-profile-skeleton" />
+          </>
+        ) : hasProfile ? (
+          <>
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
+              <span className="text-slate-500 dark:text-slate-400 block font-medium">{strings.account.age}</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 block" data-testid="account-age">
+                {age}
+              </span>
+            </div>
 
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
-          <span className="text-slate-500 dark:text-slate-400 block font-medium">{strings.account.prepStatus}</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200 block" data-testid="account-prep-status">
-            {prepStatus}
-          </span>
-        </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
+              <span className="text-slate-500 dark:text-slate-400 block font-medium">{strings.account.gender}</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 block" data-testid="account-gender">
+                {gender ? GENDER_LABELS[gender] : '-'}
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1 sm:col-span-2">
+              <span className="text-slate-500 dark:text-slate-400 block font-medium flex items-center gap-1">
+                <Target className="w-3.5 h-3.5 text-sky-500" />
+                <span>{strings.account.entryType}</span>
+              </span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 block" data-testid="account-entry-type">
+                {entryType ? ENTRY_TYPE_LABELS[entryType] : '-'}
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="sm:col-span-2 p-3.5 rounded-xl bg-sky-500/5 border border-dashed border-sky-500/30 space-y-2" data-testid="account-empty-profile">
+            <span className="font-bold text-slate-900 dark:text-white block text-sm">{strings.account.completeProfileTitle}</span>
+            <p className="text-slate-500 dark:text-slate-400">{strings.account.completeProfileSubtitle}</p>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
@@ -105,7 +142,7 @@ export const AccountSection: FC<AccountSectionProps> = ({
             data-testid="edit-diagnostic-btn"
           >
             <Edit3 className="w-4 h-4 text-sky-500" />
-            <span>{strings.account.editDiagnostic}</span>
+            <span>{hasProfile ? strings.account.editDiagnostic : strings.account.completeProfileCta}</span>
           </button>
         )}
 

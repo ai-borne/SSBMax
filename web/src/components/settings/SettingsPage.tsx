@@ -10,6 +10,7 @@ import { DataCacheSection } from './DataCacheSection';
 import { FAQSection } from './FAQSection';
 import { DeveloperSettingsCard } from './DeveloperSettingsCard';
 import { DevTierOverride } from '../../constants/ssbSelectionProcess';
+import { Gender, EntryType } from '../../types/userProfile';
 
 import { GridCardContainer } from '../common/GridCardContainer';
 
@@ -27,9 +28,11 @@ export interface SettingsPageProps {
   userName?: string | null;
   isGuest?: boolean;
   isPro?: boolean;
-  targetBoard?: string;
-  entryStream?: string;
-  prepStatus?: string;
+  age?: number;
+  gender?: Gender;
+  entryType?: EntryType;
+  hasProfile?: boolean;
+  isProfileLoading?: boolean;
   devTierOverride?: DevTierOverride;
   onSelectDevTier?: (override: DevTierOverride) => void;
 }
@@ -48,9 +51,11 @@ export const SettingsPage: FC<SettingsPageProps> = ({
   userName,
   isGuest = true,
   isPro = false,
-  targetBoard,
-  entryStream,
-  prepStatus,
+  age,
+  gender,
+  entryType,
+  hasProfile = false,
+  isProfileLoading = false,
   devTierOverride = 'FOLLOW_REAL',
   onSelectDevTier,
 }) => {
@@ -79,9 +84,11 @@ export const SettingsPage: FC<SettingsPageProps> = ({
           userName={userName}
           isGuest={isGuest}
           isPro={isPro}
-          targetBoard={targetBoard}
-          entryStream={entryStream}
-          prepStatus={prepStatus}
+          age={age}
+          gender={gender}
+          entryType={entryType}
+          hasProfile={hasProfile}
+          isProfileLoading={isProfileLoading}
           onEditDiagnostic={onEditDiagnostic}
           onUpgrade={onUpgrade}
           onSignOut={onSignOut}

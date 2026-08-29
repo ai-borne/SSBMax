@@ -232,13 +232,16 @@ export const commonStrings = {
     guestUser: 'Guest Cadet',
     membershipTier: 'Active Pass Membership',
     uidLabel: 'Candidate UID',
-    targetBoard: 'Target SSB Board',
-    entryStream: 'Entry Stream',
-    prepStatus: 'Preparation Stage',
+    age: 'Age',
+    gender: 'Gender',
+    entryType: 'Type of Entry',
     editDiagnostic: 'Edit Profile',
     upgradeTier: 'Upgrade Pass',
     signOut: 'Sign Out Account',
-    piqPrivacyWarning: 'Privacy Warning: For candidate secrecy and cybersecurity, do not enter sensitive PII (Aadhaar, Govt ID numbers, or Passport details) into form fields.'
+    piqPrivacyWarning: 'Privacy Warning: For candidate secrecy and cybersecurity, do not enter sensitive PII (Aadhaar, Govt ID numbers, or Passport details) into form fields.',
+    completeProfileTitle: 'Complete your Candidate Profile',
+    completeProfileSubtitle: 'Add your Full Name, Age, Gender, and Type of Entry so your AI dossier reflects your real candidacy.',
+    completeProfileCta: 'Complete Profile'
   },
   faq: {
     title: 'Frequently Asked Questions (FAQs)',
