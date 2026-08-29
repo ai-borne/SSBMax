@@ -11,11 +11,39 @@ import { loadTopics, loadStudyMaterials, loadFaq, assertPublishable } from './lo
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_CONTENT = join(__dirname, '..', '..', 'scripts', 'content');
 
+const MIN_TAKEAWAYS = 3;
+const MAX_TAKEAWAYS = 5;
+
+// Phase 3 (docs/plans/write-the-phased-plan-wobbly-pancake.md) requires every topic/study-material
+// file to carry a `takeaways` frontmatter array of 3-5 short bullet strings. Enforced here so a
+// file that skips it (or gets it malformed) fails the build loudly instead of shipping a topic
+// page with no answer-first TL;DR.
+function assertTakeaways(meta, sourcePath) {
+  const { takeaways } = meta;
+  if (!Array.isArray(takeaways)) {
+    throw new Error(`${sourcePath}: missing/invalid "takeaways" frontmatter (must be an array)`);
+  }
+  if (takeaways.length < MIN_TAKEAWAYS || takeaways.length > MAX_TAKEAWAYS) {
+    throw new Error(
+      `${sourcePath}: "takeaways" must have ${MIN_TAKEAWAYS}-${MAX_TAKEAWAYS} entries (found ${takeaways.length})`
+    );
+  }
+  const bad = takeaways.find((t) => typeof t !== 'string' || !t.trim());
+  if (bad !== undefined) {
+    throw new Error(`${sourcePath}: "takeaways" entries must all be non-empty strings`);
+  }
+}
+
 function validate(entries) {
   const errors = [];
-  for (const { sourcePath, body } of entries) {
+  for (const { sourcePath, meta, body } of entries) {
     try {
       assertPublishable(body, sourcePath);
+    } catch (e) {
+      errors.push(e.message);
+    }
+    try {
+      assertTakeaways(meta, sourcePath);
     } catch (e) {
       errors.push(e.message);
     }
