@@ -97,13 +97,18 @@ describe('buildContentPageHtml, for every real content route', () => {
         expect(html).toContain('<link rel="stylesheet" href="/assets/index-abc123.css" />');
       });
 
+      it('applies the prose typography classes to the rendered-markdown containers, matching StudyTopicPage.tsx (@tailwindcss/typography must be installed for these to do anything)', () => {
+        expect(html).toContain('prose dark:prose-invert');
+        expect(html).toMatch(/<article class="[^"]*max-w-3xl/);
+      });
+
       it('defaults to the dark theme with no JS required to apply it', () => {
         expect(html).toContain('<html lang="en" class="dark">');
       });
 
       it('is well-formed enough to be a real HTML document', () => {
         expect(html).toMatch(/^<!DOCTYPE html>/);
-        expect(html).toContain('<h1>');
+        expect(html).toMatch(/<h1[ >]/);
       });
     });
   }
@@ -147,7 +152,11 @@ describe('buildFaqPageHtml (Phase 7)', () => {
 
   it('is well-formed enough to be a real HTML document', () => {
     expect(html).toMatch(/^<!DOCTYPE html>/);
-    expect(html).toContain('<h1>');
+    expect(html).toMatch(/<h1[ >]/);
+  });
+
+  it('applies visible spacing between question/answer blocks, matching FaqPage.tsx', () => {
+    expect(html).toContain('space-y-8');
   });
 });
 

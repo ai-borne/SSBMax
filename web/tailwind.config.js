@@ -1,3 +1,5 @@
+import typography from '@tailwindcss/typography';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -57,5 +59,9 @@ export default {
       },
     },
   },
-  plugins: [],
+  // `prose`/`dark:prose-invert` are already used in StudyTopicPage.tsx, StudyReaderModal.tsx
+  // -- this plugin is what actually makes them do anything (heading sizes, paragraph/list
+  // spacing for markdown-rendered HTML). Without it those classes are silently unrecognized
+  // no-ops, which is why rendered markdown had no visual hierarchy.
+  plugins: [typography],
 }

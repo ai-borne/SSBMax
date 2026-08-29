@@ -70,9 +70,9 @@ function buildCfBeaconScriptTag(cfBeaconToken) {
 function buildMaterialHtml(material) {
   return `
         <div>
-          <h3>${escapeHtml(material.title)}</h3>
-          <p>${escapeHtml(material.estimatedReadTimeMinutes)} min read</p>
-          <div>${material.contentHtml}</div>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-white">${escapeHtml(material.title)}</h3>
+          <p class="text-xs font-mono text-slate-500 dark:text-slate-400">${escapeHtml(material.estimatedReadTimeMinutes)} min read</p>
+          <div class="mt-2 prose dark:prose-invert max-w-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed">${material.contentHtml}</div>
         </div>`;
 }
 
@@ -88,9 +88,9 @@ export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBase
   const jsonLdScripts = buildContentPageJsonLdScripts({ topic, seo, path, siteBaseUrl });
   const materialsHtml = topic.materials.length > 0
     ? `
-      <section>
-        <h2>Study Materials</h2>
-        <div>${topic.materials.map(buildMaterialHtml).join('\n')}
+      <section class="mt-10">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Study Materials</h2>
+        <div class="mt-4 space-y-8">${topic.materials.map(buildMaterialHtml).join('\n')}
         </div>
       </section>`
     : '';
@@ -115,9 +115,9 @@ export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBase
   </head>
   <body class="bg-slate-900 text-slate-50 min-h-screen">
     <article class="max-w-3xl mx-auto px-4 py-8 sm:py-12">
-      <a href="/">Back to home</a>
-      <h1>${escapeHtml(topic.title)}</h1>
-      <div>${topic.introductionHtml}</div>${materialsHtml}
+      <a href="/" class="text-xs font-semibold text-sky-400 hover:underline">Back to home</a>
+      <h1 class="mt-4 text-2xl sm:text-3xl font-bold text-white">${escapeHtml(topic.title)}</h1>
+      <div class="mt-4 prose dark:prose-invert max-w-none text-sm sm:text-base text-slate-300 leading-relaxed">${topic.introductionHtml}</div>${materialsHtml}
     </article>
     ${buildCfBeaconScriptTag(cfBeaconToken)}
   </body>
@@ -136,8 +136,8 @@ export function buildFaqPageJsonLdScripts({ faq, siteBaseUrl = SITE_BASE_URL }) 
 function buildFaqQuestionHtml({ question, answer }) {
   return `
       <div>
-        <h2>${escapeHtml(question)}</h2>
-        <p>${escapeHtml(answer)}</p>
+        <h2 class="text-base font-semibold text-white">${escapeHtml(question)}</h2>
+        <p class="mt-2 text-sm sm:text-base text-slate-300 leading-relaxed">${escapeHtml(answer)}</p>
       </div>`;
 }
 
@@ -167,9 +167,9 @@ export function buildFaqPageHtml({ faq, cssHrefs = [], siteBaseUrl = SITE_BASE_U
   </head>
   <body class="bg-slate-900 text-slate-50 min-h-screen">
     <article class="max-w-3xl mx-auto px-4 py-8 sm:py-12">
-      <a href="/">Back to home</a>
-      <h1>${escapeHtml(faq.title)}</h1>
-      <div>${faq.questions.map(buildFaqQuestionHtml).join('\n')}
+      <a href="/" class="text-xs font-semibold text-sky-400 hover:underline">Back to home</a>
+      <h1 class="mt-4 text-2xl sm:text-3xl font-bold text-white">${escapeHtml(faq.title)}</h1>
+      <div class="mt-8 space-y-8">${faq.questions.map(buildFaqQuestionHtml).join('\n')}
       </div>
     </article>
     ${buildCfBeaconScriptTag(cfBeaconToken)}
