@@ -1,11 +1,15 @@
-// Standalone content-pipeline gate: `npm run content:validate`. Not yet wired
-// into `npm run build` — no page reads content/ until Phase 2/5 of
-// docs/plans/i-just-watched-a-nested-russell.md add the routes and
-// prerenderer that actually consume it, so failing the required `web-ci`
-// build over content that nothing renders yet would be a premature gate.
-// Phase 5 wires this same assertPublishable check into the real build so it
-// fails loudly on empty/missing content instead of shipping hollow pages.
+// Content-pipeline gate: `npm run content:validate`, now wired into `npm run build`
+// (Phase 1, docs/plans/write-the-phased-plan-wobbly-pancake.md) — it also runs
+// scripts/content/parseDocument.js over every file and the slug-lock `--check`, so a build
+// fails loudly on empty/missing content, a body the parser can't account for exactly, or a
+// stale content/slugs.lock.json, instead of any of those surfacing later as a silent runtime gap.
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { loadTopics, loadStudyMaterials, loadFaq, assertPublishable } from './loadContent.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SCRIPTS_CONTENT = join(__dirname, '..', '..', 'scripts', 'content');
 
 function validate(entries) {
   const errors = [];
@@ -39,4 +43,15 @@ if (errors.length) {
   errors.forEach((msg) => console.error(`  - ${msg}`));
   process.exit(1);
 }
+
+// The slug lockfile check belongs to the same "does content/ still parse cleanly" gate: a
+// stale lockfile means a section was added/removed/reordered without an explicit migration
+// entry, which is exactly what buildSlugLock.js's --check flag is designed to catch.
+try {
+  execFileSync('node', [join(SCRIPTS_CONTENT, 'buildSlugLock.js'), '--check'], { stdio: 'inherit' });
+} catch (e) {
+  console.error('\ncontent/slugs.lock.json check failed (see above).');
+  process.exit(1);
+}
+
 console.log('All content files valid.');

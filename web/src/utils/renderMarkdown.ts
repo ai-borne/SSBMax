@@ -1,53 +1,11 @@
 import { marked } from 'marked';
-
-/**
- * Shifts every heading level in a rendered HTML string by `offset` (min 6). Markdown authored
- * as a flat document (its own `#`/`##`/`###`) needs this once it's rendered *inside* a page or
- * component that already has its own heading (e.g. a modal's `<h2>` title) -- otherwise the
- * content's headings collide with or outrank the surrounding UI's own outline. Mirrors
- * web/scripts/generateContentBundle.mjs's build-time shiftHeadings (same problem, runtime
- * side -- StudyMaterial content is fetched live from Firestore, not the git content/ bundle,
- * so it can't be pre-rendered at build time).
- */
-function shiftHeadings(html: string, offset: number): string {
-  return html.replace(/<(\/?)h([1-6])>/g, (_match, closing: string, level: string) => {
-    const newLevel = Math.min(6, Number(level) + offset);
-    return `<${closing}h${newLevel}>`;
-  });
-}
-
-/**
- * Consecutive `**Label**: value` spec lines (Duration/Format/Rules/Assessment...) with no
- * blank line between them are one CommonMark paragraph with soft line breaks, which render as
- * a single collapsed space, not a line break -- the "everything dumped in one run-on sentence"
- * bug. Mirrors web/scripts/generateContentBundle.mjs's build-time listifyLabelRuns (same
- * content shape, runtime side). Converts a run of 2+ such lines into a real bullet list before
- * marked.parse() runs; a single standalone label line is left as plain text.
- */
-function listifyLabelRuns(markdown: string): string {
-  const labelLineRe = /^\*\*[^*]+\*\*:/;
-  const lines = markdown.split('\n');
-  const out: string[] = [];
-  let i = 0;
-  while (i < lines.length) {
-    if (labelLineRe.test(lines[i])) {
-      const runStart = i;
-      while (i < lines.length && labelLineRe.test(lines[i])) i += 1;
-      const run = lines.slice(runStart, i);
-      if (run.length >= 2) {
-        if (out.length > 0 && out[out.length - 1].trim() !== '') out.push('');
-        for (const line of run) out.push(`- ${line}`);
-        if (i < lines.length && lines[i].trim() !== '') out.push('');
-      } else {
-        out.push(run[0]);
-      }
-    } else {
-      out.push(lines[i]);
-      i += 1;
-    }
-  }
-  return out.join('\n');
-}
+// shiftHeadingsHtml/listifyLabelRuns used to be maintained twice (here and in
+// web/scripts/generateContentBundle.mjs) -- scripts/content/markdownTransforms.js (Phase 1,
+// docs/plans/write-the-phased-plan-wobbly-pancake.md) is now the one canonical copy both sides
+// import. Same problem, runtime side: StudyMaterial content is fetched live from Firestore, not
+// the git content/ bundle, so it can't be pre-rendered at build time like generateContentBundle.mjs.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { shiftHeadingsHtml: shiftHeadings, listifyLabelRuns } = require('../../../scripts/content/markdownTransforms.js');
 
 /**
  * Runtime markdown -> HTML for content fetched live from Firestore (StudyMaterial.contentMarkdown

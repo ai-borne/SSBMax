@@ -1,0 +1,17 @@
+{
+  "sections": [
+    {
+      "id": "fixture:callout.md#0",
+      "slug": "wrap-up",
+      "heading": "Wrap-up",
+      "level": 2,
+      "blocks": [
+        {
+          "type": "callout",
+          "marker": "Remember",
+          "text": "Be that candidate."
+        }
+      ]
+    }
+  ]
+}

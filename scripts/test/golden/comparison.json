@@ -1,0 +1,33 @@
+{
+  "sections": [
+    {
+      "id": "fixture:comparison.md#0",
+      "slug": "common-myths",
+      "heading": "Common Myths",
+      "level": 2,
+      "blocks": [
+        {
+          "type": "comparison",
+          "pairs": [
+            {
+              "label": "Myth 1",
+              "text": "\"There are fixed correct answers\""
+            },
+            {
+              "label": "Reality",
+              "text": "It's about patterns, not individual responses"
+            },
+            {
+              "label": "Myth 2",
+              "text": "\"You can memorize good responses\""
+            },
+            {
+              "label": "Reality",
+              "text": "Memorized responses create obvious inconsistency"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

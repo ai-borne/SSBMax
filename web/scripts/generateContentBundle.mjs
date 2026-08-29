@@ -20,66 +20,23 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
 import { marked } from 'marked';
 import { loadTopics, loadStudyMaterials, assertPublishable } from './loadContent.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_PATH = join(__dirname, '..', 'src', 'generated', 'contentBundle.json');
 
-/**
- * Content markdown is authored as a flat document (its own `#`/`##`/`###`), but it's rendered
- * nested inside the page's real heading structure -- StudyTopicPage.tsx wraps the topic
- * introduction under an `<h1>` page title, and each material's body under an `<h3>` material
- * title. Rendering the markdown's headings verbatim would emit a second `<h1>` (or duplicate
- * `<h3>`) per page -- multiple h1s is exactly the kind of malformed-outline signal AI/SEO
- * crawlers penalize, the opposite of this bundle's purpose. Shifting by a fixed offset keeps
- * one real heading outline per page instead.
- */
-function shiftHeadings(html, offset) {
-  return html.replace(/<(\/?)h([1-6])>/g, (_match, closing, level) => {
-    const newLevel = Math.min(6, Number(level) + offset);
-    return `<${closing}h${newLevel}>`;
-  });
-}
-
-/**
- * A recurring content-authoring pattern -- consecutive spec lines like:
- *   **Duration**: 20-30 minutes
- *   **Format**: Leaderless discussion on given topic
- *   **Assessment**: Communication, leadership
- * with no blank line between them -- is one CommonMark paragraph with soft line breaks, which
- * render as a single space, not a line break (browsers collapse bare `\n` in HTML). The result
- * is exactly the "everything dumped in one run-on sentence" readability bug: found across 37
- * of 60 content/ files (93 occurrences) grep-audited after a visual review flagged it, so this
- * is a rendering-layer fix rather than 93 hand-edits. Converts a run of 2+ consecutive
- * `**Label**: ...` lines into a real markdown bullet list before marked.parse() runs, so each
- * spec renders on its own line. A single standalone label line (not part of a run) is left as
- * plain text -- unaffected, since it was never the reported problem.
- */
-function listifyLabelRuns(markdown) {
-  const labelLineRe = /^\*\*[^*]+\*\*:/;
-  const lines = markdown.split('\n');
-  const out = [];
-  let i = 0;
-  while (i < lines.length) {
-    if (labelLineRe.test(lines[i])) {
-      const runStart = i;
-      while (i < lines.length && labelLineRe.test(lines[i])) i += 1;
-      const run = lines.slice(runStart, i);
-      if (run.length >= 2) {
-        if (out.length > 0 && out[out.length - 1].trim() !== '') out.push('');
-        for (const line of run) out.push(`- ${line}`);
-        if (i < lines.length && lines[i].trim() !== '') out.push('');
-      } else {
-        out.push(run[0]);
-      }
-    } else {
-      out.push(lines[i]);
-      i += 1;
-    }
-  }
-  return out.join('\n');
-}
+// shiftHeadings/listifyLabelRuns used to be maintained twice (here and in
+// web/src/utils/renderMarkdown.ts) -- scripts/content/markdownTransforms.js (Phase 1,
+// docs/plans/write-the-phased-plan-wobbly-pancake.md) is now the one canonical copy both sides
+// import. `shiftHeadingsHtml` here operates on rendered HTML (nesting the markdown's own
+// heading outline under the page's real `<h1>`/`<h3>`); `listifyLabelRuns` converts a run of 2+
+// consecutive `**Label**: value` lines into a real bullet list before marked.parse() runs, so
+// each spec renders on its own line instead of collapsing into one CommonMark soft-break
+// run-on paragraph.
+const require = createRequire(import.meta.url);
+const { shiftHeadingsHtml: shiftHeadings, listifyLabelRuns } = require('../../scripts/content/markdownTransforms.js');
 
 function buildBundle() {
   const topics = loadTopics();

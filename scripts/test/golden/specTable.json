@@ -1,0 +1,29 @@
+{
+  "sections": [
+    {
+      "id": "fixture:specTable.md#0",
+      "slug": "format-and-structure",
+      "heading": "Format and Structure",
+      "level": 2,
+      "blocks": [
+        {
+          "type": "specTable",
+          "entries": [
+            {
+              "label": "Duration",
+              "text": "20-30 minutes"
+            },
+            {
+              "label": "Group Size",
+              "text": "8-10 candidates"
+            },
+            {
+              "label": "Assessment",
+              "text": "Communication, leadership"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
