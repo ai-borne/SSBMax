@@ -178,6 +178,11 @@ class TopicViewModel(
                 testType = testType,
                 topicTitle = data.title,
                 introduction = data.introduction,
+                // D4 forbids parsing `data.introduction` (live Firestore markdown) into a
+                // DocumentModel at runtime, so the pilot's generated model is used here too --
+                // it mirrors the same content/topics/OIR.md source Firestore was published
+                // from. Phase 5 replaces this with a real structured side document fetch.
+                introductionSections = structuredIntroductionFor(testType),
                 studyMaterials = materials,
                 availableTests = getTestsForTopic(testType),
                 testCompletionStatus = testProgress?.status,
@@ -199,6 +204,7 @@ class TopicViewModel(
                     testType = testType,
                     topicTitle = topicInfo.title,
                     introduction = topicInfo.introduction,
+                    introductionSections = structuredIntroductionFor(testType),
                     studyMaterials = topicInfo.studyMaterials,
                     availableTests = topicInfo.tests,
                     testCompletionStatus = testProgress?.status,
@@ -211,6 +217,19 @@ class TopicViewModel(
         } catch (e: Exception) {
             logger.e(TAG, "Failed to load local content", e)
             _uiState.update { it.copy(isLoading = false, error = "Failed to load local content: ${e.message}") }
+        }
+    }
+
+    /** Only OIR has a generated [com.ssbmax.shared.ui.content.blocks.DocumentModel] today
+     * (Phase 2 pilot) -- every other topic, or OIR with the flag off, falls back to null and
+     * keeps rendering [TopicUiState.introduction] as markdown text, same as before this flag
+     * existed. Shared by both [loadFromLocal] and [applyCloudContent] -- see the latter's call
+     * site for why the same generated model is used regardless of content source. */
+    private fun structuredIntroductionFor(testType: String): com.ssbmax.shared.ui.content.blocks.DocumentModel? {
+        if (!ContentFeatureFlags.isStructuredRenderingEnabled(testType)) return null
+        return when (testType.uppercase()) {
+            "OIR" -> oirIntroductionSections()
+            else -> null
         }
     }
 
@@ -258,6 +277,12 @@ data class TopicUiState(
     val testType: String = "",
     val topicTitle: String = "",
     val introduction: String = "",
+    /** Structured twin of [introduction] (Phase 2 pilot, docs/plans/
+     * write-the-phased-plan-wobbly-pancake.md) -- null unless
+     * [com.ssbmax.shared.domain.config.ContentFeatureFlags.useStructuredRendering] is on for
+     * this topic AND a generated [com.ssbmax.shared.ui.content.blocks.DocumentModel] exists for
+     * it (only SSB_OVERVIEW today; D4 forbids parsing [introduction] into one at runtime). */
+    val introductionSections: com.ssbmax.shared.ui.content.blocks.DocumentModel? = null,
     val studyMaterials: List<StudyMaterialItem> = emptyList(),
     val availableTests: List<TestType> = emptyList(),
     val testCompletionStatus: TestStatus? = null,

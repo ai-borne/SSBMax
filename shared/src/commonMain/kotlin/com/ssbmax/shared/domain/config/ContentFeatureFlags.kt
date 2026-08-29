@@ -45,6 +45,25 @@ object ContentFeatureFlags {
     // Query optimization flags
     val enableOfflinePersistence: Boolean = true
     val cacheExpiryDays: Int = 7
+
+    /**
+     * Rollout flag for the structured-content renderer (Phase 2, docs/plans/
+     * write-the-phased-plan-wobbly-pancake.md) -- separate from [topicFlags] above, which
+     * gates cloud-vs-local *content source*, not *rendering shape*. Web's twin is
+     * `isStructuredRenderingEnabled` in `web/src/constants/contentFeatureFlags.ts`; a topic
+     * enabled on one platform and not the other is a visible diff between the two maps rather
+     * than a silent behavioral fork. OIR is the pilot (both here and on web) with a generated
+     * [com.ssbmax.shared.ui.content.blocks.DocumentModel] today -- see
+     * `TopicIntroOirStructured.kt`. NOT `SSB_OVERVIEW`: that topic ID navigates to a bespoke
+     * `SSBOverviewScreen`/`SSBContentProvider` accordion UI on KMP (see `StudyContentGraph.kt`),
+     * never `TopicScreen`/`IntroductionTab` at all -- wiring it there first was a real bug the
+     * Phase 2 three-surface parity gate caught (Android showed the untouched accordion, not
+     * this renderer).
+     */
+    private val structuredRenderingTopics = setOf("OIR")
+
+    fun isStructuredRenderingEnabled(topicType: String): Boolean =
+        structuredRenderingTopics.contains(topicType.uppercase())
     
     /**
      * Get current configuration as string (for debugging)

@@ -4,8 +4,11 @@ import { marked } from 'marked';
 // docs/plans/write-the-phased-plan-wobbly-pancake.md) is now the one canonical copy both sides
 // import. Same problem, runtime side: StudyMaterial content is fetched live from Firestore, not
 // the git content/ bundle, so it can't be pre-rendered at build time like generateContentBundle.mjs.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { shiftHeadingsHtml: shiftHeadings, listifyLabelRuns } = require('../../../scripts/content/markdownTransforms.js');
+// A plain ESM import (not the CJS `require()` this used to call) so Vite can resolve/transform
+// the CJS source module for the browser -- `require` is not defined at runtime in a browser
+// bundle, which broke every route under `npm run dev` (esbuild doesn't shim it for arbitrary
+// local CJS files the way Rollup's production build happened to).
+import { shiftHeadingsHtml as shiftHeadings, listifyLabelRuns } from '../../../scripts/content/markdownTransforms.mjs';
 
 /**
  * Runtime markdown -> HTML for content fetched live from Firestore (StudyMaterial.contentMarkdown

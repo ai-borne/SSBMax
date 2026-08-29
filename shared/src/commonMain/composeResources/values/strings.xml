@@ -1202,6 +1202,8 @@
     <string name="topic_tab_study_material">Study Material</string>
     <string name="topic_interview_score_suffix">/10</string>
     <string name="topic_no_study_materials">No study materials available yet</string>
+    <string name="content_takeaways_heading">Key takeaways</string>
+    <string name="content_toc_heading">On this page</string>
     <string name="topic_no_tests_available">No tests available yet</string>
     <string name="topic_retry_button">Retry</string>
     <string name="piq_bullet_separator">• </string>

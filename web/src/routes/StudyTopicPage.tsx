@@ -2,6 +2,8 @@ import { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { strings } from '../constants/strings';
 import { contentBundle, ContentBundleTopicId } from '../generated/contentBundle';
+import { isStructuredRenderingEnabled } from '../constants/contentFeatureFlags';
+import { DocumentView } from '../components/content/DocumentView';
 import { CONTENT_ROUTES, SITE_BASE_URL } from './contentRoutes';
 import { CONTENT_SEO } from './contentSeo';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
@@ -44,11 +46,17 @@ export const StudyTopicPage: FC<StudyTopicPageProps> = ({ topicId }) => {
         {strings.contentTopic.backToHome}
       </Link>
       <h1 className="mt-4 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{topic.title}</h1>
-      {/* topic.introductionHtml is pre-rendered HTML (build-time markdown, git-authored -- not user input), see contentBundle.ts */}
-      <div
-        className="mt-4 prose dark:prose-invert max-w-none text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed"
-        dangerouslySetInnerHTML={{ __html: topic.introductionHtml }}
-      />
+      {isStructuredRenderingEnabled(topicId) ? (
+        <div className="mt-4">
+          <DocumentView model={topic.introductionSections} />
+        </div>
+      ) : (
+        // topic.introductionHtml is pre-rendered HTML (build-time markdown, git-authored -- not user input), see contentBundle.ts
+        <div
+          className="mt-4 prose dark:prose-invert max-w-none text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: topic.introductionHtml }}
+        />
+      )}
 
       {topic.materials.length > 0 && (
         <section className="mt-10">

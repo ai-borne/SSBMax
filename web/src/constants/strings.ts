@@ -11,6 +11,7 @@ import { supportStrings } from './strings/support';
 import { contentTopicStrings } from './strings/contentTopic';
 import { publicFaqStrings } from './strings/faq';
 import { analyticsStrings } from './strings/analytics';
+import { contentBlockStrings } from './strings/content';
 
 export const strings = {
   ...commonStrings,
@@ -26,5 +27,6 @@ export const strings = {
   support: supportStrings,
   ...contentTopicStrings,
   ...publicFaqStrings,
-  analytics: analyticsStrings
+  analytics: analyticsStrings,
+  ...contentBlockStrings
 } as const;

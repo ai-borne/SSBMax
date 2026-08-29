@@ -36,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ssbmax.shared.presentation.topic.StudyMaterialItem
 import com.ssbmax.shared.ui.common.MarkdownText
+import com.ssbmax.shared.ui.content.DocumentView
+import com.ssbmax.shared.ui.content.blocks.DocumentModel
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.premium_badge_label
@@ -89,13 +91,32 @@ private fun formatBreadcrumbText(text: String): String {
 }
 
 @Composable
-internal fun IntroductionTab(introduction: String, isLoading: Boolean, modifier: Modifier = Modifier) {
+internal fun IntroductionTab(
+    introduction: String,
+    isLoading: Boolean,
+    introductionSections: DocumentModel? = null,
+    modifier: Modifier = Modifier
+) {
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         return
     }
 
-    LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    // Phase 2 pilot (docs/plans/write-the-phased-plan-wobbly-pancake.md): when a structured
+    // model is available (ContentFeatureFlags.isStructuredRenderingEnabled), render it via
+    // DocumentView's real per-section LazyColumn instead of the single-item MarkdownText card
+    // below -- this is the fix for this function's own single-`item{}` composition, which is
+    // still what every other topic falls back to until Phase 5 generates a model for them too.
+    if (introductionSections != null) {
+        DocumentView(model = introductionSections, modifier = modifier.fillMaxSize())
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         item {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

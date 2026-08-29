@@ -112,7 +112,7 @@ fun TopicScreen(
                 modifier = Modifier.fillMaxSize().padding(paddingValues)
             ) {
                 when (selectedTab) {
-                    0 -> IntroductionTab(introduction = uiState.introduction, isLoading = uiState.isLoading)
+                    0 -> IntroductionTab(uiState.introduction, uiState.isLoading, uiState.introductionSections)
                     1 -> StudyMaterialTab(
                         materials = uiState.studyMaterials,
                         isLoading = uiState.isLoading,

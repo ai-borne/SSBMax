@@ -2,8 +2,15 @@
  * The canonical implementations of two markdown transforms that were previously maintained
  * twice (`web/scripts/generateContentBundle.mjs` and `web/src/utils/renderMarkdown.ts`) — Phase 1
  * of docs/plans/write-the-phased-plan-wobbly-pancake.md (Readable Study Content) retires both
- * copies in favour of this one. Pure string -> string transforms, no I/O, usable from Node
- * (CJS) and from parseDocument.js.
+ * copies in favour of this one. Pure string -> string transforms, no I/O.
+ *
+ * ESM (not CJS `module.exports`) despite the `.js` extension: `renderMarkdown.ts` imports this
+ * file directly from the browser bundle (StudyReaderModal's runtime path, Firestore content
+ * can't be pre-rendered at build time), and it lives outside `web/`'s root so Vite serves it
+ * over `/@fs/` as-is with no CJS-to-ESM interop -- a `module.exports` shape here produced
+ * "does not provide an export named ..." at runtime for every route. `generateContentBundle.mjs`
+ * (the Node/build-time consumer) uses a plain `import` of this same file instead of
+ * `createRequire`, so there is exactly one module system, not a CJS/ESM twin.
  */
 
 /**
@@ -12,14 +19,14 @@
  * or component's own heading — shifting keeps one real heading outline per page instead of a
  * duplicate `<h1>`/`<h3>`.
  */
-function shiftHeadingsHtml(html, offset) {
+export function shiftHeadingsHtml(html, offset) {
   return html.replace(/<(\/?)h([1-6])>/g, (_match, closing, level) => {
     const newLevel = Math.min(6, Number(level) + offset);
     return `<${closing}h${newLevel}>`;
   });
 }
 
-const LABEL_LINE_RE = /^\*\*[^*]+\*\*:/;
+export const LABEL_LINE_RE = /^\*\*[^*]+\*\*:/;
 
 /**
  * Converts a run of 2+ consecutive `**Label**: value` lines (no blank line between them) into
@@ -27,7 +34,7 @@ const LABEL_LINE_RE = /^\*\*[^*]+\*\*:/;
  * one run-on paragraph (CommonMark treats bare `\n` between them as a soft break, not a line
  * break). A single standalone label line is left as plain text.
  */
-function listifyLabelRuns(markdown) {
+export function listifyLabelRuns(markdown) {
   const lines = markdown.split('\n');
   const out = [];
   let i = 0;
@@ -50,5 +57,3 @@ function listifyLabelRuns(markdown) {
   }
   return out.join('\n');
 }
-
-module.exports = { shiftHeadingsHtml, listifyLabelRuns, LABEL_LINE_RE };

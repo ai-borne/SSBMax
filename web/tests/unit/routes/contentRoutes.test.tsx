@@ -9,6 +9,24 @@ import { CONTENT_ROUTES } from '../../../src/routes/contentRoutes';
 import { CONTENT_SEO } from '../../../src/routes/contentSeo';
 import { StudyTopicPage } from '../../../src/routes/StudyTopicPage';
 import { contentBundle } from '../../../src/generated/contentBundle';
+import { isStructuredRenderingEnabled } from '../../../src/constants/contentFeatureFlags';
+
+/** The Phase 2 pilot (docs/plans/write-the-phased-plan-wobbly-pancake.md) renders
+ * `introductionSections` via `DocumentView` instead of `introductionHtml`'s raw markup for
+ * flagged topics -- pull the comparable "first real text" from whichever source that topic
+ * actually renders from, so this test's markdown-leak assertion covers both paths. */
+function firstRenderedText(topicId: keyof typeof contentBundle): string {
+  const topic = contentBundle[topicId];
+  if (isStructuredRenderingEnabled(topicId)) {
+    const firstTextBlock = topic.introductionSections.sections[0]?.blocks.find(
+      (b): b is { type: 'paragraph'; text: string } => b.type === 'paragraph'
+    );
+    // Inline `**bold**` renders as <strong> (no literal asterisks in the DOM), so strip them
+    // here too -- this return value is only used as a rendered-text substring probe below.
+    return (firstTextBlock?.text ?? '').replace(/\*\*/g, '');
+  }
+  return new DOMParser().parseFromString(topic.introductionHtml, 'text/html').body.textContent ?? '';
+}
 
 describe('CONTENT_ROUTES', () => {
   it('has exactly one permanent path per bundled topic, with no duplicates', () => {
@@ -35,11 +53,10 @@ describe('CONTENT_ROUTES', () => {
 
       const topic = contentBundle[topicId];
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(topic.title);
-      // introductionHtml is pre-rendered HTML -- extract its plain text via jsdom's own
-      // DOMParser (same engine the render above went through) rather than approximating tag
-      // stripping by hand, and assert no source markdown syntax leaked through unparsed (the
-      // bug this rendering path exists to prevent).
-      const introText = new DOMParser().parseFromString(topic.introductionHtml, 'text/html').body.textContent ?? '';
+      // Assert no source markdown syntax leaked through unparsed (the bug this rendering path
+      // exists to prevent) -- via introductionHtml (marked) for most topics, or introductionSections
+      // (DocumentView) for the Phase 2 pilot -- see firstRenderedText.
+      const introText = firstRenderedText(topicId);
       expect(document.body.textContent).toContain(introText.trim().slice(0, 30));
       expect(document.body.textContent).not.toContain('**');
       expect(document.body.textContent).not.toContain('##');
