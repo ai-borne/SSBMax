@@ -39,6 +39,9 @@ const { getAnalyticsSummary } = require('./analytics/getAnalyticsSummary');
 const { evaluateGTO } = require('./evaluation/gtoEvaluate');
 const { evaluatePPDT } = require('./evaluation/ppdtEvaluate');
 const { evaluateTAT } = require('./evaluation/tatEvaluate');
+const { requestAccountDeletion } = require('./account/requestAccountDeletion');
+const { cancelAccountDeletion } = require('./account/cancelAccountDeletion');
+const { purgeExpiredAccounts } = require('./account/purgeExpiredAccounts');
 const {
   submitPIQTest,
   submitPPDTTest,
@@ -168,4 +171,13 @@ exports.submitInterviewResponse = submitInterviewResponse;
 // and analytics/getAnalyticsSummary.js's doc comments for why this is a counter, not an event
 // log, and why traffic/referrer segmentation is intentionally NOT duplicated here.
 exports.recordSignup = recordSignup;
+
+// Phase 1 (docs/plans/AccountDeletion.md): soft-delete grace-period account deletion --
+// `functions/src/account/` is the sole cascade-delete authority (root CLAUDE.md's
+// four-consumer SSOT section). requestAccountDeletion/cancelAccountDeletion are the
+// client-facing callables; purgeExpiredAccounts is the daily sweep that runs the real
+// cascade once the grace period elapses.
+exports.requestAccountDeletion = requestAccountDeletion;
+exports.cancelAccountDeletion = cancelAccountDeletion;
+exports.purgeExpiredAccounts = purgeExpiredAccounts;
 exports.getAnalyticsSummary = getAnalyticsSummary;
