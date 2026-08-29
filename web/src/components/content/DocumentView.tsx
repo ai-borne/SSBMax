@@ -14,6 +14,14 @@ export interface DocumentViewProps {
  * write-the-phased-plan-wobbly-pancake.md): sections, TOC, takeaways, `paragraph`, `list`.
  * Sections render expanded by default (D3) -- no `<details>` collapsing here, that's a later
  * per-section affordance, not this component's concern.
+ *
+ * Each section is its own bordered/tinted panel -- the plan's "Readability devices" table
+ * calls this out explicitly ("Section chunking -- one panel per ##"), matching KMP's
+ * `SectionCard` (`DocumentView.kt`). Before this, only `TakeawaysCard`/`CalloutBlock` had panel
+ * styling; a bare `mb-8` on `<section>` read as one continuous wall of text once a real
+ * multi-section document (not just the Phase 2 pilot) reached this component. Keep this in
+ * lockstep with `prerenderHtml.mjs`'s `buildDocumentHtml` (its static-HTML twin) or the
+ * prerendered and hydrated views will visibly diverge.
  */
 export const DocumentView: FC<DocumentViewProps> = ({ model, takeaways }) => {
   const headedSections = model.sections.filter((s) => s.heading);
@@ -49,7 +57,11 @@ export const DocumentView: FC<DocumentViewProps> = ({ model, takeaways }) => {
       )}
 
       {model.sections.map((section) => (
-        <section key={section.id} id={section.slug} className="mb-8">
+        <section
+          key={section.id}
+          id={section.slug}
+          className="mb-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-4 sm:p-5"
+        >
           {section.heading && <h2 className="text-lg font-bold text-slate-900 dark:text-white">{section.heading}</h2>}
           <div className="mt-3 space-y-4">
             {section.blocks.map((block, index) => {

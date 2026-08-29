@@ -40,7 +40,7 @@ const SLUGS_LOCK_PATH = join(CONTENT_ROOT, 'slugs.lock.json');
 // into a real bullet list before marked.parse() runs, so each spec renders on its own line
 // instead of collapsing into one CommonMark soft-break run-on paragraph.
 const require = createRequire(import.meta.url);
-const { parseDocument } = require('../../scripts/content/parseDocument.js');
+const { parseDocument, summaryFromModel } = require('../../scripts/content/parseDocument.js');
 
 const slugsLock = JSON.parse(readFileSync(SLUGS_LOCK_PATH, 'utf-8'));
 
@@ -67,14 +67,15 @@ function buildBundle() {
   const materialsByTopic = new Map();
   for (const { id, meta, body, sourcePath } of materials) {
     const list = materialsByTopic.get(meta.topicType) ?? [];
+    // Structured DocumentModel (Phase 4) -- StudyTopicPage.tsx and prerenderHtml.mjs render
+    // this via DocumentView/the block registry, never `dangerouslySetInnerHTML`.
+    const sections = buildIntroductionSections(sourcePath, body);
     list.push({
       id,
       title: meta.title,
       category: meta.category,
-      summary: body.split('\n').find((line) => line.trim().length > 0)?.slice(0, 200) ?? '',
-      // Structured DocumentModel (Phase 4) -- StudyTopicPage.tsx and prerenderHtml.mjs render
-      // this via DocumentView/the block registry, never `dangerouslySetInnerHTML`.
-      sections: buildIntroductionSections(sourcePath, body),
+      summary: summaryFromModel(sections),
+      sections,
       estimatedReadTimeMinutes: Number.parseInt(meta.readTime, 10) || 5,
       tags: meta.tags ?? [],
       displayOrder: meta.displayOrder ?? 0,

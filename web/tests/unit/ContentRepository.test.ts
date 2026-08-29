@@ -39,6 +39,28 @@ describe('ContentRepository Unit Tests', () => {
     expect(materials[0]).toHaveProperty('category');
   });
 
+  it('falls back to a markdown-stripped summary, not a literal-syntax raw slice, when the doc has no summary field', async () => {
+    vi.mocked(getDocs).mockResolvedValueOnce({
+      forEach: (callback: (doc: any) => void) =>
+        [
+          {
+            id: 'oir_1',
+            data: () => ({
+              title: 'Understanding OIR Test Pattern',
+              topicType: 'OIR',
+              contentMarkdown: '# Understanding OIR Test Pattern\n\nThe OIR test is the first major hurdle.'
+              // no `summary` field -- none of the 51 real study-materials docs have one
+            })
+          }
+        ].forEach(callback)
+    } as any);
+
+    const materials = await repository.getStudyMaterials();
+
+    expect(materials[0].summary).not.toContain('#');
+    expect(materials[0].summary).toBe('The OIR test is the first major hurdle.');
+  });
+
   it('should derive testTypeId from an explicit topicType field for unambiguous topics, and dayNumber from Firestore snapshots', async () => {
     const mockDocSnapshots = [
       {

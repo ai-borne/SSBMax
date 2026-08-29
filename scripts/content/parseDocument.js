@@ -124,6 +124,28 @@ function stripInline(text) {
 }
 
 /**
+ * Plain-text summary snippet from a parsed DocumentModel -- the first `paragraph` block's text
+ * (skipping subheadings, lists, etc.), inline markers stripped, truncated at a word boundary.
+ * Used wherever a `summary` field is needed and the source frontmatter doesn't define one
+ * (content/study-materials/*.md never has), replacing an earlier fallback that raw-sliced the
+ * first line of markdown and showed literal `#`/`**` syntax whenever that line was a heading.
+ */
+function summaryFromModel(model, maxLength = 200) {
+  for (const section of model.sections) {
+    for (const block of section.blocks) {
+      if (block.type !== 'paragraph') continue;
+      const plain = stripInline(block.text).replace(/\s+/g, ' ').trim();
+      if (!plain) continue;
+      if (plain.length <= maxLength) return plain;
+      const cut = plain.slice(0, maxLength);
+      const lastSpace = cut.lastIndexOf(' ');
+      return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trim()}...`;
+    }
+  }
+  return '';
+}
+
+/**
  * Flattens a DocumentModel back to plain text, in document order, for the exact-text
  * conservation gate. Order-preserving: every block contributes its literal words in the order
  * they appear. Applies the exact same normalisation rules as stripMarkdownSyntax (inline `**`
@@ -191,4 +213,4 @@ function stripMarkdownSyntax(body) {
     .trim();
 }
 
-module.exports = { parseDocument, flattenToPlainText, stripMarkdownSyntax, slugify, slugKey, TAXONOMY };
+module.exports = { parseDocument, flattenToPlainText, stripMarkdownSyntax, summaryFromModel, slugify, slugKey, TAXONOMY };

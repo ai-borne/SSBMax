@@ -5,6 +5,7 @@ import { IContentRepository } from './interfaces/IContentRepository';
 import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, TestBatchInfo, GPEImage, OIRContentMeta } from '../types/testContent';
 import { ContentUnavailableError } from '../types/errors';
 import type { DocumentModel, DocSection } from '../components/content/blocks/types';
+import { summarizeMarkdown } from '../utils/summarizeMarkdown';
 import { getFallbackStudyMaterials, getFallbackStudyMaterialById } from '../constants/fallbackStudyMaterials';
 import { primaryTestTypeIdForTopicType } from '../constants/topicTypeMapping';
 import {
@@ -73,7 +74,7 @@ export class ContentRepository implements IContentRepository {
       id,
       title: data.title || '',
       category: data.category || topicType || 'General',
-      summary: data.summary || (content ? content.slice(0, 150) + '...' : ''),
+      summary: data.summary || (content ? summarizeMarkdown(content) : ''),
       contentMarkdown: content,
       estimatedReadTimeMinutes: readTime,
       tags: data.tags || [],

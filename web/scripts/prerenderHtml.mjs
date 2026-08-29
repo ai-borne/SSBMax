@@ -131,14 +131,20 @@ function buildBlockHtml(block) {
   }
 }
 
-/** Renders a DocumentModel's sections -- see `DocumentView.tsx`'s hydrated twin. */
+/**
+ * Renders a DocumentModel's sections -- see `DocumentView.tsx`'s hydrated twin, which this
+ * must stay in lockstep with (including the per-section panel styling -- the plan's
+ * "Readability devices" table: "Section chunking -- one panel per ##") or the prerendered and
+ * hydrated views visibly diverge. This file renders on a fixed dark background (no `dark:`
+ * variants anywhere else in it), so the panel uses the same slate-900/slate-800 tone directly.
+ */
 function buildDocumentHtml(model) {
   return model.sections
     .map((section) => {
       const heading = section.heading ? `<h2 class="text-lg font-bold text-white">${escapeHtml(section.heading)}</h2>` : '';
       const blocksHtml = section.blocks.map(buildBlockHtml).join('\n          ');
       return `
-        <section id="${escapeHtml(section.slug)}">
+        <section id="${escapeHtml(section.slug)}" class="mb-8 rounded-lg border border-slate-800 bg-slate-900/40 p-4 sm:p-5">
           ${heading}
           <div class="mt-3 space-y-4">
             ${blocksHtml}

@@ -7,7 +7,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseDocument, flattenToPlainText, stripMarkdownSyntax } = require('../content/parseDocument');
+const { parseDocument, flattenToPlainText, stripMarkdownSyntax, summaryFromModel } = require('../content/parseDocument');
 const { parseContentFile } = require('../content/parseContentFile');
 
 const CONTENT_ROOT = path.join(__dirname, '..', '..', 'content');
@@ -148,4 +148,41 @@ test('parseDocument: exact-text conservation — every real content/**/*.md file
     if (flat !== expected) failures.push(sourcePath);
   }
   assert.deepEqual(failures, [], `these files lost/reordered/duplicated content: ${failures.join(', ')}`);
+});
+
+test('summaryFromModel: skips the leading heading/subheading block and returns the first real paragraph, syntax-free', () => {
+  const model = parseDocument(
+    '# Understanding OIR Test Pattern\n\nThe OIR test is the first major hurdle.\n\n## Next Section\n\nMore text.',
+    { sourcePath: 'study-materials/x.md' }
+  );
+
+  assert.equal(summaryFromModel(model), 'The OIR test is the first major hurdle.');
+});
+
+test('summaryFromModel: strips inline ** emphasis and truncates at a word boundary with an ellipsis', () => {
+  const model = parseDocument(`${'word '.repeat(60).trim()}`, { sourcePath: 'study-materials/x.md' });
+
+  const summary = summaryFromModel(model, 50);
+
+  assert.ok(summary.length <= 53);
+  assert.ok(summary.endsWith('...'));
+});
+
+test('summaryFromModel: returns empty string when the document has no paragraph block at all', () => {
+  const model = parseDocument('## Just A Heading', { sourcePath: 'study-materials/x.md' });
+
+  assert.equal(summaryFromModel(model), '');
+});
+
+test('summaryFromModel: every real study-material file produces a summary containing no literal markdown syntax', () => {
+  const materialsDir = path.join(CONTENT_ROOT, 'study-materials');
+  for (const file of fs.readdirSync(materialsDir).filter((f) => f.endsWith('.md'))) {
+    const sourcePath = path.join(materialsDir, file);
+    const raw = fs.readFileSync(sourcePath, 'utf8');
+    const { body } = parseContentFile(raw, sourcePath);
+    const model = parseDocument(body, { sourcePath });
+    const summary = summaryFromModel(model);
+    assert.ok(!summary.includes('**'), `${file}: summary still contains "**" -- ${JSON.stringify(summary)}`);
+    assert.ok(!/^#{1,6}\s/.test(summary), `${file}: summary starts with a heading marker -- ${JSON.stringify(summary)}`);
+  }
 });

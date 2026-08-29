@@ -251,7 +251,7 @@
         "id": "conf_1",
         "title": "Conference Day: Format and Procedure",
         "category": "SSB Preparation",
-        "summary": "# Conference Day: Format and Procedure",
+        "summary": "The Conference is held on the morning of Day 5, after Psychology, GTO, and Interview are complete. It is not a fresh test — it is the board's final consolidation of everything they have already...",
         "sections": {
           "sections": [
             {
@@ -406,7 +406,7 @@
         "id": "conf_2",
         "title": "Common Conference Questions and How to Answer Them",
         "category": "SSB Preparation",
-        "summary": "# Common Conference Questions and How to Answer Them",
+        "summary": "The conference interaction is short — usually under two minutes per candidate — so the board asks a small number of high-value questions. Knowing the categories helps you answer quickly and honestly...",
         "sections": {
           "sections": [
             {
@@ -626,7 +626,7 @@
         "id": "conf_3",
         "title": "Understanding SSB Results and Chest Numbers",
         "category": "SSB Preparation",
-        "summary": "# Understanding SSB Results and Chest Numbers",
+        "summary": "From Day 1 onward, every candidate is identified only by a chest number, not by name. This is a deliberate anonymisation measure: it reduces bias between assessors and candidates, and it is also how...",
         "sections": {
           "sections": [
             {
@@ -741,7 +741,7 @@
         "id": "conf_4",
         "title": "Conference Etiquette and Making the Right Final Impression",
         "category": "SSB Preparation",
-        "summary": "# Conference Etiquette and Making the Right Final Impression",
+        "summary": "The conference is brief, but it is still an observed interaction — the board is watching how you carry yourself one last time, even though the substantive evaluation is already largely complete.",
         "sections": {
           "sections": [
             {
@@ -1044,7 +1044,7 @@
         "id": "gto_1",
         "title": "GTO Tasks Overview",
         "category": "GTO Preparation",
-        "summary": "# GTO Tasks Overview",
+        "summary": "Group Testing Officer (GTO) tasks span Days 3-5 of SSB and constitute approximately 33% of your final assessment. Unlike psychology tests that reveal your thoughts, GTO tasks observe your actual...",
         "sections": {
           "sections": [
             {
@@ -1762,7 +1762,7 @@
         "id": "gto_2",
         "title": "Group Discussion Mastery",
         "category": "GTO Preparation",
-        "summary": "# Group Discussion Mastery",
+        "summary": "Group Discussion (GD) is the first GTO task where candidates discuss a given topic for 20-30 minutes without a designated leader. It assesses your communication skills, knowledge, logical thinking,...",
         "sections": {
           "sections": [
             {
@@ -2463,7 +2463,7 @@
         "id": "gto_3",
         "title": "Progressive Group Task Tips",
         "category": "GTO Preparation",
-        "summary": "# Progressive Group Task (PGT) Tips",
+        "summary": "Progressive Group Task is the signature GTO activity where your group faces 4 outdoor obstacles requiring teamwork, physical effort, and problem-solving to cross using limited helping materials. PGT...",
         "sections": {
           "sections": [
             {
@@ -3291,7 +3291,7 @@
         "id": "gto_4",
         "title": "Half Group Task Techniques",
         "category": "GTO Preparation",
-        "summary": "# Half Group Task (HGT) Techniques",
+        "summary": "Half Group Task splits your group into two smaller teams (4-5 members each) working on separate but similar obstacles simultaneously. HGT intensifies individual visibility, increases leadership...",
         "sections": {
           "sections": [
             {
@@ -3941,7 +3941,7 @@
         "id": "gto_5",
         "title": "Lecturette Preparation",
         "category": "GTO Preparation",
-        "summary": "# Lecturette Preparation",
+        "summary": "Lecturette is your individual speaking task where you deliver a 3-minute lecture on a topic given just 3 minutes before. It tests your knowledge, power of expression, confidence, ability to think...",
         "sections": {
           "sections": [
             {
@@ -4139,7 +4139,7 @@
         "id": "gto_6",
         "title": "Command Task Leadership",
         "category": "GTO Preparation",
-        "summary": "# Command Task Leadership",
+        "summary": "Command Task is your individual leadership test where you command 2-3 subordinates to complete an obstacle. This task directly simulates military leadership—giving clear orders, coordinating a team,...",
         "sections": {
           "sections": [
             {
@@ -4511,7 +4511,7 @@
         "id": "gto_7",
         "title": "Snake Race & FGT Strategies",
         "category": "GTO Preparation",
-        "summary": "# Snake Race & FGT Strategies",
+        "summary": "Snake Race and Final Group Task (FGT) are the culminating GTO activities where your group demonstrates sustained teamwork, physical endurance, and learning integration from all previous tasks. These...",
         "sections": {
           "sections": [
             {
@@ -5210,7 +5210,7 @@
         "id": "int_1",
         "title": "SSB Interview Process",
         "category": "Interview Preparation",
-        "summary": "# SSB Interview Process",
+        "summary": "The Personal Interview, conducted by the Interviewing Officer (IO), is a one-on-one assessment lasting 30-45 minutes that explores your personality, knowledge, motivation, and suitability for an...",
         "sections": {
           "sections": [
             {
@@ -5633,7 +5633,7 @@
         "id": "int_2",
         "title": "Personal Interview Preparation",
         "category": "Interview Preparation",
-        "summary": "# Personal Interview Preparation",
+        "summary": "Personal interview preparation requires deep self-reflection, honest self-assessment, and clear articulation of your life story, motivations, and aspirations. This guide helps you prepare authentic,...",
         "sections": {
           "sections": [
             {
@@ -6123,7 +6123,7 @@
         "id": "int_3",
         "title": "Current Affairs Mastery",
         "category": "Interview Preparation",
-        "summary": "# Current Affairs Mastery",
+        "summary": "Current affairs knowledge is crucial for SSB interview, demonstrating your awareness of the world around you, ability to form opinions, and interest in national and international matters—essential...",
         "sections": {
           "sections": [
             {
@@ -6818,7 +6818,7 @@
         "id": "int_4",
         "title": "Military Knowledge Basics",
         "category": "Interview Preparation",
-        "summary": "# Military Knowledge Basics",
+        "summary": "Military knowledge demonstrates your genuine interest in the profession you're aspiring to join. While IO doesn't expect you to be a military expert, basic awareness of armed forces structure, roles,...",
         "sections": {
           "sections": [
             {
@@ -7709,7 +7709,7 @@
         "id": "int_5",
         "title": "Interview Body Language",
         "category": "Interview Preparation",
-        "summary": "# Interview Body Language",
+        "summary": "Your body language communicates as much as your words during the SSB interview. The IO observes your posture, gestures, eye contact, and overall demeanor to assess confidence, honesty, and...",
         "sections": {
           "sections": [
             {
@@ -8183,7 +8183,7 @@
         "id": "int_6",
         "title": "Common Interview Questions",
         "category": "Interview Preparation",
-        "summary": "# Common Interview Questions",
+        "summary": "While every SSB interview is unique, certain categories of questions appear consistently. Preparing thoughtful, honest responses to these common questions builds confidence and helps you articulate...",
         "sections": {
           "sections": [
             {
@@ -8735,7 +8735,7 @@
         "id": "int_7",
         "title": "Mock Interview Scenarios",
         "category": "Interview Preparation",
-        "summary": "# Mock Interview Scenarios",
+        "summary": "Mock interviews are the most effective way to prepare for the actual SSB interview. This comprehensive guide provides complete mock interview scenarios covering different styles, difficulty levels,...",
         "sections": {
           "sections": [
             {
@@ -9798,7 +9798,7 @@
         "id": "med_1",
         "title": "SSB Medical Examination: Complete Overview",
         "category": "SSB Preparation",
-        "summary": "# SSB Medical Examination: Complete Overview",
+        "summary": "Once the board recommends you at the conference, you move into the medical examination — a separate, thorough assessment conducted by military doctors, independent of the psychological and interview...",
         "sections": {
           "sections": [
             {
@@ -9955,7 +9955,7 @@
         "id": "med_2",
         "title": "Vision and ENT Standards for the Armed Forces",
         "category": "SSB Preparation",
-        "summary": "# Vision and ENT Standards for the Armed Forces",
+        "summary": "Vision is consistently one of the most common reasons for medical disqualification at SSB, and the exact standard depends heavily on which service and branch you're applying for.",
         "sections": {
           "sections": [
             {
@@ -10099,7 +10099,7 @@
         "id": "med_3",
         "title": "Common Medical Disqualifications and How to Avoid Them",
         "category": "SSB Preparation",
-        "summary": "# Common Medical Disqualifications and How to Avoid Them",
+        "summary": "Most medical rejections at SSB fall into a small number of recurring categories. Knowing them in advance lets you fix what's fixable long before you're standing in front of a medical board.",
         "sections": {
           "sections": [
             {
@@ -10291,7 +10291,7 @@
         "id": "med_4",
         "title": "Special, Appeal and Review Medical Boards Explained (SMB, AMB, RMB)",
         "category": "SSB Preparation",
-        "summary": "# Special, Appeal and Review Medical Boards Explained (SMB, AMB, RMB)",
+        "summary": "If you're marked unfit at your first medical examination, that is not necessarily the final word. The system has a structured, multi-stage appeal process — understanding it removes a lot of...",
         "sections": {
           "sections": [
             {
@@ -10482,7 +10482,7 @@
         "id": "med_5",
         "title": "Preparing Your Body for the SSB Medical Examination",
         "category": "SSB Preparation",
-        "summary": "# Preparing Your Body for the SSB Medical Examination",
+        "summary": "Unlike Psychology, GTO, and Interview, the medical examination cannot be influenced by how you present yourself in the moment — it measures fixed, verifiable facts about your body. That makes advance...",
         "sections": {
           "sections": [
             {
@@ -10789,7 +10789,7 @@
         "id": "oir_1",
         "title": "Understanding OIR Test Pattern",
         "category": "OIR Preparation",
-        "summary": "# Understanding OIR Test Pattern",
+        "summary": "The Officer Intelligence Rating (OIR) test is the first major hurdle in the SSB selection process, conducted on Day 1 as part of the screening stage. Understanding its pattern and purpose is crucial...",
         "sections": {
           "sections": [
             {
@@ -11044,7 +11044,7 @@
         "id": "oir_2",
         "title": "Verbal Reasoning Mastery",
         "category": "OIR Preparation",
-        "summary": "# Verbal Reasoning Mastery",
+        "summary": "Verbal reasoning forms the backbone of the OIR test, accounting for 35-40% of all questions. Mastering this section can significantly boost your overall OIR score and increase your chances of...",
         "sections": {
           "sections": [
             {
@@ -11379,7 +11379,7 @@
         "id": "oir_3",
         "title": "Non-Verbal Reasoning Strategies",
         "category": "OIR Preparation",
-        "summary": "# Non-Verbal Reasoning Strategies",
+        "summary": "Non-verbal reasoning constitutes 30-35% of the OIR test and is often considered the most challenging section by many candidates. However, with systematic practice and the right strategies, you can...",
         "sections": {
           "sections": [
             {
@@ -11743,7 +11743,7 @@
         "id": "oir_4",
         "title": "Time Management in OIR",
         "category": "OIR Preparation",
-        "summary": "# Time Management in OIR",
+        "summary": "The OIR test is as much about time management as it is about intelligence. With 40-50 questions to attempt in just 30-40 minutes, effective time management can be the difference between clearing and...",
         "sections": {
           "sections": [
             {
@@ -12099,7 +12099,7 @@
         "id": "oir_5",
         "title": "Common Mistakes to Avoid",
         "category": "OIR Preparation",
-        "summary": "# Common Mistakes to Avoid in OIR",
+        "summary": "Even well-prepared candidates often make preventable mistakes in the OIR test that cost them valuable marks and potentially their screening success. Understanding and avoiding these pitfalls can...",
         "sections": {
           "sections": [
             {
@@ -12608,7 +12608,7 @@
         "id": "oir_6",
         "title": "Practice Sets with Solutions",
         "category": "OIR Preparation",
-        "summary": "# Practice Sets with Solutions",
+        "summary": "Practice is the cornerstone of OIR success. This comprehensive practice set includes questions from all major categories with detailed solutions to help you understand the logic and approach for each...",
         "sections": {
           "sections": [
             {
@@ -13212,7 +13212,7 @@
         "id": "oir_7",
         "title": "Mental Math Shortcuts",
         "category": "OIR Preparation",
-        "summary": "# Mental Math Shortcuts",
+        "summary": "Numerical ability questions in OIR test your speed as much as your mathematical skills. These mental math shortcuts can help you solve problems 2-3x faster, giving you a crucial edge in the...",
         "sections": {
           "sections": [
             {
@@ -13847,7 +13847,7 @@
         "id": "piq_1",
         "title": "How to Fill the PIQ Form: A Section-by-Section Guide",
         "category": "SSB Preparation",
-        "summary": "# How to Fill the PIQ Form: A Section-by-Section Guide",
+        "summary": "The Personal Information Questionnaire (PIQ) is filled at the very start of your SSB, usually on Day 1 before Psychology testing begins. It is one of the first documents your Interviewing Officer and...",
         "sections": {
           "sections": [
             {
@@ -14077,7 +14077,7 @@
         "id": "piq_2",
         "title": "PIQ Form: Common Mistakes and How to Avoid Them",
         "category": "SSB Preparation",
-        "summary": "# PIQ Form: Common Mistakes and How to Avoid Them",
+        "summary": "Because the PIQ directly shapes your interview, mistakes here don't just look untidy on paper — they generate awkward questions you have to answer live in front of the IO. These are the errors...",
         "sections": {
           "sections": [
             {
@@ -14300,7 +14300,7 @@
         "id": "piq_3",
         "title": "Using Your PIQ to Prepare for the Interview",
         "category": "SSB Preparation",
-        "summary": "# Using Your PIQ to Prepare for the Interview",
+        "summary": "Once you've submitted your PIQ, it becomes the single most important reference document for your personal interview. The smartest preparation you can do afterward is to treat your own PIQ as a study...",
         "sections": {
           "sections": [
             {
@@ -14636,7 +14636,7 @@
         "id": "ppdt_1",
         "title": "PPDT Test Overview",
         "category": "PPDT Preparation",
-        "summary": "# PPDT Test Overview",
+        "summary": "The Picture Perception and Description Test (PPDT) is the second crucial component of Day 1 screening at SSB. Combined with your OIR score, PPDT performance determines whether you proceed to the main...",
         "sections": {
           "sections": [
             {
@@ -15001,7 +15001,7 @@
         "id": "ppdt_2",
         "title": "Story Writing Techniques",
         "category": "PPDT Preparation",
-        "summary": "# Story Writing Techniques for PPDT",
+        "summary": "Writing a complete, coherent, and positive story in just 4 minutes is the most challenging aspect of PPDT for many candidates. This guide provides proven techniques to construct high-scoring stories...",
         "sections": {
           "sections": [
             {
@@ -15649,7 +15649,7 @@
         "id": "ppdt_3",
         "title": "Group Discussion Strategies",
         "category": "PPDT Preparation",
-        "summary": "# Group Discussion Strategies for PPDT",
+        "summary": "The group discussion is the final and most critical phase of PPDT, accounting for approximately 30% of your total PPDT score. It reveals your interpersonal skills, leadership potential, and teamwork...",
         "sections": {
           "sections": [
             {
@@ -16219,7 +16219,7 @@
         "id": "ppdt_4",
         "title": "Character Perception Skills",
         "category": "PPDT Preparation",
-        "summary": "# Character Perception Skills",
+        "summary": "Accurate character perception is the foundation of a strong PPDT performance. Getting the basics right—number of characters, their gender, and approximate age—is crucial as it demonstrates your...",
         "sections": {
           "sections": [
             {
@@ -16774,7 +16774,7 @@
         "id": "ppdt_5",
         "title": "Sample PPDT Stories",
         "category": "PPDT Preparation",
-        "summary": "# Sample PPDT Stories",
+        "summary": "Learning from well-constructed sample stories helps you understand the structure, language, and themes that work effectively in PPDT. Each sample below demonstrates key principles of good story...",
         "sections": {
           "sections": [
             {
@@ -17187,7 +17187,7 @@
         "id": "ppdt_6",
         "title": "Common PPDT Mistakes",
         "category": "PPDT Preparation",
-        "summary": "# Common PPDT Mistakes to Avoid",
+        "summary": "Even well-prepared candidates make avoidable mistakes in PPDT that cost them screening success. Understanding these pitfalls helps you navigate PPDT more effectively and maximize your chances of...",
         "sections": {
           "sections": [
             {
@@ -17903,7 +17903,7 @@
         "id": "psy_1",
         "title": "Psychology Tests Overview",
         "category": "Psychology Tests",
-        "summary": "# Psychology Tests Overview",
+        "summary": "Psychology Tests form a crucial component of the SSB interview process, conducted on Day 2. These tests aim to unveil your true personality, thought processes, and suitability for an officer's role...",
         "sections": {
           "sections": [
             {
@@ -18462,7 +18462,7 @@
         "id": "psy_2",
         "title": "TAT Mastery Guide",
         "category": "Psychology Tests",
-        "summary": "# TAT Mastery Guide",
+        "summary": "The Thematic Apperception Test (TAT) is arguably the most revealing and significant component of SSB psychology tests. Mastering TAT requires understanding its purpose, developing the right mindset,...",
         "sections": {
           "sections": [
             {
@@ -19209,7 +19209,7 @@
         "id": "psy_3",
         "title": "WAT Response Strategies",
         "category": "Psychology Tests",
-        "summary": "# WAT Response Strategies",
+        "summary": "The Word Association Test (WAT) is a rapid-fire psychology test that reveals your spontaneous thought patterns and mental associations. With just 15 seconds per word for 60 words, WAT tests your...",
         "sections": {
           "sections": [
             {
@@ -20023,7 +20023,7 @@
         "id": "psy_4",
         "title": "SRT Situation Analysis",
         "category": "Psychology Tests",
-        "summary": "# SRT Situation Analysis",
+        "summary": "The Situation Reaction Test (SRT) presents 60 practical, everyday situations requiring your immediate response. It reveals your problem-solving approach, practical wisdom, decision-making ability,...",
         "sections": {
           "sections": [
             {
@@ -20866,7 +20866,7 @@
         "id": "psy_5",
         "title": "Self Description Writing",
         "category": "Psychology Tests",
-        "summary": "# Self Description Writing",
+        "summary": "Self Description (SD) is the final component of SSB psychology tests where you describe how others see you and how you see yourself. This test reveals your self-awareness, honesty, social...",
         "sections": {
           "sections": [
             {
@@ -21661,7 +21661,7 @@
         "id": "psy_6",
         "title": "Officer Like Qualities Explained",
         "category": "Psychology Tests",
-        "summary": "# Officer Like Qualities (OLQs) Explained",
+        "summary": "The 15 Officer Like Qualities (OLQs) form the framework against which SSB assessors evaluate your personality. Understanding these qualities deeply helps you recognize them in yourself, develop them...",
         "sections": {
           "sections": [
             {
@@ -22376,7 +22376,7 @@
         "id": "psy_7",
         "title": "Psychology Test Practice Sets",
         "category": "Psychology Tests",
-        "summary": "# Psychology Test Practice Sets",
+        "summary": "Comprehensive practice is essential for psychology test success. This guide provides sample practice sets for TAT, WAT, SRT, and SD to help you apply all the principles and techniques you've learned.",
         "sections": {
           "sections": [
             {
@@ -22932,7 +22932,7 @@
         "id": "psy_8",
         "title": "Psychological Mindset Development",
         "category": "Psychology Tests",
-        "summary": "# Psychological Mindset Development",
+        "summary": "Success in SSB psychology tests and overall recommendation depends not just on test-taking techniques but on developing a genuinely positive, officer-like psychological mindset. This guide helps you...",
         "sections": {
           "sections": [
             {
@@ -23687,7 +23687,7 @@
         "id": "ssb_1",
         "title": "Complete Guide to the SSB Selection Process",
         "category": "SSB Preparation",
-        "summary": "# Complete Guide to the SSB Selection Process",
+        "summary": "The Services Selection Board (SSB) is the five-day assessment used by the Indian Army, Navy, and Air Force to select candidates for officer entry. It is deliberately designed to be difficult to...",
         "sections": {
           "sections": [
             {
@@ -23914,7 +23914,7 @@
         "id": "ssb_2",
         "title": "SSB Entry Schemes: NDA, CDS, TES, SSC and More",
         "category": "SSB Preparation",
-        "summary": "# SSB Entry Schemes: NDA, CDS, TES, SSC and More",
+        "summary": "SSB is the common evaluation used across nearly every officer-entry route into the Army, Navy, and Air Force — but the eligibility, age bracket, and academic requirement to *reach* the SSB stage...",
         "sections": {
           "sections": [
             {
@@ -24158,7 +24158,7 @@
         "id": "ssb_3",
         "title": "How to Prepare for SSB: A 90-Day Study Plan",
         "category": "SSB Preparation",
-        "summary": "# How to Prepare for SSB: A 90-Day Study Plan",
+        "summary": "SSB rewards steady, structured preparation far more than last-minute intensity — most of what it measures (personality patterns, physical fitness, genuine self-awareness) simply can't be crammed in...",
         "sections": {
           "sections": [
             {
@@ -24438,7 +24438,7 @@
         "id": "ssb_4",
         "title": "SSB Myths and Facts: What Candidates Get Wrong",
         "category": "SSB Preparation",
-        "summary": "# SSB Myths and Facts: What Candidates Get Wrong",
+        "summary": "SSB has attracted decades of folklore — much of it well-intentioned but wrong, and some of it actively harmful to candidates who believe it. Here are the most persistent myths, and what's actually...",
         "sections": {
           "sections": [
             {
