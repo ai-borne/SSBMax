@@ -148,7 +148,7 @@ Half Group Task splits your group into two smaller teams (4-5 members each) work
 - Ideas: "What if we angle the plank this way?"
 - Execution: "I'll go first and secure the rope"
 - Coordination: "On count of three, we lift together"
-- Encouragement**: "Great effort! Let's try again"
+- **Encouragement**: "Great effort! Let's try again"
 
 ### Strategy 4: Mutual Support Intensified
 **In Smaller Group**:

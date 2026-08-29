@@ -1,14 +1,16 @@
 export interface ContentTopicMaterial {
   id: string;
   title: string;
-  contentMarkdown: string;
+  /** Pre-rendered HTML (build-time markdown->HTML), not raw markdown. */
+  contentHtml: string;
   estimatedReadTimeMinutes: number;
 }
 
 export interface ContentTopic {
   id: string;
   title: string;
-  introduction: string;
+  /** Pre-rendered HTML (build-time markdown->HTML), not raw markdown. */
+  introductionHtml: string;
   materials: ContentTopicMaterial[];
 }
 

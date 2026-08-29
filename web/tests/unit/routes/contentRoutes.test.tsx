@@ -35,7 +35,14 @@ describe('CONTENT_ROUTES', () => {
 
       const topic = contentBundle[topicId];
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(topic.title);
-      expect(document.body.textContent).toContain(topic.introduction.split('\n')[0].slice(0, 30));
+      // introductionHtml is pre-rendered HTML -- extract its plain text via jsdom's own
+      // DOMParser (same engine the render above went through) rather than approximating tag
+      // stripping by hand, and assert no source markdown syntax leaked through unparsed (the
+      // bug this rendering path exists to prevent).
+      const introText = new DOMParser().parseFromString(topic.introductionHtml, 'text/html').body.textContent ?? '';
+      expect(document.body.textContent).toContain(introText.trim().slice(0, 30));
+      expect(document.body.textContent).not.toContain('**');
+      expect(document.body.textContent).not.toContain('##');
     });
 
     it(`sets document.title to its real SEO title for ${path} (Phase 3, HIGH 5)`, () => {

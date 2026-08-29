@@ -69,15 +69,16 @@ describe('buildContentPageHtml, for every real content route', () => {
         }
       });
 
-      it('contains the real topic title and introduction text, not a placeholder', () => {
+      it('contains the real topic title and introduction, rendered as HTML not raw markdown', () => {
         expect(html).toContain(escapeHtml(topic.title));
-        expect(html).toContain(escapeHtml(topic.introduction));
+        expect(html).toContain(topic.introductionHtml);
+        expect(html).not.toContain('**');
       });
 
-      it('contains every material title and body for this topic', () => {
+      it('contains every material title and body for this topic, rendered as HTML not raw markdown', () => {
         for (const material of topic.materials) {
           expect(html).toContain(escapeHtml(material.title));
-          expect(html).toContain(escapeHtml(material.contentMarkdown));
+          expect(html).toContain(material.contentHtml);
         }
       });
 

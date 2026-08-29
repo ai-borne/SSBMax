@@ -61,12 +61,18 @@ function buildCfBeaconScriptTag(cfBeaconToken) {
   return `<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "${escapeHtml(cfBeaconToken)}"}'></script>`;
 }
 
+/**
+ * material.contentHtml is already build-time-rendered HTML (marked, over git-authored
+ * markdown -- not user input), produced by scripts/generateContentBundle.mjs. Embedded
+ * verbatim, not escapeHtml'd -- escaping it would print the HTML tags as literal text,
+ * reintroducing the exact bug this function exists to avoid.
+ */
 function buildMaterialHtml(material) {
   return `
         <div>
           <h3>${escapeHtml(material.title)}</h3>
           <p>${escapeHtml(material.estimatedReadTimeMinutes)} min read</p>
-          <div>${escapeHtml(material.contentMarkdown)}</div>
+          <div>${material.contentHtml}</div>
         </div>`;
 }
 
@@ -111,7 +117,7 @@ export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBase
     <article class="max-w-3xl mx-auto px-4 py-8 sm:py-12">
       <a href="/">Back to home</a>
       <h1>${escapeHtml(topic.title)}</h1>
-      <div>${escapeHtml(topic.introduction)}</div>${materialsHtml}
+      <div>${topic.introductionHtml}</div>${materialsHtml}
     </article>
     ${buildCfBeaconScriptTag(cfBeaconToken)}
   </body>

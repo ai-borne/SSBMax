@@ -9,7 +9,8 @@ export interface ContentTopicMaterial {
   title: string;
   category: string;
   summary: string;
-  contentMarkdown: string;
+  /** Pre-rendered HTML (build-time markdown->HTML via `marked`, scripts/generateContentBundle.mjs) -- render with dangerouslySetInnerHTML, never as text. */
+  contentHtml: string;
   estimatedReadTimeMinutes: number;
   tags: string[];
 }
@@ -17,7 +18,8 @@ export interface ContentTopicMaterial {
 export interface ContentTopic {
   id: string;
   title: string;
-  introduction: string;
+  /** Pre-rendered HTML (build-time markdown->HTML via `marked`, scripts/generateContentBundle.mjs) -- render with dangerouslySetInnerHTML, never as text. */
+  introductionHtml: string;
   materials: ContentTopicMaterial[];
 }
 

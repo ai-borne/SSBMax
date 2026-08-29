@@ -44,9 +44,11 @@ export const StudyTopicPage: FC<StudyTopicPageProps> = ({ topicId }) => {
         {strings.contentTopic.backToHome}
       </Link>
       <h1 className="mt-4 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{topic.title}</h1>
-      <div className="mt-4 prose dark:prose-invert max-w-none text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-        {topic.introduction}
-      </div>
+      {/* topic.introductionHtml is pre-rendered HTML (build-time markdown, git-authored -- not user input), see contentBundle.ts */}
+      <div
+        className="mt-4 prose dark:prose-invert max-w-none text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: topic.introductionHtml }}
+      />
 
       {topic.materials.length > 0 && (
         <section className="mt-10">
@@ -58,9 +60,10 @@ export const StudyTopicPage: FC<StudyTopicPageProps> = ({ topicId }) => {
                 <p className="text-xs font-mono text-slate-500 dark:text-slate-400">
                   {material.estimatedReadTimeMinutes} {strings.contentTopic.minRead}
                 </p>
-                <div className="mt-2 prose dark:prose-invert max-w-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-                  {material.contentMarkdown}
-                </div>
+                <div
+                  className="mt-2 prose dark:prose-invert max-w-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: material.contentHtml }}
+                />
               </div>
             ))}
           </div>
