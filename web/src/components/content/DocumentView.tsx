@@ -1,11 +1,19 @@
 import { FC } from 'react';
+import { CheckCircle2, Circle } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { renderBlock } from './blocks/blockRegistry';
+import { estimateSectionReadingMinutes } from './blocks/estimateReadingTime';
 import type { DocumentModel } from './blocks/types';
 
 export interface DocumentViewProps {
   model: DocumentModel;
   takeaways?: string[];
+  /** Phase 7 reading affordances -- all optional so callers that don't pass them (the public
+   * prerendered path, `prerenderHtml.mjs`) render byte-identical to before this phase. */
+  readSectionIds?: Set<string>;
+  onToggleSectionRead?: (sectionId: string) => void;
+  practiceTestTypeId?: string;
+  onPracticeClick?: (testTypeId: string) => void;
 }
 
 /**
@@ -23,7 +31,14 @@ export interface DocumentViewProps {
  * lockstep with `prerenderHtml.mjs`'s `buildDocumentHtml` (its static-HTML twin) or the
  * prerendered and hydrated views will visibly diverge.
  */
-export const DocumentView: FC<DocumentViewProps> = ({ model, takeaways }) => {
+export const DocumentView: FC<DocumentViewProps> = ({
+  model,
+  takeaways,
+  readSectionIds,
+  onToggleSectionRead,
+  practiceTestTypeId,
+  onPracticeClick,
+}) => {
   const headedSections = model.sections.filter((s) => s.heading);
 
   return (
@@ -62,13 +77,45 @@ export const DocumentView: FC<DocumentViewProps> = ({ model, takeaways }) => {
           id={section.slug}
           className="mb-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-4 sm:p-5"
         >
-          {section.heading && <h2 className="text-lg font-bold text-slate-900 dark:text-white">{section.heading}</h2>}
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              {section.heading && <h2 className="text-lg font-bold text-slate-900 dark:text-white">{section.heading}</h2>}
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                {estimateSectionReadingMinutes(section)} {strings.content.estimatedMinutesSuffix}
+              </p>
+            </div>
+            {onToggleSectionRead && (
+              <button
+                type="button"
+                onClick={() => onToggleSectionRead(section.id)}
+                aria-label={readSectionIds?.has(section.id) ? strings.content.sectionReadCd : strings.content.markSectionReadCd}
+                data-testid={`section-read-toggle-${section.id}`}
+                className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-sky-600 dark:hover:text-sky-400"
+              >
+                {readSectionIds?.has(section.id) ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                ) : (
+                  <Circle className="w-5 h-5" />
+                )}
+              </button>
+            )}
+          </div>
           <div className="mt-3 space-y-4">
             {section.blocks.map((block, index) => {
               const { Component, block: resolvedBlock } = renderBlock(block);
               return <Component key={index} block={resolvedBlock} />;
             })}
           </div>
+          {practiceTestTypeId && onPracticeClick && (
+            <button
+              type="button"
+              onClick={() => onPracticeClick(practiceTestTypeId)}
+              data-testid={`section-practice-cta-${section.id}`}
+              className="mt-4 w-full sm:w-auto px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-colors min-h-[44px]"
+            >
+              {strings.content.practiceNowCta}
+            </button>
+          )}
         </section>
       ))}
     </div>

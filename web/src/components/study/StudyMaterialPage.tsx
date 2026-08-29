@@ -14,12 +14,15 @@ export interface StudyMaterialPageProps {
   viewModel?: StudyMaterialViewModel;
   onSelectMaterial?: (material: StudyMaterial) => void;
   user?: UserProfile | null;
+  /** "Practice this now" CTA target (Phase 7), threaded down to StudyReaderModal. */
+  onNavigateToTests?: () => void;
 }
 
 export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
   viewModel,
   onSelectMaterial,
   user: propUser,
+  onNavigateToTests,
 }) => {
   const [vm] = useState<StudyMaterialViewModel>(
     () => viewModel || new StudyMaterialViewModel(new ContentRepository())
@@ -209,6 +212,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
         isCompleted={selectedMaterial ? vm.isCompleted(selectedMaterial.id) : false}
         onClose={() => setSelectedMaterial(null)}
         onToggleCompleted={(id) => handleToggleComplete(id)}
+        onNavigateToTests={onNavigateToTests}
       />
     </div>
   );

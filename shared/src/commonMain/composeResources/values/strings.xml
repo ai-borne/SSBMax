@@ -1204,6 +1204,10 @@
     <string name="topic_no_study_materials">No study materials available yet</string>
     <string name="content_takeaways_heading">Key takeaways</string>
     <string name="content_toc_heading">On this page</string>
+    <string name="content_estimated_minutes">%1$d min read</string>
+    <string name="content_practice_now_cta">Practice this now →</string>
+    <string name="content_section_unread_cd">Mark section as read</string>
+    <string name="content_section_isread_cd">Section read</string>
     <string name="topic_no_tests_available">No tests available yet</string>
     <string name="topic_retry_button">Retry</string>
     <string name="piq_bullet_separator">• </string>

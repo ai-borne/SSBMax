@@ -191,7 +191,7 @@ export const App: FC = () => {
               />
             )
           )}
-          {activeTab === 'study' && <StudyMaterialPage />}
+          {activeTab === 'study' && <StudyMaterialPage onNavigateToTests={() => setActiveTab('tests')} />}
           {activeTab === 'subscription' && (
             <SubscriptionPage
               userId={authService.getCurrentUser()?.uid}

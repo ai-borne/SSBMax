@@ -4,9 +4,11 @@ import { BaseModal } from '../common/BaseModal';
 import { strings } from '../../constants/strings';
 import { StudyMaterial } from '../../types/testContent';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useSectionReadState } from '../../hooks/useSectionReadState';
 import { renderMarkdown } from '../../utils/renderMarkdown';
 import { useStudyMaterialSections } from '../../viewmodels/useStudyMaterialSections';
 import { DocumentView } from '../content/DocumentView';
+import { primaryTestTypeIdForTopicType } from '../../constants/topicTypeMapping';
 import { ContentRepository } from '../../repositories/ContentRepository';
 import { IContentRepository } from '../../repositories/interfaces/IContentRepository';
 
@@ -21,6 +23,10 @@ export interface StudyReaderModalProps {
   isCompleted?: boolean;
   onClose: () => void;
   onToggleCompleted?: (id: string) => void;
+  /** "Practice this now" CTA target (Phase 7, docs/plans/write-the-phased-plan-wobbly-pancake.md)
+   * -- switches to the Tests tab; no per-test deep link exists yet (see `useTabRouting`'s doc
+   * comment), so this is intentionally coarse. Omit to render sections with no CTA. */
+  onNavigateToTests?: () => void;
   /** Injectable for tests, same pattern as StudyMaterialPage's `viewModel` prop -- defaults to
    * a real ContentRepository so callers never need to pass this in production. */
   contentRepository?: IContentRepository;
@@ -32,10 +38,13 @@ export const StudyReaderModal: FC<StudyReaderModalProps> = ({
   isCompleted = false,
   onClose,
   onToggleCompleted,
+  onNavigateToTests,
   contentRepository = defaultContentRepository
 }) => {
   const isOnline = useOnlineStatus();
   const sections = useStudyMaterialSections(material?.id, material?.topicType, contentRepository);
+  const { readSectionIds, toggleSectionRead } = useSectionReadState();
+  const practiceTestTypeId = primaryTestTypeIdForTopicType(material?.topicType);
 
   // Content's own headings nest under this modal's <h2> title (BaseModal), so shift by 1.
   // Only needed as a fallback -- once `sections` resolves, DocumentView renders instead (D4:
@@ -105,7 +114,13 @@ export const StudyReaderModal: FC<StudyReaderModalProps> = ({
             on trust) when sections hasn't resolved yet or none is published. */}
         {sections ? (
           <div className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-            <DocumentView model={sections} />
+            <DocumentView
+              model={sections}
+              readSectionIds={readSectionIds}
+              onToggleSectionRead={toggleSectionRead}
+              practiceTestTypeId={practiceTestTypeId}
+              onPracticeClick={onNavigateToTests}
+            />
           </div>
         ) : (
           <div

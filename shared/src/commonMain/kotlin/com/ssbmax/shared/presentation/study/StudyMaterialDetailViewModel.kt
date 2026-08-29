@@ -2,19 +2,24 @@ package com.ssbmax.shared.presentation.study
 
 import com.ssbmax.shared.domain.config.ContentFeatureFlags
 import com.ssbmax.shared.domain.model.StudyProgress
+import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.StudyContentRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.study.GetStudyMaterialDetailUseCase
 import com.ssbmax.shared.domain.usecase.study.GetStudyProgressUseCase
 import com.ssbmax.shared.domain.usecase.study.SaveStudyProgressUseCase
 import com.ssbmax.shared.domain.usecase.study.TrackStudySessionUseCase
+import com.ssbmax.shared.platform.settings.ReadStateSettings
 import com.ssbmax.shared.ui.content.blocks.DocumentModel
+import com.ssbmax.shared.ui.content.testTypeForTopicType
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
@@ -63,12 +68,23 @@ class StudyMaterialDetailViewModel(
     private val trackStudySession: TrackStudySessionUseCase,
     private val getStudyProgress: GetStudyProgressUseCase,
     private val observeCurrentUser: ObserveCurrentUserUseCase,
-    private val studyContentRepository: StudyContentRepository
+    private val studyContentRepository: StudyContentRepository,
+    private val readStateSettings: ReadStateSettings
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(StudyMaterialDetailUiState())
     val uiState: StateFlow<StudyMaterialDetailUiState> = _uiState.asStateFlow()
 
     private var materialId: String = ""
+
+    init {
+        readStateSettings.readSectionIdsFlow
+            .onEach { ids -> _uiState.update { it.copy(readSectionIds = ids) } }
+            .launchIn(viewModelScope)
+    }
+
+    fun toggleSectionRead(sectionId: String) {
+        readStateSettings.toggleSectionRead(sectionId)
+    }
 
     fun loadMaterial(materialId: String) {
         this.materialId = materialId
@@ -95,7 +111,8 @@ class StudyMaterialDetailViewModel(
                         isPremium = cloudMaterial.isPremium,
                         tags = emptyList(),
                         relatedMaterials = emptyList(),
-                        sections = structuredSectionsFor(cloudMaterial.topicType, materialId)
+                        sections = structuredSectionsFor(cloudMaterial.topicType, materialId),
+                        practiceTestType = testTypeForTopicType(cloudMaterial.topicType)
                     )
                 } ?: run {
                     if (materialId == "piq_form_reference") {
@@ -205,7 +222,11 @@ data class StudyMaterialDetailUiState(
     val readingProgress: Float = 0f,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val activeSessionId: String? = null
+    val activeSessionId: String? = null,
+    /** Per-section "read" state (Phase 7, docs/plans/write-the-phased-plan-wobbly-pancake.md),
+     * sourced from [ReadStateSettings] -- local-device only, same anonymous-reader rationale as
+     * web's `useSectionReadState.ts`. */
+    val readSectionIds: Set<String> = emptySet()
 )
 
 /**
@@ -226,7 +247,11 @@ data class StudyMaterialContent(
      * -- null unless a `study_material_sections` side document exists and the topic is behind
      * [com.ssbmax.shared.domain.config.ContentFeatureFlags.isStructuredRenderingEnabled]; render
      * [content] as markdown when null, same as before this field existed. */
-    val sections: DocumentModel? = null
+    val sections: DocumentModel? = null,
+    /** The single [TestType] this material's `topicType` unambiguously maps to, or null when the
+     * topic covers several (GTO/PSYCHOLOGY) -- see [testTypeForTopicType]. Drives the per-section
+     * "Practice this now" CTA (Phase 7); null renders no CTA rather than a wrong guess. */
+    val practiceTestType: TestType? = null
 )
 
 /**

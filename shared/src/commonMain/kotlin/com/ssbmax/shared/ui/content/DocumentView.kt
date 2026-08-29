@@ -3,23 +3,36 @@ package com.ssbmax.shared.ui.content
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.ui.content.blocks.DocBlockView
 import com.ssbmax.shared.ui.content.blocks.DocSection
 import com.ssbmax.shared.ui.content.blocks.DocumentModel
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
+import ssbmax.shared.generated.resources.content_estimated_minutes
+import ssbmax.shared.generated.resources.content_practice_now_cta
+import ssbmax.shared.generated.resources.content_section_isread_cd
+import ssbmax.shared.generated.resources.content_section_unread_cd
 import ssbmax.shared.generated.resources.content_takeaways_heading
 import ssbmax.shared.generated.resources.content_toc_heading
 
@@ -51,6 +64,7 @@ fun DocumentView(model: DocumentModel, modifier: Modifier = Modifier, takeaways:
     }
 }
 
+
 /**
  * Same rendering as [DocumentView], as a plain [Column] instead of a `LazyColumn` -- for a
  * caller that is itself already inside a `LazyColumn` item (e.g. `StudyMaterialDetailScreen`'s
@@ -61,13 +75,29 @@ fun DocumentView(model: DocumentModel, modifier: Modifier = Modifier, takeaways:
  * whole topic introduction.
  */
 @Composable
-fun DocumentSectionsColumn(model: DocumentModel, modifier: Modifier = Modifier, takeaways: List<String> = emptyList()) {
+fun DocumentSectionsColumn(
+    model: DocumentModel,
+    modifier: Modifier = Modifier,
+    takeaways: List<String> = emptyList(),
+    readSectionIds: Set<String> = emptySet(),
+    onToggleSectionRead: (String) -> Unit = {},
+    practiceTestType: TestType? = null,
+    onPracticeClick: (TestType) -> Unit = {}
+) {
     val headedSections = model.sections.filter { it.heading != null }
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (takeaways.isNotEmpty()) TakeawaysCard(takeaways)
         if (headedSections.size > 1) TableOfContentsCard(headedSections)
-        model.sections.forEach { section -> SectionCard(section) }
+        model.sections.forEach { section ->
+            SectionCard(
+                section = section,
+                isRead = readSectionIds.contains(section.id),
+                onToggleRead = { onToggleSectionRead(section.id) },
+                practiceTestType = practiceTestType,
+                onPracticeClick = onPracticeClick
+            )
+        }
     }
 }
 
@@ -105,13 +135,46 @@ private fun TableOfContentsCard(headedSections: List<DocSection>) {
 }
 
 @Composable
-private fun SectionCard(section: DocSection) {
+private fun SectionCard(
+    section: DocSection,
+    isRead: Boolean = false,
+    onToggleRead: () -> Unit = {},
+    practiceTestType: TestType? = null,
+    onPracticeClick: (TestType) -> Unit = {}
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            section.heading?.let {
-                Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    section.heading?.let {
+                        Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        stringResource(Res.string.content_estimated_minutes, estimatedReadingMinutes(section)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                val readCd = stringResource(Res.string.content_section_unread_cd)
+                val readDoneCd = stringResource(Res.string.content_section_isread_cd)
+                IconButton(onClick = onToggleRead) {
+                    if (isRead) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = readDoneCd, tint = MaterialTheme.colorScheme.primary)
+                    } else {
+                        Icon(Icons.Filled.RadioButtonUnchecked, contentDescription = readCd)
+                    }
+                }
             }
             section.blocks.forEach { block -> DocBlockView(block) }
+            if (practiceTestType != null) {
+                Button(onClick = { onPracticeClick(practiceTestType) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.content_practice_now_cta))
+                }
+            }
         }
     }
 }

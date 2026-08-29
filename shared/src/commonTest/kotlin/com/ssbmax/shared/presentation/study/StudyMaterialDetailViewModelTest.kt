@@ -9,7 +9,9 @@ import com.ssbmax.shared.domain.usecase.study.GetStudyMaterialDetailUseCase
 import com.ssbmax.shared.domain.usecase.study.GetStudyProgressUseCase
 import com.ssbmax.shared.domain.usecase.study.SaveStudyProgressUseCase
 import com.ssbmax.shared.domain.usecase.study.TrackStudySessionUseCase
+import com.ssbmax.shared.platform.settings.ReadStateSettings
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
+import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeStudyContentRepository
 import com.ssbmax.shared.presentation.testing.FakeStudyProgressRepository
 import com.ssbmax.shared.presentation.testing.testUser
@@ -59,7 +61,8 @@ class StudyMaterialDetailViewModelTest {
         trackStudySession = TrackStudySessionUseCase(studyProgressRepository),
         getStudyProgress = GetStudyProgressUseCase(studyProgressRepository),
         observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
-        studyContentRepository = studyContentRepository
+        studyContentRepository = studyContentRepository,
+        readStateSettings = ReadStateSettings(FakeSettings())
     )
 
     @Test
