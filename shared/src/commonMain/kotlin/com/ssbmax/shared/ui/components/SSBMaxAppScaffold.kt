@@ -27,6 +27,7 @@ import com.ssbmax.navigation.SSBMaxDestinations
 import com.ssbmax.navigation.isAuthScreen
 import com.ssbmax.shared.domain.model.UserRole
 import com.ssbmax.shared.domain.repository.AuthRepository
+import com.ssbmax.shared.domain.usecase.auth.SignOutUseCase
 import com.ssbmax.shared.presentation.auth.AccountDeletionState
 import com.ssbmax.shared.presentation.auth.AuthViewModel
 import com.ssbmax.shared.presentation.profile.UserProfileViewModel
@@ -88,6 +89,7 @@ fun SSBMaxAppScaffold(
     }
 
     val authRepository: AuthRepository = koinInject()
+    val signOutUseCase: SignOutUseCase = koinInject()
     val profileViewModel: UserProfileViewModel = koinViewModel()
     val authViewModel: AuthViewModel = koinViewModel()
 
@@ -163,7 +165,7 @@ fun SSBMaxAppScaffold(
                     onSignOut = {
                         scope.launch {
                             drawerState.close()
-                            authRepository.signOut()
+                            signOutUseCase()
                             navController.navigate(SSBMaxDestinations.Login) {
                                 popUpTo(0) { inclusive = true }
                             }

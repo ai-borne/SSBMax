@@ -49,6 +49,25 @@ class AuthViewModel(
     private val _accountDeletionState = MutableStateFlow<AccountDeletionState>(AccountDeletionState.Idle)
     val accountDeletionState: StateFlow<AccountDeletionState> = _accountDeletionState.asStateFlow()
 
+    init {
+        // Seeds/clears DeletionPending from the reactive Firestore-backed `currentUser` flow
+        // (`users/{uid}.deletionRequestedAt`) so the state survives process death -- unlike
+        // ConfirmPending/Loading/Error, which only exist mid-flow and must not be clobbered by a
+        // stale snapshot arriving while the user is actively confirming/cancelling.
+        viewModelScope.launch {
+            observeCurrentUserUseCase().collect { user ->
+                val isPending = user?.deletionRequestedAt != null
+                _accountDeletionState.update { current ->
+                    when {
+                        isPending && current == AccountDeletionState.Idle -> AccountDeletionState.DeletionPending
+                        !isPending && current == AccountDeletionState.DeletionPending -> AccountDeletionState.Idle
+                        else -> current
+                    }
+                }
+            }
+        }
+    }
+
     /** Show the irreversibility confirmation dialog before calling [confirmAccountDeletion]. */
     fun showAccountDeletionConfirmation() {
         _accountDeletionState.update { AccountDeletionState.ConfirmPending }
