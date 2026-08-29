@@ -126,7 +126,7 @@
     <ID>LongMethod:SubscriptionSection.kt$@Composable fun SubscriptionSection( currentTier: SubscriptionTier, onUpgradeClick: () -&gt; Unit, onManageSubscriptionClick: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:TATTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class) @Composable fun TATTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: TATTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:TopicContentLoader.kt$TopicContentLoader$private fun getIntroduction(testType: String): String</ID>
-    <ID>LongMethod:TopicContentLoaderConference.kt$internal fun conferenceIntroduction(): String</ID>
+    <ID>LongMethod:TopicIntroConference.kt$internal fun conferenceIntroduction(): String</ID>
     <ID>LongMethod:UpgradePlanCard.kt$@Composable internal fun AnimatedPlanCard( plan: SubscriptionPlan, currentTier: SubscriptionTier, selectedBillingCycle: BillingCycle, isVisible: Boolean, onUpgradeClick: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:UpgradeViewModel.kt$UpgradeViewModel$private fun loadAvailablePlans()</ID>
     <ID>LongParameterList:DrawerContent.kt$( currentRoute: String, phase1Expanded: Boolean, phase2Expanded: Boolean, onNavigateToHome: () -&gt; Unit, onNavigateToTopic: (topicId: String) -&gt; Unit, onNavigateToSSBOverview: () -&gt; Unit, onNavigateToMyBatches: () -&gt; Unit, onNavigateToSettings: () -&gt; Unit, onTogglePhase1: () -&gt; Unit, onTogglePhase2: () -&gt; Unit, onSignOut: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
