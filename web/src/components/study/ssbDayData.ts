@@ -15,6 +15,20 @@ export interface DaySectionConfig {
   ) => SSBTestCardInfo[];
 }
 
+// Seniority order of the 9 GTO sub-tests (matches numbering used in their titles: 1. Group
+// Discussion through 9. Final Group Task), used to order the merged GTO study-materials list.
+const GTO_SUB_TEST_ORDER: StudyMaterial['testTypeId'][] = [
+  'gd', 'gpe', 'pgt', 'snake_race', 'hgt', 'lecturette', 'iot', 'command_task', 'fgt'
+];
+
+function sortByGtoSeniority(materials: StudyMaterial[]): StudyMaterial[] {
+  return [...materials].sort((a, b) => {
+    const aIndex = a.testTypeId ? GTO_SUB_TEST_ORDER.indexOf(a.testTypeId) : -1;
+    const bIndex = b.testTypeId ? GTO_SUB_TEST_ORDER.indexOf(b.testTypeId) : -1;
+    return aIndex - bIndex;
+  });
+}
+
 const day1Overview = getDayOverview('1')!;
 const day2Overview = getDayOverview('2')!;
 const day34Overview = getDayOverview('3-4')!;
@@ -81,85 +95,14 @@ export const ssbDayConfigs: DaySectionConfig[] = [
     subtitle: day34Overview.subtitle,
     getTestCards: (getMaterials) => [
       {
-        id: 'gd',
+        id: 'gto_materials',
         testTypeId: 'gd',
-        shortCode: 'GD',
-        title: '1. Group Discussion',
-        description: 'Current affairs and defense topics group discussion techniques.',
+        compositeTestTypeIds: GTO_SUB_TEST_ORDER,
+        shortCode: 'GTO',
+        title: 'GTO Tasks (9 Sub-Tests)',
+        description: 'Group Discussion, Planning Exercise, Progressive Group Task, Snake Race, Half Group Task, Lecturette, Individual Obstacles, Command Task, and Final Group Task.',
         requiredTier: 'PRO',
-        materials: getMaterials('gd')
-      },
-      {
-        id: 'gpe',
-        testTypeId: 'gpe',
-        shortCode: 'GPE',
-        title: '2. Group Planning Exercise',
-        description: 'Military map problem solving and group consensus planning.',
-        requiredTier: 'PRO',
-        materials: getMaterials('gpe')
-      },
-      {
-        id: 'pgt',
-        testTypeId: 'pgt',
-        shortCode: 'PGT',
-        title: '3. Progressive Group Task',
-        description: 'Structures, plank, rope, and load crossing methods across 4 obstacles.',
-        requiredTier: 'PRO',
-        materials: getMaterials('pgt')
-      },
-      {
-        id: 'snake_race',
-        testTypeId: 'snake_race',
-        shortCode: 'GOR',
-        title: '4. Snake Race / Group Obstacle Race',
-        description: 'Group obstacle race carrying continuous load (snake).',
-        requiredTier: 'PRO',
-        materials: getMaterials('snake_race')
-      },
-      {
-        id: 'hgt',
-        testTypeId: 'hgt',
-        shortCode: 'HGT',
-        title: '5. Half Group Task',
-        description: 'Group half-division outdoor structure assessment.',
-        requiredTier: 'PRO',
-        materials: getMaterials('hgt')
-      },
-      {
-        id: 'lecturette',
-        testTypeId: 'lecturette',
-        shortCode: 'LECT',
-        title: '6. Lecturette',
-        description: '3 minutes of preparation followed by a 3-minute individual speech on an assigned topic.',
-        requiredTier: 'PRO',
-        materials: getMaterials('lecturette')
-      },
-      {
-        id: 'iot',
-        testTypeId: 'iot',
-        shortCode: 'IOT',
-        title: '7. Individual Obstacles Test',
-        description: '10 individual outdoor physical obstacles and scoring strategy.',
-        requiredTier: 'PRO',
-        materials: getMaterials('iot')
-      },
-      {
-        id: 'command_task',
-        testTypeId: 'command_task',
-        shortCode: 'CT',
-        title: '8. Command Task',
-        description: 'Subordinate selection and leader obstacle execution.',
-        requiredTier: 'PRO',
-        materials: getMaterials('command_task')
-      },
-      {
-        id: 'fgt',
-        testTypeId: 'fgt',
-        shortCode: 'FGT',
-        title: '9. Final Group Task',
-        description: 'Final single outdoor structure group task execution.',
-        requiredTier: 'PRO',
-        materials: getMaterials('fgt')
+        materials: sortByGtoSeniority(getMaterials('gd', GTO_SUB_TEST_ORDER))
       }
     ]
   },

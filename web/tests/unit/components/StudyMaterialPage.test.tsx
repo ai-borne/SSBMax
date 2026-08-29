@@ -112,7 +112,7 @@ describe('StudyMaterialPage Component', () => {
     });
   });
 
-  it('renders all 8 GTO test cards under Day 3 & 4 section', async () => {
+  it('renders a single merged GTO study-materials card under Day 3 & 4 section', async () => {
     const vm = new StudyMaterialViewModel(new MockContentRepository());
     render(<StudyMaterialPage viewModel={vm} user={mockUser} />);
 
@@ -124,14 +124,16 @@ describe('StudyMaterialPage Component', () => {
     const toggleBtn = screen.getByTestId('toggle-accordion-btn-3-4');
     fireEvent.click(toggleBtn);
 
+    // All 9 GTO sub-tests are merged into one card (per-sub-test cards were removed to stop
+    // rendering the same study-guide list 9 times) — testTypeId 'gd' is its primary id.
     expect(screen.getByTestId('study-test-card-gd')).toBeInTheDocument();
-    expect(screen.getByTestId('study-test-card-gpe')).toBeInTheDocument();
-    expect(screen.getByTestId('study-test-card-pgt')).toBeInTheDocument();
-    expect(screen.getByTestId('study-test-card-hgt')).toBeInTheDocument();
-    expect(screen.getByTestId('study-test-card-iot')).toBeInTheDocument();
-    expect(screen.getByTestId('study-test-card-command_task')).toBeInTheDocument();
-    expect(screen.getByTestId('study-test-card-snake_race')).toBeInTheDocument();
-    expect(screen.getByTestId('study-test-card-fgt')).toBeInTheDocument();
+    expect(screen.queryByTestId('study-test-card-gpe')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('study-test-card-pgt')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('study-test-card-hgt')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('study-test-card-iot')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('study-test-card-command_task')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('study-test-card-snake_race')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('study-test-card-fgt')).not.toBeInTheDocument();
   });
 
   it('shows a non-blocking soft sign-in CTA (not a content lock) for unauthenticated visitors', async () => {
