@@ -97,10 +97,19 @@ internal fun MaterialHeaderCard(material: StudyMaterialContent, modifier: Modifi
 
 /**
  * Renders the HTML PIQ form (via [HtmlContentView]), the structured [sections] model (via
- * [DocumentView], Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md -- same
- * sections-over-markdown precedent as [com.ssbmax.shared.ui.topic.IntroductionTab]), or plain
- * markdown [content] (via [MarkdownText]) as the fallback, matching the Android original's
+ * [com.ssbmax.shared.ui.content.DocumentSectionsColumn], Phase 5, docs/plans/
+ * write-the-phased-plan-wobbly-pancake.md -- same sections-over-markdown precedent as
+ * [com.ssbmax.shared.ui.topic.IntroductionTab]), or plain markdown [content] (via
+ * [MarkdownText]) as the fallback, matching the Android original's
  * `content.startsWith("<!DOCTYPE html>")`/`startsWith("<html")` branch for the HTML case.
+ *
+ * Uses `DocumentSectionsColumn` (a plain `Column`), not `DocumentView` (a `LazyColumn`) --
+ * this composable is itself called from inside [StudyMaterialDetailScreen]'s own outer
+ * `LazyColumn` `item {}`, and nesting a second `LazyColumn` there crashes at runtime
+ * ("Vertically scrollable component was measured with an infinity maximum height
+ * constraints"). Caught on a physical Pixel 9 once a real `study_material_sections` document
+ * made `sections` non-null for the first time -- the crash is silent whenever `sections` is
+ * null, so it never showed up while the D2 Firestore rules blocked every read.
  */
 @Composable
 internal fun MaterialBodyContent(
@@ -115,7 +124,7 @@ internal fun MaterialBodyContent(
             }
         }
     } else if (sections != null) {
-        com.ssbmax.shared.ui.content.DocumentView(model = sections, modifier = modifier.fillMaxWidth())
+        com.ssbmax.shared.ui.content.DocumentSectionsColumn(model = sections, modifier = modifier.fillMaxWidth())
     } else {
         Card(modifier = modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

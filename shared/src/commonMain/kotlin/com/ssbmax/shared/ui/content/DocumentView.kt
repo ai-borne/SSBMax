@@ -51,6 +51,26 @@ fun DocumentView(model: DocumentModel, modifier: Modifier = Modifier, takeaways:
     }
 }
 
+/**
+ * Same rendering as [DocumentView], as a plain [Column] instead of a `LazyColumn` -- for a
+ * caller that is itself already inside a `LazyColumn` item (e.g. `StudyMaterialDetailScreen`'s
+ * `MaterialBodyContent`), where nesting a second `LazyColumn` crashes at runtime
+ * ("Vertically scrollable component was measured with an infinity maximum height constraints").
+ * A material's own body is a bounded, single-screen-ish list of sections, so losing lazy
+ * virtualization here is not the tradeoff [DocumentView]'s own doc comment warns about for a
+ * whole topic introduction.
+ */
+@Composable
+fun DocumentSectionsColumn(model: DocumentModel, modifier: Modifier = Modifier, takeaways: List<String> = emptyList()) {
+    val headedSections = model.sections.filter { it.heading != null }
+
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (takeaways.isNotEmpty()) TakeawaysCard(takeaways)
+        if (headedSections.size > 1) TableOfContentsCard(headedSections)
+        model.sections.forEach { section -> SectionCard(section) }
+    }
+}
+
 @Composable
 private fun TakeawaysCard(takeaways: List<String>) {
     Card(
