@@ -269,6 +269,59 @@ must never be deployed.
 
 ---
 
+## SEO / AI Search (GEO)
+
+Public content routes (`/study/*`, `/faq`, and any future content path under `src/routes/`)
+exist to be read by AI answer engines (ChatGPT, Perplexity, Google AI Overviews, Claude) as
+well as humans — most of these crawlers do not execute JavaScript, so a route that only renders
+after hydration is invisible to them. This section is the convention set from the
+`ai_search_readiness` GEO plan (`docs/plans/ai_search_readiness*`); read that plan for the "why"
+behind each rule below.
+
+- **Public routes must be prerendered, full-text, non-hydrated static HTML.** `web/scripts/
+  prerenderContentRoutes.mjs` + `prerenderHtml.mjs` run inside `npm run build` (never as a
+  separate/optional step) and emit `dist/<route>/index.html` containing the actual prose — not
+  a loading skeleton. Never seed `window.__INITIAL_DATA__` for these pages instead: that
+  reintroduces the inline-script CSP problem for no benefit. `curl <url> | grep` for body text
+  is the source-of-truth check, not "it renders in a browser."
+- **Content is data, authored in git, not in TSX.** New long-form public content goes under
+  `web/content/` (or `content/` at repo root for the KMP-shared prose) as markdown +
+  frontmatter, loaded at build time via `web/scripts/loadContent.mjs`. It is exempt from the
+  300-LOC rule (content, not code) but the *loader/renderer* code is not.
+- **Metadata + JSON-LD are mandatory on every public route**, not optional polish: `<title>`,
+  `description`, `og:*`/`twitter:*` via `useDocumentMeta`/`contentSeo.ts`, and a schema.org
+  JSON-LD block appropriate to the page type (`Course`/`LearningResource`, `BreadcrumbList`,
+  `FAQPage`). JSON-LD ships CSP-safe — either a per-build `sha256-…` script-src hash
+  (`web/scripts/cspHashes.mjs`/`cspHeaders.mjs`) or external static JSON. Never loosen
+  `web/public/_headers`' CSP (no `'unsafe-inline'`) to make a JSON-LD block work; `web/tests/
+  security/headers.test.ts` and `structuredData.test.ts` enforce this.
+- **`web/scripts/generateSeoFiles.mjs` regenerates `robots.txt`/`sitemap.xml`/`llms.txt` from
+  the live route list on every build** — a route added under `src/routes/` without a
+  corresponding content/seo entry will not silently appear half-configured; extend the
+  generator, don't hand-edit `dist/sitemap.xml`.
+- **Gated routes (anything behind auth — SSB Tests, results, dashboards) must stay `noindex`
+  and excluded from the sitemap.** Only Study/FAQ/marketing content is public; the auth wall on
+  SSB Tests itself is a tier/quota control (`CheckTestEligibilityUseCase`), not a GEO decision,
+  and must not be relaxed as a side effect of GEO work.
+- **URLs are permanent once indexed.** A content route's slug is a one-time decision (see the
+  plan's Phase 2 "URL structure is permanent" gate) — changing an indexed slug later costs the
+  indexing already earned and needs a 301, not a rename. Pick intent-matching slugs
+  (`/study/ssb-psychology-tat-wat-srt-sd`, not `/study/day-1`) before merging, not after.
+- **robots.txt distinguishes training crawlers from retrieval crawlers on purpose** (`GPTBot`,
+  `ClaudeBot`, `Google-Extended` disallowed; `ChatGPT-User`, `Claude-User`, `Claude-SearchBot`,
+  `PerplexityBot`, `Googlebot` allowed). This is a deliberate monetization/citation tradeoff
+  (root `CLAUDE.md` Rule 7) — don't "fix" it toward allow-all without re-litigating that
+  decision with the user.
+- **`content/` under repo root is the shared SSOT with KMP**, not a web-only fork: web reads it
+  at build time (no Firestore credentials in the web build); a publish script pushes the same
+  source to Firestore `topic_content`/`study_materials` for mobile; `scripts/content/
+  generateKmpFallback.js` regenerates KMP's offline fallback prose
+  (`shared/.../presentation/topic/TopicIntro*.kt`) from it. Writing content once should improve
+  both platforms — never hand-write competing prose in `web/content/` and `shared/` for the
+  same topic.
+
+---
+
 ## Build & Dev Commands
 
 ```bash
