@@ -102,11 +102,10 @@ internal fun IntroductionTab(
         return
     }
 
-    // Phase 2 pilot (docs/plans/write-the-phased-plan-wobbly-pancake.md): when a structured
-    // model is available (ContentFeatureFlags.isStructuredRenderingEnabled), render it via
-    // DocumentView's real per-section LazyColumn instead of the single-item MarkdownText card
-    // below -- this is the fix for this function's own single-`item{}` composition, which is
-    // still what every other topic falls back to until Phase 5 generates a model for them too.
+    // Phase 2/8 (docs/plans/write-the-phased-plan-wobbly-pancake.md): when a structured model is
+    // available, render it via DocumentView's real per-section LazyColumn instead of the
+    // single-item MarkdownText card below -- the fallback now only fires on a genuine missing
+    // fetch and missing generated offline copy, not a rollout flag (removed in the Phase 8 sweep).
     if (introductionSections != null) {
         DocumentView(model = introductionSections, modifier = modifier.fillMaxSize())
         return

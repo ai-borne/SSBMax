@@ -68,7 +68,7 @@ Personal interview preparation requires deep self-reflection, honest self-assess
 
 **What IO Wants**: Concise, structured overview of who you are
 
-**Structure** (2-3 minutes):
+**Structure**: 2-3 minutes total
 **Opening**: Name, age, place
 **Family**: Brief about parents, siblings, upbringing
 **Education**: Academic journey highlights

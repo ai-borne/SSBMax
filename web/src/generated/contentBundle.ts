@@ -21,12 +21,11 @@ export interface ContentTopicMaterial {
 export interface ContentTopic {
   id: string;
   title: string;
-  /** Pre-rendered HTML (build-time markdown->HTML via `marked`, scripts/generateContentBundle.mjs) -- render with dangerouslySetInnerHTML, never as text. */
-  introductionHtml: string;
   /** Structured DocumentModel (Phase 2, docs/plans/write-the-phased-plan-wobbly-pancake.md),
    * from `scripts/content/parseDocument.js` at build time -- render via `DocumentView`, never
-   * parsed again at runtime (D4). Additive alongside `introductionHtml`; only read behind the
-   * `useStructuredRendering` pilot flag today. */
+   * parsed again at runtime (D4). The `introductionHtml` pre-rendered-HTML field this used to
+   * sit alongside as a rollout fallback was dropped in the Phase 8 sweep once every topic
+   * reached this path. */
   introductionSections: DocumentModel;
   materials: ContentTopicMaterial[];
 }

@@ -320,6 +320,38 @@ behind each rule below.
   both platforms — never hand-write competing prose in `web/content/` and `shared/` for the
   same topic.
 
+### Structured content rendering (docs/plans/write-the-phased-plan-wobbly-pancake.md)
+
+Every `content/*.md` body is parsed once, at build time, into a typed `DocumentModel`
+(`scripts/content/parseDocument.js` — the one parser; do not write a second one in TSX or
+Kotlin) and rendered natively on each platform instead of as one markdown blob per page.
+
+- **The block taxonomy is a plain string, not an enum (D1).** `block.type` values:
+  `paragraph`, `list`, `specTable`, `callout`, `comparison`, `timeline`, `table`. An unrecognised
+  type must render as `paragraph` on both web (`web/src/components/content/blockRegistry.ts`)
+  and KMP (`shared/.../ui/content/blocks/blockRegistry.kt`) — this lets a shipped mobile build
+  survive a new block type introduced after it was released. Promote to
+  `contracts/enums.yaml` only once the taxonomy is stable across a release or two.
+- **Sections ship expanded by default (D3).** No hidden/collapsed content on first render — AI
+  retrieval crawlers' handling of `<details>` is undocumented and Google has historically
+  down-weighted hidden text. Where a collapse control is offered, it is a local user preference
+  applied on top of native `<details>` markup (content stays in the DOM), never React
+  conditional rendering — that would strip prose from the prerendered HTML.
+- **No markdown parsing in the browser or on device, ever (D4).** All parsing happens once, at
+  build/publish time, in `parseDocument.js`. `StudyReaderModal` and every other surface render
+  the parsed `DocumentModel` via `DocumentView`/`blockRegistry`; there is no runtime
+  markdown-to-HTML fallback path. `web/src/utils/renderMarkdown.ts` and the `marked` dependency
+  were deleted for this reason (Phase 8 sweep) — do not reintroduce a runtime markdown parser
+  as a "just in case" fallback when a fetch is slow or fails; render a loading state instead.
+- **Structure is authored in `content/`, never in TSX or Compose.** A renderer's job is to map
+  an existing block type to markup, not to encode document structure itself. New prose goes into
+  a `.md` file conforming to `content/SCHEMA.md`; new *shapes* (a new block type) go into
+  `parseDocument.js`'s classifier plus both `blockRegistry`s together (the parity gate,
+  `content/__fixtures__/blocks.json`, fails both builds until they agree).
+- **The parity gate is mechanical, not convention** — the one place in this codebase where
+  `shared` and `web` are kept in sync by a build-time check rather than a CLAUDE.md instruction
+  (see root `CLAUDE.md`'s four-consumer section on Tier 3 having no such enforcement elsewhere).
+
 ---
 
 ## Build & Dev Commands

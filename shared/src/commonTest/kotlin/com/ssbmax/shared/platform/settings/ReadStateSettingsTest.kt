@@ -23,7 +23,7 @@ class ReadStateSettingsTest {
     }
 
     @Test
-    fun `setSectionRead true round-trips through get, the flow, and a fresh instance`() {
+    fun `setSectionRead true round-trips through get and the flow and a fresh instance`() {
         val backing = FakeSettings()
         val settings = ReadStateSettings(backing)
 

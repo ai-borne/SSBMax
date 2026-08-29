@@ -210,7 +210,7 @@ export function buildContentPageHtml({ topic, seo, path, cssHrefs = [], siteBase
     <article class="max-w-3xl mx-auto px-4 py-8 sm:py-12">
       <a href="/" class="text-xs font-semibold text-sky-400 hover:underline">Back to home</a>
       <h1 class="mt-4 text-2xl sm:text-3xl font-bold text-white">${escapeHtml(topic.title)}</h1>
-      <div class="mt-4 prose dark:prose-invert max-w-none text-sm sm:text-base text-slate-300 leading-relaxed">${topic.introductionHtml}</div>${materialsHtml}
+      <div class="mt-4">${buildDocumentHtml(topic.introductionSections)}</div>${materialsHtml}
     </article>
     ${buildCfBeaconScriptTag(cfBeaconToken)}
   </body>

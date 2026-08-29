@@ -328,13 +328,17 @@ class FirebaseRulesValidationTest {
     // ==================== Study Materials Tests ====================
 
     @Test
-    fun `study materials are read-only for authenticated users`() {
+    fun `study materials are public read, no client writes`() {
+        // Un-gated in Phase 4 of docs/plans/i-just-watched-a-nested-russell.md: study content
+        // was never behind auth for a security reason, only a lead-capture one (now a soft CTA
+        // instead), so the web Study tab and its public content routes read this collection
+        // unauthenticated. See the matching comment in firestore.rules.
         val content = getRulesContent()
         val studyMaterialsRules = content.substringAfter("match /study_materials/{materialId}")
             .substringBefore("// CONTENT VERSIONS")
 
-        assertTrue("Authenticated users can read study materials",
-            studyMaterialsRules.contains("allow read: if isAuthenticated()"))
+        assertTrue("Study materials are public read",
+            studyMaterialsRules.contains("allow read: if true"))
         assertTrue("Clients cannot write study materials",
             studyMaterialsRules.contains("allow write: if false"))
     }

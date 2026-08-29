@@ -1,8 +1,7 @@
-// Follow-up to the ai_search_readiness/GEO plan's public-content markdown-rendering fix
-// (StudyTopicPage.tsx, prerenderHtml.mjs): StudyReaderModal has the same bug for
-// Firestore-runtime-fed StudyMaterial content -- this is the authenticated Study tab's
-// reader, un-gated for anonymous visitors since Phase 4, so it renders the same kind of
-// public-facing prose. Verifies markdown is parsed to real HTML, not shown as literal syntax.
+// Phase 8 sweep (docs/plans/write-the-phased-plan-wobbly-pancake.md): D4 forbids runtime
+// markdown parsing entirely -- StudyReaderModal now always fetches the D2 side document
+// (study_material_sections/{materialId}) and renders it via DocumentView; there is no
+// markdown-rollback path left to test. `sections === null` is a loading state, not a fallback.
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { StudyReaderModal } from '../../../src/components/study/StudyReaderModal';
@@ -19,11 +18,9 @@ const material: StudyMaterial = {
   estimatedReadTimeMinutes: 5,
   tags: [],
   createdAt: new Date().toISOString(),
+  topicType: 'OIR',
 };
 
-// A repository whose getStudyMaterialSections is never expected to be called just throws --
-// makes an accidental fetch (e.g. the "no topicType" / "flag disabled" guard regressing) fail
-// loudly instead of silently passing because a mock happened to resolve something harmless.
 const unreachableRepository: IContentRepository = {
   getStudyMaterials: () => { throw new Error('not stubbed'); },
   getStudyMaterialById: () => { throw new Error('not stubbed'); },
@@ -39,21 +36,19 @@ const unreachableRepository: IContentRepository = {
 };
 
 describe('StudyReaderModal', () => {
-  it('renders markdown content as real HTML, not literal syntax', () => {
-    render(<StudyReaderModal material={material} isOpen onClose={() => {}} />);
+  it('shows a loading state, never markdown, while study_material_sections resolves', () => {
+    const repository: IContentRepository = {
+      ...unreachableRepository,
+      getStudyMaterialSections: vi.fn(() => new Promise<null>(() => {})),
+    };
+
+    render(<StudyReaderModal material={material} isOpen onClose={() => {}} contentRepository={repository} />);
 
     expect(screen.getByTestId('study-reader-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('study-reader-loading')).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('**');
     expect(document.body.textContent).not.toContain('# OIR Guide');
-    expect(screen.getByText('Focus on speed.')).toBeInTheDocument();
-    expect(screen.getByText('Practice daily')).toBeInTheDocument();
-  });
-
-  it("nests the content's own heading under the modal's <h2> title instead of emitting a competing <h1>", () => {
-    render(<StudyReaderModal material={material} isOpen onClose={() => {}} />);
-
-    expect(document.querySelectorAll('h1')).toHaveLength(0);
-    expect(screen.getByRole('heading', { level: 2, name: 'OIR Guide' })).toBeInTheDocument();
+    expect(screen.queryByTestId('document-view')).not.toBeInTheDocument();
   });
 
   it('renders nothing when material is null', () => {
@@ -61,20 +56,20 @@ describe('StudyReaderModal', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('never fetches study_material_sections for a material with no topicType (falls straight to markdown)', () => {
+  it('fetches study_material_sections by materialId regardless of topicType', () => {
+    const repository: IContentRepository = {
+      ...unreachableRepository,
+      getStudyMaterialSections: vi.fn(() => new Promise<null>(() => {})),
+    };
+
     render(
-      <StudyReaderModal
-        material={material}
-        isOpen
-        onClose={() => {}}
-        contentRepository={unreachableRepository}
-      />
+      <StudyReaderModal material={material} isOpen onClose={() => {}} contentRepository={repository} />
     );
 
-    expect(screen.getByText('Focus on speed.')).toBeInTheDocument();
+    expect(repository.getStudyMaterialSections).toHaveBeenCalledWith('mat_1');
   });
 
-  it('renders the D2 side document via DocumentView, not markdown, once it resolves (D4)', async () => {
+  it('renders the D2 side document via DocumentView once it resolves (D4)', async () => {
     const model: DocumentModel = {
       sections: [
         {
@@ -90,45 +85,28 @@ describe('StudyReaderModal', () => {
       ...unreachableRepository,
       getStudyMaterialSections: vi.fn().mockResolvedValue(model),
     };
-    const oirMaterial: StudyMaterial = { ...material, topicType: 'OIR' };
 
     render(
-      <StudyReaderModal material={oirMaterial} isOpen onClose={() => {}} contentRepository={repository} />
+      <StudyReaderModal material={material} isOpen onClose={() => {}} contentRepository={repository} />
     );
 
     expect(await screen.findByTestId('document-view')).toBeInTheDocument();
     expect(screen.getByText('Structured intro text')).toBeInTheDocument();
-    expect(document.body.textContent).not.toContain('Focus on speed.'); // markdown fallback did not also render
+    expect(screen.queryByTestId('study-reader-loading')).not.toBeInTheDocument();
   });
 
-  it('falls back to markdown when the topic is enabled but no side document has been published yet', async () => {
+  it('stays in the loading state when no side document has been published yet', async () => {
     const repository: IContentRepository = {
       ...unreachableRepository,
       getStudyMaterialSections: vi.fn().mockResolvedValue(null),
     };
-    const oirMaterial: StudyMaterial = { ...material, topicType: 'OIR' };
 
     render(
-      <StudyReaderModal material={oirMaterial} isOpen onClose={() => {}} contentRepository={repository} />
+      <StudyReaderModal material={material} isOpen onClose={() => {}} contentRepository={repository} />
     );
 
     await waitFor(() => expect(repository.getStudyMaterialSections).toHaveBeenCalledWith('mat_1'));
-    expect(screen.getByText('Focus on speed.')).toBeInTheDocument();
+    expect(screen.getByTestId('study-reader-loading')).toBeInTheDocument();
     expect(screen.queryByTestId('document-view')).not.toBeInTheDocument();
-  });
-
-  it('falls back to markdown for a topicType outside the structured-rendering rollout', () => {
-    const oirMaterial: StudyMaterial = { ...material, topicType: 'NOT_A_REAL_TOPIC' };
-
-    render(
-      <StudyReaderModal
-        material={oirMaterial}
-        isOpen
-        onClose={() => {}}
-        contentRepository={unreachableRepository}
-      />
-    );
-
-    expect(screen.getByText('Focus on speed.')).toBeInTheDocument();
   });
 });

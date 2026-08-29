@@ -69,9 +69,11 @@ describe('buildContentPageHtml, for every real content route', () => {
         }
       });
 
-      it('contains the real topic title and introduction, rendered as HTML not raw markdown', () => {
+      it('contains the real topic title and introduction, rendered as chunked structured HTML not raw markdown (Phase 8)', () => {
         expect(html).toContain(escapeHtml(topic.title));
-        expect(html).toContain(topic.introductionHtml);
+        for (const section of topic.introductionSections.sections) {
+          if (section.heading) expect(html).toContain(escapeHtml(section.heading));
+        }
         expect(html).not.toContain('**');
       });
 
@@ -99,9 +101,9 @@ describe('buildContentPageHtml, for every real content route', () => {
         expect(html).toContain('<link rel="stylesheet" href="/assets/index-abc123.css" />');
       });
 
-      it('applies the prose typography classes to the rendered-markdown containers, matching StudyTopicPage.tsx (@tailwindcss/typography must be installed for these to do anything)', () => {
-        expect(html).toContain('prose dark:prose-invert');
+      it('renders the introduction as one chunked panel per section, matching StudyTopicPage.tsx/DocumentView.tsx (Phase 8)', () => {
         expect(html).toMatch(/<article class="[^"]*max-w-3xl/);
+        expect(html).toContain('mb-8 rounded-lg border border-slate-800 bg-slate-900/40 p-4 sm:p-5');
       });
 
       it('defaults to the dark theme with no JS required to apply it', () => {
@@ -172,34 +174,44 @@ describe('buildFaqPageHtml (Phase 7)', () => {
   });
 });
 
-describe('listifyLabelRuns (generateContentBundle.mjs) -- the actual generated bundle', () => {
+describe('parseDocument spec-line classification -- the actual generated bundle', () => {
   // A user-reported readability bug: consecutive `**Label**: value` spec lines (Duration/
   // Format/Rules/Assessment...) with no blank line between them rendered as one collapsed
   // run-on paragraph instead of separate lines. Found in 37 of 60 content/ files by grep audit
-  // after the report. Regression-tests the real generated bundle, not a synthetic fixture, so
-  // a content file re-introducing this pattern fails here.
-  function hasRunOnLabelParagraph(html: string): boolean {
-    // Every <p>...</p> block, individually -- counting <strong>label</strong>: occurrences
-    // *within* one block. A naive single regex with a repeated group can bridge across
-    // separate <p> tags (its own inner .*? isn't blocked from consuming </p>), so this
-    // extracts each paragraph's own content first and only then counts within it.
-    const paragraphs = html.match(/<p>[\s\S]*?<\/p>/g) ?? [];
-    return paragraphs.some((p) => (p.match(/<strong>[^<]+<\/strong>:/g) ?? []).length >= 2);
-  }
-
+  // after the report. Fixed by parseDocument classifying such runs as a `specTable` block
+  // instead of a `paragraph` block (scripts/content/parseDocument.js, Phase 1). Both topic
+  // intros and materials go through the same parser (`introductionHtml`, the legacy
+  // `marked`-rendered fallback this test used to check, was removed in the Phase 8 sweep), so
+  // this regresses if any `paragraph` block's raw text still contains a 2+-label run.
+  interface DocParagraphBlock { type: string; text?: string }
+  interface DocSection { blocks: DocParagraphBlock[] }
+  interface DocumentModelForTest { sections: DocSection[] }
   interface ContentBundleTopicForTest {
     id: string;
-    introductionHtml: string;
+    introductionSections: DocumentModelForTest;
+    materials: { id: string; sections: DocumentModelForTest }[];
   }
 
-  it('never leaves 2+ consecutive bold-label spec fields collapsed into one paragraph', () => {
-    // Materials are no longer `marked`-rendered (Phase 4 -- they go through parseDocument into
-    // a `specTable` block instead), so this run-on-paragraph bug class cannot recur there;
-    // `introductionHtml` (the legacy fallback field, still marked-rendered) is the only
-    // remaining surface this regression check applies to.
+  function hasRunOnLabelParagraph(model: DocumentModelForTest): boolean {
+    // Matches only a `**Label**:` at the START of a line (the original bug's exact shape --
+    // consecutive spec lines with no blank line between them). A bold label used mid-sentence
+    // or inside a list item (e.g. "- **Encouragement**: ...") is legitimate prose, not this bug.
+    return model.sections.some((section) =>
+      section.blocks.some(
+        (block) =>
+          block.type === 'paragraph' &&
+          (block.text?.match(/^\*\*[^*\n]+\*\*:/gm) ?? []).length >= 2
+      )
+    );
+  }
+
+  it('never leaves 2+ consecutive bold-label spec fields collapsed into one paragraph block', () => {
     const topics = Object.values(contentBundle) as ContentBundleTopicForTest[];
     for (const topic of topics) {
-      expect(hasRunOnLabelParagraph(topic.introductionHtml), `topic "${topic.id}" introductionHtml`).toBe(false);
+      expect(hasRunOnLabelParagraph(topic.introductionSections), `topic "${topic.id}" introduction`).toBe(false);
+      for (const material of topic.materials) {
+        expect(hasRunOnLabelParagraph(material.sections), `material "${material.id}"`).toBe(false);
+      }
     }
   });
 });

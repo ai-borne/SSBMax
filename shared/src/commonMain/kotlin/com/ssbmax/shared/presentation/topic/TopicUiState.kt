@@ -14,9 +14,9 @@ data class TopicUiState(
     val topicTitle: String = "",
     val introduction: String = "",
     /** Structured twin of [introduction] (Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md)
-     * -- null unless [com.ssbmax.shared.domain.config.ContentFeatureFlags.isStructuredRenderingEnabled]
-     * is on for this topic (only OIR today; every topic has a generated [DocumentModel] fallback
-     * since Phase 5, but the rollout flag still gates them in one at a time). D4 forbids parsing
+     * -- null only when both the network fetch and the generated [DocumentModel] offline fallback
+     * come back empty (the per-topic rollout flag that used to gate this was removed in the
+     * Phase 8 sweep, once all 9 topics had a generated fallback). D4 forbids parsing
      * [introduction] into one at runtime -- see [TopicViewModel.structuredIntroductionFor]. */
     val introductionSections: DocumentModel? = null,
     val studyMaterials: List<StudyMaterialItem> = emptyList(),

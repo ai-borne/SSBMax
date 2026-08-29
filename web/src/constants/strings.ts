@@ -1,4 +1,5 @@
 import { commonStrings } from './strings/common';
+import { studyMaterialStrings } from './strings/studyMaterial';
 import { landingStrings } from './strings/landing';
 import { testStrings } from './strings/tests';
 import { dossierStrings } from './strings/dossier';
@@ -15,6 +16,7 @@ import { contentBlockStrings } from './strings/content';
 
 export const strings = {
   ...commonStrings,
+  ...studyMaterialStrings,
   landing: landingStrings,
   ...testStrings,
   ...dossierStrings,

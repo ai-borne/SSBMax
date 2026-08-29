@@ -222,15 +222,14 @@ class TopicViewModel(
      * Prefers the D2 side document `topic_sections/{testType}` (Phase 5, docs/plans/
      * write-the-phased-plan-wobbly-pancake.md) fetched via [studyContentRepository], falling
      * back to [TopicContentLoader.getStructuredIntroduction]'s generated offline copy of the
-     * exact same source (never a network call). Returns null -- same as before Phase 5 -- only
-     * when the topic isn't behind the [ContentFeatureFlags.isStructuredRenderingEnabled]
-     * rollout flag, so [TopicUiState.introduction] keeps rendering as markdown text for
-     * everything not yet flagged on. Shared by both [loadFromLocal] and [applyCloudContent] so
-     * the same resolution order applies regardless of which tier the rest of the screen's
-     * content came from.
+     * exact same source (never a network call). The per-topic rollout flag this used to check
+     * (`ContentFeatureFlags.isStructuredRenderingEnabled`) was removed in the Phase 8 sweep once
+     * all 9 topics reached parity; a null result now only means both the network fetch and the
+     * generated offline fallback came back empty. Shared by both [loadFromLocal] and
+     * [applyCloudContent] so the same resolution order applies regardless of which tier the rest
+     * of the screen's content came from.
      */
     private suspend fun structuredIntroductionFor(testType: String): com.ssbmax.shared.ui.content.blocks.DocumentModel? {
-        if (!ContentFeatureFlags.isStructuredRenderingEnabled(testType)) return null
         val cloudSections = studyContentRepository.getTopicSections(testType).getOrNull()
         return cloudSections ?: TopicContentLoader.getStructuredIntroduction(testType)
     }

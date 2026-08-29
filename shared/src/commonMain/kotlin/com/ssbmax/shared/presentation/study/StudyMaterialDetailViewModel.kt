@@ -1,6 +1,5 @@
 package com.ssbmax.shared.presentation.study
 
-import com.ssbmax.shared.domain.config.ContentFeatureFlags
 import com.ssbmax.shared.domain.model.StudyProgress
 import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.domain.repository.StudyContentRepository
@@ -111,7 +110,7 @@ class StudyMaterialDetailViewModel(
                         isPremium = cloudMaterial.isPremium,
                         tags = emptyList(),
                         relatedMaterials = emptyList(),
-                        sections = structuredSectionsFor(cloudMaterial.topicType, materialId),
+                        sections = structuredSectionsFor(materialId),
                         practiceTestType = testTypeForTopicType(cloudMaterial.topicType)
                     )
                 } ?: run {
@@ -164,13 +163,12 @@ class StudyMaterialDetailViewModel(
      * intros, study-material bodies have no generated offline fallback (out of scope for this
      * plan -- see its "Out of scope" section) -- a missing/failed fetch here means null, which
      * [StudyMaterialContent.sections] callers must treat as "render [StudyMaterialContent.content]
-     * as markdown instead," same as today. Gated by
-     * [ContentFeatureFlags.isStructuredStudyMaterialRenderingEnabled], not
-     * [ContentFeatureFlags.isStructuredRenderingEnabled] -- see that flag's doc comment for why
-     * study-material bodies don't need the topic-intro offline-fallback gate.
+     * as markdown instead," same as today. The per-topic rollout flag this used to check
+     * (`ContentFeatureFlags.isStructuredStudyMaterialRenderingEnabled`) was removed in the
+     * Phase 8 sweep -- `publishContent.js` publishes this side document for all 51 materials
+     * unconditionally, so the allowlist had reached 100% and was dead weight.
      */
-    private suspend fun structuredSectionsFor(topicType: String, materialId: String): DocumentModel? {
-        if (!ContentFeatureFlags.isStructuredStudyMaterialRenderingEnabled(topicType)) return null
+    private suspend fun structuredSectionsFor(materialId: String): DocumentModel? {
         return studyContentRepository.getStudyMaterialSections(materialId).getOrNull()
     }
 
@@ -244,8 +242,7 @@ data class StudyMaterialContent(
     val tags: List<String>,
     val relatedMaterials: List<RelatedMaterial>,
     /** Structured twin of [content] (Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md)
-     * -- null unless a `study_material_sections` side document exists and the topic is behind
-     * [com.ssbmax.shared.domain.config.ContentFeatureFlags.isStructuredRenderingEnabled]; render
+     * -- null unless a `study_material_sections` side document exists for this material; render
      * [content] as markdown when null, same as before this field existed. */
     val sections: DocumentModel? = null,
     /** The single [TestType] this material's `topicType` unambiguously maps to, or null when the

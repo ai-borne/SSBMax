@@ -1,11 +1,10 @@
-import { FC, useMemo } from 'react';
+import { FC } from 'react';
 import { Clock, CheckCircle, WifiOff } from 'lucide-react';
 import { BaseModal } from '../common/BaseModal';
 import { strings } from '../../constants/strings';
 import { StudyMaterial } from '../../types/testContent';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useSectionReadState } from '../../hooks/useSectionReadState';
-import { renderMarkdown } from '../../utils/renderMarkdown';
 import { useStudyMaterialSections } from '../../viewmodels/useStudyMaterialSections';
 import { DocumentView } from '../content/DocumentView';
 import { primaryTestTypeIdForTopicType } from '../../constants/topicTypeMapping';
@@ -42,17 +41,9 @@ export const StudyReaderModal: FC<StudyReaderModalProps> = ({
   contentRepository = defaultContentRepository
 }) => {
   const isOnline = useOnlineStatus();
-  const sections = useStudyMaterialSections(material?.id, material?.topicType, contentRepository);
+  const sections = useStudyMaterialSections(material?.id, contentRepository);
   const { readSectionIds, toggleSectionRead } = useSectionReadState();
   const practiceTestTypeId = primaryTestTypeIdForTopicType(material?.topicType);
-
-  // Content's own headings nest under this modal's <h2> title (BaseModal), so shift by 1.
-  // Only needed as a fallback -- once `sections` resolves, DocumentView renders instead (D4:
-  // no runtime markdown parsing once structured sections are available).
-  const contentHtml = useMemo(
-    () => (material && !sections ? renderMarkdown(material.contentMarkdown, 1) : ''),
-    [material, sections]
-  );
 
   if (!material) return null;
 
@@ -108,10 +99,10 @@ export const StudyReaderModal: FC<StudyReaderModalProps> = ({
           {material.summary}
         </p>
 
-        {/* D4: no runtime markdown parsing once a study_material_sections side document exists
-            for this material -- DocumentView renders the same typed blocks as every other
-            surface. Falls back to contentHtml (rendered HTML, see renderMarkdown's doc comment
-            on trust) when sections hasn't resolved yet or none is published. */}
+        {/* D4 (docs/plans/write-the-phased-plan-wobbly-pancake.md): no runtime markdown parsing,
+            ever -- DocumentView renders the same typed blocks as every other surface. `sections`
+            is null both while the fetch is in flight and if the material has no published side
+            document; either way this is a loading state, never a markdown re-parse. */}
         {sections ? (
           <div className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
             <DocumentView
@@ -123,10 +114,9 @@ export const StudyReaderModal: FC<StudyReaderModalProps> = ({
             />
           </div>
         ) : (
-          <div
-            className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: contentHtml }}
-          />
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400" data-testid="study-reader-loading">
+            {strings.studyMaterial.contentLoading}
+          </p>
         )}
       </div>
     </BaseModal>

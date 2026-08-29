@@ -130,13 +130,13 @@ class StudyMaterialDetailViewModelTest {
     }
 
     @Test
-    fun `loadMaterial uses the D2 side document for a non-OIR topic too (SRT belongs to PSYCHOLOGY)`() = runTest(testDispatcher) {
+    fun `loadMaterial uses the D2 side document for a non-OIR topic too -- SRT belongs to PSYCHOLOGY`() = runTest(testDispatcher) {
         // Regression test for the bug this fix closes: study-material bodies used to be gated
         // behind ContentFeatureFlags.isStructuredRenderingEnabled (OIR-only, meant for topic
         // intros' offline-fallback readiness), which silently fell back to markdown for every
-        // other topic even though its Firestore side document existed. Now gated behind
-        // isStructuredStudyMaterialRenderingEnabled, which has no such offline-fallback
-        // dependency and is enabled for all 9 topics.
+        // other topic even though its Firestore side document existed. The per-topic rollout
+        // flag was removed entirely in the Phase 8 sweep once it covered all 9 topics -- every
+        // material with a published side document now renders structured, unconditionally.
         val model = com.ssbmax.shared.ui.content.blocks.DocumentModel(
             sections = listOf(
                 com.ssbmax.shared.ui.content.blocks.DocSection(

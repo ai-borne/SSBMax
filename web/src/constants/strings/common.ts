@@ -161,26 +161,6 @@ export const commonStrings = {
     queuedMessage: 'Test response saved offline. Will sync when back online.',
     reconnectNotice: 'You are currently offline. Local cache enabled.'
   },
-  studyMaterial: {
-    title: 'Free Study Material',
-    allCategories: 'All Categories',
-    readTime: '{min} min read',
-    markAsRead: 'Mark as Read',
-    completed: 'Completed',
-    noMaterials: 'No study materials available at the moment.',
-    loadError: 'Failed to load study materials.',
-    offlineNotice: 'Viewing cached study material',
-    softCtaTitle: 'Sign in to Save Your Progress',
-    softCtaDesc: 'Study guides are free for everyone, no sign-in required. Sign in with Google to sync completed guides and your practice history across devices.',
-    signInWithGoogle: 'Sign in with Google',
-    day1Title: 'Day 1: Stage I Screening Test',
-    day2Title: 'Day 2: Stage II Psychology Battery & PIQ',
-    day3Title: 'Day 3 & 4: Stage II GTO Outdoor Tasks',
-    day5Title: 'Day 5: Stage II Interview & Board Conference',
-    skeletonLoading: 'Loading authentic SSB study materials...',
-    postAuthResuming: 'Resuming your session to open study guide...',
-    offlineFallbackBanner: 'Operating in offline mode. Showing cached study materials.'
-  },
   nav: {
     landing: 'Home',
     study: 'Study',

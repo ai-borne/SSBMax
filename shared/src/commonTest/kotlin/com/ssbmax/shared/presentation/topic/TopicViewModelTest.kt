@@ -107,8 +107,7 @@ class TopicViewModelTest {
 
     @Test
     fun `loadTopic falls back to the generated structured model when no D2 side document is published`() = runTest(testDispatcher) {
-        // OIR is the one topic behind ContentFeatureFlags.isStructuredRenderingEnabled today --
-        // Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md's exit criterion that a
+        // Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md's exit criterion: a
         // missing side document falls back to the generated offline copy, not a blank section.
         studyContentRepository.topicSectionsResult = Result.success(null)
         val viewModel = buildViewModel()
@@ -118,6 +117,18 @@ class TopicViewModelTest {
 
         val sections = viewModel.uiState.value.introductionSections
         assertEquals(TopicContentLoader.getStructuredIntroduction("OIR"), sections)
+    }
+
+    @Test
+    fun `loadTopic also returns structured sections for a non-OIR topic -- Phase 8 removed the flag and all 9 topics are on`() = runTest(testDispatcher) {
+        studyContentRepository.topicSectionsResult = Result.success(null)
+        val viewModel = buildViewModel()
+
+        viewModel.loadTopic("MEDICALS")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val sections = viewModel.uiState.value.introductionSections
+        assertEquals(TopicContentLoader.getStructuredIntroduction("MEDICALS"), sections)
     }
 
     @Test
