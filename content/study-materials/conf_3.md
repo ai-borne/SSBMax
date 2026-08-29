@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738495112
+takeaways: ["Every candidate is identified only by chest number, never by name, from Day 1 through result declaration", "Results are binary -- recommended or not -- with no visible numeric score or ranked list read aloud", "Being recommended clears you for the medical examination; it is not the final commissioning decision", "A large proportion of currently serving officers were not recommended on their first SSB attempt", "Note your chest number immediately and don't try to read meaning into informal signals during the week"]
+keyFacts: {"identificationMethod": "chest number, not name"}
 ---
 # Understanding SSB Results and Chest Numbers
 

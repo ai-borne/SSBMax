@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738072584
+takeaways: ["The medical examination is a separate, independent assessment by military doctors, run after and unrelated to Psychology, GTO, and Interview", "It follows conference recommendation, not the other way around -- you must be recommended first", "Findings from multiple specialists are consolidated into a single outcome by the medical board", "Bringing existing medical records and prescriptions can speed up the examination and avoid confusion", "A rejection here is not automatically final -- later materials cover the appeal process"]
+keyFacts: {}
 ---
 # SSB Medical Examination: Complete Overview
 

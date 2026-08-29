@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724614584
+takeaways: ["With 40-50 questions in just 30-40 minutes, OIR is as much a time-management test as an intelligence test", "The 3-zone strategy helps you triage easy, medium, and hard questions instead of attempting them in order", "Strategic question selection -- skipping questions likely to cost disproportionate time -- protects your overall score", "A deliberate guessing strategy for unanswered questions can be worth more than leaving them blank", "Practising under real time constraints, not untimed, is what actually builds test-day speed"]
+keyFacts: {"typicalQuestionCount": "40-50", "typicalDuration": "30-40 minutes"}
 ---
 # Time Management in OIR
 

@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738059795
+takeaways: ["Body language communicates as much as your words -- posture, eye contact, and gestures are actively assessed", "Authenticity beats artificial confidence -- forced power poses or rehearsed gestures read as unnatural", "Managing nervous habits (fidgeting, avoiding eye contact) matters more than eliminating nervousness entirely", "Voice, tone, and pacing shape how confident and honest you come across, independent of the words used", "Practising in front of a mirror or on video is the most effective way to notice and correct unconscious habits"]
+keyFacts: {}
 ---
 # Interview Body Language
 

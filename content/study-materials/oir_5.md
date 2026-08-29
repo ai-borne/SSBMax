@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724615160
+takeaways: ["Even well-prepared candidates lose marks to preventable, recurring mistakes rather than lack of knowledge", "Mistakes cluster into distinct phases -- preparation, section-specific, test-day, and overall strategy", "A recovery strategy for when you realize you're behind schedule mid-test prevents one bad section from sinking the whole score", "Reviewing a prevention checklist before the actual test is more useful than reviewing it only after a mock test", "Section-specific mistakes require section-specific fixes -- a generic 'be more careful' isn't actionable"]
+keyFacts: {}
 ---
 # Common Mistakes to Avoid in OIR
 

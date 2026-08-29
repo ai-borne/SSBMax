@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738053539
+takeaways: ["Snake Race and FGT are the culminating Day 5 GTO tasks, testing sustained teamwork and physical endurance after three days of fatigue", "These tasks integrate everything learned across earlier obstacles -- GTO is watching for a visible improvement curve, not a fresh start", "Physical stamina matters here more than in earlier tasks, but teamwork and rule discipline remain the primary assessment criteria", "Maintaining positive energy despite fatigue is itself an Officer Like Quality being observed", "Performance across the full 3 days is reviewed together, so a weak final task does not erase a strong overall pattern"]
+keyFacts: {}
 ---
 # Snake Race & FGT Strategies
 

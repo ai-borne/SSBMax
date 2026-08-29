@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724615608
+takeaways: ["This practice set spans all four major OIR categories -- verbal, non-verbal, numerical, and general intelligence -- with worked solutions", "Understanding the logic behind each solution matters more than memorizing the specific answer", "The scoring guide helps you benchmark a practice attempt against realistic performance bands", "A recommended practice schedule turns this into a repeatable routine rather than a one-time read-through", "Reviewing your mistakes after each practice set is what converts practice into measurable improvement"]
+keyFacts: {}
 ---
 # Practice Sets with Solutions
 

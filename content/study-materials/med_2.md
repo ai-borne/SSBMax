@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738072793
+takeaways: ["Vision is one of the most common reasons for medical disqualification at SSB", "The exact vision and colour-vision standard depends heavily on which service and branch you're applying for", "ENT standards are evaluated separately from vision and can independently affect eligibility", "Standards differ sharply by branch because roles like flying have stricter physiological demands", "Getting your vision and hearing checked well in advance avoids a preventable surprise at the medical board"]
+keyFacts: {}
 ---
 # Vision and ENT Standards for the Armed Forces
 

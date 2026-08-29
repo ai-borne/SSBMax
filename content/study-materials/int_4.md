@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738059579
+takeaways: ["Basic awareness of armed forces structure, ranks, and entry schemes signals genuine interest, not expert-level knowledge", "The IO does not expect military-expert answers -- honest, roughly accurate awareness is what's being checked", "Knowing your own entry scheme and its training academy in detail is more important than exhaustive general knowledge", "Recent defense developments and the Agnipath scheme are common, current interview topics worth specific preparation", "Common mistakes include confidently stating incorrect facts rather than admitting uncertainty"]
+keyFacts: {}
 ---
 # Military Knowledge Basics
 

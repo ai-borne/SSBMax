@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738067679
+takeaways: ["SSB rewards steady, structured preparation over 90 days far more than last-minute intensity, since personality patterns can't be crammed", "Phase 1 (Days 1-30) builds foundational understanding, physical conditioning, and current-affairs habits", "Phase 2 (Days 31-60) shifts to timed psychology practice, GTO task familiarity, and interview groundwork", "Phase 3 (Days 61-90) consolidates through full-length mock tests and fine-tuning, not new intensity", "Consistency beats intensity throughout -- the final week should prioritise rest over cramming, since SSB is built to detect exactly that kind of surface-level effort"]
+keyFacts: {"planDuration": "90 days"}
 ---
 # How to Prepare for SSB: A 90-Day Study Plan
 

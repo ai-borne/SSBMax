@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724624518
+takeaways: ["PPDT combines with your OIR score to decide whether you proceed past Day 1 screening", "Assessors are checking character perception, story structure, and narration -- not artistic writing ability", "Time management across perception, writing, and narration is as critical as the content itself", "PPDT marks the start of psychological assessment, even though it happens before the formal Psychology tests", "A realistic preparation timeline built around practice pictures beats last-minute cramming"]
+keyFacts: {}
 ---
 # PPDT Test Overview
 

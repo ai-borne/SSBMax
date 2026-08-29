@@ -11,10 +11,12 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724611992
+takeaways: ["OIR is the first hurdle at SSB, conducted on Day 1 as part of the screening stage", "The test covers verbal and non-verbal reasoning across two timed sub-tests", "Your OIR score is combined with PPDT performance for the screening decision, so a strong OIR can offset an average PPDT", "There is no single publicly disclosed cut-off -- scoring bands range from Excellent to Below Average", "Consistent daily practice across question types matters more than last-minute cramming"]
+keyFacts: {}
 ---
-# Hi Guys : Understanding OIR Test Pattern
+# Understanding OIR Test Pattern
 
-The "max" Officer Intelligence Rating (OIR) test is the first major hurdle in the SSB selection process, conducted on Day 1 as part of the screening stage. Understanding its pattern and purpose is crucial for your success in the armed forces selection journey.
+The Officer Intelligence Rating (OIR) test is the first major hurdle in the SSB selection process, conducted on Day 1 as part of the screening stage. Understanding its pattern and purpose is crucial for your success in the armed forces selection journey.
 
 ## What is OIR Test?
 
@@ -88,7 +90,7 @@ While exact cut-off scores are not publicly disclosed, generally:
 - **Borderline**: 22-27 correct answers
 - **Below Average**: Less than 22 correct answers
 
-**Important**: Your OIR score is combined with your PPDT performance for screening. A strong OIR score can compensate for an average PPDT performance.
+**Note**: Your OIR score is combined with your PPDT performance for screening. A strong OIR score can compensate for an average PPDT performance.
 
 ## Common Question Distribution
 

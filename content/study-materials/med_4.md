@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738073165
+takeaways: ["Being marked unfit at the first medical examination is not necessarily final -- a structured, multi-stage appeal process exists (SMB, AMB, RMB)", "Whether a rejection is classified as temporary or permanent changes what happens next and is worth understanding precisely", "A temporary rejection (e.g. for low haemoglobin) can often be resolved and re-tested rather than ending your candidature", "Each appeal stage has its own process and realistic expectations, covered in order", "Acting promptly and following the correct appeal channel matters more than panicking after an initial rejection"]
+keyFacts: {}
 ---
 # Special, Appeal and Review Medical Boards Explained (SMB, AMB, RMB)
 

@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761736691904
+takeaways: ["TAT is widely considered the most revealing psychology test, so mastering it pays off across the whole psychology assessment", "Every story must include the required elements -- characters, a central action, and a positive resolution -- within the 4-minute window", "Story themes that demonstrate initiative, problem-solving, and positive outlook consistently score higher than dramatic or negative ones", "A repeatable story structure template makes it possible to write complete stories reliably under time pressure", "The blank slide (the final image with no picture) still requires a genuine, positive story, not a placeholder response"]
+keyFacts: {"totalPictures": "12", "writingTimePerStory": "4 minutes"}
 ---
 # TAT Mastery Guide
 
@@ -129,7 +131,7 @@ TAT presents 12 ambiguous, hazy pictures (11 regular + 1 blank slide) shown for 
 
 **OLQs Highlighted**: Sense of responsibility, social adjustment
 
-**Caution**: Don't make overly emotional or dependent; show maturity
+**Warning**: Don't make overly emotional or dependent; show maturity
 
 ## Advanced TAT Techniques
 

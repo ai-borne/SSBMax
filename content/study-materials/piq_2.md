@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761737560884
+takeaways: ["Mistakes in the PIQ don't just look untidy -- they generate awkward, unprepared-for questions live in front of the IO", "Exaggerated achievements and vague hobby entries are among the most common and most damaging errors", "Inconsistency between the PIQ and other documents (marksheets, certificates) is a red flag the board actively checks for", "Copying a 'model' PIQ from the internet produces a mismatched tone that reads as inauthentic", "A quick pre-submission checklist catches most of these errors before they become interview problems"]
+keyFacts: {}
 ---
 # PIQ Form: Common Mistakes and How to Avoid Them
 

@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738073418
+takeaways: ["The medical examination measures fixed, verifiable facts about your body, so advance preparation is the only real lever you have", "A realistic preparation timeline started early is far more effective than last-minute crash efforts", "Basic fitness and nutrition habits, sustained weekly, matter more than short intense pushes", "Weight management should be done safely -- distorting your readings artificially close to the exam can backfire", "Understanding what not to do (crash diets, unverified supplements, last-minute drastic changes) prevents self-inflicted disqualification"]
+keyFacts: {}
 ---
 # Preparing Your Body for the SSB Medical Examination
 

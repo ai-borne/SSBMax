@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761736692429
+takeaways: ["SRT presents 60 practical situations requiring an immediate written reaction, testing decision-making under time pressure", "Responses should be action-oriented and realistic, not idealistic or vague statements of intent", "A consistent response framework across situation categories helps maintain speed without sacrificing quality", "Common mistakes include overthinking simple situations and giving passive or avoidant reactions", "Time management across all 60 situations matters as much as the quality of any single response"]
+keyFacts: {"totalSituations": "60"}
 ---
 # SRT Situation Analysis
 

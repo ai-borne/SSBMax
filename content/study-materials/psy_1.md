@@ -9,8 +9,10 @@ readTime: "10 min read"
 tags: ["Psychology Tests","TAT","WAT","SRT","Officer Like Qualities"]
 relatedMaterials: []
 isPremium: false
-version: 1
+version: 2
 lastUpdated: 1761736691596
+takeaways: ["Psychology tests have no right or wrong answers -- they assess personality patterns, not knowledge", "Consistency across TAT, WAT, SRT, and SD matters more than any single response", "Psychology carries roughly 33% weightage in the final conference decision", "You cannot fake spontaneous responses -- psychologists are trained to spot inconsistency"]
+keyFacts: {"weightageInFinalRecommendation": "~33%", "numberOfOLQsAssessed": "15"}
 ---
 # Psychology Tests Overview
 
@@ -25,7 +27,7 @@ Unlike conventional tests, psychology tests have no right or wrong answers. They
 - Response patterns under time pressure
 - Unconscious attitudes and beliefs
 
-## The Four Main Tests
+## What Are the Four Main Tests?
 
 ### 1. Thematic Apperception Test (TAT)
 **Duration**: 30 seconds per picture × 12 pictures = 6 minutes viewing + 4 minutes per story
@@ -63,7 +65,7 @@ Unlike conventional tests, psychology tests have no right or wrong answers. They
 
 **Key Challenge**: Being honest while highlighting positive qualities
 
-## What Psychologists Assess
+## What Do Psychologists Assess?
 
 ### The 15 Officer Like Qualities (OLQs)
 
@@ -97,7 +99,7 @@ Unlike conventional tests, psychology tests have no right or wrong answers. They
 
 **Stamina**: Physical and mental endurance, sustained effort
 
-## How Psychology Tests Work
+## How Do Psychology Tests Work?
 
 ### Projective Technique Principle
 When given ambiguous stimuli (vague pictures, words, situations), your responses reveal your:
@@ -108,7 +110,7 @@ When given ambiguous stimuli (vague pictures, words, situations), your responses
 
 **Key Insight**: You can't fake these tests because responses must be spontaneous. Trying to appear "perfect" creates inconsistency that psychologists easily detect.
 
-## Common Themes Psychologists Look For
+## What Themes Do Psychologists Look For?
 
 **Positive Indicators**:
 - Helping others in need
@@ -147,7 +149,7 @@ When given ambiguous stimuli (vague pictures, words, situations), your responses
 
 **Afternoon**: Free time or optional activities while psychologist analyzes responses
 
-## How Responses Are Analyzed
+## How Are Responses Analyzed?
 
 The psychologist looks for:
 
@@ -249,7 +251,7 @@ All three assessors (Psychologist, GTO, IO) discuss findings. Psychology carries
 
 **Day Before**: No practice; relax and get good sleep
 
-## What Makes Psychology Tests Unique
+## What Makes Psychology Tests Unique?
 
 **No Objective Right/Wrong**: Your personality is being assessed, not knowledge
 

@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761736692815
+takeaways: ["The 15 OLQs form the framework every SSB assessor -- Psychologist, GTO, and IO -- evaluates you against", "You don't need all 15 equally developed; genuinely demonstrating 8-10 is considered excellent", "OLQs cluster into related groups, so developing one often naturally strengthens others in the same cluster", "Genuine possession matters far more than pretense -- assessors are specifically trained to detect performed qualities", "OLQ-specific development activities build these traits over weeks, not through last-minute test-taking tricks"]
+keyFacts: {"totalOLQs": "15", "excellentThreshold": "8-10 qualities"}
 ---
 # Officer Like Qualities (OLQs) Explained
 
@@ -20,7 +22,7 @@ The 15 Officer Like Qualities (OLQs) form the framework against which SSB assess
 
 OLQs are specific personality traits and behavioral characteristics that military research has identified as essential for successful military leadership. These 15 qualities collectively define the ideal officer personality that armed forces seek.
 
-**Important**: You don't need all 15 OLQs equally developed. Having 8-10 qualities strongly demonstrated is considered excellent. The key is genuine possession, not pretense.
+**Note**: You don't need all 15 OLQs equally developed. Having 8-10 qualities strongly demonstrated is considered excellent. The key is genuine possession, not pretense.
 
 ## The 15 OLQs in Detail
 

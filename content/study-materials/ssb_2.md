@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738067483
+takeaways: ["The same five-day SSB process applies regardless of entry scheme -- what differs is the age bracket, academic requirement, and route to reach SSB", "NDA and TES are the earliest entry points, available straight after Class 12, while CDS and AFCAT require a completed or near-complete degree", "Permanent Commission and Short Service Commission are a separate distinction from the entry scheme itself, with different career-length implications", "Exact age brackets and academic cut-offs are revised each notification cycle, so official current figures should always be confirmed", "Choosing the right entry scheme is as consequential as SSB preparation itself, since it determines eligibility to even reach the board"]
+keyFacts: {}
 ---
 # SSB Entry Schemes: NDA, CDS, TES, SSC and More
 

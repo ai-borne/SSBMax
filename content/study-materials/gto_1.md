@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738052215
+takeaways: ["GTO tasks span Days 3-5 and carry roughly 33% weightage in the final assessment, equal to Psychology and Interview", "GTO observes actual behaviour under pressure, not written responses -- it is the hardest area to fake", "Balanced participation (contributing 5-7 times meaningfully) beats both dominating and staying silent", "Rule violations and unsafe actions are treated as serious negatives even if they help complete a task faster", "The improvement curve across tasks matters more than performance on the very first task"]
+keyFacts: {"weightageInFinalRecommendation": "~33%", "numberOfMainTasks": "8"}
 ---
 # GTO Tasks Overview
 

@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738053141
+takeaways: ["You get only 3 minutes to prepare before delivering a 3-minute lecture on an assigned topic", "Lecturette tests knowledge, power of expression, and the ability to organize thoughts quickly under time pressure", "A clear structure (introduction, 2-3 main points, conclusion) matters more than trying to cover everything", "Confident delivery and pacing carry as much weight as content accuracy", "Practising across current-affairs, social, defense, and economic topics builds the breadth Lecturette demands"]
+keyFacts: {"preparationTime": "3 minutes", "speakingTime": "3 minutes"}
 ---
 # Lecturette Preparation
 

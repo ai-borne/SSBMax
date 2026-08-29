@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738058962
+takeaways: ["The Personal Interview is a one-on-one, 30-45 minute conversation with the IO that carries roughly 33% weightage in the final assessment", "The IO is assessing personality, knowledge, motivation, and self-awareness, not just correct answers", "Honesty and consistency with your PIQ and other assessments matter more than rehearsed, impressive-sounding responses", "Common mistakes include memorized answers, overconfidence, and being unclear about your motivation to join the armed forces", "Mock interview practice is the most effective way to build natural, confident delivery"]
+keyFacts: {"weightageInFinalRecommendation": "~33%", "typicalDuration": "30-45 minutes"}
 ---
 # SSB Interview Process
 

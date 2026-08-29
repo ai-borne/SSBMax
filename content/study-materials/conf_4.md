@@ -11,6 +11,7 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738495311
+takeaways: ["The conference is a brief but still observed interaction -- dress, posture, and composure continue to matter", "Do not try to 'sell' yourself here -- any obvious attempt to project undemonstrated qualities reads as inconsistent", "Over-explaining an inconsistency is more damaging than a short, honest clarification", "A visible pause before answering an unexpected question is acceptable and preferable to improvising", "The conference feels anticlimactic because the real evaluation already happened across Psychology, GTO, and Interview"]
 ---
 # Conference Etiquette and Making the Right Final Impression
 

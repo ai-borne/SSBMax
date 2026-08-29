@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738494908
+takeaways: ["The conference interaction is short -- usually under two minutes -- so answers should be brief and specific, not rehearsed speeches", "Board questions cluster into a few categories: overall experience, self-reflection, inconsistency checks, motivation, and closing remarks", "Never get defensive when asked to clarify a discrepancy between your interview, PIQ, and psychology responses", "Give the same core answer you've given throughout SSB rather than manufacturing a more dramatic one for the conference", "A considered short pause before answering reads better than a rushed long response"]
+keyFacts: {"typicalAnswerLength": "2-3 sentences", "typicalPerCandidateTime": "under 2 minutes"}
 ---
 # Common Conference Questions and How to Answer Them
 

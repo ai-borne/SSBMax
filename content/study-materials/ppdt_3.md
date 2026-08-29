@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724625272
+takeaways: ["The PPDT group discussion is the final phase and accounts for roughly 30% of your total PPDT score", "It tests interpersonal skills, leadership potential, and teamwork, similar in spirit to the later GTO group discussion", "Reading the room and adapting your participation level matters more than sticking to a fixed script", "Language and tone should stay respectful and constructive even when disagreeing with another candidate's story", "Consistent, moderate participation beats both dominating the discussion and staying silent"]
+keyFacts: {"gdShareOfPpdtScore": "~30%"}
 ---
 # Group Discussion Strategies for PPDT
 

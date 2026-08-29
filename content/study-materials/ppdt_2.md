@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724624751
+takeaways: ["Writing a complete, coherent, positive story in just 4 minutes is the most challenging part of PPDT for most candidates", "Simple, clear, active-voice language scores better than elaborate vocabulary or passive constructions", "Concrete actions demonstrate qualities more convincingly than describing thoughts or feelings", "A consistent story structure practiced repeatedly is more reliable under time pressure than improvising each time", "Common mistakes -- mismatched character count, negative themes, incomplete endings -- are all avoidable with awareness"]
+keyFacts: {"storyWritingTime": "4 minutes"}
 ---
 # Story Writing Techniques for PPDT
 
@@ -124,30 +126,30 @@ Writing a complete, coherent, and positive story in just 4 minutes is the most c
 ## Writing Style Tips
 
 ### Use Simple, Clear Language
-**Good**: "Rajesh decided to help the injured person."
+**Right**: "Rajesh decided to help the injured person."
 
-**Avoid**: "Rajesh contemplated the philosophical implications of intervention."
+**Wrong**: "Rajesh contemplated the philosophical implications of intervention."
 
 **Why**: Clarity and directness matter more than vocabulary
 
 ### Active Voice > Passive Voice
-**Good**: "The soldier secured the area quickly."
+**Right**: "The soldier secured the area quickly."
 
-**Avoid**: "The area was secured by the soldier quickly."
+**Wrong**: "The area was secured by the soldier quickly."
 
 **Why**: Active voice is stronger and more engaging
 
 ### Positive Language
-**Good**: "He successfully completed the mission."
+**Right**: "He successfully completed the mission."
 
-**Avoid**: "He didn't fail the mission."
+**Wrong**: "He didn't fail the mission."
 
 **Why**: Positive framing reflects positive thinking
 
 ### Concrete Actions
-**Good**: "He organized 50 volunteers and arranged food for flood victims."
+**Right**: "He organized 50 volunteers and arranged food for flood victims."
 
-**Avoid**: "He thought about helping and felt good."
+**Wrong**: "He thought about helping and felt good."
 
 **Why**: Actions demonstrate qualities; thoughts don't
 

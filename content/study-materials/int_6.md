@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738060002
+takeaways: ["Certain question categories -- background, motivation, education, current affairs, and personal qualities -- recur across nearly every SSB interview", "Preparing thoughtful, honest answers in advance builds confidence without making responses sound rehearsed", "Motivation-related questions get special scrutiny because consistency across the whole week is checked against them", "Some personal topics are better handled with care -- know what to avoid volunteering unprompted", "Articulating your own story clearly matters more than giving the answer you think the IO wants to hear"]
+keyFacts: {}
 ---
 # Common Interview Questions
 

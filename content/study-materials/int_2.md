@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738059169
+takeaways: ["Interview preparation is fundamentally an exercise in honest self-reflection, not memorizing model answers", "Your life story, motivations, and aspirations need to be articulated clearly and consistently", "Certain topics are better avoided or handled carefully during the interview -- know which ones and why", "Question-handling technique (structure, pacing, honesty) matters as much as the content of individual answers", "The final preparation week should focus on consolidation and calm, not cramming new material"]
+keyFacts: {}
 ---
 # Personal Interview Preparation
 

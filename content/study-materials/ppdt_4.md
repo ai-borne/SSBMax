@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724625551
+takeaways: ["Getting the basics right -- number of characters, gender, approximate age -- demonstrates observation skill and mental alertness", "A systematic 30-second viewing strategy produces more reliable perception than trying to absorb everything at once", "Common perception errors (miscounting characters, misjudging age) create problems that cascade into the story itself", "When genuinely uncertain about a detail, a reasonable, consistent assumption is better than an obviously wrong guess", "Perception is about what you can defend having seen, not what you imagine could be there"]
+keyFacts: {"viewingTime": "30 seconds"}
 ---
 # Character Perception Skills
 

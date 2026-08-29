@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738060164
+takeaways: ["Mock interviews are the single most effective way to prepare, more so than passively reading question lists", "Different mock formats -- standard, stress test, technical, personality, and motivation-focused -- each expose different weaknesses", "Self-assessment after each mock interview is what turns practice into actual improvement", "A stress-test mock specifically prepares you for pointed or uncomfortable questions from the real IO", "A structured practice schedule across several mock formats beats repeating the same one"]
+keyFacts: {}
 ---
 # Mock Interview Scenarios
 

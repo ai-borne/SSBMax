@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761736693023
+takeaways: ["Applying TAT, WAT, SRT, and SD principles through timed practice sets converts theory into working test-day speed", "A complete practice session run under real time constraints reveals gaps that isolated single-question practice hides", "Consistency across all four tests during practice is the specific pattern the real psychology assessment looks for", "Reviewing your own responses against the principles from earlier guides is what makes repeated practice actually improve performance", "Practicing all four tests together, not just individually, builds the stamina the real Day 2 schedule demands"]
+keyFacts: {}
 ---
 # Psychology Test Practice Sets
 

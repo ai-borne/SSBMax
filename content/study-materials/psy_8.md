@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761736693245
+takeaways: ["Success across psychology tests depends on genuinely developing an officer-like mindset, not just learning test-taking techniques", "A positive, action-oriented mental framework naturally generates the right responses without conscious engineering", "Daily mindset practices, sustained over a realistic timeline, produce authentic change rather than a performed veneer", "Common mindset obstacles (negative self-talk, fear of failure) need deliberate practical exercises to overcome", "The benefits of this mindset work extend beyond SSB into how you handle challenges generally"]
+keyFacts: {}
 ---
 # Psychological Mindset Development
 

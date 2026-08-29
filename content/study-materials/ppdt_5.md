@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724625951
+takeaways: ["Studying well-constructed sample stories across different themes builds an intuitive sense of what works", "Effective stories share common elements -- clear characters, positive action, and a resolved ending -- regardless of theme", "Story templates are a starting scaffold to adapt, not scripts to memorize and reproduce verbatim", "Practising by writing your own stories against these samples is more valuable than reading them passively", "Testing your own stories against the same analysis criteria used on the samples reveals concrete gaps to fix"]
+keyFacts: {}
 ---
 # Sample PPDT Stories
 

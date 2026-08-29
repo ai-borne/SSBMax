@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738053335
+takeaways: ["Command Task is the most direct assessment of leadership -- you individually command 2-3 subordinates to complete an obstacle", "Only the commander may initially touch the helping materials, forcing you to lead through clear instruction rather than doing the work yourself", "Giving specific, unambiguous orders matters more than being loud or authoritative", "Common mistakes include micromanaging subordinates or, conversely, failing to direct them at all", "GTO is watching how efficiently you coordinate a small team toward a clear objective, mirroring real military command"]
+keyFacts: {"typicalDuration": "10-15 minutes per candidate", "subordinateCount": "2-3"}
 ---
 # Command Task Leadership
 

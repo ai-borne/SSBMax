@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738059390
+takeaways: ["Current affairs knowledge signals awareness of the world and interest in national and international matters, both essential officer qualities", "Forming and defending a balanced opinion matters more than reciting facts", "Defense-specific current affairs deserve particular depth given the interview context", "A structured daily reading habit built over weeks beats last-minute cramming", "Common mistakes include one-sided opinions and confusing facts across similar recent events"]
+keyFacts: {}
 ---
 # Current Affairs Mastery
 

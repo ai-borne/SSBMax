@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724613472
+takeaways: ["Verbal reasoning makes up 35-40% of all OIR questions, making it the single largest section", "Mastering the major question types systematically has more impact on your score than random practice", "Common mistakes include overthinking simple questions and mismanaging time across question types", "A daily practice routine builds both speed and accuracy over weeks, not days", "Tracking your progress over time reveals which specific question types still need work"]
+keyFacts: {"verbalReasoningShareOfTest": "35-40%"}
 ---
 # Verbal Reasoning Mastery
 

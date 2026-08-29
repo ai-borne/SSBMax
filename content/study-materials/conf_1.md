@@ -11,12 +11,14 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738494692
+takeaways: ["The Conference is a review of what assessors already observed over four days, not a fresh test", "The IO, GTO, and Psychologist submit independent written assessments before you enter the room", "Individual appearances last only 1-3 minutes; deliberation and results follow afterward", "Consistency across your PIQ, interview, and psychology responses matters because the board cross-references all three", "Being called back a second time is not inherently a bad sign"]
+keyFacts: {"typicalAppearanceLength": "1-3 minutes", "typicalBatchSize": "15-20 candidates", "conferenceDuration": "2-4 hours"}
 ---
 # Conference Day: Format and Procedure
 
 The Conference is held on the morning of Day 5, after Psychology, GTO, and Interview are complete. It is not a fresh test — it is the board's final consolidation of everything they have already observed about you over the previous four days.
 
-## Who Sits on the Board
+## Who Sits on the Conference Board?
 
 - **President** — presides over the board and has the final say on recommendation
 - **Deputy President** — assists the President, present at larger centres
@@ -26,7 +28,7 @@ The Conference is held on the morning of Day 5, after Psychology, GTO, and Inter
 
 All assessors who evaluated you sit together in a semi-circle or U-shaped arrangement, with your chest number displayed so the board can identify you instantly.
 
-## Sequence of Events
+## What Happens During the Conference?
 
 1. **Batch assembly** — your entire batch (usually 15–20 candidates) is called together and briefed on the process.
 2. **Individual appearance** — candidates are called in one by one, in chest-number order. Each appearance lasts roughly 1–3 minutes.
@@ -43,7 +45,7 @@ By the time you walk into the conference room, your fate is **already largely de
 - Let the board cross-check inconsistencies between what you told the IO, how you behaved in GTO tasks, and what your psychology responses suggested
 - Provide a final, brief opportunity for any candidate to clarify something or make a closing impression
 
-## Duration
+## How Long Does the Conference Take?
 
 A single conference for a full batch typically takes 2–4 hours: individual appearances take about 30–45 minutes in total, and board deliberation (which happens without candidates present) takes the rest of the morning. Results are usually declared by early-to-mid afternoon.
 

@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738067262
+takeaways: ["SSB is a five-day, multi-assessor evaluation of consistent personality traits (the 15 OLQs), deliberately designed to resist last-minute performance", "Three independent assessors -- Psychologist, GTO, and IO -- evaluate you separately and only cross-check at the final conference", "Each day maps to a distinct part of the OLQ framework: intellectual, character-related, social, and physical qualities", "The overall recommendation rate is commonly cited around 3-5%, reflecting the rigor of the multi-day design rather than an arbitrarily high bar", "Consistency across all five days matters more than trying to perform well in any single test"]
+keyFacts: {"totalDuration": "5 days", "numberOfIndependentAssessors": "3", "recommendationRate": "~3-5%"}
 ---
 # Complete Guide to the SSB Selection Process
 

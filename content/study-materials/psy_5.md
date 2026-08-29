@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761736692624
+takeaways: ["SD asks you to describe how others see you and how you see yourself, testing self-awareness and honesty", "A balanced self-image -- genuine strengths alongside one or two real weaknesses -- reads better than an unrealistically positive one", "Choosing weaknesses that are honest but not disqualifying takes deliberate thought before test day", "Linking your self-description to your stated career goal ties the whole response together coherently", "Consistency between what you write here and what parents, teachers, and friends would plausibly say about you matters"]
+keyFacts: {}
 ---
 # Self Description Writing
 

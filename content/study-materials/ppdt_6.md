@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724626212
+takeaways: ["Even well-prepared candidates lose PPDT marks to avoidable mistakes across perception, writing, narration, and GD", "Mistakes cluster by phase -- pre-test, test-day, and each of the four PPDT components have their own common pitfalls", "A recovery strategy for noticing and correcting a mistake mid-test prevents one slip from derailing the whole attempt", "Reviewing a prevention checklist before the test is more actionable than reviewing it only after a mock attempt", "Most mistakes here are about awareness and habit, not lack of underlying ability"]
+keyFacts: {}
 ---
 # Common PPDT Mistakes to Avoid
 

@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738052721
+takeaways: ["PGT requires the whole group and all helping materials to cross each of 4 obstacles without touching ground, water, or out-of-bounds areas", "Rule violations send you back to Start regardless of how close the group was to finishing", "Effective planning takes only 3-5 minutes -- endless discussion without attempting is a common mistake", "Helping others without being asked is exactly the spontaneous behaviour GTO is watching for", "Success is measured by teamwork and visible improvement across the 4 obstacles, not by completing all of them"]
+keyFacts: {"typicalDuration": "40-60 minutes", "numberOfObstacles": "4", "typicalGroupSize": "8-10 candidates"}
 ---
 # Progressive Group Task (PGT) Tips
 

@@ -9,8 +9,9 @@ readTime: "12 min read"
 tags: ["Medicals","Medical Standards","Physical Fitness"]
 relatedMaterials: []
 isPremium: false
-version: 1
+version: 2
 lastUpdated: 1761738072992
+takeaways: ["Most medical rejections fall into a small number of recurring, often fixable categories", "Time is the common thread -- issues addressed months in advance rarely cause rejection", "Undisclosed medical history is judged far more harshly than the same condition disclosed upfront", "Vision, dental, and orthopaedic issues are among the most preventable rejection categories"]
 ---
 # Common Medical Disqualifications and How to Avoid Them
 

@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761736692212
+takeaways: ["WAT gives just 15 seconds per word across 60 words, so responses must be genuinely spontaneous, not composed", "The test reveals unconscious thought patterns -- trying to consciously engineer 'ideal' answers usually backfires as inconsistency", "Practising response templates by word category builds speed without sacrificing authenticity", "Difficult or negative-sounding words still deserve a positive, practical sentence rather than being skipped", "Unlike TAT's full stories, WAT responses are single sentences -- brevity and immediacy are part of what's being assessed"]
+keyFacts: {"wordsPerTest": "60", "timePerWord": "15 seconds"}
 ---
 # WAT Response Strategies
 

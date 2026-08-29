@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738052929
+takeaways: ["HGT splits your group into two smaller teams (4-5 members) working simultaneously, increasing individual visibility versus PGT", "Smaller team size means fewer places to hide -- every member's contribution is more directly observable", "Leadership opportunities are more accessible here than in the full group, closer to real small-unit operations", "The same rules and safety principles from PGT still apply within each half", "Role maximization -- finding a genuine way to contribute given your physical and situational strengths -- matters more than trying to lead every phase"]
+keyFacts: {"typicalSubgroupSize": "4-5 candidates"}
 ---
 # Half Group Task (HGT) Techniques
 

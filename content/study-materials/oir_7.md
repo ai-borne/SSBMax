@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724616033
+takeaways: ["Numerical OIR questions test speed as much as raw mathematical skill", "Mental math shortcuts for multiplication, percentages, and division can solve problems 2-3x faster", "Memorizing common squares, cubes, and approximation techniques removes the need to calculate them from scratch", "These shortcuts only pay off under exam pressure if practiced through repeated drills beforehand", "Applying the right shortcut to the right question type is a skill in itself, not just knowing the shortcut"]
+keyFacts: {"speedImprovement": "2-3x faster"}
 ---
 # Mental Math Shortcuts
 

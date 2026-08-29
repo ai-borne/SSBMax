@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761737561100
+takeaways: ["Once submitted, your PIQ becomes the single most important reference document for your personal interview", "Re-reading it as an interviewer would helps you spot the questions it's likely to prompt", "Preparing honest, detailed answers for every entry avoids being caught off guard by a follow-up question", "Identifying your own inconsistencies before the board does lets you address them calmly rather than defensively", "Practising speaking about your PIQ out loud, not just reviewing it silently, builds natural delivery"]
+keyFacts: {}
 ---
 # Using Your PIQ to Prepare for the Interview
 

@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761737560671
+takeaways: ["The PIQ is filled on Day 1, before Psychology testing, and quietly shapes the questions you face for the rest of SSB", "It is one of the first documents your IO and Psychologist see, so accuracy and consistency here matter more than candidates expect", "Each section (family, education, achievements, hobbies, goals) should be filled honestly rather than optimized to look impressive", "A practical filling strategy -- reading questions carefully, being specific, staying consistent -- avoids most later interview friction", "What you write here will very likely resurface as a direct interview question later in the week"]
+keyFacts: {}
 ---
 # How to Fill the PIQ Form: A Section-by-Section Guide
 

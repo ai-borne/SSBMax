@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761724613886
+takeaways: ["Non-verbal reasoning makes up 30-35% of the OIR test and is widely considered its most challenging section", "Systematic practice with the right strategies can turn this into a strength rather than a weak point", "Building spatial intelligence through deliberate practice pays off across multiple question types at once", "Good time management within this section is as important as accuracy, given the volume of questions", "Difficulty progresses through the section, so pacing strategy should adapt as questions get harder"]
+keyFacts: {"nonVerbalReasoningShareOfTest": "30-35%"}
 ---
 # Non-Verbal Reasoning Strategies
 
@@ -45,7 +47,7 @@ Non-verbal reasoning tests your:
 - Size progression (small → medium → large)
 - Position changes (clockwise/anticlockwise movement)
 
-**Pro Tip**: Sometimes patterns alternate or follow a 2-step/3-step cycle. Check for recurring elements.
+**Tip**: Sometimes patterns alternate or follow a 2-step/3-step cycle. Check for recurring elements.
 
 ### 2. Analogy in Figures
 
@@ -83,7 +85,7 @@ Answer: Inverted square (same transformation = 180° rotation)
 - Look for distinctive features (unique angles, curves, intersections)
 - Ignore extra lines and distracting elements
 
-**Pro Tip**: Practice by tracing the simple figure mentally within the complex one
+**Tip**: Practice by tracing the simple figure mentally within the complex one
 
 ### 5. Paper Folding and Cutting
 

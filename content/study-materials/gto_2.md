@@ -11,6 +11,8 @@ relatedMaterials: []
 isPremium: false
 version: 1
 lastUpdated: 1761738052475
+takeaways: ["GD assesses communication, knowledge, logical reasoning, leadership, and team orientation together, not just who talks the most", "Aim for 5-7 quality contributions of 30-60 seconds each -- both dominance and silence are penalised", "Respectful disagreement and inclusive language ('perhaps we could consider') read as more mature than blunt assertions", "Active listening and building on others' points matters as much as the content of your own contribution", "Daily current-affairs reading and weekly mock GDs are the most effective preparation"]
+keyFacts: {"typicalDuration": "20-30 minutes", "typicalGroupSize": "8-10 candidates", "targetContributionCount": "5-7"}
 ---
 # Group Discussion Mastery
 
