@@ -1,9 +1,10 @@
-import { FC } from 'react';
+import { FC, useMemo } from 'react';
 import { Clock, CheckCircle, WifiOff } from 'lucide-react';
 import { BaseModal } from '../common/BaseModal';
 import { strings } from '../../constants/strings';
 import { StudyMaterial } from '../../types/testContent';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { renderMarkdown } from '../../utils/renderMarkdown';
 
 export interface StudyReaderModalProps {
   material: StudyMaterial | null;
@@ -21,6 +22,12 @@ export const StudyReaderModal: FC<StudyReaderModalProps> = ({
   onToggleCompleted
 }) => {
   const isOnline = useOnlineStatus();
+
+  // Content's own headings nest under this modal's <h2> title (BaseModal), so shift by 1.
+  const contentHtml = useMemo(
+    () => (material ? renderMarkdown(material.contentMarkdown, 1) : ''),
+    [material]
+  );
 
   if (!material) return null;
 
@@ -76,10 +83,11 @@ export const StudyReaderModal: FC<StudyReaderModalProps> = ({
           {material.summary}
         </p>
 
-        {/* Markdown Content */}
-        <div className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-          {material.contentMarkdown}
-        </div>
+        {/* Markdown Content -- contentHtml is rendered HTML (see renderMarkdown's doc comment on trust) */}
+        <div
+          className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: contentHtml }}
+        />
       </div>
     </BaseModal>
   );
