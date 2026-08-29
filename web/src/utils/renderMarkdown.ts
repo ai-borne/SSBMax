@@ -17,6 +17,39 @@ function shiftHeadings(html: string, offset: number): string {
 }
 
 /**
+ * Consecutive `**Label**: value` spec lines (Duration/Format/Rules/Assessment...) with no
+ * blank line between them are one CommonMark paragraph with soft line breaks, which render as
+ * a single collapsed space, not a line break -- the "everything dumped in one run-on sentence"
+ * bug. Mirrors web/scripts/generateContentBundle.mjs's build-time listifyLabelRuns (same
+ * content shape, runtime side). Converts a run of 2+ such lines into a real bullet list before
+ * marked.parse() runs; a single standalone label line is left as plain text.
+ */
+function listifyLabelRuns(markdown: string): string {
+  const labelLineRe = /^\*\*[^*]+\*\*:/;
+  const lines = markdown.split('\n');
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (labelLineRe.test(lines[i])) {
+      const runStart = i;
+      while (i < lines.length && labelLineRe.test(lines[i])) i += 1;
+      const run = lines.slice(runStart, i);
+      if (run.length >= 2) {
+        if (out.length > 0 && out[out.length - 1].trim() !== '') out.push('');
+        for (const line of run) out.push(`- ${line}`);
+        if (i < lines.length && lines[i].trim() !== '') out.push('');
+      } else {
+        out.push(run[0]);
+      }
+    } else {
+      out.push(lines[i]);
+      i += 1;
+    }
+  }
+  return out.join('\n');
+}
+
+/**
  * Runtime markdown -> HTML for content fetched live from Firestore (StudyMaterial.contentMarkdown
  * via ContentRepository) -- render with dangerouslySetInnerHTML, never as text. Firestore
  * `study_materials`/`topic_content` only ever accept writes from trusted backend/admin paths
@@ -25,6 +58,6 @@ function shiftHeadings(html: string, offset: number): string {
  * same way, so this carries no new XSS surface.
  */
 export function renderMarkdown(markdown: string, headingOffset = 0): string {
-  const html = marked.parse(markdown, { async: false });
+  const html = marked.parse(listifyLabelRuns(markdown), { async: false });
   return headingOffset > 0 ? shiftHeadings(html, headingOffset) : html;
 }

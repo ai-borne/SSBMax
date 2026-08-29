@@ -42,6 +42,45 @@ function shiftHeadings(html, offset) {
   });
 }
 
+/**
+ * A recurring content-authoring pattern -- consecutive spec lines like:
+ *   **Duration**: 20-30 minutes
+ *   **Format**: Leaderless discussion on given topic
+ *   **Assessment**: Communication, leadership
+ * with no blank line between them -- is one CommonMark paragraph with soft line breaks, which
+ * render as a single space, not a line break (browsers collapse bare `\n` in HTML). The result
+ * is exactly the "everything dumped in one run-on sentence" readability bug: found across 37
+ * of 60 content/ files (93 occurrences) grep-audited after a visual review flagged it, so this
+ * is a rendering-layer fix rather than 93 hand-edits. Converts a run of 2+ consecutive
+ * `**Label**: ...` lines into a real markdown bullet list before marked.parse() runs, so each
+ * spec renders on its own line. A single standalone label line (not part of a run) is left as
+ * plain text -- unaffected, since it was never the reported problem.
+ */
+function listifyLabelRuns(markdown) {
+  const labelLineRe = /^\*\*[^*]+\*\*:/;
+  const lines = markdown.split('\n');
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (labelLineRe.test(lines[i])) {
+      const runStart = i;
+      while (i < lines.length && labelLineRe.test(lines[i])) i += 1;
+      const run = lines.slice(runStart, i);
+      if (run.length >= 2) {
+        if (out.length > 0 && out[out.length - 1].trim() !== '') out.push('');
+        for (const line of run) out.push(`- ${line}`);
+        if (i < lines.length && lines[i].trim() !== '') out.push('');
+      } else {
+        out.push(run[0]);
+      }
+    } else {
+      out.push(lines[i]);
+      i += 1;
+    }
+  }
+  return out.join('\n');
+}
+
 function buildBundle() {
   const topics = loadTopics();
   const materials = loadStudyMaterials();
@@ -59,7 +98,7 @@ function buildBundle() {
       category: meta.category,
       summary: body.split('\n').find((line) => line.trim().length > 0)?.slice(0, 200) ?? '',
       // Nested under the page's <h1> title + <h2> "Study Materials" + this material's own <h3>.
-      contentHtml: shiftHeadings(marked.parse(body, { async: false }), 3),
+      contentHtml: shiftHeadings(marked.parse(listifyLabelRuns(body), { async: false }), 3),
       estimatedReadTimeMinutes: Number.parseInt(meta.readTime, 10) || 5,
       tags: meta.tags ?? [],
       displayOrder: meta.displayOrder ?? 0,
@@ -76,7 +115,7 @@ function buildBundle() {
       id,
       title: meta.title,
       // Nested under the page's own <h1>{title}</h1>.
-      introductionHtml: shiftHeadings(marked.parse(body, { async: false }), 1),
+      introductionHtml: shiftHeadings(marked.parse(listifyLabelRuns(body), { async: false }), 1),
       materials: materialsByTopic.get(meta.topicType) ?? [],
     };
   }

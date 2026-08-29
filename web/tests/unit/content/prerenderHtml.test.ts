@@ -160,6 +160,38 @@ describe('buildFaqPageHtml (Phase 7)', () => {
   });
 });
 
+describe('listifyLabelRuns (generateContentBundle.mjs) -- the actual generated bundle', () => {
+  // A user-reported readability bug: consecutive `**Label**: value` spec lines (Duration/
+  // Format/Rules/Assessment...) with no blank line between them rendered as one collapsed
+  // run-on paragraph instead of separate lines. Found in 37 of 60 content/ files by grep audit
+  // after the report. Regression-tests the real generated bundle, not a synthetic fixture, so
+  // a content file re-introducing this pattern fails here.
+  function hasRunOnLabelParagraph(html: string): boolean {
+    // Every <p>...</p> block, individually -- counting <strong>label</strong>: occurrences
+    // *within* one block. A naive single regex with a repeated group can bridge across
+    // separate <p> tags (its own inner .*? isn't blocked from consuming </p>), so this
+    // extracts each paragraph's own content first and only then counts within it.
+    const paragraphs = html.match(/<p>[\s\S]*?<\/p>/g) ?? [];
+    return paragraphs.some((p) => (p.match(/<strong>[^<]+<\/strong>:/g) ?? []).length >= 2);
+  }
+
+  interface ContentBundleTopicForTest {
+    id: string;
+    introductionHtml: string;
+    materials: { id: string; contentHtml: string }[];
+  }
+
+  it('never leaves 2+ consecutive bold-label spec fields collapsed into one paragraph', () => {
+    const topics = Object.values(contentBundle) as ContentBundleTopicForTest[];
+    for (const topic of topics) {
+      expect(hasRunOnLabelParagraph(topic.introductionHtml), `topic "${topic.id}" introductionHtml`).toBe(false);
+      for (const material of topic.materials) {
+        expect(hasRunOnLabelParagraph(material.contentHtml), `material "${material.id}" contentHtml`).toBe(false);
+      }
+    }
+  });
+});
+
 describe('Cloudflare Web Analytics beacon defaults (Phase 8)', () => {
   it('renders a harmless empty-token beacon when cfBeaconToken is omitted, matching index.html\'s unset-env fallback', () => {
     const [{ topicId, path }] = routes;
