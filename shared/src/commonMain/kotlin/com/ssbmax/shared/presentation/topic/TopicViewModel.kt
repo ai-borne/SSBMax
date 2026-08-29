@@ -4,9 +4,7 @@ import com.ssbmax.shared.data.repository.ContentSource
 import com.ssbmax.shared.data.repository.TopicContentData
 import com.ssbmax.shared.domain.config.ContentFeatureFlags
 import com.ssbmax.shared.domain.model.TestProgress
-import com.ssbmax.shared.domain.model.TestStatus
 import com.ssbmax.shared.domain.model.TestType
-import com.ssbmax.shared.domain.model.interview.InterviewResult
 import com.ssbmax.shared.domain.repository.InterviewRepository
 import com.ssbmax.shared.domain.repository.StudyContentRepository
 import com.ssbmax.shared.domain.repository.TestProgressRepository
@@ -273,39 +271,3 @@ class TopicViewModel(
         loadTopicContent()
     }
 }
-
-/**
- * UI State for Topic Screen
- */
-data class TopicUiState(
-    val testType: String = "",
-    val topicTitle: String = "",
-    val introduction: String = "",
-    /** Structured twin of [introduction] (Phase 2 pilot, docs/plans/
-     * write-the-phased-plan-wobbly-pancake.md) -- null unless
-     * [com.ssbmax.shared.domain.config.ContentFeatureFlags.useStructuredRendering] is on for
-     * this topic AND a generated [com.ssbmax.shared.ui.content.blocks.DocumentModel] exists for
-     * it (only SSB_OVERVIEW today; D4 forbids parsing [introduction] into one at runtime). */
-    val introductionSections: com.ssbmax.shared.ui.content.blocks.DocumentModel? = null,
-    val studyMaterials: List<StudyMaterialItem> = emptyList(),
-    val availableTests: List<TestType> = emptyList(),
-    val testCompletionStatus: TestStatus? = null,
-    val testLatestScore: Float? = null,
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val contentSource: String = "Local",
-    val pastInterviewResults: List<InterviewResult> = emptyList(),
-    val isLoadingInterviewHistory: Boolean = false
-) {
-    fun hasPastInterviews(): Boolean = pastInterviewResults.isNotEmpty()
-}
-
-/**
- * Study material item for list display
- */
-data class StudyMaterialItem(
-    val id: String,
-    val title: String,
-    val duration: String,
-    val isPremium: Boolean
-)
