@@ -5,7 +5,7 @@ testTypeId: "lecturette"
 title: "Lecturette Preparation"
 author: "SSB Expert"
 category: "GTO Preparation"
-displayOrder: 5
+displayOrder: 7
 readTime: "10 min read"
 tags: ["GTO","Group Tasks","Leadership"]
 relatedMaterials: []

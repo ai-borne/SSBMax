@@ -5,7 +5,7 @@ testTypeId: "hgt"
 title: "Half Group Task Techniques"
 author: "SSB Expert"
 category: "GTO Preparation"
-displayOrder: 4
+displayOrder: 6
 readTime: "14 min read"
 tags: ["GTO","Group Tasks","Leadership"]
 relatedMaterials: []

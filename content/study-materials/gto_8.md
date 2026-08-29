@@ -5,7 +5,7 @@ testTypeId: "gpe"
 title: "Group Planning Exercise Guide"
 author: "SSB Expert"
 category: "GTO Preparation"
-displayOrder: 8
+displayOrder: 3
 readTime: "16 min read"
 tags: ["GTO","Group Tasks","Leadership","Planning"]
 relatedMaterials: []

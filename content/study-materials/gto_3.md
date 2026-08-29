@@ -5,7 +5,7 @@ testTypeId: "pgt"
 title: "Progressive Group Task Tips"
 author: "SSB Expert"
 category: "GTO Preparation"
-displayOrder: 3
+displayOrder: 4
 readTime: "18 min read"
 tags: ["GTO","Group Tasks","Leadership"]
 relatedMaterials: []

@@ -5,7 +5,7 @@ testTypeId: "iot"
 title: "Individual Obstacles Test Guide"
 author: "SSB Expert"
 category: "GTO Preparation"
-displayOrder: 10
+displayOrder: 8
 readTime: "13 min read"
 tags: ["GTO","Individual Task","Physical Fitness"]
 relatedMaterials: []

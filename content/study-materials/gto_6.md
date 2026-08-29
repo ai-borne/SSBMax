@@ -5,7 +5,7 @@ testTypeId: "command_task"
 title: "Command Task Leadership"
 author: "SSB Expert"
 category: "GTO Preparation"
-displayOrder: 6
+displayOrder: 9
 readTime: "12 min read"
 tags: ["GTO","Group Tasks","Leadership"]
 relatedMaterials: []

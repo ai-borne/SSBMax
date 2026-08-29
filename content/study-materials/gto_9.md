@@ -5,7 +5,7 @@ testTypeId: "fgt"
 title: "Final Group Task Strategy"
 author: "SSB Expert"
 category: "GTO Preparation"
-displayOrder: 9
+displayOrder: 10
 readTime: "14 min read"
 tags: ["GTO","Group Tasks","Leadership","Teamwork"]
 relatedMaterials: []

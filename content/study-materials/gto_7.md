@@ -5,7 +5,7 @@ testTypeId: "snake_race"
 title: "Snake Race & FGT Strategies"
 author: "SSB Expert"
 category: "GTO Preparation"
-displayOrder: 7
+displayOrder: 5
 readTime: "16 min read"
 tags: ["GTO","Group Tasks","Leadership"]
 relatedMaterials: []
