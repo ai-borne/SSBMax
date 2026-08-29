@@ -20,7 +20,7 @@ describe('DocumentView reading affordances', () => {
     const { queryByTestId } = render(<DocumentView model={model} />);
 
     expect(queryByTestId('section-read-toggle-s1')).toBeNull();
-    expect(queryByTestId('section-practice-cta-s1')).toBeNull();
+    expect(queryByTestId('document-practice-cta')).toBeNull();
   });
 
   it('calls onToggleSectionRead with the section id when the read toggle is clicked', () => {
@@ -40,7 +40,7 @@ describe('DocumentView reading affordances', () => {
       <DocumentView model={model} practiceTestTypeId="oir" onPracticeClick={onPractice} />
     );
 
-    fireEvent.click(getByTestId('section-practice-cta-s1'));
+    fireEvent.click(getByTestId('document-practice-cta'));
 
     expect(onPractice).toHaveBeenCalledWith('oir');
   });
@@ -49,6 +49,6 @@ describe('DocumentView reading affordances', () => {
     const onPractice = vi.fn();
     const { queryByTestId } = render(<DocumentView model={model} onPracticeClick={onPractice} />);
 
-    expect(queryByTestId('section-practice-cta-s1')).toBeNull();
+    expect(queryByTestId('document-practice-cta')).toBeNull();
   });
 });

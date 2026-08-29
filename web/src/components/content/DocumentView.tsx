@@ -71,6 +71,17 @@ export const DocumentView: FC<DocumentViewProps> = ({
         </nav>
       )}
 
+      {practiceTestTypeId && onPracticeClick && (
+        <button
+          type="button"
+          onClick={() => onPracticeClick(practiceTestTypeId)}
+          data-testid="document-practice-cta"
+          className="mb-8 w-full sm:w-auto px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-colors min-h-[44px]"
+        >
+          {strings.content.practiceNowCta}
+        </button>
+      )}
+
       {model.sections.map((section) => (
         <section
           key={section.id}
@@ -106,16 +117,6 @@ export const DocumentView: FC<DocumentViewProps> = ({
               return <Component key={index} block={resolvedBlock} />;
             })}
           </div>
-          {practiceTestTypeId && onPracticeClick && (
-            <button
-              type="button"
-              onClick={() => onPracticeClick(practiceTestTypeId)}
-              data-testid={`section-practice-cta-${section.id}`}
-              className="mt-4 w-full sm:w-auto px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-colors min-h-[44px]"
-            >
-              {strings.content.practiceNowCta}
-            </button>
-          )}
         </section>
       ))}
     </div>

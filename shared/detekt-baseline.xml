@@ -20,6 +20,7 @@
     <ID>CyclomaticComplexMethod:SRTTestScreen.kt$@OptIn(ExperimentalComposeUiApi::class) @Composable fun SRTTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: SRTTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>CyclomaticComplexMethod:TATTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class) @Composable fun TATTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: TATTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>CyclomaticComplexMethod:TopicTestsTab.kt$private fun getTestColor(testType: TestType): Color</ID>
+    <ID>CyclomaticComplexMethod:TopicTestsTab.kt$private fun getTestIcon(testType: TestType): ImageVector</ID>
     <ID>CyclomaticComplexMethod:WATTestScreen.kt$@OptIn(ExperimentalComposeUiApi::class) @Composable fun WATTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: WATTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>EmptyFunctionBlock:DomainLogger.kt$NoOpLogger${}</ID>
     <ID>ForbiddenComment:InstructorHomeViewModel.kt$InstructorHomeViewModel$* ViewModel for the Instructor Home Screen — Phase 5 KMP port of the Android * original (`app/.../ui/home/instructor/InstructorHomeViewModel.kt`). * * A real `androidx.lifecycle.ViewModel` using `viewModelScope` (Phase 1 of * the KMP-convergence plan). Real change from the Android original: * `System.currentTimeMillis()` (JVM-only) -&gt; * `Clock.System.now().toEpochMilliseconds()`. The mock `students`/`batches` * data and the `// TODO: Load batches and students from BatchRepository` * comment are carried forward unchanged — `BatchRepository` doesn't exist in * either the Android original or `:shared` yet; not something this port * introduces or is scoped to fix.</ID>
@@ -70,6 +71,7 @@
     <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFFF57C00</ID>
     <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFFFF5722</ID>
     <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFFFF9800</ID>
+    <ID>HardcodedComposeColor:TopicTestsTab.kt$0xFF795548</ID>
     <ID>LargeClass:GTOAnalysisPrompts.kt$GTOAnalysisPrompts</ID>
     <ID>LargeClass:SharedDatabaseQueries.kt$SharedDatabaseQueries : TransacterImpl</ID>
     <ID>LongMethod:DrawerContent.kt$@Composable fun DrawerContent( currentRoute: String, phase1Expanded: Boolean, phase2Expanded: Boolean, onNavigateToHome: () -&gt; Unit, onNavigateToTopic: (topicId: String) -&gt; Unit, onNavigateToSSBOverview: () -&gt; Unit, onNavigateToMyBatches: () -&gt; Unit, onNavigateToSettings: () -&gt; Unit, onTogglePhase1: () -&gt; Unit, onTogglePhase2: () -&gt; Unit, onSignOut: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
@@ -126,6 +128,7 @@
     <ID>LongMethod:SubscriptionSection.kt$@Composable fun SubscriptionSection( currentTier: SubscriptionTier, onUpgradeClick: () -&gt; Unit, onManageSubscriptionClick: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:TATTestScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class) @Composable fun TATTestScreen( testId: String, onTestComplete: (submissionId: String, subscriptionType: SubscriptionTier) -&gt; Unit = { _, _ -&gt; }, onNavigateBack: () -&gt; Unit = {}, viewModel: TATTestViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:TopicContentLoader.kt$TopicContentLoader$private fun getIntroduction(testType: String): String</ID>
+    <ID>LongMethod:TopicScreen.kt$@Composable fun TopicScreen( topicId: String, initialTab: Int = 0, onNavigateBack: () -&gt; Unit, onNavigateToStudyMaterial: (String) -&gt; Unit = {}, onNavigateToTest: (String) -&gt; Unit = {}, onNavigateToInterviewResult: (String) -&gt; Unit = {}, viewModel: TopicViewModel = koinViewModel(), modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:TopicIntroConference.kt$internal fun conferenceIntroduction(): String</ID>
     <ID>LongMethod:TopicIntroConferenceStructured.kt$internal fun conferenceIntroductionSections(): DocumentModel</ID>
     <ID>LongMethod:TopicIntroGtoStructured.kt$internal fun gtoIntroductionSections(): DocumentModel</ID>
@@ -287,7 +290,8 @@
     <ID>MaxLineLength:SRTInstructionsPhase.kt$Text(stringResource(Res.string.srt_instructions_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)</ID>
     <ID>MaxLineLength:SRTInstructionsPhase.kt$Text(stringResource(Res.string.srt_tips_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)</ID>
     <ID>MaxLineLength:SRTReviewPhase.kt$Text(stringResource(Res.string.srt_situation_prefix, number), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)</ID>
-    <ID>MaxLineLength:SSBPhase.kt$TestType$get() = this in listOf(PPDT, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, IO) // PIQ is for reference, not graded</ID>
+    <ID>MaxLineLength:SSBPhase.kt$TestType$get() = this in listOf(PPDT, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, GTO_FGT, IO) // PIQ is for reference, not graded</ID>
+    <ID>MaxLineLength:SSBPhase.kt$TestType$PIQ, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, GTO_FGT, IO -&gt; TestPhase.PHASE_2</ID>
     <ID>MaxLineLength:SSBRecommendationBanner.kt$Row</ID>
     <ID>MaxLineLength:SharedDatabaseQueries.kt$SharedDatabaseQueries$"SELECT GPEBatchMetadata.batchId, GPEBatchMetadata.downloadedAt, GPEBatchMetadata.imageCount, GPEBatchMetadata.version FROM GPEBatchMetadata ORDER BY downloadedAt DESC"</ID>
     <ID>MaxLineLength:SharedDatabaseQueries.kt$SharedDatabaseQueries$"SELECT GTOBatchMetadata.batchId, GTOBatchMetadata.downloadedAt, GTOBatchMetadata.taskCount, GTOBatchMetadata.version FROM GTOBatchMetadata ORDER BY downloadedAt DESC"</ID>
@@ -317,6 +321,7 @@
     <ID>MaxLineLength:StartInterviewViewModel.kt$StartInterviewViewModel$loadingMessage = if (hasCachedQuestions) "Preparing interview..." else "Generating personalized questions (30-60s)..."</ID>
     <ID>MaxLineLength:String0.commonMain.kt$StringResource</ID>
     <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.GTO_CT, "Command Task", Icons.Default.MilitaryTech, "GTO", 15, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore)</ID>
+    <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.GTO_FGT, "Final Group Task", Icons.AutoMirrored.Filled.DirectionsRun, "GTO", 30, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore)</ID>
     <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.GTO_GD, "Group Discussion", Icons.Default.Forum, "GTO", 20, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore)</ID>
     <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.GTO_GOR, "Group Obstacle Race", Icons.AutoMirrored.Filled.DirectionsRun, "GTO", 60, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore)</ID>
     <ID>MaxLineLength:StudentTestsViewModel.kt$StudentTestsViewModel$TestOverviewItem(TestType.GTO_GPE, "Group Planning Exercise", Icons.Default.Map, "GTO", 30, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore)</ID>

@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.presentation.topic.TopicViewModel
 import com.ssbmax.shared.ui.common.TabSwipeableContent
 import org.jetbrains.compose.resources.stringResource
@@ -59,6 +60,8 @@ fun TopicScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(initialTab) }
+    val onPracticeOrTestClick: (TestType) -> Unit =
+        { testType -> onNavigateToTest("${testType.name.lowercase()}_standard") }
 
     Scaffold(
         topBar = {
@@ -112,7 +115,13 @@ fun TopicScreen(
                 modifier = Modifier.fillMaxSize().padding(paddingValues)
             ) {
                 when (selectedTab) {
-                    0 -> IntroductionTab(uiState.introduction, uiState.isLoading, uiState.introductionSections)
+                    0 -> IntroductionTab(
+                        introduction = uiState.introduction,
+                        isLoading = uiState.isLoading,
+                        introductionSections = uiState.introductionSections,
+                        practiceTestType = uiState.availableTests.singleOrNull(),
+                        onPracticeClick = onPracticeOrTestClick
+                    )
                     1 -> StudyMaterialTab(
                         materials = uiState.studyMaterials,
                         isLoading = uiState.isLoading,
@@ -124,7 +133,7 @@ fun TopicScreen(
                         isLoading = uiState.isLoading,
                         pastInterviewResults = uiState.pastInterviewResults,
                         isLoadingInterviewHistory = uiState.isLoadingInterviewHistory,
-                        onTestClick = { testType -> onNavigateToTest("${testType.name.lowercase()}_standard") },
+                        onTestClick = onPracticeOrTestClick,
                         onInterviewResultClick = onNavigateToInterviewResult
                     )
                 }

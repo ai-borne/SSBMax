@@ -230,8 +230,25 @@ class TopicViewModel(
      * of the screen's content came from.
      */
     private suspend fun structuredIntroductionFor(testType: String): com.ssbmax.shared.ui.content.blocks.DocumentModel? {
-        val cloudSections = studyContentRepository.getTopicSections(testType).getOrNull()
-        return cloudSections ?: TopicContentLoader.getStructuredIntroduction(testType)
+        val cloudResult = studyContentRepository.getTopicSections(testType)
+        val cloudSections = cloudResult.getOrNull()
+        val cloudHeadedCount = cloudSections?.sections?.count { it.heading != null }
+        val local = TopicContentLoader.getStructuredIntroduction(testType)
+        val localHeadedCount = local?.sections?.count { it.heading != null }
+        val resolved = cloudSections ?: local
+        val resolvedSource = if (cloudSections != null) "CLOUD" else if (local != null) "LOCAL_FALLBACK" else "NONE"
+        // Diagnostic for the Q3 missing-TOC investigation (docs/plans -- TOC card only renders when
+        // headedSections.size > 1): logs which tier actually won and its heading count, since static
+        // analysis found both the live Firestore docs and the generated local fallback well-formed
+        // for every topic, yet the TOC visibly fails to render for some topics on-device.
+        logger.d(
+            TAG,
+            "structuredIntroductionFor($testType): cloudFetchFailed=${cloudResult.isFailure}, " +
+                "cloudExists=${cloudSections != null}, cloudHeadedSections=$cloudHeadedCount, " +
+                "localHeadedSections=$localHeadedCount, resolvedSource=$resolvedSource, " +
+                "resolvedHeadedSections=${resolved?.sections?.count { it.heading != null }}"
+        )
+        return resolved
     }
 
     private suspend fun loadTestProgress(userId: String?): TestProgress? {
@@ -259,7 +276,7 @@ class TopicViewModel(
             "PSYCHOLOGY" -> listOf(TestType.TAT, TestType.WAT, TestType.SRT, TestType.SD)
             "GTO" -> listOf(
                 TestType.GTO_GD, TestType.GTO_GPE, TestType.GTO_PGT, TestType.GTO_GOR,
-                TestType.GTO_HGT, TestType.GTO_LECTURETTE, TestType.GTO_IO, TestType.GTO_CT
+                TestType.GTO_HGT, TestType.GTO_LECTURETTE, TestType.GTO_IO, TestType.GTO_CT, TestType.GTO_FGT
             )
             "INTERVIEW" -> listOf(TestType.IO)
             else -> emptyList()

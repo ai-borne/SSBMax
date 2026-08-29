@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.presentation.topic.StudyMaterialItem
 import com.ssbmax.shared.ui.common.MarkdownText
 import com.ssbmax.shared.ui.content.DocumentView
@@ -95,7 +96,9 @@ internal fun IntroductionTab(
     introduction: String,
     isLoading: Boolean,
     introductionSections: DocumentModel? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    practiceTestType: TestType? = null,
+    onPracticeClick: (TestType) -> Unit = {}
 ) {
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -107,7 +110,12 @@ internal fun IntroductionTab(
     // single-item MarkdownText card below -- the fallback now only fires on a genuine missing
     // fetch and missing generated offline copy, not a rollout flag (removed in the Phase 8 sweep).
     if (introductionSections != null) {
-        DocumentView(model = introductionSections, modifier = modifier.fillMaxSize())
+        DocumentView(
+            model = introductionSections,
+            modifier = modifier.fillMaxSize(),
+            practiceTestType = practiceTestType,
+            onPracticeClick = onPracticeClick
+        )
         return
     }
 

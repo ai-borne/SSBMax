@@ -44,7 +44,13 @@ import ssbmax.shared.generated.resources.content_toc_heading
  * no per-section collapse here, that's a later reading-affordance phase.
  */
 @Composable
-fun DocumentView(model: DocumentModel, modifier: Modifier = Modifier, takeaways: List<String> = emptyList()) {
+fun DocumentView(
+    model: DocumentModel,
+    modifier: Modifier = Modifier,
+    takeaways: List<String> = emptyList(),
+    practiceTestType: TestType? = null,
+    onPracticeClick: (TestType) -> Unit = {}
+) {
     val headedSections = model.sections.filter { it.heading != null }
 
     LazyColumn(
@@ -57,6 +63,9 @@ fun DocumentView(model: DocumentModel, modifier: Modifier = Modifier, takeaways:
         }
         if (headedSections.size > 1) {
             item(key = "toc") { TableOfContentsCard(headedSections) }
+        }
+        if (practiceTestType != null) {
+            item(key = "practice_cta") { PracticeNowCard(practiceTestType, onPracticeClick) }
         }
         items(model.sections, key = { it.id }) { section ->
             SectionCard(section)
@@ -89,13 +98,12 @@ fun DocumentSectionsColumn(
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (takeaways.isNotEmpty()) TakeawaysCard(takeaways)
         if (headedSections.size > 1) TableOfContentsCard(headedSections)
+        if (practiceTestType != null) PracticeNowCard(practiceTestType, onPracticeClick)
         model.sections.forEach { section ->
             SectionCard(
                 section = section,
                 isRead = readSectionIds.contains(section.id),
-                onToggleRead = { onToggleSectionRead(section.id) },
-                practiceTestType = practiceTestType,
-                onPracticeClick = onPracticeClick
+                onToggleRead = { onToggleSectionRead(section.id) }
             )
         }
     }
@@ -135,12 +143,17 @@ private fun TableOfContentsCard(headedSections: List<DocSection>) {
 }
 
 @Composable
+private fun PracticeNowCard(testType: TestType, onPracticeClick: (TestType) -> Unit) {
+    Button(onClick = { onPracticeClick(testType) }, modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(Res.string.content_practice_now_cta))
+    }
+}
+
+@Composable
 private fun SectionCard(
     section: DocSection,
     isRead: Boolean = false,
-    onToggleRead: () -> Unit = {},
-    practiceTestType: TestType? = null,
-    onPracticeClick: (TestType) -> Unit = {}
+    onToggleRead: () -> Unit = {}
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -170,11 +183,6 @@ private fun SectionCard(
                 }
             }
             section.blocks.forEach { block -> DocBlockView(block) }
-            if (practiceTestType != null) {
-                Button(onClick = { onPracticeClick(practiceTestType) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(Res.string.content_practice_now_cta))
-                }
-            }
         }
     }
 }
