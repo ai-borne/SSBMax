@@ -1,6 +1,7 @@
 ---
 id: "gto_6"
 topicType: "GTO"
+testTypeId: "command_task"
 title: "Command Task Leadership"
 author: "SSB Expert"
 category: "GTO Preparation"

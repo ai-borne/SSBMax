@@ -1,6 +1,7 @@
 ---
 id: "gto_2"
 topicType: "GTO"
+testTypeId: "gd"
 title: "Group Discussion Mastery"
 author: "SSB Expert"
 category: "GTO Preparation"

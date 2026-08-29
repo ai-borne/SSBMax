@@ -1,6 +1,7 @@
 ---
 id: "gto_4"
 topicType: "GTO"
+testTypeId: "hgt"
 title: "Half Group Task Techniques"
 author: "SSB Expert"
 category: "GTO Preparation"

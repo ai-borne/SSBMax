@@ -38,11 +38,11 @@ describe('assertPublishable', () => {
 // docs/plans/ai_search_readiness_phase0_findings.md) — asserted separately
 // via `npm run content:validate`, not hardcoded here.
 describe('loadTopics / loadStudyMaterials (reads the real content/ directory)', () => {
-  it('loads all 9 topic files and 51 study-material files with the expected shape', () => {
+  it('loads all 9 topic files and 53 study-material files with the expected shape', () => {
     const topics = loadTopics();
     const materials = loadStudyMaterials();
     expect(topics).toHaveLength(9);
-    expect(materials).toHaveLength(51);
+    expect(materials).toHaveLength(53);
     for (const t of topics) {
       expect(t.meta.topicType).toBeTruthy();
       expect(typeof t.body).toBe('string');

@@ -1,6 +1,7 @@
 ---
 id: "gto_3"
 topicType: "GTO"
+testTypeId: "pgt"
 title: "Progressive Group Task Tips"
 author: "SSB Expert"
 category: "GTO Preparation"

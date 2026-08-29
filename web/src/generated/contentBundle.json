@@ -5091,6 +5091,580 @@
           "Leadership"
         ],
         "displayOrder": 7
+      },
+      {
+        "id": "gto_8",
+        "title": "Group Planning Exercise Guide",
+        "category": "GTO Preparation",
+        "summary": "The Group Planning Exercise (GPE) is an indoor GTO task, usually the first task on Day 3. Candidates are shown a large model/map of a fictional area and given a narrated problem — a natural disaster,...",
+        "sections": {
+          "sections": [
+            {
+              "id": "study-materials/gto_8.md#root",
+              "slug": "intro",
+              "heading": null,
+              "level": 0,
+              "blocks": [
+                {
+                  "type": "subheading",
+                  "level": 1,
+                  "text": "Group Planning Exercise Guide"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "The Group Planning Exercise (GPE) is an indoor GTO task, usually the first task on Day 3. Candidates are shown a large model/map of a fictional area and given a narrated problem — a natural disaster, accident, or crisis — with a fixed set of resources (vehicles, personnel, time, materials) to solve it. Unlike GD, GPE has a concrete right-and-wrong-shaped answer: a plan either respects the map's distances and resource limits or it doesn't."
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_8.md#1",
+              "slug": "gpe-format-and-structure",
+              "heading": "GPE Format and Structure",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Duration**: ~45 minutes total"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Step 1 — Narration (10 minutes)**: The GTO reads the problem aloud twice while candidates view the model. No notes are allowed during narration."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Step 2 — Individual Solution (10 minutes)**: Each candidate writes their own plan on paper — routes, resource allocation, timings, and assumptions."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Step 3 — Group Discussion (20-25 minutes)**: The group discusses individual solutions and must agree on one final combined plan, written by a designated candidate and read out to the GTO."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Observation**: GTO watches both the individual writing (via the submitted sheet) and group behaviour during discussion — who listens, who dominates, who actually improves the plan."
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_8.md#2",
+              "slug": "what-the-problem-usually-involves",
+              "heading": "What the Problem Usually Involves",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "list",
+                  "items": [
+                    "A crisis situation (flood, fire, accident, epidemic, stranded group) at a specified location on the model",
+                    "A limited set of resources: vehicles with fixed capacity and speed, personnel counts, medical supplies, communication equipment",
+                    "Fixed time constraints (e.g. \"help must arrive within 3 hours\")",
+                    "Distances that must be read off the map's scale, not guessed",
+                    "Deliberately more demands than resources can fully cover, forcing prioritisation"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_8.md#3",
+              "slug": "what-gto-assesses-in-gpe",
+              "heading": "What GTO Assesses in GPE",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Reasoning & Organising Ability** (30%):\n- Correct map reading (distances, routes, terrain features)\n- Realistic resource allocation within stated limits\n- Logical sequencing (what happens first, second, third)"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Practical/Administrative Sense** (25%):\n- Assumptions are stated, not hidden\n- Solution accounts for the time constraint, not just the immediate problem\n- Contingency for likely complications (e.g. a route being blocked)"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Cooperation & Group Behaviour** (25%):\n- Genuinely listening to alternative individual plans, not just defending your own\n- Building a combined plan rather than a compromise nobody fully agrees with\n- Contributing constructively, not going silent once your plan isn't picked"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Communication & Presentation** (20%):\n- Individual sheet is legible, organised, and complete within 10 minutes\n- Final group plan is presented clearly and confidently by whoever reads it out"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_8.md#4",
+              "slug": "individual-solution-strategy-10-minutes",
+              "heading": "Individual Solution Strategy (10 minutes)",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "list",
+                  "items": [
+                    "**Note the givens first** — resources, time limit, and locations, in a quick list, before drafting anything",
+                    "**Read the map scale before estimating distances** — most lost marks come from misjudging distance, not from bad logic",
+                    "**State assumptions on paper explicitly** — e.g. \"Assuming the bridge is intact unless stated otherwise\" — this is rewarded, silent assumptions are not",
+                    "**Allocate resources against the highest-priority need first**, then work down — don't spread every resource thin trying to solve everything at once",
+                    "**Write a simple timeline**: what departs/happens at t=0, t+15, t+30, etc., so the plan is checkable against the stated time limit",
+                    "**Leave 1-2 minutes to reread** your own solution for an obvious resource-count or distance error"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_8.md#5",
+              "slug": "group-discussion-strategy-20-25-minutes",
+              "heading": "Group Discussion Strategy (20-25 minutes)",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Opening**: Briefly let each candidate state their core approach (1 line each) before deep-diving into any one plan — this avoids the group anchoring on the first or loudest speaker."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Merging, not voting**: The goal is a *combined* plan that takes the strongest elements of multiple individual solutions, not a majority vote for one candidate's untouched plan."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Common contribution phrases**:\n- \"My solution used a similar route, but allocated the ambulance differently — can we compare timings?\"\n- \"I think we're missing the time constraint here — if we send the truck first, does it still arrive within the 3 hours?\"\n- \"Let's write the combined plan on the model as we agree on each piece, so we don't lose track.\""
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Defending your idea vs. accepting a better one**: If your individual plan gets set aside for a genuinely stronger group plan, say so and support it — GTO is watching for group orientation, not attachment to being \"right.\""
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_8.md#6",
+              "slug": "common-gpe-mistakes-to-avoid",
+              "heading": "Common GPE Mistakes to Avoid",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Mistake 1: Misreading the Map Scale"
+                },
+                {
+                  "type": "specTable",
+                  "entries": [
+                    {
+                      "label": "Error",
+                      "text": "Estimating distances by eye instead of using the given scale"
+                    },
+                    {
+                      "label": "Impact",
+                      "text": "Every downstream timing calculation becomes wrong"
+                    },
+                    {
+                      "label": "Fix",
+                      "text": "Always locate and use the scale bar first, before planning routes"
+                    }
+                  ]
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Mistake 2: Ignoring the Resource Limit"
+                },
+                {
+                  "type": "specTable",
+                  "entries": [
+                    {
+                      "label": "Error",
+                      "text": "Using more vehicles/personnel than the problem actually provided"
+                    },
+                    {
+                      "label": "Impact",
+                      "text": "Read as inattentive to detail — a basic administrative failure"
+                    },
+                    {
+                      "label": "Fix",
+                      "text": "List every resource given, with its capacity, before drafting the plan"
+                    }
+                  ]
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Mistake 3: Silent Assumptions"
+                },
+                {
+                  "type": "specTable",
+                  "entries": [
+                    {
+                      "label": "Error",
+                      "text": "Assuming favourable conditions (a road is clear, a bridge exists) without stating it"
+                    },
+                    {
+                      "label": "Impact",
+                      "text": "GTO cannot tell deliberate reasoning from a guess"
+                    },
+                    {
+                      "label": "Fix",
+                      "text": "Write \"Assuming X\" wherever the problem doesn't explicitly say"
+                    }
+                  ]
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Mistake 4: Dominating or Disengaging in Discussion"
+                },
+                {
+                  "type": "specTable",
+                  "entries": [
+                    {
+                      "label": "Error",
+                      "text": "Either pushing your own plan without listening, or going quiet once it isn't chosen"
+                    },
+                    {
+                      "label": "Impact",
+                      "text": "Both read as poor team orientation, the task's core assessment"
+                    },
+                    {
+                      "label": "Fix",
+                      "text": "Contribute to refining whichever plan the group is converging on"
+                    }
+                  ]
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Mistake 5: An Overambitious Plan"
+                },
+                {
+                  "type": "specTable",
+                  "entries": [
+                    {
+                      "label": "Error",
+                      "text": "Trying to fully solve every stated problem simultaneously with limited resources"
+                    },
+                    {
+                      "label": "Impact",
+                      "text": "Falls apart under a timing check; shows weak prioritisation"
+                    },
+                    {
+                      "label": "Fix",
+                      "text": "Solve the highest-priority need fully first, then address the rest with what remains"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_8.md#7",
+              "slug": "gpe-preparation-strategy",
+              "heading": "GPE Preparation Strategy",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Map reading practice**: Practice reading distance/scale on any map or floor plan — this single skill fixes most avoidable GPE errors."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Timed mock GPEs**: Simulate the 10/10/20-minute structure with a peer group using any resource-allocation scenario (not necessarily military) to build comfort with the time pressure."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Mental math for logistics**: Practice quick distance ÷ speed = time calculations, since GPE plans are checked against a hard time limit."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Study real disaster-response logic**: Reading about how emergency services actually prioritise (triage principles, evacuation order) builds intuition GTO scenarios are modelled on."
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_8.md#8",
+              "slug": "conclusion",
+              "heading": "Conclusion",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "GPE rewards candidates who read carefully, state their reasoning, and can let go of their own plan in favour of a better group one. It is one of the few GTO tasks with a partially objective \"check\" — the map and the resource limits — so basic accuracy matters as much as group behaviour."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Success Formula**: Accurate Map Reading + Explicit Assumptions + Realistic Resource Allocation + Genuine Group Merging = GPE Excellence"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Next Step**: Carry the same resource-discipline mindset into Progressive Group Task (PGT), where planning is tested physically rather than on paper."
+                }
+              ]
+            }
+          ]
+        },
+        "estimatedReadTimeMinutes": 16,
+        "tags": [
+          "GTO",
+          "Group Tasks",
+          "Leadership",
+          "Planning"
+        ],
+        "displayOrder": 8
+      },
+      {
+        "id": "gto_9",
+        "title": "Final Group Task Strategy",
+        "category": "GTO Preparation",
+        "summary": "The Final Group Task (FGT) is the last outdoor obstacle task of the GTO series, typically run immediately after the Snake Race / Group Obstacle Race. Structurally it resembles the Progressive Group...",
+        "sections": {
+          "sections": [
+            {
+              "id": "study-materials/gto_9.md#root",
+              "slug": "intro",
+              "heading": null,
+              "level": 0,
+              "blocks": [
+                {
+                  "type": "subheading",
+                  "level": 1,
+                  "text": "Final Group Task Strategy"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "The Final Group Task (FGT) is the last outdoor obstacle task of the GTO series, typically run immediately after the Snake Race / Group Obstacle Race. Structurally it resembles the Progressive Group Task (PGT) and Half Group Task (HGT) — the whole group must move itself and its helping materials across a physical obstacle without touching the ground, water, or out-of-bounds zones — but it carries the specific weight of being the task GTO uses to judge whether your teamwork and energy are consistent, not just present at the start of the day."
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_9.md#1",
+              "slug": "fgt-format-and-structure",
+              "heading": "FGT Format and Structure",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Duration**: 20-30 minutes"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Group Size**: Full group, 8-10 candidates"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Structure**: One or more physical obstacles, using ropes, planks, and other helping materials, that the whole group and its equipment must cross under the same rules as PGT/HGT"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Timing in the day**: Last outdoor task, usually following the Snake Race — candidates are already physically tired from the day's earlier tasks"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Observation**: GTO watches the same criteria as PGT/HGT, plus a specific interest in whether behaviour holds up under fatigue"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_9.md#2",
+              "slug": "why-fgt-matters-more-than-its-difficulty-suggests",
+              "heading": "Why FGT Matters More Than Its Difficulty Suggests",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "FGT is rarely the hardest single obstacle of the three days — PGT and Snake Race are often physically tougher. What makes it significant is timing: it is the last data point GTO collects on your group behaviour, coming after roughly two full days of GD, GPE, PGT, HGT, Lecturette, Individual Obstacles, Command Task, and the Snake Race. GTO's overall impression is formed across all of these tasks together, and FGT is the closing chapter of that pattern."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "Two candidates who perform identically on FGT itself can still be assessed differently based on the trend: one who has been consistently cooperative and is now visibly tired but still helping others reads very differently from one who was disengaged all along and is now also tired."
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_9.md#3",
+              "slug": "what-gto-assesses-in-fgt",
+              "heading": "What GTO Assesses in FGT",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Physical Stamina & Determination** (25%):\n- Continuing to contribute despite two days of physical tasks\n- Not visibly giving up or checking out when tired"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Teamwork & Cooperation** (30%):\n- Helping teammates without being asked, same as every earlier obstacle task\n- Sharing the physical load rather than letting the same few members carry it"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Consistency of Behaviour** (25%):\n- Applying the same safety discipline and rule awareness as in PGT/HGT (no touching restricted zones, materials not thrown carelessly)\n- Not abandoning earlier good habits (spontaneous helping, clear communication) just because it's the last task"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Positive Attitude Under Fatigue** (20%):\n- Maintaining energy and encouragement for the group, not visible frustration or blame\n- Treating FGT as worth genuine effort rather than \"coasting to the finish\""
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_9.md#4",
+              "slug": "fgt-preparation-strategy",
+              "heading": "FGT Preparation Strategy",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Physical conditioning across the full week, not just task-specific practice**: Since FGT tests stamina late in a demanding sequence, general fitness (stamina runs, basic strength work) matters more here than any FGT-specific drill."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Mental rehearsal of PGT/HGT fundamentals**: Since the obstacle mechanics mirror earlier tasks, review the same core rules — no touching the ground/water/out-of-bounds, materials must cross with the group, rule violations restart from the obstacle's start point."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Practice sustaining cooperative behaviour when tired**: In mock GTO sessions, deliberately run the group-task portion after some physical exertion (a short run, a few PGT-style obstacles) so you experience contributing while fatigued before the real assessment day."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Review your own pattern across the three days**: If you know you tend to go quiet under pressure or to dominate early and fade, use FGT specifically as the task where you correct that — GTO's final impression weighs recent behaviour heavily."
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_9.md#5",
+              "slug": "common-fgt-mistakes-to-avoid",
+              "heading": "Common FGT Mistakes to Avoid",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Mistake 1: Treating It as \"Just One More Obstacle\""
+                },
+                {
+                  "type": "specTable",
+                  "entries": [
+                    {
+                      "label": "Error",
+                      "text": "Mentally checking out because it feels repetitive after PGT, HGT, and Snake Race"
+                    },
+                    {
+                      "label": "Impact",
+                      "text": "A flat or disengaged final task can undercut an otherwise strong three-day pattern"
+                    },
+                    {
+                      "label": "Fix",
+                      "text": "Treat FGT with the same energy as the first task of the day — GTO is watching the trend, not giving credit for effort already spent"
+                    }
+                  ]
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Mistake 2: Letting Fatigue Excuse Poor Cooperation"
+                },
+                {
+                  "type": "specTable",
+                  "entries": [
+                    {
+                      "label": "Error",
+                      "text": "Withdrawing from helping others because you personally are tired"
+                    },
+                    {
+                      "label": "Impact",
+                      "text": "Reads as self-focused exactly when teamwork matters most"
+                    },
+                    {
+                      "label": "Fix",
+                      "text": "Contribute in smaller ways if full physical effort isn't possible — spotting, guiding, encouraging still count as participation"
+                    }
+                  ]
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Mistake 3: Repeating Earlier Rule Mistakes"
+                },
+                {
+                  "type": "specTable",
+                  "entries": [
+                    {
+                      "label": "Error",
+                      "text": "Rushing and touching a restricted zone or mishandling helping materials, as might have happened in PGT"
+                    },
+                    {
+                      "label": "Impact",
+                      "text": "Signals no learning across the three days"
+                    },
+                    {
+                      "label": "Fix",
+                      "text": "Apply the same careful rule-awareness from your best earlier task, not your worst"
+                    }
+                  ]
+                },
+                {
+                  "type": "subheading",
+                  "level": 3,
+                  "text": "Mistake 4: Racing to Finish Instead of Finishing as a Team"
+                },
+                {
+                  "type": "specTable",
+                  "entries": [
+                    {
+                      "label": "Error",
+                      "text": "A few strong members finishing the obstacle while others lag behind unhelped"
+                    },
+                    {
+                      "label": "Impact",
+                      "text": "GTO is assessing the group, not individual speed"
+                    },
+                    {
+                      "label": "Fix",
+                      "text": "The task isn't complete, in GTO's eyes, until the whole group and all materials are across"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_9.md#6",
+              "slug": "fgt-day-tips",
+              "heading": "FGT Day Tips",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "**Before FGT**:\n- Hydrate and, if a short break is available, use it fully — physical recovery matters more here than mental preparation\n- Reset mentally: treat it as a fresh task, not the tail end of a long day"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**During FGT**:\n- Contribute early — a strong, visible start signals sustained effort, not just a late push\n- Watch for teammates who are struggling more than you and offer help proactively\n- Maintain clear, calm communication even if the group is tired or frustrated"
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**After FGT**:\n- This is typically the last outdoor GTO task — there's little to gain from replaying it mentally; shift focus to whatever comes next (Lecturette review, Command Task, or moving toward Day 5)"
+                }
+              ]
+            },
+            {
+              "id": "study-materials/gto_9.md#7",
+              "slug": "conclusion",
+              "heading": "Conclusion",
+              "level": 2,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "text": "FGT rarely requires new skills beyond what PGT and HGT already taught — its real test is whether your teamwork, rule discipline, and positive attitude survive two days of physical and mental fatigue. Treat it as the closing proof of the pattern GTO has been building since Group Discussion on Day 3, not as a separate challenge."
+                },
+                {
+                  "type": "paragraph",
+                  "text": "**Success Formula**: Sustained Stamina + Consistent Cooperation + Rule Discipline + Positive Energy Under Fatigue = FGT Excellence"
+                },
+                {
+                  "type": "callout",
+                  "marker": "Remember",
+                  "text": "GTO's final impression is a pattern across all nine tasks, not a single obstacle — finish the way you started."
+                }
+              ]
+            }
+          ]
+        },
+        "estimatedReadTimeMinutes": 14,
+        "tags": [
+          "GTO",
+          "Group Tasks",
+          "Leadership",
+          "Teamwork"
+        ],
+        "displayOrder": 9
       }
     ]
   },
