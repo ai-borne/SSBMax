@@ -10,8 +10,10 @@ import com.ssbmax.shared.domain.model.interview.InterviewMode
 import com.ssbmax.shared.domain.model.interview.InterviewResult
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.util.NoOpLogger
+import com.ssbmax.shared.platform.settings.ReadStateSettings
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
 import com.ssbmax.shared.presentation.testing.FakeInterviewRepository
+import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeStudyContentRepository
 import com.ssbmax.shared.presentation.testing.FakeTestProgressRepository
 import com.ssbmax.shared.presentation.testing.testUser
@@ -64,7 +66,8 @@ class TopicViewModelTest {
         observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
         studyContentRepository = studyContentRepository,
         interviewRepository = interviewRepository,
-        logger = NoOpLogger()
+        logger = NoOpLogger(),
+        readStateSettings = ReadStateSettings(FakeSettings())
     )
 
     @Test

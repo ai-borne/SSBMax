@@ -48,6 +48,8 @@ fun DocumentView(
     model: DocumentModel,
     modifier: Modifier = Modifier,
     takeaways: List<String> = emptyList(),
+    readSectionIds: Set<String> = emptySet(),
+    onToggleSectionRead: (String) -> Unit = {},
     practiceTestType: TestType? = null,
     onPracticeClick: (TestType) -> Unit = {}
 ) {
@@ -68,7 +70,11 @@ fun DocumentView(
             item(key = "practice_cta") { PracticeNowCard(practiceTestType, onPracticeClick) }
         }
         items(model.sections, key = { it.id }) { section ->
-            SectionCard(section)
+            SectionCard(
+                section = section,
+                isRead = readSectionIds.contains(section.id),
+                onToggleRead = { onToggleSectionRead(section.id) }
+            )
         }
     }
 }

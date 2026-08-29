@@ -97,6 +97,8 @@ internal fun IntroductionTab(
     isLoading: Boolean,
     introductionSections: DocumentModel? = null,
     modifier: Modifier = Modifier,
+    readSectionIds: Set<String> = emptySet(),
+    onToggleSectionRead: (String) -> Unit = {},
     practiceTestType: TestType? = null,
     onPracticeClick: (TestType) -> Unit = {}
 ) {
@@ -113,6 +115,8 @@ internal fun IntroductionTab(
         DocumentView(
             model = introductionSections,
             modifier = modifier.fillMaxSize(),
+            readSectionIds = readSectionIds,
+            onToggleSectionRead = onToggleSectionRead,
             practiceTestType = practiceTestType,
             onPracticeClick = onPracticeClick
         )

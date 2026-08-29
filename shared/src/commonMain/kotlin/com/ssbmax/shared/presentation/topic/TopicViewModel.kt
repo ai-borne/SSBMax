@@ -10,6 +10,7 @@ import com.ssbmax.shared.domain.repository.StudyContentRepository
 import com.ssbmax.shared.domain.repository.TestProgressRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.util.DomainLogger
+import com.ssbmax.shared.platform.settings.ReadStateSettings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -51,7 +54,8 @@ class TopicViewModel(
     private val observeCurrentUser: ObserveCurrentUserUseCase,
     private val studyContentRepository: StudyContentRepository,
     private val interviewRepository: InterviewRepository,
-    private val logger: DomainLogger
+    private val logger: DomainLogger,
+    private val readStateSettings: ReadStateSettings
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TopicUiState())
     val uiState: StateFlow<TopicUiState> = _uiState.asStateFlow()
@@ -60,6 +64,16 @@ class TopicViewModel(
 
     private companion object {
         const val TAG = "TopicViewModel"
+    }
+
+    init {
+        readStateSettings.readSectionIdsFlow
+            .onEach { ids -> _uiState.update { it.copy(readSectionIds = ids) } }
+            .launchIn(viewModelScope)
+    }
+
+    fun toggleSectionRead(sectionId: String) {
+        readStateSettings.toggleSectionRead(sectionId)
     }
 
     fun loadTopic(topicId: String) {

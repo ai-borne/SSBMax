@@ -119,6 +119,8 @@ fun TopicScreen(
                         introduction = uiState.introduction,
                         isLoading = uiState.isLoading,
                         introductionSections = uiState.introductionSections,
+                        readSectionIds = uiState.readSectionIds,
+                        onToggleSectionRead = viewModel::toggleSectionRead,
                         practiceTestType = uiState.availableTests.singleOrNull(),
                         onPracticeClick = onPracticeOrTestClick
                     )

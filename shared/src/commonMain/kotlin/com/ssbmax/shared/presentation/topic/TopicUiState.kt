@@ -27,7 +27,8 @@ data class TopicUiState(
     val error: String? = null,
     val contentSource: String = "Local",
     val pastInterviewResults: List<InterviewResult> = emptyList(),
-    val isLoadingInterviewHistory: Boolean = false
+    val isLoadingInterviewHistory: Boolean = false,
+    val readSectionIds: Set<String> = emptySet()
 ) {
     fun hasPastInterviews(): Boolean = pastInterviewResults.isNotEmpty()
 }
