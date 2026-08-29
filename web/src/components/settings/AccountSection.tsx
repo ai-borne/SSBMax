@@ -26,7 +26,7 @@ export interface AccountSectionProps {
   entryType?: EntryType;
   hasProfile?: boolean;
   isProfileLoading?: boolean;
-  onEditDiagnostic?: () => void;
+  onEditProfile?: () => void;
   onUpgrade?: () => void;
   onSignOut?: () => void;
 }
@@ -41,7 +41,7 @@ export const AccountSection: FC<AccountSectionProps> = ({
   entryType,
   hasProfile = false,
   isProfileLoading = false,
-  onEditDiagnostic,
+  onEditProfile,
   onUpgrade,
   onSignOut,
 }) => {
@@ -135,9 +135,9 @@ export const AccountSection: FC<AccountSectionProps> = ({
 
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        {onEditDiagnostic && (
+        {onEditProfile && (
           <button
-            onClick={onEditDiagnostic}
+            onClick={onEditProfile}
             className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-2"
             data-testid="edit-diagnostic-btn"
           >

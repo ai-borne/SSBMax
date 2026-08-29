@@ -19,7 +19,7 @@ export interface SettingsPageProps {
   theme?: ThemeMode;
   onToggleTheme?: () => void;
   onClearCache?: () => void;
-  onEditDiagnostic?: () => void;
+  onEditProfile?: () => void;
   onUpgrade?: () => void;
   onSignOut?: () => void;
   onViewPrivacy?: () => void;
@@ -42,7 +42,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
   theme: customTheme,
   onToggleTheme,
   onClearCache,
-  onEditDiagnostic,
+  onEditProfile,
   onUpgrade,
   onSignOut,
   onViewPrivacy,
@@ -89,7 +89,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
           entryType={entryType}
           hasProfile={hasProfile}
           isProfileLoading={isProfileLoading}
-          onEditDiagnostic={onEditDiagnostic}
+          onEditProfile={onEditProfile}
           onUpgrade={onUpgrade}
           onSignOut={onSignOut}
         />

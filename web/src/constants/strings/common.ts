@@ -243,6 +243,26 @@ export const commonStrings = {
     completeProfileSubtitle: 'Add your Full Name, Age, Gender, and Type of Entry so your AI dossier reflects your real candidacy.',
     completeProfileCta: 'Complete Profile'
   },
+  editProfileModal: {
+    title: 'Edit Candidate Profile',
+    fullNameLabel: 'Full Name',
+    fullNamePlaceholder: 'Enter your full name',
+    ageLabel: 'Age',
+    agePlaceholder: 'Enter your age',
+    genderLabel: 'Gender',
+    genderMale: 'Male',
+    genderFemale: 'Female',
+    genderOther: 'Other',
+    entryTypeLabel: 'Type of Entry',
+    entryType10Plus2: '10+2 Entry',
+    entryTypeGraduate: 'Graduate Entry',
+    entryTypeService: 'Service Entry',
+    saveProfile: 'Save Profile',
+    saving: 'Saving...',
+    fullNameRequired: 'Full name cannot be blank',
+    ageRangeInvalid: 'Age must be between 18 and 35',
+    saveFailed: 'Failed to save profile. Please try again.'
+  },
   faq: {
     title: 'Frequently Asked Questions (FAQs)',
     subtitle: 'Everything you need to know about SSBMax preparatory tools, AI dossier reports, and Officer Pass.',

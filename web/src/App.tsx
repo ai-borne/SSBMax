@@ -5,6 +5,7 @@ import { LandingPage } from './components/landing/LandingPage';
 import { PracticeTestsPage } from './components/practice/PracticeTestsPage';
 import { StudyMaterialPage } from './components/study/StudyMaterialPage';
 import { SettingsPage } from './components/settings/SettingsPage';
+import { EditProfileModal } from './components/settings/EditProfileModal';
 import { SubscriptionPage } from './components/subscription/SubscriptionPage';
 import { SupportSubscriptionPage } from './components/support/SupportSubscriptionPage';
 import { AnalyticsDashboardPage } from './components/analytics/AnalyticsDashboardPage';
@@ -57,7 +58,8 @@ export const App: FC = () => {
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   useEffect(() => authService.onAuthStateChanged(setCurrentUser), []);
 
-  const { profile: userProfile, isLoading: isUserProfileLoading } = useUserProfileViewModel(currentUser?.uid);
+  const { profile: userProfile, isLoading: isUserProfileLoading, refresh: refreshUserProfile } = useUserProfileViewModel(currentUser?.uid);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
 
   const { tier: realTier, usage } = useSubscriptionViewModel(authService.getCurrentUser()?.uid, devTierOverride);
   const paymentService = useMemo(() => new PaymentService(), []);
@@ -225,10 +227,20 @@ export const App: FC = () => {
               age={userProfile?.age}
               gender={userProfile?.gender}
               entryType={userProfile?.entryType}
+              onEditProfile={() => setIsEditProfileModalOpen(true)}
               onSignOut={() => authService.signOut()}
               devTierOverride={devTierOverride}
               onUpgrade={() => setActiveTab('subscription')}
               onSelectDevTier={handleSelectDevTier}
+            />
+          )}
+          {currentUser && (
+            <EditProfileModal
+              isOpen={isEditProfileModalOpen}
+              onClose={() => setIsEditProfileModalOpen(false)}
+              userId={currentUser.uid}
+              profile={userProfile}
+              onSaved={refreshUserProfile}
             />
           )}
           {activeTab === 'privacy' && (
