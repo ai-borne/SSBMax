@@ -10,9 +10,9 @@
 // (contentBundle.json / contentRoutes.json / contentSeo.json) keeps a single data source
 // without requiring a TS loader or an SSR bundle step in a plain Node script.
 import { readdirSync } from 'node:fs';
-import { buildContentPageJsonLd, buildFaqPageJsonLd, serializeJsonLd } from './jsonLd.mjs';
+import { buildContentPageJsonLd, buildFaqPageJsonLd, serializeJsonLd, SITE_BASE_URL } from './jsonLd.mjs';
 
-export const SITE_BASE_URL = 'https://ssbmax.in';
+export { SITE_BASE_URL };
 
 /** Escapes text for safe inclusion in HTML body/attribute contexts. */
 export function escapeHtml(value) {

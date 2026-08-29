@@ -4,13 +4,12 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { SITE_BASE_URL } from './jsonLd.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROUTES_PATH = join(__dirname, '..', 'src', 'routes', 'contentRoutes.json');
 
-// Kept in sync manually with src/routes/contentRoutes.ts's SITE_BASE_URL -- see that
-// file's comment. A plain Node script can't import the .ts module.
-export const SITE_BASE_URL = 'https://ssbmax.in';
+export { SITE_BASE_URL };
 
 export function loadContentRoutes() {
   return JSON.parse(readFileSync(ROUTES_PATH, 'utf8'));
