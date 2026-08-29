@@ -83,9 +83,9 @@ class StudyMaterialDetailViewModelTest {
 
     @Test
     fun `loadMaterial falls back to markdown when the D2 side document is missing`() = runTest(testDispatcher) {
-        // OIR is the one topic behind ContentFeatureFlags.isStructuredRenderingEnabled today --
-        // Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md's exit criterion that a
-        // missing side document renders markdown, not a blank screen.
+        // Every topic is behind ContentFeatureFlags.isStructuredStudyMaterialRenderingEnabled
+        // today -- this pins Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md's exit
+        // criterion that a missing side document renders markdown, not a blank screen.
         studyContentRepository.studyMaterialResult = Result.success(
             CloudStudyMaterial(id = "mat-1", title = "OIR Basics", topicType = "OIR", contentMarkdown = "# Hello")
         )
@@ -121,6 +121,37 @@ class StudyMaterialDetailViewModelTest {
         val viewModel = buildViewModel()
 
         viewModel.loadMaterial("mat-1")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(model, viewModel.uiState.value.material?.sections)
+    }
+
+    @Test
+    fun `loadMaterial uses the D2 side document for a non-OIR topic too (SRT belongs to PSYCHOLOGY)`() = runTest(testDispatcher) {
+        // Regression test for the bug this fix closes: study-material bodies used to be gated
+        // behind ContentFeatureFlags.isStructuredRenderingEnabled (OIR-only, meant for topic
+        // intros' offline-fallback readiness), which silently fell back to markdown for every
+        // other topic even though its Firestore side document existed. Now gated behind
+        // isStructuredStudyMaterialRenderingEnabled, which has no such offline-fallback
+        // dependency and is enabled for all 9 topics.
+        val model = com.ssbmax.shared.ui.content.blocks.DocumentModel(
+            sections = listOf(
+                com.ssbmax.shared.ui.content.blocks.DocSection(
+                    id = "study-materials/psy_4.md#0",
+                    slug = "intro",
+                    heading = null,
+                    level = 0,
+                    blocks = listOf(com.ssbmax.shared.ui.content.blocks.ParagraphBlock("Hello"))
+                )
+            )
+        )
+        studyContentRepository.studyMaterialResult = Result.success(
+            CloudStudyMaterial(id = "mat-2", title = "SRT Situation Analysis", topicType = "PSYCHOLOGY", contentMarkdown = "# Hello")
+        )
+        studyContentRepository.studyMaterialSectionsResult = Result.success(model)
+        val viewModel = buildViewModel()
+
+        viewModel.loadMaterial("mat-2")
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(model, viewModel.uiState.value.material?.sections)

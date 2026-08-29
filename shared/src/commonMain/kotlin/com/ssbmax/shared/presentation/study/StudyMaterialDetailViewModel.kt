@@ -147,10 +147,13 @@ class StudyMaterialDetailViewModel(
      * intros, study-material bodies have no generated offline fallback (out of scope for this
      * plan -- see its "Out of scope" section) -- a missing/failed fetch here means null, which
      * [StudyMaterialContent.sections] callers must treat as "render [StudyMaterialContent.content]
-     * as markdown instead," same as today.
+     * as markdown instead," same as today. Gated by
+     * [ContentFeatureFlags.isStructuredStudyMaterialRenderingEnabled], not
+     * [ContentFeatureFlags.isStructuredRenderingEnabled] -- see that flag's doc comment for why
+     * study-material bodies don't need the topic-intro offline-fallback gate.
      */
     private suspend fun structuredSectionsFor(topicType: String, materialId: String): DocumentModel? {
-        if (!ContentFeatureFlags.isStructuredRenderingEnabled(topicType)) return null
+        if (!ContentFeatureFlags.isStructuredStudyMaterialRenderingEnabled(topicType)) return null
         return studyContentRepository.getStudyMaterialSections(materialId).getOrNull()
     }
 

@@ -64,6 +64,31 @@ object ContentFeatureFlags {
 
     fun isStructuredRenderingEnabled(topicType: String): Boolean =
         structuredRenderingTopics.contains(topicType.uppercase())
+
+    /**
+     * Rollout flag for the structured-content renderer applied to STUDY MATERIAL bodies only
+     * (Phase 6, docs/plans/write-the-phased-plan-wobbly-pancake.md tech-debt sweep). Deliberately
+     * separate from [structuredRenderingTopics]/[isStructuredRenderingEnabled] above, which also
+     * gates each topic's *intro* -- that path falls back to a KMP-generated offline
+     * `DocumentModel` (`TopicIntroXStructured.kt`) when Firestore is unreachable, so a topic can
+     * only flip there once its physical-device three-surface parity gate has passed (Phase 0's
+     * exit criterion). Study-material bodies have no such offline fallback at all -- see
+     * [com.ssbmax.shared.presentation.study.StudyMaterialDetailViewModel.structuredSectionsFor]'s
+     * doc comment -- a miss there just falls back to markdown, same as before Phase 5, so there
+     * is no reason to withhold them behind the intro's stricter gate once their Firestore side
+     * document exists, which `scripts/content/publishContent.js` already publishes for all 51
+     * materials unconditionally (no per-topic allowlist there). Matches web's
+     * `isStructuredRenderingEnabled` in `web/src/constants/contentFeatureFlags.ts` (all 9 topics)
+     * for this one purpose -- `SSB_OVERVIEW` is included here even though its topic *intro*
+     * renders via a bespoke `SSBOverviewScreen` on KMP, because its individual study materials
+     * still go through the generic `StudyMaterialDetailScreen` route (`StudyContentGraph.kt`).
+     */
+    private val structuredStudyMaterialTopics = setOf(
+        "OIR", "PPDT", "PSYCHOLOGY", "PIQ_FORM", "GTO", "INTERVIEW", "SSB_OVERVIEW", "MEDICALS", "CONFERENCE"
+    )
+
+    fun isStructuredStudyMaterialRenderingEnabled(topicType: String): Boolean =
+        structuredStudyMaterialTopics.contains(topicType.uppercase())
     
     /**
      * Get current configuration as string (for debugging)
