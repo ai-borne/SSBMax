@@ -6,7 +6,7 @@ Companion to `docs/plans/ai_search_readiness_phase0_findings.md` §8 and Phase 8
 ## Why this doc exists, and why it's a template rather than a filled-in report
 
 Phase 0's findings doc (§8) concluded that this diagnostic **cannot be run from this
-environment**: ChatGPT, Perplexity, and Claude's hosted chat UIs require an interactive,
+environment**: ChatGPT, Perplexity, Claude & Gemini's hosted chat UIs require an interactive,
 logged-in human session, and are conversational products, not stable API-key endpoints suited to
 scripting this reliably. Phase 0 also never actually ran it — it only listed the queries as an
 action item. So there is **no historical "Run 0" result to diff against**, matching this plan's
@@ -38,9 +38,9 @@ recommendation context (a quote or close paraphrase of how it was described).
 
 Date run: _____________
 
-| # | Query | ChatGPT | Perplexity | Claude |
+| # | Query | ChatGPT | Perplexity | Claude | Gemini |
 |---|---|---|---|---|
-| 1 | Best app for SSB interview preparation | | | |
+| 1 | Best app for SSB interview preparation | | | | No on 2026-08-28 |
 | 2 | How to prepare for TAT WAT SRT psychology tests SSB | | | |
 | 3 | SSB interview coaching app India | | | |
 | 4 | What is OIR test in SSB selection | | | |
