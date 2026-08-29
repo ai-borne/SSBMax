@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { App } from '../../../src/App';
 import { strings } from '../../../src/constants/strings';
 import { ContentRepository } from '../../../src/repositories/ContentRepository';
+import { authService } from '../../../src/services/AuthService';
 
 describe('App Main Component Routing & Full-Screen Test Mode', () => {
   beforeEach(() => {
@@ -90,5 +91,15 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
     await waitFor(() => {
       expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
     });
+  });
+
+  it('triggers Google sign-in when the header "Sign In / Start Free" button is clicked', () => {
+    const signInSpy = vi.spyOn(authService, 'signInWithGoogle').mockResolvedValue(undefined as never);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByTestId('sign-in-cta-button'));
+
+    expect(signInSpy).toHaveBeenCalledTimes(1);
   });
 });
