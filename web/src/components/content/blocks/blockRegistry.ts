@@ -2,6 +2,11 @@ import { FC } from 'react';
 import { ParagraphBlockView } from './ParagraphBlock';
 import { ListBlockView } from './ListBlock';
 import { SubheadingBlockView } from './SubheadingBlock';
+import { SpecTableBlockView } from './SpecTableBlock';
+import { CalloutBlockView } from './CalloutBlock';
+import { ComparisonBlockView } from './ComparisonBlock';
+import { TimelineBlockView } from './TimelineBlock';
+import { TableBlockView } from './TableBlock';
 import type { DocBlock } from './types';
 
 export interface BlockRendererProps {
@@ -9,17 +14,20 @@ export interface BlockRendererProps {
 }
 
 /**
- * type -> renderer. Phase 2 (docs/plans/write-the-phased-plan-wobbly-pancake.md) implements the
- * structural blocks only; `specTable`/`callout`/`comparison`/`timeline`/`table` land in Phase 4.
- * Any type not in this map -- including those five, today -- renders via `renderFallback` (D1:
- * an unrecognised type is never a hard failure). The parity-gate coverage test
- * (blockRegistry.parity.test.ts) walks content/__fixtures__/blocks.json and only requires that
- * *some* renderer runs per fixture type, matching that intentional Phase 2 scope.
+ * type -> renderer. Phase 4 (docs/plans/write-the-phased-plan-wobbly-pancake.md) adds the five
+ * rich types on top of Phase 2's structural slice. Any type still not in this map renders via
+ * `renderFallback` below (D1: an unrecognised type is never a hard failure) -- that now only
+ * covers genuinely-unknown future block types, not the full taxonomy.
  */
 export const blockRegistry: Partial<Record<string, FC<BlockRendererProps>>> = {
   paragraph: ParagraphBlockView,
   list: ListBlockView,
   subheading: SubheadingBlockView,
+  specTable: SpecTableBlockView,
+  callout: CalloutBlockView,
+  comparison: ComparisonBlockView,
+  timeline: TimelineBlockView,
+  table: TableBlockView,
 };
 
 /** Best-effort plain-text flattening for a block type with no dedicated renderer yet, so

@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { strings } from '../constants/strings';
 import { faqBundle } from '../generated/faqBundle';
+import { renderBlock } from '../components/content/blocks/blockRegistry';
 import { SITE_BASE_URL } from './contentRoutes';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 
@@ -29,9 +30,12 @@ export const FaqPage: FC = () => {
         {faqBundle.questions.map((qa) => (
           <div key={qa.question}>
             <h2 className="text-base font-semibold text-slate-900 dark:text-white">{qa.question}</h2>
-            <p className="mt-2 text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-              {qa.answer}
-            </p>
+            <div className="mt-2 space-y-2">
+              {qa.answerBlocks.map((block, index) => {
+                const { Component, block: resolved } = renderBlock(block);
+                return <Component key={index} block={resolved} />;
+              })}
+            </div>
           </div>
         ))}
       </div>

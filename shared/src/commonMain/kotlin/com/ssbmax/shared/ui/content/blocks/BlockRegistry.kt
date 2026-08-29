@@ -4,12 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 /**
- * Renders any [DocBlock] by dispatching on its runtime type. Phase 2 (docs/plans/
- * write-the-phased-plan-wobbly-pancake.md) implements the structural blocks only --
- * [SpecTableBlock]/[CalloutBlock]/[ComparisonBlock]/[TimelineBlock]/[TableBlock] land in Phase 4
- * and, like [UnknownBlock], render via [toFallbackText] today (D1: an unrecognised/not-yet-rich
- * type is never a hard failure). The web twin is `blockRegistry.ts`; the parity-gate coverage
- * test is `BlockRegistryParityTest.kt`.
+ * Renders any [DocBlock] by dispatching on its runtime type. Phase 4 (docs/plans/
+ * write-the-phased-plan-wobbly-pancake.md) adds the five rich types on top of Phase 2's
+ * structural slice. Only [UnknownBlock] (a genuinely-unmodelled future type) still falls back to
+ * [toFallbackText] (D1: an unrecognised type is never a hard failure). The web twin is
+ * `blockRegistry.ts`; the parity-gate coverage test is `BlockRegistryParityTest.kt`.
  */
 @Composable
 fun DocBlockView(block: DocBlock, modifier: Modifier = Modifier) {
@@ -17,7 +16,12 @@ fun DocBlockView(block: DocBlock, modifier: Modifier = Modifier) {
         is ParagraphBlock -> ParagraphBlockView(block, modifier)
         is ListBlock -> ListBlockView(block, modifier)
         is SubheadingBlock -> SubheadingBlockView(block, modifier)
-        else -> ParagraphBlockView(ParagraphBlock(toFallbackText(block)), modifier)
+        is SpecTableBlock -> SpecTableBlockView(block, modifier)
+        is CalloutBlock -> CalloutBlockView(block, modifier)
+        is ComparisonBlock -> ComparisonBlockView(block, modifier)
+        is TimelineBlock -> TimelineBlockView(block, modifier)
+        is TableBlock -> TableBlockView(block, modifier)
+        is UnknownBlock -> ParagraphBlockView(ParagraphBlock(toFallbackText(block)), modifier)
     }
 }
 

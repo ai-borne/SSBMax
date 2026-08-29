@@ -75,10 +75,12 @@ describe('buildContentPageHtml, for every real content route', () => {
         expect(html).not.toContain('**');
       });
 
-      it('contains every material title and body for this topic, rendered as HTML not raw markdown', () => {
+      it('contains every material title and section heading for this topic, rendered as HTML not raw markdown', () => {
         for (const material of topic.materials) {
           expect(html).toContain(escapeHtml(material.title));
-          expect(html).toContain(material.contentHtml);
+          for (const section of material.sections.sections) {
+            if (section.heading) expect(html).toContain(escapeHtml(section.heading));
+          }
         }
       });
 
@@ -133,10 +135,20 @@ describe('buildFaqPageHtml (Phase 7)', () => {
     expect(() => JSON.parse(jsonLdScripts[0])).not.toThrow();
   });
 
-  it('contains every question and answer from content/faq.md, not a placeholder', () => {
-    for (const { question, answer } of faq.questions) {
+  it('contains every question and answer from content/faq.md, rendered as HTML not raw markdown', () => {
+    for (const { question, answer, answerBlocks } of faq.questions) {
       expect(html).toContain(escapeHtml(question));
-      expect(html).toContain(escapeHtml(answer));
+      // Answers are rendered from parsed answerBlocks (Phase 4 fix for the escaped-plain-text
+      // defect), so the raw markdown-syntax answer string itself must NOT appear verbatim --
+      // that would mean `**bold**` etc. leaked through as literal text again.
+      if (/\*\*|^- |^\d+\. /m.test(answer)) {
+        expect(html).not.toContain(escapeHtml(answer));
+      }
+      for (const block of answerBlocks) {
+        if (typeof (block as { text?: unknown }).text === 'string') {
+          expect(html).toContain(escapeHtml((block as { text: string }).text.replace(/\*\*/g, '')));
+        }
+      }
     }
   });
 
@@ -178,16 +190,16 @@ describe('listifyLabelRuns (generateContentBundle.mjs) -- the actual generated b
   interface ContentBundleTopicForTest {
     id: string;
     introductionHtml: string;
-    materials: { id: string; contentHtml: string }[];
   }
 
   it('never leaves 2+ consecutive bold-label spec fields collapsed into one paragraph', () => {
+    // Materials are no longer `marked`-rendered (Phase 4 -- they go through parseDocument into
+    // a `specTable` block instead), so this run-on-paragraph bug class cannot recur there;
+    // `introductionHtml` (the legacy fallback field, still marked-rendered) is the only
+    // remaining surface this regression check applies to.
     const topics = Object.values(contentBundle) as ContentBundleTopicForTest[];
     for (const topic of topics) {
       expect(hasRunOnLabelParagraph(topic.introductionHtml), `topic "${topic.id}" introductionHtml`).toBe(false);
-      for (const material of topic.materials) {
-        expect(hasRunOnLabelParagraph(material.contentHtml), `material "${material.id}" contentHtml`).toBe(false);
-      }
     }
   });
 });

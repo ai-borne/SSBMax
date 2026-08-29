@@ -62,17 +62,104 @@ function buildCfBeaconScriptTag(cfBeaconToken) {
 }
 
 /**
- * material.contentHtml is already build-time-rendered HTML (marked, over git-authored
- * markdown -- not user input), produced by scripts/generateContentBundle.mjs. Embedded
- * verbatim, not escapeHtml'd -- escaping it would print the HTML tags as literal text,
- * reintroducing the exact bug this function exists to avoid.
+ * Renders inline `**bold**` markers the same way `inlineBold.tsx` does, for HTML built by
+ * hand outside React (Phase 4, docs/plans/write-the-phased-plan-wobbly-pancake.md). Only
+ * `**bold**` -- the only inline markup the block parser leaves for a block renderer to handle
+ * (content/SCHEMA.md).
+ */
+function renderInlineBoldHtml(text) {
+  // `[^*]+`, not `.+?` -- must match across newlines too (a bold span can wrap multiple
+  // lines, see inlineBold.tsx's identical `[^*]+` choice and the oir_6.md regression this
+  // caught: `.` alone excludes `\n`, silently leaving multi-line `**...**` spans unrendered).
+  return escapeHtml(text).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+}
+
+const NEGATIVE_COMPARISON_LABEL_RE = /^(wrong|myth|problem|negative)/i;
+
+/**
+ * Server-side twin of `blockRegistry.ts`'s components, for the static (non-hydrated) prerender
+ * path -- same block shapes (content/SCHEMA.md), same Tailwind design intent, hand-built as a
+ * string like the rest of this file rather than via react-dom/server (Blocker 2: this script
+ * has no SSR bundle step, see the file-level doc comment). Unrecognised types fall back to
+ * plain text (D1), same as the client registry.
+ */
+function buildBlockHtml(block) {
+  switch (block.type) {
+    case 'paragraph':
+      return `<p class="text-sm sm:text-base text-slate-300 leading-relaxed">${renderInlineBoldHtml(block.text)}</p>`;
+    case 'list':
+      return `<ul class="list-disc pl-5 space-y-1 text-sm sm:text-base text-slate-300 leading-relaxed">${block.items
+        .map((item) => `<li>${renderInlineBoldHtml(item)}</li>`)
+        .join('')}</ul>`;
+    case 'subheading': {
+      const tag = `h${Math.min(6, Math.max(2, block.level))}`;
+      return `<${tag} class="mt-4 font-semibold text-white">${escapeHtml(block.text)}</${tag}>`;
+    }
+    case 'specTable':
+      return `<dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm sm:text-base rounded-lg border border-slate-800 p-4">${block.entries
+        .map((e) => `<dt class="font-semibold text-white">${escapeHtml(e.label)}</dt><dd class="text-slate-300">${renderInlineBoldHtml(e.text)}</dd>`)
+        .join('')}</dl>`;
+    case 'callout': {
+      const isWarning = block.marker.toLowerCase() === 'warning';
+      const tint = isWarning ? 'border-amber-800 bg-amber-950/40 text-amber-300' : 'border-sky-900 bg-sky-950/40 text-sky-300';
+      return `<aside class="rounded-lg border p-4 ${tint}"><p class="text-xs font-bold uppercase tracking-wide">${escapeHtml(block.marker)}</p><p class="mt-1 text-sm sm:text-base text-slate-300">${renderInlineBoldHtml(block.text)}</p></aside>`;
+    }
+    case 'comparison':
+      return `<div class="space-y-2">${block.pairs
+        .map((pair) => {
+          const negative = NEGATIVE_COMPARISON_LABEL_RE.test(pair.label);
+          const tint = negative ? 'border-rose-900 bg-rose-950/30' : 'border-emerald-900 bg-emerald-950/30';
+          return `<div class="rounded-lg border p-3 ${tint}"><span class="text-sm font-bold text-white">${negative ? '✗' : '✓'} ${escapeHtml(pair.label)}:</span> <span class="text-sm sm:text-base text-slate-300">${renderInlineBoldHtml(pair.text)}</span></div>`;
+        })
+        .join('')}</div>`;
+    case 'timeline':
+      return `<ol class="relative border-l border-slate-700 pl-4 space-y-4">${block.steps
+        .map((step) => `<li><p class="text-sm font-bold text-white">${escapeHtml(step.label)}</p><p class="text-sm sm:text-base text-slate-300">${renderInlineBoldHtml(step.text)}</p></li>`)
+        .join('')}</ol>`;
+    case 'table': {
+      const [header, ...body] = block.rows;
+      const headerHtml = header
+        ? `<thead><tr>${header.map((cell) => `<th class="p-2 text-left font-semibold text-white border-b border-slate-800">${renderInlineBoldHtml(cell)}</th>`).join('')}</tr></thead>`
+        : '';
+      const bodyHtml = body
+        .map((row) => `<tr>${row.map((cell) => `<td class="p-2 text-slate-300 border-b border-slate-800">${renderInlineBoldHtml(cell)}</td>`).join('')}</tr>`)
+        .join('');
+      return `<div class="overflow-x-auto"><table class="min-w-full text-sm sm:text-base border border-slate-800">${headerHtml}<tbody>${bodyHtml}</tbody></table></div>`;
+    }
+    default:
+      return `<p class="text-sm sm:text-base text-slate-300 leading-relaxed">${escapeHtml(JSON.stringify(block))}</p>`;
+  }
+}
+
+/** Renders a DocumentModel's sections -- see `DocumentView.tsx`'s hydrated twin. */
+function buildDocumentHtml(model) {
+  return model.sections
+    .map((section) => {
+      const heading = section.heading ? `<h2 class="text-lg font-bold text-white">${escapeHtml(section.heading)}</h2>` : '';
+      const blocksHtml = section.blocks.map(buildBlockHtml).join('\n          ');
+      return `
+        <section id="${escapeHtml(section.slug)}">
+          ${heading}
+          <div class="mt-3 space-y-4">
+            ${blocksHtml}
+          </div>
+        </section>`;
+    })
+    .join('\n');
+}
+
+/**
+ * material.sections is a structured DocumentModel (Phase 4, docs/plans/
+ * write-the-phased-plan-wobbly-pancake.md), produced by scripts/generateContentBundle.mjs --
+ * rendered here via buildDocumentHtml, never as raw text (that was the FAQ-answer bug this
+ * phase also fixes, see buildFaqQuestionHtml).
  */
 function buildMaterialHtml(material) {
   return `
         <div>
           <h3 class="text-base font-semibold text-slate-900 dark:text-white">${escapeHtml(material.title)}</h3>
           <p class="text-xs font-mono text-slate-500 dark:text-slate-400">${escapeHtml(material.estimatedReadTimeMinutes)} min read</p>
-          <div class="mt-2 prose dark:prose-invert max-w-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed">${material.contentHtml}</div>
+          <div class="mt-2">${buildDocumentHtml(material.sections)}</div>
         </div>`;
 }
 
@@ -133,11 +220,21 @@ export function buildFaqPageJsonLdScripts({ faq, siteBaseUrl = SITE_BASE_URL }) 
   return [serializeJsonLd(buildFaqPageJsonLd({ faq, siteBaseUrl }))];
 }
 
-function buildFaqQuestionHtml({ question, answer }) {
+/**
+ * `answerBlocks` is parsed at build time (scripts/generateFaqBundle.mjs, via
+ * scripts/content/parseDocument.js) -- fixes the FAQ answers-as-escaped-plain-text defect
+ * (docs/plans/write-the-phased-plan-wobbly-pancake.md Phase 4 defect #3): answers previously
+ * went through `escapeHtml(answer)` alone, so any `**bold**` in an answer showed as literal
+ * asterisks to visitors and crawlers.
+ */
+function buildFaqQuestionHtml({ question, answerBlocks }) {
+  const blocksHtml = answerBlocks.map(buildBlockHtml).join('\n        ');
   return `
       <div>
         <h2 class="text-base font-semibold text-white">${escapeHtml(question)}</h2>
-        <p class="mt-2 text-sm sm:text-base text-slate-300 leading-relaxed">${escapeHtml(answer)}</p>
+        <div class="mt-2 space-y-2">
+        ${blocksHtml}
+        </div>
       </div>`;
 }
 

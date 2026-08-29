@@ -10,8 +10,10 @@ export interface ContentTopicMaterial {
   title: string;
   category: string;
   summary: string;
-  /** Pre-rendered HTML (build-time markdown->HTML via `marked`, scripts/generateContentBundle.mjs) -- render with dangerouslySetInnerHTML, never as text. */
-  contentHtml: string;
+  /** Structured DocumentModel (Phase 4, docs/plans/write-the-phased-plan-wobbly-pancake.md),
+   * from `scripts/content/parseDocument.js` at build time -- render via `DocumentView`, never
+   * parsed again at runtime (D4). */
+  sections: DocumentModel;
   estimatedReadTimeMinutes: number;
   tags: string[];
 }

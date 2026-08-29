@@ -68,10 +68,9 @@ export const StudyTopicPage: FC<StudyTopicPageProps> = ({ topicId }) => {
                 <p className="text-xs font-mono text-slate-500 dark:text-slate-400">
                   {material.estimatedReadTimeMinutes} {strings.contentTopic.minRead}
                 </p>
-                <div
-                  className="mt-2 prose dark:prose-invert max-w-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: material.contentHtml }}
-                />
+                <div className="mt-2">
+                  <DocumentView model={material.sections} />
+                </div>
               </div>
             ))}
           </div>

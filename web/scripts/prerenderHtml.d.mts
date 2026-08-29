@@ -1,8 +1,25 @@
+export interface DocBlock {
+  type: string;
+  [key: string]: unknown;
+}
+
+export interface DocSection {
+  id: string;
+  slug: string;
+  heading: string | null;
+  level: number;
+  blocks: DocBlock[];
+}
+
+export interface DocumentModel {
+  sections: DocSection[];
+}
+
 export interface ContentTopicMaterial {
   id: string;
   title: string;
-  /** Pre-rendered HTML (build-time markdown->HTML), not raw markdown. */
-  contentHtml: string;
+  /** Structured DocumentModel (Phase 4) -- rendered via buildDocumentHtml, not raw HTML. */
+  sections: DocumentModel;
   estimatedReadTimeMinutes: number;
 }
 
@@ -31,6 +48,7 @@ export interface BuildContentPageHtmlInput {
 export interface FaqQuestion {
   question: string;
   answer: string;
+  answerBlocks: DocBlock[];
 }
 
 export interface FaqBundle {

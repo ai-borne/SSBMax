@@ -4,13 +4,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * The Phase 2 parity gate's pure half (docs/plans/write-the-phased-plan-wobbly-pancake.md):
- * [toFallbackText] is exercised for every block type in the frozen taxonomy
- * (`scripts/content/blockClassifier.js`'s `TAXONOMY`, `content/SCHEMA.md`), matching the web
- * twin's `toFallbackText` in `blockRegistry.ts` field-by-field. The `@Composable` dispatch half
- * of this gate (does every fixture type actually render without throwing) lives in
- * `BlockRegistryUiTest` under `androidUnitTest` -- see that class's doc comment for why, same
- * constraint as `MarkdownTextTest`/`MarkdownTextUiTest`.
+ * [toFallbackText]'s pure-function coverage: exercised for every block type in the frozen
+ * taxonomy (`scripts/content/blockClassifier.js`'s `TAXONOMY`, `content/SCHEMA.md`), matching
+ * the web twin's `toFallbackText` in `blockRegistry.ts` field-by-field. As of Phase 4 only
+ * [UnknownBlock] actually renders via this path -- the rich types now have dedicated composables
+ * (`BlockRegistryUiTest`) -- but the flattening logic stays tested here since it is still the
+ * function a genuinely-unmodelled future block type falls back to.
  */
 class BlockRegistryFallbackTest {
 

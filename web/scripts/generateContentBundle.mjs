@@ -65,15 +65,16 @@ function buildBundle() {
   }
 
   const materialsByTopic = new Map();
-  for (const { id, meta, body } of materials) {
+  for (const { id, meta, body, sourcePath } of materials) {
     const list = materialsByTopic.get(meta.topicType) ?? [];
     list.push({
       id,
       title: meta.title,
       category: meta.category,
       summary: body.split('\n').find((line) => line.trim().length > 0)?.slice(0, 200) ?? '',
-      // Nested under the page's <h1> title + <h2> "Study Materials" + this material's own <h3>.
-      contentHtml: shiftHeadings(marked.parse(listifyLabelRuns(body), { async: false }), 3),
+      // Structured DocumentModel (Phase 4) -- StudyTopicPage.tsx and prerenderHtml.mjs render
+      // this via DocumentView/the block registry, never `dangerouslySetInnerHTML`.
+      sections: buildIntroductionSections(sourcePath, body),
       estimatedReadTimeMinutes: Number.parseInt(meta.readTime, 10) || 5,
       tags: meta.tags ?? [],
       displayOrder: meta.displayOrder ?? 0,

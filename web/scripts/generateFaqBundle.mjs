@@ -7,17 +7,29 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
 import { loadFaq } from './loadContent.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_PATH = join(__dirname, '..', 'src', 'generated', 'faqBundle.json');
+
+const require = createRequire(import.meta.url);
+const { parseDocument } = require('../../scripts/content/parseDocument.js');
 
 const faq = loadFaq();
 const bundle = {
   title: faq.meta.title,
   seoTitle: faq.meta.seoTitle,
   seoDescription: faq.meta.seoDescription,
-  questions: faq.questions,
+  // `answer` stays raw plain text -- jsonLd.mjs's FAQPage schema wants plain text, not HTML/
+  // blocks. `answerBlocks` is new in Phase 4 (docs/plans/write-the-phased-plan-wobbly-pancake.md):
+  // FaqPage.tsx and prerenderHtml.mjs render this instead, fixing the defect where an answer's
+  // `**bold**` markup showed as literal asterisks (it was never markdown-parsed at all). No
+  // slug pinning needed here -- FAQ answers have no anchors -- so `existingSlugs` is left empty.
+  questions: faq.questions.map((q, index) => ({
+    ...q,
+    answerBlocks: parseDocument(q.answer, { sourcePath: `faq.md#${index}` }).sections.flatMap((s) => s.blocks),
+  })),
 };
 
 writeFileSync(OUT_PATH, `${JSON.stringify(bundle, null, 2)}\n`);
