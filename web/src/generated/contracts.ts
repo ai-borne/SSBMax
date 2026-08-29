@@ -69,8 +69,8 @@ export const FirestorePaths = {
   },
 } as const;
 
-export type TestType = "OIR" | "PPDT" | "PIQ" | "TAT" | "WAT" | "SRT" | "SD" | "GTO_GD" | "GTO_GPE" | "GTO_PGT" | "GTO_GOR" | "GTO_HGT" | "GTO_LECTURETTE" | "GTO_IO" | "GTO_CT" | "IO";
-export const TestTypeValues: TestType[] = ["OIR", "PPDT", "PIQ", "TAT", "WAT", "SRT", "SD", "GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT", "IO"];
+export type TestType = "OIR" | "PPDT" | "PIQ" | "TAT" | "WAT" | "SRT" | "SD" | "GTO_GD" | "GTO_GPE" | "GTO_PGT" | "GTO_GOR" | "GTO_HGT" | "GTO_LECTURETTE" | "GTO_IO" | "GTO_CT" | "GTO_FGT" | "IO";
+export const TestTypeValues: TestType[] = ["OIR", "PPDT", "PIQ", "TAT", "WAT", "SRT", "SD", "GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT", "GTO_FGT", "IO"];
 
 export type TestPhase = "PHASE_1" | "PHASE_2";
 export const TestPhaseValues: TestPhase[] = ["PHASE_1", "PHASE_2"];
@@ -115,7 +115,7 @@ export const SubscriptionLimits: SubscriptionLimit[] = [
   { bucket: "WAT", testTypes: ["WAT"], free: 0, basic: 5, pro: 8, premium: 15 },
   { bucket: "SRT", testTypes: ["SRT"], free: 0, basic: 5, pro: 8, premium: 15 },
   { bucket: "SD", testTypes: ["SD"], free: 0, basic: 5, pro: 8, premium: 15 },
-  { bucket: "GTO", testTypes: ["GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT"], free: 0, basic: 5, pro: 8, premium: 15 },
+  { bucket: "GTO", testTypes: ["GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT", "GTO_FGT"], free: 0, basic: 5, pro: 8, premium: 15 },
   { bucket: "INTERVIEW", testTypes: ["IO"], free: 0, basic: 1, pro: 3, premium: 10 },
 ];
 
@@ -146,6 +146,7 @@ export const TestConfig: TestConfigEntry[] = [
   { testType: "GTO_GOR", values: { "totalSeconds": 1200 } },
   { testType: "GTO_IO", values: { "totalSeconds": 1800 } },
   { testType: "GTO_CT", values: { "totalSeconds": 900 } },
+  { testType: "GTO_FGT", values: { "totalSeconds": 1800 } },
 ];
 
 export const SecurityEvents = {

@@ -163,6 +163,7 @@ private fun getTestColor(testType: TestType): Color {
         TestType.GTO_LECTURETTE -> Color(0xFF3F51B5)
         TestType.GTO_IO -> Color(0xFF8BC34A)
         TestType.GTO_CT -> Color(0xFFFF5722)
+        TestType.GTO_FGT -> Color(0xFF795548)
         TestType.IO -> Color(0xFF455A64)
     }
 }
@@ -181,6 +182,7 @@ private fun getTestIcon(testType: TestType): ImageVector {
         TestType.GTO_LECTURETTE -> Icons.Default.Mic
         TestType.GTO_IO -> Icons.Default.Person
         TestType.GTO_CT -> Icons.Default.MilitaryTech
+        TestType.GTO_FGT -> Icons.AutoMirrored.Filled.DirectionsRun
         TestType.IO -> Icons.Default.RecordVoiceOver
     }
 }

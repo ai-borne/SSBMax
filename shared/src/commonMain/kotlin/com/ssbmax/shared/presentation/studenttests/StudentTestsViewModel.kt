@@ -108,6 +108,7 @@ class StudentTestsViewModel(
                     TestOverviewItem(TestType.GTO_LECTURETTE, "Lecturette", Icons.Default.Mic, "GTO", 3, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore),
                     TestOverviewItem(TestType.GTO_IO, "Individual Obstacles", Icons.Default.Person, "GTO", 10, 10, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore),
                     TestOverviewItem(TestType.GTO_CT, "Command Task", Icons.Default.MilitaryTech, "GTO", 15, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore),
+                    TestOverviewItem(TestType.GTO_FGT, "Final Group Task", Icons.AutoMirrored.Filled.DirectionsRun, "GTO", 30, 1, phase2Progress.gtoProgress.status, phase2Progress.gtoProgress.latestScore),
                     TestOverviewItem(TestType.IO, "Personal Interview", Icons.Default.RecordVoiceOver, "Interview", 45, 1, phase2Progress.interviewProgress.status, phase2Progress.interviewProgress.latestScore)
                 )
 

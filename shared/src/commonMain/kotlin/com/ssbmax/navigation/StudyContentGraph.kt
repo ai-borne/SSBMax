@@ -197,6 +197,6 @@ internal fun destinationForTestType(testType: TestType): SSBMaxDestinations = wh
     TestType.GTO_LECTURETTE -> SSBMaxDestinations.GTOLecturetteTest("gto_lecturette_standard")
     TestType.GTO_GPE -> SSBMaxDestinations.GTOGPETest("gto_gpe_standard")
     TestType.IO -> SSBMaxDestinations.StartInterview
-    TestType.GTO_PGT, TestType.GTO_GOR, TestType.GTO_HGT, TestType.GTO_IO, TestType.GTO_CT ->
+    TestType.GTO_PGT, TestType.GTO_GOR, TestType.GTO_HGT, TestType.GTO_IO, TestType.GTO_CT, TestType.GTO_FGT ->
         SSBMaxDestinations.NotYetPorted("Test(${testType.name})")
 }

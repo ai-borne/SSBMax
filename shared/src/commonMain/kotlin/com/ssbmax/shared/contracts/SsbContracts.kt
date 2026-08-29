@@ -77,7 +77,7 @@ object SsbContracts {
     }
 
     object Enums {
-        enum class TestType { OIR, PPDT, PIQ, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, IO }
+        enum class TestType { OIR, PPDT, PIQ, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, GTO_FGT, IO }
         enum class TestPhase { PHASE_1, PHASE_2 }
         enum class TestStatus { NOT_ATTEMPTED, IN_PROGRESS, SUBMITTED_PENDING_REVIEW, GRADED, COMPLETED }
         enum class SubscriptionTier { FREE, BASIC, PRO, PREMIUM }
@@ -112,7 +112,7 @@ object SsbContracts {
             SubscriptionLimit("WAT", listOf("WAT"), 0, 5, 8, 15),
             SubscriptionLimit("SRT", listOf("SRT"), 0, 5, 8, 15),
             SubscriptionLimit("SD", listOf("SD"), 0, 5, 8, 15),
-            SubscriptionLimit("GTO", listOf("GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT"), 0, 5, 8, 15),
+            SubscriptionLimit("GTO", listOf("GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT", "GTO_FGT"), 0, 5, 8, 15),
             SubscriptionLimit("INTERVIEW", listOf("IO"), 0, 1, 3, 10)
         )
     }
@@ -144,7 +144,8 @@ object SsbContracts {
             TestConfigEntry("GTO_HGT", mapOf("totalSeconds" to 900)),
             TestConfigEntry("GTO_GOR", mapOf("totalSeconds" to 1200)),
             TestConfigEntry("GTO_IO", mapOf("totalSeconds" to 1800)),
-            TestConfigEntry("GTO_CT", mapOf("totalSeconds" to 900))
+            TestConfigEntry("GTO_CT", mapOf("totalSeconds" to 900)),
+            TestConfigEntry("GTO_FGT", mapOf("totalSeconds" to 1800))
         )
     }
 

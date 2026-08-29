@@ -108,19 +108,37 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         materials: getMaterials('pgt')
       },
       {
+        id: 'snake_race',
+        testTypeId: 'snake_race',
+        shortCode: 'GOR',
+        title: '4. Snake Race / Group Obstacle Race',
+        description: 'Group obstacle race carrying continuous load (snake).',
+        requiredTier: 'PRO',
+        materials: getMaterials('snake_race')
+      },
+      {
         id: 'hgt',
         testTypeId: 'hgt',
         shortCode: 'HGT',
-        title: '4. Half Group Task',
+        title: '5. Half Group Task',
         description: 'Group half-division outdoor structure assessment.',
         requiredTier: 'PRO',
         materials: getMaterials('hgt')
       },
       {
+        id: 'lecturette',
+        testTypeId: 'lecturette',
+        shortCode: 'LECT',
+        title: '6. Lecturette',
+        description: '3 minutes of preparation followed by a 3-minute individual speech on an assigned topic.',
+        requiredTier: 'PRO',
+        materials: getMaterials('lecturette')
+      },
+      {
         id: 'iot',
         testTypeId: 'iot',
         shortCode: 'IOT',
-        title: '5. Individual Obstacles Test',
+        title: '7. Individual Obstacles Test',
         description: '10 individual outdoor physical obstacles and scoring strategy.',
         requiredTier: 'PRO',
         materials: getMaterials('iot')
@@ -129,25 +147,16 @@ export const ssbDayConfigs: DaySectionConfig[] = [
         id: 'command_task',
         testTypeId: 'command_task',
         shortCode: 'CT',
-        title: '6. Command Task',
+        title: '8. Command Task',
         description: 'Subordinate selection and leader obstacle execution.',
         requiredTier: 'PRO',
         materials: getMaterials('command_task')
       },
       {
-        id: 'snake_race',
-        testTypeId: 'snake_race',
-        shortCode: 'GOR',
-        title: '7. Snake Race / Group Obstacle Race',
-        description: 'Group obstacle race carrying continuous load (snake).',
-        requiredTier: 'PRO',
-        materials: getMaterials('snake_race')
-      },
-      {
         id: 'fgt',
         testTypeId: 'fgt',
         shortCode: 'FGT',
-        title: '8. Final Group Task',
+        title: '9. Final Group Task',
         description: 'Final single outdoor structure group task execution.',
         requiredTier: 'PRO',
         materials: getMaterials('fgt')

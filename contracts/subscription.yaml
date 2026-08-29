@@ -55,8 +55,8 @@ limits:
     PRO: 8
     PREMIUM: 15
   - bucket: GTO
-    testTypes: [GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT]
-    note: all 8 GTO sub-tests share one monthly bucket in KMP today
+    testTypes: [GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, GTO_FGT]
+    note: all 9 GTO sub-tests share one monthly bucket in KMP today
     FREE: 0
     BASIC: 5
     PRO: 8

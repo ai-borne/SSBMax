@@ -1,6 +1,7 @@
 ---
 id: "gto_5"
 topicType: "GTO"
+testTypeId: "lecturette"
 title: "Lecturette Preparation"
 author: "SSB Expert"
 category: "GTO Preparation"

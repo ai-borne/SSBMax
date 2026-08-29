@@ -101,12 +101,12 @@ class SubscriptionLimitsTest {
         }
     }
 
-    /** All 8 GTO sub-tests share one counter/limit — same grouping as the Android original. */
+    /** All 9 GTO sub-tests share one counter/limit — same grouping as the Android original. */
     @Test
     fun `all GTO sub-tests share the same limits-table key`() {
         val gtoTypes = listOf(
             TestType.GTO_GD, TestType.GTO_GPE, TestType.GTO_PGT, TestType.GTO_GOR,
-            TestType.GTO_HGT, TestType.GTO_LECTURETTE, TestType.GTO_IO, TestType.GTO_CT
+            TestType.GTO_HGT, TestType.GTO_LECTURETTE, TestType.GTO_IO, TestType.GTO_CT, TestType.GTO_FGT
         )
         gtoTypes.forEach { assertEquals("GTO", SubscriptionLimits.keyFor(it)) }
     }

@@ -7,11 +7,14 @@ import { StudyMaterial } from '../types/testContent';
  * matching arbitrary category/tag text -- concretely mapping `'medicals' -> 'conference'`
  * and collapsing every PSYCHOLOGY material (TAT/WAT/SRT/SD) onto 'tat' alone.
  *
- * topicType is coarser than testTypeId: GTO and PSYCHOLOGY each cover several testTypeIds,
- * and content/study-materials/*.md carries no per-subtask field to disambiguate further.
- * Rather than fabricate a single guess, a multi-valued topic maps to every testTypeId it can
- * legitimately be, and a material is considered a match for a StudyTestCard's testTypeId if
- * that id appears anywhere in its topicType's list -- explicit and exhaustive, not fuzzy.
+ * topicType is coarser than testTypeId: GTO and PSYCHOLOGY each cover several testTypeIds.
+ * Most content/study-materials/gto_*.md files now carry their own `testTypeId` frontmatter
+ * field (GTO taxonomy parity fix) so `filterMaterialsForTestCard` matches on that directly;
+ * this table remains the fallback for materials that are genuinely shared across several
+ * sub-tests (e.g. the GTO overview) and carry no single testTypeId of their own -- a
+ * multi-valued topic maps to every testTypeId it can legitimately be, and such a material is
+ * considered a match for a StudyTestCard's testTypeId if that id appears anywhere in its
+ * topicType's list -- explicit and exhaustive, not fuzzy.
  *
  * MEDICALS and SSB_OVERVIEW are intentionally absent: no testTypeId exists for either, and
  * forcing one (as the old matcher did for MEDICALS -> 'conference') would be a wrong answer,
@@ -22,7 +25,7 @@ export const TOPIC_TYPE_TO_TEST_TYPE_IDS: Record<string, NonNullable<StudyMateri
   PPDT: ['ppdt'],
   PIQ_FORM: ['piq'],
   PSYCHOLOGY: ['tat', 'wat', 'srt', 'sd'],
-  GTO: ['gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt'],
+  GTO: ['gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'lecturette', 'fgt'],
   INTERVIEW: ['interview'],
   CONFERENCE: ['conference'],
 };

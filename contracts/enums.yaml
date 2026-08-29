@@ -23,6 +23,7 @@ enums:
       - GTO_LECTURETTE
       - GTO_IO
       - GTO_CT
+      - GTO_FGT
       - IO
 
   - name: TestPhase

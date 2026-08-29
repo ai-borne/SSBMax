@@ -115,7 +115,7 @@ export const App: FC = () => {
   }
 
   const isPsychTest = ['ppdt', 'tat', 'wat', 'srt', 'sd'].includes(activeTest || '');
-  const isGTOTaskOrBoard = ['gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt', 'interview', 'conference'].includes(activeTest || '');
+  const isGTOTaskOrBoard = ['gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'lecturette', 'fgt', 'interview', 'conference'].includes(activeTest || '');
 
   return (
     <AppLayout activeTab={activeTab} onTabChange={handleTabChange} onNotificationClick={handleNotificationClick} isTestMode={Boolean(activeTest)} isPaidMember={isPaidMember}>

@@ -59,7 +59,7 @@ class NotificationResultDestinationTest {
 
     @Test
     fun `unported GTO sub-types fall through to null not a crash`() {
-        for (unported in listOf("GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_IO", "GTO_CT")) {
+        for (unported in listOf("GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_IO", "GTO_CT", "GTO_FGT")) {
             assertNull(resolveNotificationResultDestination(notification(unported)), "expected null for $unported")
         }
     }

@@ -62,7 +62,7 @@ class StudentTestsViewModelTest {
         assertEquals(false, state.isLoading)
         assertEquals(null, state.error)
         assertEquals(2, state.phase1Tests.size)
-        assertEquals(13, state.phase2Tests.size)
+        assertEquals(14, state.phase2Tests.size)
         assertEquals(TestType.OIR, state.phase1Tests[0].type)
         assertEquals(TestStatus.NOT_ATTEMPTED, state.phase1Tests[0].status)
     }

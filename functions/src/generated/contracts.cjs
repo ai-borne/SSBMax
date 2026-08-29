@@ -86,6 +86,7 @@ const Enums = {
     "GTO_LECTURETTE",
     "GTO_IO",
     "GTO_CT",
+    "GTO_FGT",
     "IO"
   ],
   "TestPhase": [
@@ -292,7 +293,8 @@ const SubscriptionLimits = [
       "GTO_HGT",
       "GTO_LECTURETTE",
       "GTO_IO",
-      "GTO_CT"
+      "GTO_CT",
+      "GTO_FGT"
     ],
     "free": 0,
     "basic": 5,
@@ -432,6 +434,12 @@ const TestConfig = [
     "testType": "GTO_CT",
     "values": {
       "totalSeconds": 900
+    }
+  },
+  {
+    "testType": "GTO_FGT",
+    "values": {
+      "totalSeconds": 1800
     }
   }
 ];

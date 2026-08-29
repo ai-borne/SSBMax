@@ -1,6 +1,7 @@
 ---
 id: "gto_7"
 topicType: "GTO"
+testTypeId: "snake_race"
 title: "Snake Race & FGT Strategies"
 author: "SSB Expert"
 category: "GTO Preparation"
