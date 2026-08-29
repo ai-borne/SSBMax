@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { User, ShieldAlert, Sparkles, LogOut, Edit3, Award, Target } from 'lucide-react';
+import { User, ShieldAlert, Sparkles, LogOut, Edit3, Award, Target, Trash2, UserX } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { GridCardContainer } from '../common/GridCardContainer';
 import { Gender, EntryType } from '../../types/userProfile';
@@ -26,9 +26,14 @@ export interface AccountSectionProps {
   entryType?: EntryType;
   hasProfile?: boolean;
   isProfileLoading?: boolean;
+  /** Epoch millis of a pending deletion request, or null/undefined when none is pending. */
+  deletionRequestedAt?: number | null;
+  deletionScheduledForLabel?: string;
   onEditProfile?: () => void;
   onUpgrade?: () => void;
   onSignOut?: () => void;
+  onDeleteAccount?: () => void;
+  onCancelDeletion?: () => void;
 }
 
 export const AccountSection: FC<AccountSectionProps> = ({
@@ -41,10 +46,15 @@ export const AccountSection: FC<AccountSectionProps> = ({
   entryType,
   hasProfile = false,
   isProfileLoading = false,
+  deletionRequestedAt = null,
+  deletionScheduledForLabel,
   onEditProfile,
   onUpgrade,
   onSignOut,
+  onDeleteAccount,
+  onCancelDeletion,
 }) => {
+  const deletionPending = deletionRequestedAt != null;
   return (
     <GridCardContainer
       variant={isPro ? 'pro' : 'free'}
@@ -72,6 +82,27 @@ export const AccountSection: FC<AccountSectionProps> = ({
           )}
         </div>
       </div>
+
+      {deletionPending && (
+        <div
+          className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex flex-col sm:flex-row sm:items-center gap-2.5"
+          data-testid="deletion-pending-banner"
+        >
+          <UserX className="w-4 h-4 shrink-0" />
+          <p className="leading-relaxed flex-1">
+            {strings.account.deletionPendingBanner.replace('{date}', deletionScheduledForLabel ?? '')}
+          </p>
+          {onCancelDeletion && (
+            <button
+              onClick={onCancelDeletion}
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-rose-700 dark:text-rose-300 font-semibold border border-rose-500/30 transition-all shrink-0"
+              data-testid="cancel-deletion-btn"
+            >
+              {strings.account.cancelDeletionButton}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Explicit No PII Privacy Warning Banner */}
       <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-300 text-xs flex items-start gap-2.5" data-testid="pii-privacy-warning">
@@ -165,6 +196,17 @@ export const AccountSection: FC<AccountSectionProps> = ({
           >
             <LogOut className="w-4 h-4" />
             <span>{strings.account.signOut}</span>
+          </button>
+        )}
+
+        {!isGuest && !deletionPending && onDeleteAccount && (
+          <button
+            onClick={onDeleteAccount}
+            className="min-h-[44px] px-4 py-2.5 rounded-xl bg-transparent hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-xs border border-transparent hover:border-rose-500/30 transition-all flex items-center gap-2"
+            data-testid="delete-account-btn"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>{strings.account.deleteAccount}</span>
           </button>
         )}
       </div>

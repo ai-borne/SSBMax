@@ -20,6 +20,8 @@ import { SubmissionResultView } from './components/evaluation/SubmissionResultVi
 import { OIRSubmissionResultView } from './components/evaluation/OIRSubmissionResultView';
 import { useOLQDashboardViewModel } from './viewmodels/useOLQDashboardViewModel';
 import { useUserProfileViewModel } from './viewmodels/useUserProfileViewModel';
+import { useAccountDeletionViewModel } from './viewmodels/useAccountDeletionViewModel';
+import { DeleteAccountModal } from './components/settings/DeleteAccountModal';
 import { resolveNotificationResultTarget, NotificationResultTarget } from './utils/notificationResultRoute';
 import type { SSBMaxNotification } from './types/notification';
 import { strings } from './constants/strings';
@@ -33,6 +35,7 @@ import { useAppVersionGateViewModel } from './viewmodels/useAppVersionGateViewMo
 import { useFeatureFlag } from './viewmodels/useFeatureFlag';
 import { UpdateRequiredScreen } from './components/common/UpdateRequiredScreen';
 import { AccessTier, DevTierOverride, getEffectiveTier } from './constants/ssbSelectionProcess';
+import { ACCOUNT_DELETION_GRACE_PERIOD_DAYS } from './constants/accountDeletion';
 
 const DEV_TIER_OVERRIDE_KEY = 'ssbmax_dev_tier_override';
 const VALID_DEV_TIER_OVERRIDES: DevTierOverride[] = ['FOLLOW_REAL', 'FORCE_FREE', 'FORCE_BASIC', 'FORCE_PRO', 'FORCE_PREMIUM'];
@@ -60,6 +63,14 @@ export const App: FC = () => {
 
   const { profile: userProfile, isLoading: isUserProfileLoading, refresh: refreshUserProfile } = useUserProfileViewModel(currentUser?.uid);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+
+  const accountDeletion = useAccountDeletionViewModel(currentUser?.uid);
+  const handleConfirmDeleteAccount = async () => {
+    const succeeded = await accountDeletion.confirmDelete();
+    if (succeeded) {
+      await authService.signOut();
+    }
+  };
 
   const { tier: realTier, usage } = useSubscriptionViewModel(authService.getCurrentUser()?.uid, devTierOverride);
   const paymentService = useMemo(() => new PaymentService(), []);
@@ -229,11 +240,28 @@ export const App: FC = () => {
               entryType={userProfile?.entryType}
               onEditProfile={() => setIsEditProfileModalOpen(true)}
               onSignOut={() => authService.signOut()}
+              onDeleteAccount={accountDeletion.openModal}
+              onCancelDeletion={accountDeletion.cancelDeletion}
+              deletionRequestedAt={accountDeletion.deletionRequestedAt}
+              deletionScheduledForLabel={
+                accountDeletion.deletionRequestedAt != null
+                  ? new Date(
+                      accountDeletion.deletionRequestedAt + ACCOUNT_DELETION_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000
+                    ).toLocaleDateString()
+                  : undefined
+              }
               devTierOverride={devTierOverride}
               onUpgrade={() => setActiveTab('subscription')}
               onSelectDevTier={handleSelectDevTier}
             />
           )}
+          <DeleteAccountModal
+            isOpen={accountDeletion.isModalOpen}
+            onClose={accountDeletion.closeModal}
+            onConfirm={handleConfirmDeleteAccount}
+            isSubmitting={accountDeletion.isSubmitting}
+            error={accountDeletion.error}
+          />
           {currentUser && (
             <EditProfileModal
               isOpen={isEditProfileModalOpen}

@@ -22,6 +22,10 @@ export interface SettingsPageProps {
   onEditProfile?: () => void;
   onUpgrade?: () => void;
   onSignOut?: () => void;
+  onDeleteAccount?: () => void;
+  onCancelDeletion?: () => void;
+  deletionRequestedAt?: number | null;
+  deletionScheduledForLabel?: string;
   onViewPrivacy?: () => void;
   onViewTerms?: () => void;
   userEmail?: string | null;
@@ -45,6 +49,10 @@ export const SettingsPage: FC<SettingsPageProps> = ({
   onEditProfile,
   onUpgrade,
   onSignOut,
+  onDeleteAccount,
+  onCancelDeletion,
+  deletionRequestedAt,
+  deletionScheduledForLabel,
   onViewPrivacy,
   onViewTerms,
   userEmail,
@@ -92,6 +100,10 @@ export const SettingsPage: FC<SettingsPageProps> = ({
           onEditProfile={onEditProfile}
           onUpgrade={onUpgrade}
           onSignOut={onSignOut}
+          onDeleteAccount={onDeleteAccount}
+          onCancelDeletion={onCancelDeletion}
+          deletionRequestedAt={deletionRequestedAt}
+          deletionScheduledForLabel={deletionScheduledForLabel}
         />
 
         {/* Section 2: Appearance & Display Theme */}

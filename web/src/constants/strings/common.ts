@@ -196,7 +196,18 @@ export const commonStrings = {
     piqPrivacyWarning: 'Privacy Warning: For candidate secrecy and cybersecurity, do not enter sensitive PII (Aadhaar, Govt ID numbers, or Passport details) into form fields.',
     completeProfileTitle: 'Complete your Candidate Profile',
     completeProfileSubtitle: 'Add your Full Name, Age, Gender, and Type of Entry so your AI dossier reflects your real candidacy.',
-    completeProfileCta: 'Complete Profile'
+    completeProfileCta: 'Complete Profile',
+    deleteAccount: 'Delete Account',
+    deleteAccountConfirmTitle: 'Delete your Candidate Account?',
+    deleteAccountConfirmBody:
+      'Your account will be scheduled for permanent deletion, including all test submissions, AI dossier reports, and profile data. You have {days} days to change your mind -- sign back in and cancel from this page. After that, deletion cannot be undone.',
+    deleteAccountConfirmCheckbox: 'I understand this cannot be undone after the {days}-day grace period.',
+    deleteAccountConfirmButton: 'Yes, Delete My Account',
+    deleteAccountCancelButton: 'Cancel',
+    deleteAccountFailed: 'Failed to schedule account deletion. Please try again.',
+    deletionPendingBanner: 'Account deletion scheduled. Your account and data will be permanently removed on {date}.',
+    cancelDeletionButton: 'Cancel Deletion',
+    cancelDeletionFailed: 'Failed to cancel account deletion. Please try again.'
   },
   editProfileModal: {
     title: 'Edit Candidate Profile',
