@@ -424,15 +424,21 @@ service cloud.firestore {
 
     // D2 side documents (docs/plans/write-the-phased-plan-wobbly-pancake.md
     // Phase 5): structured DocumentModel published alongside -- never onto --
-    // topic_content / study_materials. Mirrors topic_content's rule exactly,
-    // fetched only when a topic/material detail screen is actually opened.
+    // topic_content / study_materials, fetched only when a topic/material
+    // detail screen is actually opened. Each mirrors its own legacy sibling's
+    // rule, not a single shared one: topic_sections mirrors topic_content
+    // (authenticated-only -- KMP is the only reader). study_material_sections
+    // mirrors study_materials (public -- the web Study tab's StudyReaderModal
+    // reads it unauthenticated, same as study_materials itself); mirroring
+    // topic_content here instead was a real bug caught live -- an anonymous
+    // web visitor got Missing or insufficient permissions on every material.
     match /topic_sections/{topicId} {
       allow read: if isAuthenticated();
       allow write: if false;
     }
 
     match /study_material_sections/{materialId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if false;
     }
 
