@@ -26,6 +26,7 @@ export const DeveloperSettingsCard: FC<DeveloperSettingsCardProps> = ({
   onSelectOverride,
 }) => {
   const isOverrideActive = devTierOverride !== 'FOLLOW_REAL';
+  const activeChip = OVERRIDE_CHIPS.find((c) => c.value === devTierOverride);
 
   return (
     <GridCardContainer variant="free" testId="dev-settings-card" className="p-6 space-y-4">
@@ -59,7 +60,7 @@ export const DeveloperSettingsCard: FC<DeveloperSettingsCardProps> = ({
         })}
       </div>
 
-      {isOverrideActive && (
+      {isOverrideActive && activeChip && (
         <div
           className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2.5"
           data-testid="dev-override-active-banner"
@@ -67,7 +68,7 @@ export const DeveloperSettingsCard: FC<DeveloperSettingsCardProps> = ({
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>
             {strings.devSettings.activeOverrideNotice}{' '}
-            <strong>{strings.devSettings[OVERRIDE_CHIPS.find((c) => c.value === devTierOverride)!.labelKey]}</strong>
+            <strong>{strings.devSettings[activeChip.labelKey]}</strong>
           </span>
         </div>
       )}

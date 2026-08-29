@@ -102,4 +102,45 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
 
     expect(signInSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('shows a working sign-out control in Settings for a signed-in user', () => {
+    vi.spyOn(authService, 'getCurrentUser').mockReturnValue({
+      uid: 'user_123',
+      email: 'cadet@ssbmax.in',
+      displayName: 'Cadet Officer',
+      photoURL: null
+    });
+    const signOutSpy = vi.spyOn(authService, 'signOut').mockResolvedValue(undefined);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByTestId('nav-item-settings'));
+
+    expect(screen.getByTestId('account-display-name')).toHaveTextContent('Cadet Officer');
+    expect(screen.getByTestId('account-email')).toHaveTextContent('cadet@ssbmax.in');
+
+    fireEvent.click(screen.getByTestId('sign-out-btn'));
+    expect(signOutSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the sign-out control in Settings for a guest user', () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByTestId('nav-item-settings'));
+
+    expect(screen.queryByTestId('sign-out-btn')).not.toBeInTheDocument();
+  });
+
+  it('renders Settings instead of crashing when a stale/invalid dev-tier override is stored', () => {
+    // Regression: a corrupted `ssbmax_dev_tier_override` localStorage value (observed live as
+    // the string "command") crashed DeveloperSettingsCard and blanked the whole Settings tab.
+    localStorage.setItem('ssbmax_dev_tier_override', 'command');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByTestId('nav-item-settings'));
+
+    expect(screen.getByTestId('settings-page')).toBeInTheDocument();
+    expect(screen.getByTestId('dev-tier-chip-FOLLOW_REAL')).toHaveAttribute('aria-pressed', 'true');
+  });
 });

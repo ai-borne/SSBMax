@@ -1,4 +1,4 @@
-import { useState, useMemo, FC } from 'react';
+import { useState, useMemo, useEffect, FC } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { AppLayout } from './components/layout/AppLayout';
 import { LandingPage } from './components/landing/LandingPage';
@@ -33,6 +33,12 @@ import { UpdateRequiredScreen } from './components/common/UpdateRequiredScreen';
 import { AccessTier, DevTierOverride, getEffectiveTier } from './constants/ssbSelectionProcess';
 
 const DEV_TIER_OVERRIDE_KEY = 'ssbmax_dev_tier_override';
+const VALID_DEV_TIER_OVERRIDES: DevTierOverride[] = ['FOLLOW_REAL', 'FORCE_FREE', 'FORCE_BASIC', 'FORCE_PRO', 'FORCE_PREMIUM'];
+
+function readStoredDevTierOverride(): DevTierOverride {
+  const stored = localStorage.getItem(DEV_TIER_OVERRIDE_KEY);
+  return VALID_DEV_TIER_OVERRIDES.includes(stored as DevTierOverride) ? (stored as DevTierOverride) : 'FOLLOW_REAL';
+}
 
 export const App: FC = () => {
   const updateRequired = useAppVersionGateViewModel();
@@ -40,14 +46,15 @@ export const App: FC = () => {
   const [activeTest, setActiveTest] = useState<string | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | undefined>(undefined);
   const [selectedResult, setSelectedResult] = useState<NotificationResultTarget | null>(null);
-  const [devTierOverride, setDevTierOverride] = useState<DevTierOverride>(
-    () => (localStorage.getItem(DEV_TIER_OVERRIDE_KEY) as DevTierOverride | null) || 'FOLLOW_REAL'
-  );
+  const [devTierOverride, setDevTierOverride] = useState<DevTierOverride>(readStoredDevTierOverride);
 
   const handleSelectDevTier = (override: DevTierOverride) => {
     setDevTierOverride(override);
     localStorage.setItem(DEV_TIER_OVERRIDE_KEY, override);
   };
+
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+  useEffect(() => authService.onAuthStateChanged(setCurrentUser), []);
 
   const { tier: realTier, usage } = useSubscriptionViewModel(authService.getCurrentUser()?.uid, devTierOverride);
   const paymentService = useMemo(() => new PaymentService(), []);
@@ -205,8 +212,12 @@ export const App: FC = () => {
           )}
           {activeTab === 'settings' && (
             <SettingsPage
-              userId={authService.getCurrentUser()?.uid}
+              userId={currentUser?.uid}
               isPro={isPaidMember}
+              isGuest={!currentUser}
+              userEmail={currentUser?.email}
+              userName={currentUser?.displayName}
+              onSignOut={() => authService.signOut()}
               devTierOverride={devTierOverride}
               onUpgrade={() => setActiveTab('subscription')}
               onSelectDevTier={handleSelectDevTier}

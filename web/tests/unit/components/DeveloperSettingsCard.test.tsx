@@ -46,4 +46,18 @@ describe('DeveloperSettingsCard Component', () => {
     fireEvent.click(screen.getByTestId('dev-tier-chip-FOLLOW_REAL'));
     expect(onSelectOverride).toHaveBeenCalledWith('FOLLOW_REAL');
   });
+
+  it('does not crash and hides the active override banner when given a value outside the known override set', () => {
+    // Regression: a stale/corrupted localStorage value (e.g. from an older build) used to
+    // crash the whole Settings page here via a non-null assertion on Array.find().
+    render(
+      <DeveloperSettingsCard
+        devTierOverride={'command' as unknown as Parameters<typeof DeveloperSettingsCard>[0]['devTierOverride']}
+        onSelectOverride={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('dev-settings-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('dev-override-active-banner')).not.toBeInTheDocument();
+  });
 });
