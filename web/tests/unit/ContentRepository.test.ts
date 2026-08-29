@@ -218,5 +218,51 @@ describe('ContentRepository Unit Tests', () => {
 
     await expect(repository.getOIRContentVersion()).rejects.toThrow();
   });
+
+  // Phase 5 (docs/plans/write-the-phased-plan-wobbly-pancake.md, D2 side documents).
+  describe('getStudyMaterialSections', () => {
+    it('returns null when no study_material_sections doc has been published for this material', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+
+      expect(await repository.getStudyMaterialSections('mat_1')).toBeNull();
+    });
+
+    it('returns null (never throws) when the fetch itself fails', async () => {
+      vi.mocked(getDoc).mockRejectedValueOnce(new Error('offline'));
+
+      expect(await repository.getStudyMaterialSections('mat_1')).toBeNull();
+    });
+
+    it('unwraps table rows from publishContent.js\'s { cells } wrapping back into string[][]', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          sections: [
+            {
+              id: 's#0',
+              slug: 'a',
+              heading: null,
+              level: 0,
+              blocks: [
+                { type: 'paragraph', text: 'Hello' },
+                { type: 'table', rows: [{ cells: ['H1', 'H2'] }, { cells: ['a', 'b'] }] }
+              ]
+            }
+          ]
+        })
+      } as any);
+
+      const model = await repository.getStudyMaterialSections('mat_1');
+
+      expect(model?.sections[0].blocks[0]).toEqual({ type: 'paragraph', text: 'Hello' });
+      expect(model?.sections[0].blocks[1]).toEqual({
+        type: 'table',
+        rows: [
+          ['H1', 'H2'],
+          ['a', 'b']
+        ]
+      });
+    });
+  });
 });
 

@@ -72,6 +72,10 @@ class MockContentRepository implements IContentRepository {
   async getAvailableBatches(): Promise<any[]> {
     return [];
   }
+
+  async getStudyMaterialSections() {
+    return null;
+  }
 }
 
 

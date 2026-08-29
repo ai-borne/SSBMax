@@ -5,6 +5,15 @@ import { strings } from '../../constants/strings';
 import { StudyMaterial } from '../../types/testContent';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { renderMarkdown } from '../../utils/renderMarkdown';
+import { useStudyMaterialSections } from '../../viewmodels/useStudyMaterialSections';
+import { DocumentView } from '../content/DocumentView';
+import { ContentRepository } from '../../repositories/ContentRepository';
+import { IContentRepository } from '../../repositories/interfaces/IContentRepository';
+
+// Module-level singleton, not `new ContentRepository()` inline as the prop default -- an inline
+// default is re-created every render, which would change useStudyMaterialSections' dependency
+// and re-trigger the fetch effect on every render.
+const defaultContentRepository = new ContentRepository();
 
 export interface StudyReaderModalProps {
   material: StudyMaterial | null;
@@ -12,6 +21,9 @@ export interface StudyReaderModalProps {
   isCompleted?: boolean;
   onClose: () => void;
   onToggleCompleted?: (id: string) => void;
+  /** Injectable for tests, same pattern as StudyMaterialPage's `viewModel` prop -- defaults to
+   * a real ContentRepository so callers never need to pass this in production. */
+  contentRepository?: IContentRepository;
 }
 
 export const StudyReaderModal: FC<StudyReaderModalProps> = ({
@@ -19,14 +31,18 @@ export const StudyReaderModal: FC<StudyReaderModalProps> = ({
   isOpen,
   isCompleted = false,
   onClose,
-  onToggleCompleted
+  onToggleCompleted,
+  contentRepository = defaultContentRepository
 }) => {
   const isOnline = useOnlineStatus();
+  const sections = useStudyMaterialSections(material?.id, material?.topicType, contentRepository);
 
   // Content's own headings nest under this modal's <h2> title (BaseModal), so shift by 1.
+  // Only needed as a fallback -- once `sections` resolves, DocumentView renders instead (D4:
+  // no runtime markdown parsing once structured sections are available).
   const contentHtml = useMemo(
-    () => (material ? renderMarkdown(material.contentMarkdown, 1) : ''),
-    [material]
+    () => (material && !sections ? renderMarkdown(material.contentMarkdown, 1) : ''),
+    [material, sections]
   );
 
   if (!material) return null;
@@ -83,11 +99,20 @@ export const StudyReaderModal: FC<StudyReaderModalProps> = ({
           {material.summary}
         </p>
 
-        {/* Markdown Content -- contentHtml is rendered HTML (see renderMarkdown's doc comment on trust) */}
-        <div
-          className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: contentHtml }}
-        />
+        {/* D4: no runtime markdown parsing once a study_material_sections side document exists
+            for this material -- DocumentView renders the same typed blocks as every other
+            surface. Falls back to contentHtml (rendered HTML, see renderMarkdown's doc comment
+            on trust) when sections hasn't resolved yet or none is published. */}
+        {sections ? (
+          <div className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+            <DocumentView model={sections} />
+          </div>
+        ) : (
+          <div
+            className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: contentHtml }}
+          />
+        )}
       </div>
     </BaseModal>
   );

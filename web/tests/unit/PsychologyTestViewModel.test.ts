@@ -41,7 +41,8 @@ describe('PsychologyTestViewModel TDD Unit Tests', () => {
       }),
       getGPEBatch: vi.fn(),
       getOIRContentVersion: vi.fn(),
-      getAvailableBatches: vi.fn().mockResolvedValue([])
+      getAvailableBatches: vi.fn().mockResolvedValue([]),
+      getStudyMaterialSections: vi.fn()
     };
 
     mockOfflineQueue = {

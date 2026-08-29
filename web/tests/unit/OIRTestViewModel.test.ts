@@ -45,7 +45,8 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
       getSRTBatch: vi.fn(),
       getGPEBatch: vi.fn(),
       getOIRContentVersion: vi.fn(),
-      getAvailableBatches: vi.fn().mockResolvedValue([])
+      getAvailableBatches: vi.fn().mockResolvedValue([]),
+      getStudyMaterialSections: vi.fn()
     };
 
 

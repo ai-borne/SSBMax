@@ -4,6 +4,7 @@ import { FirestorePaths } from '../generated/contracts';
 import { IContentRepository } from './interfaces/IContentRepository';
 import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, TestBatchInfo, GPEImage, OIRContentMeta } from '../types/testContent';
 import { ContentUnavailableError } from '../types/errors';
+import type { DocumentModel, DocSection } from '../components/content/blocks/types';
 import { getFallbackStudyMaterials, getFallbackStudyMaterialById } from '../constants/fallbackStudyMaterials';
 import { primaryTestTypeIdForTopicType } from '../constants/topicTypeMapping';
 import {
@@ -235,6 +236,38 @@ export class ContentRepository implements IContentRepository {
     } catch (error) {
       console.warn(`Failed to query batches for module ${normModule}`, error);
       return [];
+    }
+  }
+
+  /**
+   * D2 side document `study_material_sections/{id}` (Phase 5, docs/plans/
+   * write-the-phased-plan-wobbly-pancake.md) -- fetched only when a material's reader is
+   * actually opened (StudyReaderModal), never as part of the study-materials list query, same
+   * "fetched only on detail open" contract as KMP's `GitLiveStudyContentRepository.
+   * getStudyMaterialSections`. `table` blocks' rows come back wrapped as `{ cells }`
+   * (`publishContent.js`'s `sanitizeForFirestore` -- Firestore rejects a directly-nested
+   * array), unwrapped back to `string[][]` here to match every other DocumentModel consumer
+   * (the build-time bundle, KMP).
+   */
+  async getStudyMaterialSections(id: string): Promise<DocumentModel | null> {
+    try {
+      const snap = await getDoc(doc(db, FirestorePaths.STUDY_MATERIAL_SECTIONS, id));
+      if (!snap.exists()) return null;
+      const data = snap.data() as { sections?: DocSection[] };
+      if (!Array.isArray(data.sections)) return null;
+      return {
+        sections: data.sections.map((section) => ({
+          ...section,
+          blocks: section.blocks.map((block) =>
+            block.type === 'table'
+              ? { ...block, rows: (block as unknown as { rows: { cells: string[] }[] }).rows.map((r) => r.cells) }
+              : block
+          ),
+        })),
+      };
+    } catch (error) {
+      console.warn(`Failed to fetch study material sections for ${id}`, error);
+      return null;
     }
   }
 }
