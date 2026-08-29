@@ -3,8 +3,8 @@ id: "GTO"
 topicType: "GTO"
 title: "Group Testing Officer Tasks"
 isPremium: false
-version: 3
-lastUpdated: 1761900000000
+version: 4
+lastUpdated: 1788008689559
 takeaways: ["Days 3-4 belong to the GTO, who runs 8+ indoor/outdoor group tasks over two full days", "GTO is the only stage where assessors watch you operate inside a real group under physical and time pressure", "Consistency of contribution across tasks matters more than dominating any single task", "Physical fitness genuinely affects your Stamina and Determination scores, not just task completion"]
 ---
 ## What Are GTO Tasks?
@@ -20,11 +20,12 @@ Psychology tests reveal how you think when writing alone; the interview reveals 
 - **Group Discussion (GD)**: A topic (often current affairs or a case study) is discussed by the whole group for ~15-20 minutes with no appointed leader -- assessors watch who contributes substantively, who listens, and who dominates without adding value
 - **Group Planning Exercise (GPE)**: The group is given a complex model situation with a map and several problems to solve within a time limit, first individually in writing, then as a group discussion producing one final plan
 - **Progressive Group Task (PGT)**: A series of increasingly difficult obstacles that the group must cross together using limited materials (planks, ropes) within rules -- physical, hands-on group problem-solving
+- **Snake Race / Group Obstacle Race**: The whole group carries a continuous connected load (the "snake") across a series of obstacles as fast as possible -- tests coordinated group speed and teamwork under time pressure
 - **Half Group Task (HGT)**: A shorter, single obstacle version of PGT with half the group, giving quieter candidates more room to contribute
-- **Command Task**: Each candidate individually commands a small team of 2-3 (chosen by the candidate) through an obstacle -- the one task where you are explicitly the leader and directly accountable for the outcome
-- **Individual Obstacles (Snake Race / Individual Obstacle Task)**: A timed course of ~10 physical obstacles attempted individually; scored by how many are completed correctly within the time limit
-- **Final Group Task (FGT)**: A wrap-up group obstacle task, often combining leftover elements from earlier tasks, giving every candidate one last chance to demonstrate initiative
 - **Lecturette**: A 3-minute solo talk on one of four topics drawn by the candidate, delivered standing in front of the group -- tests structured thinking and public speaking under a tight time limit
+- **Individual Obstacles Test (IOT)**: A timed course of ~10 physical obstacles attempted individually; scored by how many are completed correctly within the time limit
+- **Command Task**: Each candidate individually commands a small team of 2-3 (chosen by the candidate) through an obstacle -- the one task where you are explicitly the leader and directly accountable for the outcome
+- **Final Group Task (FGT)**: A wrap-up group obstacle task, often combining leftover elements from earlier tasks, giving every candidate one last chance to demonstrate initiative
 
 ## What Is GTO Actually Watching For?
 
@@ -50,5 +51,5 @@ Psychology tests reveal how you think when writing alone; the interview reveals 
 ## Key Numbers to Remember
 
 - Duration: 2 full days (Day 3-4)
-- Task count: 8+ distinct GTO exercises across GD, GPE, PGT, HGT, Command Task, Individual Obstacles, FGT, and Lecturette
+- Task count: 9 distinct GTO exercises, in order -- GD, GPE, PGT, Snake Race, HGT, Lecturette, Individual Obstacles, Command Task, and FGT
 - Focus: Teamwork, practical leadership, and physical execution under time pressure

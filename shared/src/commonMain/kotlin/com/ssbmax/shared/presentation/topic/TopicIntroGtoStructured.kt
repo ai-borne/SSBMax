@@ -64,18 +64,21 @@ internal fun gtoIntroductionSections(): DocumentModel = DocumentModel(
                 "**Progressive Group Task (PGT)**: A series of increasingly difficult obstacles that the group must " +
                 "cross together using limited materials (planks, ropes) within rules -- physical, hands-on group " +
                 "problem-solving",
+                "**Snake Race / Group Obstacle Race**: The whole group carries a continuous connected load (the " +
+                "\"snake\") across a series of obstacles as fast as possible -- tests coordinated group speed and " +
+                "teamwork under time pressure",
                 "**Half Group Task (HGT)**: A shorter, single obstacle version of PGT with half the group, giving " +
                 "quieter candidates more room to contribute",
+                "**Lecturette**: A 3-minute solo talk on one of four topics drawn by the candidate, delivered " +
+                "standing in front of the group -- tests structured thinking and public speaking under a tight time " +
+                "limit",
+                "**Individual Obstacles Test (IOT)**: A timed course of ~10 physical obstacles attempted " +
+                "individually; scored by how many are completed correctly within the time limit",
                 "**Command Task**: Each candidate individually commands a small team of 2-3 (chosen by the candidate) " +
                 "through an obstacle -- the one task where you are explicitly the leader and directly accountable for " +
                 "the outcome",
-                "**Individual Obstacles (Snake Race / Individual Obstacle Task)**: A timed course of ~10 physical " +
-                "obstacles attempted individually; scored by how many are completed correctly within the time limit",
                 "**Final Group Task (FGT)**: A wrap-up group obstacle task, often combining leftover elements from " +
-                "earlier tasks, giving every candidate one last chance to demonstrate initiative",
-                "**Lecturette**: A 3-minute solo talk on one of four topics drawn by the candidate, delivered " +
-                "standing in front of the group -- tests structured thinking and public speaking under a tight time " +
-                "limit"
+                "earlier tasks, giving every candidate one last chance to demonstrate initiative"
             ))
         )
     ),
@@ -139,8 +142,8 @@ internal fun gtoIntroductionSections(): DocumentModel = DocumentModel(
         blocks = listOf(
             ListBlock(items = listOf(
                 "Duration: 2 full days (Day 3-4)",
-                "Task count: 8+ distinct GTO exercises across GD, GPE, PGT, HGT, Command Task, Individual Obstacles, " +
-                "FGT, and Lecturette",
+                "Task count: 9 distinct GTO exercises, in order -- GD, GPE, PGT, Snake Race, HGT, Lecturette, " +
+                "Individual Obstacles, Command Task, and FGT",
                 "Focus: Teamwork, practical leadership, and physical execution under time pressure"
             ))
         )
