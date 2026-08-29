@@ -4,6 +4,7 @@
 export const studyMaterialStrings = {
   studyMaterial: {
     title: 'Free Study Material',
+    subtitle: 'Track your preparation progress, run timed SSB test simulators, and review AI OLQ assessments.',
     allCategories: 'All Categories',
     readTime: '{min} min read',
     markAsRead: 'Mark as Read',

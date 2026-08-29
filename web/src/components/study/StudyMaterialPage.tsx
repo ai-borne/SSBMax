@@ -126,7 +126,7 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
               {strings.studyMaterial.title}
             </h1>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
-              {strings.dashboard.subtitle}
+              {strings.studyMaterial.subtitle}
             </p>
           </div>
 
