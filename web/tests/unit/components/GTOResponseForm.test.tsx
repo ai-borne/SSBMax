@@ -4,8 +4,25 @@ import { GTOResponseForm } from '../../../src/components/testRunners/GTOResponse
 import { SubmissionRepository } from '../../../src/repositories/SubmissionRepository';
 import { SubmissionService } from '../../../src/services/SubmissionService';
 import { EligibilityService } from '../../../src/services/EligibilityService';
+import type { OfflineQueueService } from '../../../src/services/OfflineQueueService';
 
 vi.mock('../../../src/repositories/SubmissionRepository');
+
+const mockUseOnlineStatus = vi.fn(() => true);
+vi.mock('../../../src/hooks/useOnlineStatus', () => ({
+  useOnlineStatus: () => mockUseOnlineStatus()
+}));
+
+vi.mock('../../../src/services/AuthService', () => ({
+  authService: { getCurrentUser: () => ({ uid: 'user-1', email: null, displayName: null, photoURL: null }) }
+}));
+
+function mockOfflineQueue(overrides: Partial<Record<keyof OfflineQueueService, unknown>> = {}): Mocked<OfflineQueueService> {
+  return {
+    enqueueSubmission: vi.fn().mockResolvedValue('sub_1'),
+    ...overrides
+  } as unknown as Mocked<OfflineQueueService>;
+}
 
 function mockService(overrides: Partial<Record<keyof SubmissionService, unknown>> = {}): Mocked<SubmissionService> {
   return {
@@ -175,5 +192,67 @@ describe('GTOResponseForm', () => {
   it('disables the submit button until a non-empty response is entered', () => {
     render(<GTOResponseForm gtoType="GTO_GD" topic="Topic" submissionService={mockService()} />);
     expect(screen.getByTestId('gto-submit-button')).toBeDisabled();
+  });
+
+  it('enqueues the exact submitGTOTest payload shape when offline, instead of calling submitGTOTest/evaluateGTO -- matches the OIR/Psychology offline-branch convention so resync can replay it verbatim', async () => {
+    mockUseOnlineStatus.mockReturnValue(false);
+    const service = mockService();
+    const eligibility = mockEligibility();
+    const offlineQueue = mockOfflineQueue();
+    render(
+      <GTOResponseForm
+        gtoType="GTO_GD"
+        topic="Leadership under pressure"
+        submissionService={service}
+        eligibilityService={eligibility}
+        offlineQueueService={offlineQueue}
+      />
+    );
+
+    fireEvent.change(screen.getByTestId('gto-response-textarea'), { target: { value: 'My response text' } });
+    fireEvent.click(screen.getByTestId('gto-submit-button'));
+
+    await waitFor(() => expect(screen.getByTestId('gto-submit-success')).toBeInTheDocument());
+    expect(offlineQueue.enqueueSubmission).toHaveBeenCalledWith({
+      testType: 'GTO_GD',
+      userId: 'user-1',
+      payload: {
+        gtoType: 'GTO_GD',
+        topic: 'Leadership under pressure',
+        response: 'My response text',
+        charCount: 'My response text'.length
+      }
+    });
+    expect(service.submitGTOTest).not.toHaveBeenCalled();
+    expect(service.evaluateGTO).not.toHaveBeenCalled();
+    expect(eligibility.recordTestUsage).not.toHaveBeenCalled();
+
+    mockUseOnlineStatus.mockReturnValue(true);
+  });
+
+  it('enqueues a non-evaluable GTO type offline with its own payload shape (notes field, no evaluate)', async () => {
+    mockUseOnlineStatus.mockReturnValue(false);
+    const offlineQueue = mockOfflineQueue();
+    render(
+      <GTOResponseForm
+        gtoType="GTO_PGT"
+        topic="Obstacle course"
+        submissionService={mockService()}
+        eligibilityService={mockEligibility()}
+        offlineQueueService={offlineQueue}
+      />
+    );
+
+    fireEvent.change(screen.getByTestId('gto-response-textarea'), { target: { value: 'My notes' } });
+    fireEvent.click(screen.getByTestId('gto-submit-button'));
+
+    await waitFor(() => expect(screen.getByTestId('gto-submit-success')).toBeInTheDocument());
+    expect(offlineQueue.enqueueSubmission).toHaveBeenCalledWith({
+      testType: 'GTO_PGT',
+      userId: 'user-1',
+      payload: { gtoType: 'GTO_PGT', notes: 'My notes' }
+    });
+
+    mockUseOnlineStatus.mockReturnValue(true);
   });
 });

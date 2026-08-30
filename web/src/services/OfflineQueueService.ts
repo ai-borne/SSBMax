@@ -2,7 +2,21 @@ import { auth } from '../config/firebase';
 
 export interface QueuedSubmission {
   id: string;
-  testType: 'OIR' | 'TAT' | 'WAT' | 'SRT' | 'SD' | 'PPDT';
+  testType:
+    | 'OIR'
+    | 'TAT'
+    | 'WAT'
+    | 'SRT'
+    | 'SD'
+    | 'PPDT'
+    | 'GTO_GD'
+    | 'GTO_GPE'
+    | 'GTO_LECTURETTE'
+    | 'GTO_PGT'
+    | 'GTO_GOR'
+    | 'GTO_HGT'
+    | 'GTO_CT'
+    | 'GTO_IO';
   userId: string;
   payload: Record<string, unknown>;
   timestamp: number;

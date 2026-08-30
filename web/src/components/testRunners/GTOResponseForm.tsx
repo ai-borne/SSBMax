@@ -3,9 +3,12 @@ import { Clock } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { SubmissionService } from '../../services/SubmissionService';
 import { EligibilityService } from '../../services/EligibilityService';
+import { OfflineQueueService, QueuedSubmission } from '../../services/OfflineQueueService';
 import { recordUsageThenEvaluate } from '../../services/testEvaluationOrchestrator';
 import { SubmissionResultView } from '../evaluation/SubmissionResultView';
 import { FirestorePaths } from '../../generated/contracts';
+import { authService } from '../../services/AuthService';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 
 /**
  * Only GD/GPE/Lecturette have a matching `evaluateGTO` prompt path today
@@ -35,6 +38,7 @@ export interface GTOResponseFormProps {
   topic: string;
   submissionService?: SubmissionService;
   eligibilityService?: EligibilityService;
+  offlineQueueService?: OfflineQueueService;
 }
 
 type SubmitStatus = 'idle' | 'submitting' | 'submitted' | 'error';
@@ -43,17 +47,33 @@ export const GTOResponseForm: FC<GTOResponseFormProps> = ({
   gtoType,
   topic,
   submissionService = new SubmissionService(),
-  eligibilityService = new EligibilityService()
+  eligibilityService = new EligibilityService(),
+  offlineQueueService = new OfflineQueueService()
 }) => {
   const [response, setResponse] = useState('');
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const isOnline = useOnlineStatus();
   const t = strings.testRunner.gtoCapture;
 
   const handleSubmit = async () => {
     setStatus('submitting');
     setError(null);
+
+    if (!isOnline) {
+      // Enqueue the exact submitGTOTest payload shape, so resync can replay it verbatim --
+      // same convention Phase 1 established for OIR/Psychology offline branches.
+      const userId = authService.getCurrentUser()?.uid ?? '';
+      await offlineQueueService.enqueueSubmission({
+        testType: gtoType as QueuedSubmission['testType'],
+        userId,
+        payload: { gtoType, ...buildSubmissionData(gtoType, topic, response) }
+      });
+      setStatus('submitted');
+      return;
+    }
+
     try {
       const { submissionId: newSubmissionId } = await submissionService.submitGTOTest({
         gtoType,
