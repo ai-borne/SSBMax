@@ -131,6 +131,24 @@ describe('App Main Component Routing & Full-Screen Test Mode', () => {
     expect(screen.queryByTestId('sign-out-btn')).not.toBeInTheDocument();
   });
 
+  it('wires real offline status into OIRTestRunner instead of the isOnline=true default', async () => {
+    // Regression: App.tsx never called useOnlineStatus() and never passed isOnline to
+    // OIRTestRunner, so the prop's `isOnline = true` default always won -- the offline-queue
+    // enqueue branch (OIRTestViewModel.submitTest's isOnline===false path) was unreachable from
+    // the real UI no matter the browser's actual connectivity.
+    vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+
+    render(<App />);
+    fireEvent.click(screen.getByTestId('nav-item-tests'));
+    fireEvent.click(screen.getByTestId('launch-button-oir'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByText(strings.oir.requiresOnline)).toBeInTheDocument();
+  });
+
   it('renders Settings instead of crashing when a stale/invalid dev-tier override is stored', () => {
     // Regression: a corrupted `ssbmax_dev_tier_override` localStorage value (observed live as
     // the string "command") crashed DeveloperSettingsCard and blanked the whole Settings tab.

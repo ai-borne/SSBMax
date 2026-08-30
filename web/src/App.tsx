@@ -29,6 +29,7 @@ import { OIRTestViewModel } from './viewmodels/OIRTestViewModel';
 import { PsychologyTestViewModel, PsychologyTestType } from './viewmodels/PsychologyTestViewModel';
 import { ContentRepository } from './repositories/ContentRepository';
 import { useTabRouting } from './hooks/useTabRouting';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { authService } from './services/AuthService';
 import { useSubscriptionViewModel } from './viewmodels/SubscriptionViewModel';
 import { useAppVersionGateViewModel } from './viewmodels/useAppVersionGateViewModel';
@@ -48,6 +49,7 @@ function readStoredDevTierOverride(): DevTierOverride {
 export const App: FC = () => {
   const updateRequired = useAppVersionGateViewModel();
   const { activeTab, setActiveTab } = useTabRouting('home');
+  const isOnline = useOnlineStatus();
   const [activeTest, setActiveTest] = useState<string | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | undefined>(undefined);
   const [selectedResult, setSelectedResult] = useState<NotificationResultTarget | null>(null);
@@ -147,6 +149,7 @@ export const App: FC = () => {
           <OIRTestRunner
             viewModel={oirViewModel}
             userId="cadet-web-user"
+            isOnline={isOnline}
             batchIndex={oirBatchIndex}
             onExitTest={handleExitTest}
           />
@@ -154,6 +157,7 @@ export const App: FC = () => {
           <PsychologyTestRunner
             viewModel={psychViewModel}
             userId="cadet-web-user"
+            isOnline={isOnline}
             batchId={activeBatchId}
             onExitTest={handleExitTest}
           />
@@ -166,6 +170,7 @@ export const App: FC = () => {
           <PsychologyTestRunner
             viewModel={psychViewModel}
             userId="cadet-web-user"
+            isOnline={isOnline}
             batchId={activeBatchId}
             onExitTest={handleExitTest}
           />
