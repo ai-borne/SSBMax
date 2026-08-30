@@ -9,7 +9,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { notifyEvaluationComplete } = require('../src/notifications/sendNotification');
+const { notifyEvaluationComplete, writeAndPush } = require('../src/notifications/sendNotification');
 
 function makeFakeDb() {
   const store = {};
@@ -185,4 +185,53 @@ test('Phase 2: notifyEvaluationComplete does not delete a token row on a non-sta
   await notifyEvaluationComplete({ firestoreDb: db, userId: 'user1', testType: 'WAT', submissionId: 'sub1', messaging });
 
   assert.ok(db._store['fcmTokens/user1_device1'], 'a transient send error must not delete the token row');
+});
+
+test('writeAndPush writes a notification doc with the given type and stringified actionData', async () => {
+  const db = makeFakeDb();
+  const { id } = await writeAndPush({
+    firestoreDb: db,
+    userId: 'user1',
+    type: 'TEST_REMINDER',
+    title: 'Time to practice',
+    message: 'Your daily SSB practice reminder',
+    actionUrl: '/practice',
+    actionData: { source: 'scheduled' },
+    messaging: makeFakeMessaging()
+  });
+
+  const doc = db._store[`notifications/${id}`];
+  assert.equal(doc.type, 'TEST_REMINDER');
+  assert.equal(doc.title, 'Time to practice');
+  assert.deepEqual(doc.actionData, { source: 'scheduled' });
+});
+
+test('writeAndPush sends the given type (not a hardcoded GRADING_COMPLETE) in the FCM data payload', async () => {
+  const db = makeFakeDb();
+  db._seed('fcmTokens/user1_device1', { userId: 'user1', deviceId: 'device1', token: 'tok-1', platform: 'android' });
+  const messaging = makeFakeMessaging();
+
+  await writeAndPush({
+    firestoreDb: db,
+    userId: 'user1',
+    type: 'TEST_REMINDER',
+    title: 'Time to practice',
+    message: 'Your daily SSB practice reminder',
+    actionUrl: '/practice',
+    actionData: { source: 'scheduled' },
+    messaging
+  });
+
+  assert.equal(messaging.calls[0].data.type, 'TEST_REMINDER');
+  assert.equal(messaging.calls[0].data.source, 'scheduled');
+});
+
+test('notifyEvaluationComplete (via writeAndPush) still sends GRADING_COMPLETE in the FCM data payload', async () => {
+  const db = makeFakeDb();
+  db._seed('fcmTokens/user1_device1', { userId: 'user1', deviceId: 'device1', token: 'tok-1', platform: 'android' });
+  const messaging = makeFakeMessaging();
+
+  await notifyEvaluationComplete({ firestoreDb: db, userId: 'user1', testType: 'WAT', submissionId: 'sub1', messaging });
+
+  assert.equal(messaging.calls[0].data.type, 'GRADING_COMPLETE');
 });

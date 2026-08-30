@@ -1,4 +1,4 @@
-import { FC, useState } from 'react';
+import { FC } from 'react';
 import { Bell } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { useNotificationPreferencesViewModel } from '../../viewmodels/useNotificationPreferencesViewModel';
@@ -10,23 +10,19 @@ export interface NotificationsSectionProps {
 }
 
 /**
- * Notification settings (Phase 7, Centralized Result-Announcement
- * Notifications plan). The "Push Notifications" toggle is now backed by the
- * real `notificationPreferences` Firestore doc (via
- * `useNotificationPreferencesViewModel`, Phase 5's `NotificationRepository`)
- * and drives the browser permission request + FCM token registration
- * (`requestPushPermission`, Phase 7). The other three toggles (email alerts,
- * offline-sync alerts, practice reminders) are unrelated settings outside
- * this plan's `notificationPreferences` schema -- left as local-state stubs,
- * not touched here.
+ * Notification settings. Both toggles are backed by the real
+ * `notificationPreferences` Firestore doc (via
+ * `useNotificationPreferencesViewModel`). "Push Notifications" drives the
+ * browser permission request + FCM token registration
+ * (`requestPushPermission`). "Daily SSB Practice Reminders" persists
+ * `enableTestReminders`, which is already fully wired on KMP. The
+ * previously-stubbed "Email AI Report Dossiers" and "Offline Queue Sync
+ * Alerts" toggles were removed (no persistence, no backend consumer).
  */
 export const NotificationsSection: FC<NotificationsSectionProps> = ({ userId }) => {
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [offlineSyncAlerts, setOfflineSyncAlerts] = useState(true);
-  const [practiceReminders, setPracticeReminders] = useState(false);
-
-  const { preferences, setEnablePushNotifications } = useNotificationPreferencesViewModel(userId);
+  const { preferences, setEnablePushNotifications, setEnableTestReminders } = useNotificationPreferencesViewModel(userId);
   const pushEnabled = preferences?.enablePushNotifications ?? false;
+  const practiceRemindersEnabled = preferences?.enableTestReminders ?? false;
 
   const togglePush = async () => {
     if (!userId) return;
@@ -35,6 +31,11 @@ export const NotificationsSection: FC<NotificationsSectionProps> = ({ userId }) 
       if (result.status !== 'granted') return;
     }
     await setEnablePushNotifications(!pushEnabled);
+  };
+
+  const togglePracticeReminders = async () => {
+    if (!userId) return;
+    await setEnableTestReminders(!practiceRemindersEnabled);
   };
 
   return (
@@ -70,59 +71,25 @@ export const NotificationsSection: FC<NotificationsSectionProps> = ({ userId }) 
           </div>
         )}
 
-        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80">
-          <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{strings.settings.emailAlerts}</span>
-          <button
-            onClick={() => setEmailAlerts(!emailAlerts)}
-            aria-label={strings.settings.emailAlerts}
-            className={`w-12 h-6 rounded-full p-1 transition-colors ${
-              emailAlerts ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-800'
-            }`}
-            data-testid="toggle-email-alerts"
-          >
-            <div
-              className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                emailAlerts ? 'translate-x-6' : 'translate-x-0'
+        {userId && (
+          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80">
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{strings.settings.practiceReminders}</span>
+            <button
+              onClick={togglePracticeReminders}
+              aria-label={strings.settings.practiceReminders}
+              className={`w-12 h-6 rounded-full p-1 transition-colors ${
+                practiceRemindersEnabled ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-800'
               }`}
-            />
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80">
-          <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{strings.settings.offlineSyncAlerts}</span>
-          <button
-            onClick={() => setOfflineSyncAlerts(!offlineSyncAlerts)}
-            aria-label={strings.settings.offlineSyncAlerts}
-            className={`w-12 h-6 rounded-full p-1 transition-colors ${
-              offlineSyncAlerts ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-800'
-            }`}
-            data-testid="toggle-sync-alerts"
-          >
-            <div
-              className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                offlineSyncAlerts ? 'translate-x-6' : 'translate-x-0'
-              }`}
-            />
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80">
-          <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{strings.settings.practiceReminders}</span>
-          <button
-            onClick={() => setPracticeReminders(!practiceReminders)}
-            aria-label={strings.settings.practiceReminders}
-            className={`w-12 h-6 rounded-full p-1 transition-colors ${
-              practiceReminders ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-800'
-            }`}
-            data-testid="toggle-practice-reminders"
-          >
-            <div
-              className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                practiceReminders ? 'translate-x-6' : 'translate-x-0'
-              }`}
-            />
-          </button>
-        </div>
+              data-testid="toggle-practice-reminders"
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                  practiceRemindersEnabled ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

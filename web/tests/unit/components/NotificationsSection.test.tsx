@@ -27,7 +27,8 @@ describe('NotificationsSection', () => {
       isLoading: false,
       preferences: null,
       error: null,
-      setEnablePushNotifications: vi.fn()
+      setEnablePushNotifications: vi.fn(),
+      setEnableTestReminders: vi.fn()
     });
 
     render(<NotificationsSection />);
@@ -35,12 +36,42 @@ describe('NotificationsSection', () => {
     expect(screen.queryByTestId('toggle-push-notifications')).not.toBeInTheDocument();
   });
 
+  it('hides the practice-reminders toggle for a signed-out user (no userId)', () => {
+    vi.mocked(useNotificationPreferencesViewModel).mockReturnValue({
+      isLoading: false,
+      preferences: null,
+      error: null,
+      setEnablePushNotifications: vi.fn(),
+      setEnableTestReminders: vi.fn()
+    });
+
+    render(<NotificationsSection />);
+
+    expect(screen.queryByTestId('toggle-practice-reminders')).not.toBeInTheDocument();
+  });
+
+  it('no longer renders the removed email-alerts and offline-sync-alerts toggles', () => {
+    vi.mocked(useNotificationPreferencesViewModel).mockReturnValue({
+      isLoading: false,
+      preferences: { ...defaultNotificationPreferences('user_1'), enablePushNotifications: true, enableTestReminders: true },
+      error: null,
+      setEnablePushNotifications: vi.fn(),
+      setEnableTestReminders: vi.fn()
+    });
+
+    render(<NotificationsSection userId="user_1" />);
+
+    expect(screen.queryByTestId('toggle-email-alerts')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('toggle-sync-alerts')).not.toBeInTheDocument();
+  });
+
   it('reflects enablePushNotifications from the loaded preferences doc', () => {
     vi.mocked(useNotificationPreferencesViewModel).mockReturnValue({
       isLoading: false,
       preferences: { ...defaultNotificationPreferences('user_1'), enablePushNotifications: true },
       error: null,
-      setEnablePushNotifications: vi.fn()
+      setEnablePushNotifications: vi.fn(),
+      setEnableTestReminders: vi.fn()
     });
 
     render(<NotificationsSection userId="user_1" />);
@@ -54,7 +85,8 @@ describe('NotificationsSection', () => {
       isLoading: false,
       preferences: { ...defaultNotificationPreferences('user_1'), enablePushNotifications: false },
       error: null,
-      setEnablePushNotifications
+      setEnablePushNotifications,
+      setEnableTestReminders: vi.fn()
     });
     vi.mocked(requestPushPermission).mockResolvedValue({ status: 'granted' });
 
@@ -71,7 +103,8 @@ describe('NotificationsSection', () => {
       isLoading: false,
       preferences: { ...defaultNotificationPreferences('user_1'), enablePushNotifications: false },
       error: null,
-      setEnablePushNotifications
+      setEnablePushNotifications,
+      setEnableTestReminders: vi.fn()
     });
     vi.mocked(requestPushPermission).mockResolvedValue({ status: 'denied' });
 
@@ -80,5 +113,21 @@ describe('NotificationsSection', () => {
 
     await waitFor(() => expect(requestPushPermission).toHaveBeenCalled());
     expect(setEnablePushNotifications).not.toHaveBeenCalled();
+  });
+
+  it('persists enableTestReminders when the practice-reminders toggle is clicked', async () => {
+    const setEnableTestReminders = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useNotificationPreferencesViewModel).mockReturnValue({
+      isLoading: false,
+      preferences: { ...defaultNotificationPreferences('user_1'), enableTestReminders: false },
+      error: null,
+      setEnablePushNotifications: vi.fn(),
+      setEnableTestReminders
+    });
+
+    render(<NotificationsSection userId="user_1" />);
+    fireEvent.click(screen.getByTestId('toggle-practice-reminders'));
+
+    await waitFor(() => expect(setEnableTestReminders).toHaveBeenCalledWith(true));
   });
 });

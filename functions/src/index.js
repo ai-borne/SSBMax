@@ -19,6 +19,7 @@ const { cancelRazorpaySubscription } = require('./razorpaySubscriptionCancel');
 const { evaluateOIRAnswers } = require('./oirScoring');
 const { onOirSubmissionCreated } = require('./notifications/onOirSubmissionCreated');
 const { notifyGradingComplete } = require('./notifications/notifyGradingComplete');
+const { scheduledDailyPracticeReminders } = require('./notifications/scheduledDailyPracticeReminders');
 const { analyzeInterviewResponse, analyzeResponseInline } = require('./aiAnalysis');
 const { recordTestUsage } = require('./eligibility');
 const { geminiGenerateContent } = require('./geminiProxy');
@@ -78,6 +79,12 @@ exports.onOirSubmissionCreated = onOirSubmissionCreated;
 // chain, kept deliberately separate from the flag-gated shared orchestrator for process-death
 // resilience -- see app/CLAUDE.md).
 exports.notifyGradingComplete = notifyGradingComplete;
+// Notification & Intelligence Sync plan (Phase 3): daily 09:00 cron sending a TEST_REMINDER
+// notification + push to every user with notificationPreferences.enableTestReminders == true.
+// enableTestReminders/NotificationType.TEST_REMINDER already existed on both KMP platforms with
+// no server-side sender -- this is that missing sender, shared with web via the same
+// notificationPreferences doc and writeAndPush helper notifyGradingComplete above uses.
+exports.scheduledDailyPracticeReminders = scheduledDailyPracticeReminders;
 exports.analyzeInterviewResponse = analyzeInterviewResponse;
 exports.analyzeResponseInline = analyzeResponseInline;
 exports.recordTestUsage = recordTestUsage;

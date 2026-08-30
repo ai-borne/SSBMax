@@ -74,20 +74,43 @@ function buildResultActionUrl(testType, submissionId) {
  */
 async function notifyEvaluationComplete({ firestoreDb, userId, testType, submissionId, messaging }) {
   const label = TEST_TYPE_LABELS[testType] || testType;
-  const notificationRef = firestoreDb.collection(FirestorePaths.NOTIFICATIONS).doc();
   const title = 'Your result is ready';
   const message = `Your ${label} evaluation has been graded.`;
   const actionUrl = buildResultActionUrl(testType, submissionId);
 
-  await notificationRef.set({
-    id: notificationRef.id,
+  return writeAndPush({
+    firestoreDb,
     userId,
     type: 'GRADING_COMPLETE',
-    priority: 'NORMAL',
     title,
     message,
     actionUrl,
     actionData: { submissionId, testType },
+    messaging
+  });
+}
+
+/**
+ * Writes one `NOTIFICATIONS` doc, then best-effort pushes it via FCM. Shared by every
+ * notification source (`notifyEvaluationComplete` above, `scheduledDailyPracticeReminders.js`)
+ * so the write-then-best-effort-push shape lives once. `type` flows through to both the
+ * Firestore doc and the FCM payload's `data.type` -- previously `sendPush` hardcoded
+ * `GRADING_COMPLETE` there regardless of the actual notification type.
+ *
+ * @param actionData plain-string-valued object; stringified into the FCM data payload as-is
+ */
+async function writeAndPush({ firestoreDb, userId, type, title, message, actionUrl, actionData, messaging }) {
+  const notificationRef = firestoreDb.collection(FirestorePaths.NOTIFICATIONS).doc();
+
+  await notificationRef.set({
+    id: notificationRef.id,
+    userId,
+    type,
+    priority: 'NORMAL',
+    title,
+    message,
+    actionUrl,
+    actionData,
     isRead: false,
     createdAt: Date.now(),
     expiresAt: null
@@ -97,10 +120,11 @@ async function notifyEvaluationComplete({ firestoreDb, userId, testType, submiss
     await sendPush({
       firestoreDb,
       userId,
+      type,
       title,
       body: message,
       actionUrl,
-      actionData: { submissionId, testType },
+      actionData,
       notificationId: notificationRef.id,
       messaging: messaging || require('firebase-admin').messaging()
     });
@@ -108,8 +132,8 @@ async function notifyEvaluationComplete({ firestoreDb, userId, testType, submiss
     // The NOTIFICATIONS doc above already landed -- the in-app inbox is the
     // source of truth, push is best-effort on top of it. Never let a push
     // failure (bad token, messaging quota, no default app in a test/local
-    // context) fail the evaluation completion itself.
-    console.error('notifyEvaluationComplete: push send failed', { userId, testType, submissionId, error: error.message });
+    // context) fail the caller.
+    console.error('writeAndPush: push send failed', { userId, type, error: error.message });
   }
 
   return { id: notificationRef.id };
@@ -122,7 +146,7 @@ async function notifyEvaluationComplete({ firestoreDb, userId, testType, submiss
  * unregistered so a stale token doesn't get retried on every future
  * notification.
  */
-async function sendPush({ firestoreDb, userId, title, body, actionUrl, actionData, notificationId, messaging }) {
+async function sendPush({ firestoreDb, userId, type, title, body, actionUrl, actionData, notificationId, messaging }) {
   const tokensSnapshot = await firestoreDb
     .collection(FirestorePaths.FCM_TOKENS)
     .where('userId', '==', userId)
@@ -135,15 +159,18 @@ async function sendPush({ firestoreDb, userId, title, body, actionUrl, actionDat
   const tokenDocs = tokensSnapshot.docs;
   const tokens = tokenDocs.map((doc) => doc.data().token);
 
+  const stringifiedActionData = Object.fromEntries(
+    Object.entries(actionData || {}).map(([key, value]) => [key, String(value)])
+  );
+
   const response = await messaging.sendEachForMulticast({
     tokens,
     notification: { title, body },
     data: {
       actionUrl,
-      submissionId: String(actionData.submissionId),
-      testType: String(actionData.testType),
+      ...stringifiedActionData,
       notificationId,
-      type: 'GRADING_COMPLETE'
+      type
     }
   });
 
@@ -155,4 +182,4 @@ async function sendPush({ firestoreDb, userId, title, body, actionUrl, actionDat
   await Promise.all(staleTokenDeletes);
 }
 
-module.exports = { notifyEvaluationComplete, TEST_TYPE_LABELS };
+module.exports = { notifyEvaluationComplete, writeAndPush, TEST_TYPE_LABELS };

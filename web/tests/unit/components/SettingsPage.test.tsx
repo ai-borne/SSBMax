@@ -96,19 +96,11 @@ describe('SettingsPage Component', () => {
   });
 
   it('allows toggling notification settings switches', () => {
-    render(<SettingsPage />);
-
-    const emailToggle = screen.getByTestId('toggle-email-alerts');
-    fireEvent.click(emailToggle);
-
-    const syncToggle = screen.getByTestId('toggle-sync-alerts');
-    fireEvent.click(syncToggle);
+    render(<SettingsPage userId="user_1" />);
 
     const practiceToggle = screen.getByTestId('toggle-practice-reminders');
     fireEvent.click(practiceToggle);
 
-    expect(emailToggle).toBeInTheDocument();
-    expect(syncToggle).toBeInTheDocument();
     expect(practiceToggle).toBeInTheDocument();
   });
 

@@ -10,13 +10,13 @@ export interface NotificationPreferencesState {
 
 export interface NotificationPreferencesActions {
   setEnablePushNotifications: (enabled: boolean) => Promise<void>;
+  setEnableTestReminders: (enabled: boolean) => Promise<void>;
 }
 
 /**
- * Backs the Settings > Notifications push toggle (Phase 7, Centralized
- * Result-Announcement Notifications plan) with the `notificationPreferences`
- * Firestore doc from `NotificationRepository` (Phase 5), replacing the
- * previously local-state-only `NotificationsSection.tsx` stub.
+ * Backs the Settings > Notifications toggles with the `notificationPreferences`
+ * Firestore doc from `NotificationRepository`, replacing the previously
+ * local-state-only `NotificationsSection.tsx` stubs.
  */
 export function useNotificationPreferencesViewModel(
   userId: string | undefined,
@@ -51,16 +51,20 @@ export function useNotificationPreferencesViewModel(
     };
   }, [userId, repository]);
 
-  const setEnablePushNotifications = async (enabled: boolean) => {
+  const updatePreference = async (patch: Partial<NotificationPreferences>) => {
     if (!userId) return;
-    const next = { ...(state.preferences ?? defaultNotificationPreferences(userId)), enablePushNotifications: enabled };
-    setState((prev) => ({ ...prev, preferences: next }));
+    const previous = state.preferences;
+    const next = { ...(previous ?? defaultNotificationPreferences(userId)), ...patch };
+    setState((prev) => ({ ...prev, preferences: next, error: null }));
     try {
       await repository.savePreferences(next);
     } catch (e) {
-      setState((prev) => ({ ...prev, error: e instanceof Error ? e.message : String(e) }));
+      setState((prev) => ({ ...prev, preferences: previous, error: e instanceof Error ? e.message : String(e) }));
     }
   };
 
-  return { ...state, setEnablePushNotifications };
+  const setEnablePushNotifications = (enabled: boolean) => updatePreference({ enablePushNotifications: enabled });
+  const setEnableTestReminders = (enabled: boolean) => updatePreference({ enableTestReminders: enabled });
+
+  return { ...state, setEnablePushNotifications, setEnableTestReminders };
 }
