@@ -6,6 +6,7 @@
  */
 
 const admin = require('firebase-admin');
+const { getDownloadURL } = require('firebase-admin/storage');
 
 // Initialize Firebase Admin
 const serviceAccount = require('../.firebase/service-account.json');
@@ -57,21 +58,15 @@ async function updateImageUrls() {
           continue;
         }
 
-        // Make file public (if not already)
-        try {
-          await file.makePublic();
-        } catch (publicError) {
-          // Might already be public, continue
-        }
+        // Get the CSP-allowlisted download-token URL (no public ACL)
+        const downloadUrl = await getDownloadURL(file);
 
-        // Get public URL
-        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-        
-        // Update the image URL in the array
-        images[i].imageUrl = publicUrl;
-        
+        // Update the image URL + storage path in the array
+        images[i].imageUrl = downloadUrl;
+        images[i].storagePath = filePath;
+
         updatedCount++;
-        console.log(`✅ Updated ${imageId}: ${publicUrl}`);
+        console.log(`✅ Updated ${imageId}: ${downloadUrl}`);
       } catch (error) {
         console.error(`❌ Error updating ${imageId}:`, error.message);
       }

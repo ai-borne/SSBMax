@@ -187,9 +187,11 @@ def png_to_jpeg_bytes(png_path: Path, quality: int = 88) -> bytes:
     return buf.getvalue()
 
 
-def upload_images(bucket: Any, entries: list[dict], dry_run: bool) -> dict[str, str]:
-    """Upload PNGs as JPEGs to Storage. Returns {image_id: public_url}."""
-    urls: dict[str, str] = {}
+def upload_images(bucket: Any, entries: list[dict], dry_run: bool) -> dict[str, tuple[str, str]]:
+    """Upload PNGs as JPEGs to Storage. Returns {image_id: (image_url, storage_path)}."""
+    from firebase_image_upload import upload_image_and_get_url
+
+    urls: dict[str, tuple[str, str]] = {}
     for i, entry in enumerate(entries, 1):
         image_id = entry["id"]
         local_path = SOURCE_DIR / entry.get("sourceFile", "")
@@ -198,32 +200,31 @@ def upload_images(bucket: Any, entries: list[dict], dry_run: bool) -> dict[str, 
             continue
 
         remote_path = f"{STORAGE_PREFIX}/{image_id}.jpg"
-        url = f"https://storage.googleapis.com/{BUCKET}/{remote_path}"
 
         if dry_run:
             print(f"  [{i}/{len(entries)}] [DRY RUN] {local_path.name} → {remote_path}")
-            urls[image_id] = url
+            urls[image_id] = (f"https://firebasestorage.googleapis.com/v0/b/{BUCKET}/o/{remote_path}?alt=media", remote_path)
             continue
 
         jpeg_bytes = png_to_jpeg_bytes(local_path)
-        blob = bucket.blob(remote_path)
-        blob.upload_from_string(jpeg_bytes, content_type="image/jpeg")
-        blob.make_public()
-        urls[image_id] = blob.public_url
-        print(f"  [{i}/{len(entries)}] Uploaded: {local_path.name} → {blob.public_url}")
+        image_url, storage_path = upload_image_and_get_url(bucket, jpeg_bytes, remote_path, "image/jpeg")
+        urls[image_id] = (image_url, storage_path)
+        print(f"  [{i}/{len(entries)}] Uploaded: {local_path.name} → {image_url}")
 
     return urls
 
 
-def build_firestore_document(entries: list[dict], urls: dict[str, str], version: str) -> dict:
+def build_firestore_document(entries: list[dict], urls: dict[str, tuple[str, str]], version: str) -> dict:
     images: list[dict] = []
     for entry in sorted(entries, key=lambda e: (e.get("sceneNumber", 0), e.get("genderTag", ""))):
         image_id = entry["id"]
         ctx = entry.get("imageContext", {})
+        image_url, storage_path = urls.get(image_id, ("", ""))
         images.append({
             "id": image_id,
             "sourceFile": entry.get("sourceFile", ""),
-            "imageUrl": urls.get(image_id, ""),
+            "imageUrl": image_url,
+            "storagePath": storage_path,
             "cardPosition": entry.get("cardPosition", 0),
             "genderTag": entry.get("genderTag", "MIXED"),
             "imageContext": ctx,

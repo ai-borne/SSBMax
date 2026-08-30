@@ -29,6 +29,7 @@ async function createMetadata() {
       images.push({
         id: `tat_${paddedNum}`,
         imageUrl: `https://via.placeholder.com/800x600/3498db/ffffff?text=TAT+${i}`, // Placeholder, will be updated
+        storagePath: null, // Filled in by update_tat_urls.js
         sequenceNumber: i,
         prompt: 'Write a story about what you see in the picture',
         viewingTimeSeconds: 30,
@@ -44,6 +45,7 @@ async function createMetadata() {
     images.push({
       id: 'blank_slide',
       imageUrl: 'https://via.placeholder.com/800x600/FFFFFF/000000?text=Blank+Slide', // Placeholder
+      storagePath: null, // Filled in by update_tat_urls.js
       sequenceNumber: 58,
       prompt: 'Describe what you imagine in your mind',
       viewingTimeSeconds: 30,

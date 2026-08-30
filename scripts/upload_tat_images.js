@@ -8,6 +8,7 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
+const { uploadImageAndGetUrl } = require('./lib/firebaseImageUpload');
 
 // Initialize Firebase Admin
 const serviceAccount = require('../.firebase/service-account.json');
@@ -33,36 +34,15 @@ async function uploadImage(filename) {
 
   try {
     const destination = `${STORAGE_PATH}/${filename}`;
-    
-    await bucket.upload(filePath, {
-      destination: destination,
-      metadata: {
-        contentType: 'image/jpeg',
-        metadata: {
-          firebaseStorageDownloadTokens: generateUUID()
-        }
-      }
-    });
 
-    // Make file public
-    await bucket.file(destination).makePublic();
+    const { imageUrl, storagePath } = await uploadImageAndGetUrl(bucket, filePath, destination, 'image/jpeg');
 
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${destination}`;
-    
     console.log(`✅ Uploaded: ${filename}`);
-    return { success: true, filename, url: publicUrl };
+    return { success: true, filename, url: imageUrl, storagePath };
   } catch (error) {
     console.error(`❌ Failed to upload ${filename}:`, error.message);
     return { success: false, filename, error: error.message };
   }
-}
-
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
 }
 
 async function uploadAllImages() {

@@ -140,12 +140,14 @@ def bump_version(version: str) -> str:
     return version
 
 
-def upload_cropped_images(bucket: Any, dry_run: bool = False) -> dict[str, str]:
+def upload_cropped_images(bucket: Any, dry_run: bool = False) -> dict[str, tuple[str, str]]:
     """
     Upload cropped images to Firebase Storage.
-    Returns {image_id: public_url}
+    Returns {image_id: (image_url, storage_path)}
     """
-    urls: dict[str, str] = {}
+    from firebase_image_upload import upload_image_and_get_url
+
+    urls: dict[str, tuple[str, str]] = {}
     uploaded = 0
 
     for filename in CROPPED_IMAGES:
@@ -160,19 +162,16 @@ def upload_cropped_images(bucket: Any, dry_run: bool = False) -> dict[str, str]:
             continue
 
         remote_path = f"{STORAGE_PREFIX}/{image_id}.jpg"
-        url = f"https://storage.googleapis.com/{BUCKET}/{remote_path}"
 
         if dry_run:
             print(f"  [DRY RUN] {filename:20} → {remote_path}")
-            urls[image_id] = url
+            urls[image_id] = (f"https://firebasestorage.googleapis.com/v0/b/{BUCKET}/o/{remote_path}?alt=media", remote_path)
             uploaded += 1
         else:
             try:
                 jpeg_bytes = png_to_jpeg_bytes(source_path)
-                blob = bucket.blob(remote_path)
-                blob.upload_from_string(jpeg_bytes, content_type="image/jpeg")
-                blob.make_public()
-                urls[image_id] = blob.public_url
+                image_url, storage_path = upload_image_and_get_url(bucket, jpeg_bytes, remote_path, "image/jpeg")
+                urls[image_id] = (image_url, storage_path)
                 print(f"  ✓ {filename:20} → {image_id}")
                 uploaded += 1
             except Exception as e:
@@ -184,7 +183,7 @@ def upload_cropped_images(bucket: Any, dry_run: bool = False) -> dict[str, str]:
 def update_firestore_with_new_urls(
     db: Any,
     firestore_doc: dict,
-    new_urls: dict[str, str],
+    new_urls: dict[str, tuple[str, str]],
     dry_run: bool = False
 ) -> int:
     """
@@ -198,7 +197,9 @@ def update_firestore_with_new_urls(
     for img in images:
         image_id = img.get("id")
         if image_id in new_urls:
-            img["imageUrl"] = new_urls[image_id]
+            image_url, storage_path = new_urls[image_id]
+            img["imageUrl"] = image_url
+            img["storagePath"] = storage_path
             updated_count += 1
 
     # Bump version
