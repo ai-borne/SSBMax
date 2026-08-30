@@ -189,6 +189,7 @@ def png_to_jpeg_bytes(png_path: Path, quality: int = 88) -> bytes:
 
 def upload_images(bucket: Any, entries: list[dict], dry_run: bool) -> dict[str, tuple[str, str]]:
     """Upload PNGs as JPEGs to Storage. Returns {image_id: (image_url, storage_path)}."""
+    sys.path.insert(0, str(SCRIPT_DIR.parent / "lib"))
     from firebase_image_upload import upload_image_and_get_url
 
     urls: dict[str, tuple[str, str]] = {}

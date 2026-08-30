@@ -1,5 +1,6 @@
 """
-Shared upload helper for the TAT picture pipeline (step1/step2).
+Shared upload helper for the Python content-image pipelines (TAT step1/step2,
+PPDT step3).
 
 Mirrors scripts/lib/firebaseImageUpload.js: uploads with a
 firebaseStorageDownloadTokens metadata token instead of blob.make_public(),

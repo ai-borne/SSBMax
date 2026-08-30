@@ -95,9 +95,12 @@ def delete_old_images(bucket: Any, dry_run: bool) -> int:
     return len(blobs)
 
 
-def upload_images(bucket: Any, entries: list[dict], dry_run: bool) -> dict[int, str]:
-    """Upload JPEGs to Storage. Returns {imageNumber: public_url}."""
-    urls: dict[int, str] = {}
+def upload_images(bucket: Any, entries: list[dict], dry_run: bool) -> dict[int, tuple[str, str]]:
+    """Upload JPEGs to Storage. Returns {imageNumber: (image_url, storage_path)}."""
+    sys.path.insert(0, str(SCRIPT_DIR.parent / "lib"))
+    from firebase_image_upload import upload_image_and_get_url
+
+    urls: dict[int, tuple[str, str]] = {}
     for entry in entries:
         img_id = entry["imageNumber"]
         local_path = IMAGES_DIR / f"ppdt_image_{img_id:03d}.jpg"
@@ -106,33 +109,33 @@ def upload_images(bucket: Any, entries: list[dict], dry_run: bool) -> dict[int, 
             continue
 
         remote_path = f"{STORAGE_PREFIX}/ppdt_image_{img_id:03d}.jpg"
-        url = f"https://storage.googleapis.com/{BUCKET}/{remote_path}"
 
         if dry_run:
             print(f"  [DRY RUN] would upload {local_path.name} → {remote_path}")
-            urls[img_id] = url
+            urls[img_id] = (f"https://firebasestorage.googleapis.com/v0/b/{BUCKET}/o/{remote_path}?alt=media", remote_path)
             continue
 
-        blob = bucket.blob(remote_path)
-        blob.upload_from_filename(str(local_path), content_type="image/jpeg")
-        blob.make_public()
-        urls[img_id] = blob.public_url
-        print(f"  Uploaded: {local_path.name} → {blob.public_url}")
+        with open(local_path, "rb") as f:
+            jpeg_bytes = f.read()
+        image_url, storage_path = upload_image_and_get_url(bucket, jpeg_bytes, remote_path, "image/jpeg")
+        urls[img_id] = (image_url, storage_path)
+        print(f"  Uploaded: {local_path.name} → {image_url}")
 
     return urls
 
 
-def build_firestore_document(entries: list[dict], urls: dict[int, str]) -> dict:
+def build_firestore_document(entries: list[dict], urls: dict[int, tuple[str, str]]) -> dict:
     """Build the Firestore batch_001 document from draft entries and upload URLs."""
     images: list[dict] = []
     for entry in sorted(entries, key=lambda e: e["imageNumber"]):
         img_id = entry["imageNumber"]
-        url = urls.get(img_id, "")
+        image_url, storage_path = urls.get(img_id, ("", ""))
         ctx = entry.get("imageContext", {})
 
         images.append({
             "id": entry["id"],
-            "imageUrl": url,
+            "imageUrl": image_url,
+            "storagePath": storage_path,
             "genderTag": entry.get("genderTag", "MIXED"),
             "imageContext": ctx,
             # Backward-compat fields for PPDTImageCacheManager (pre-Phase 6)

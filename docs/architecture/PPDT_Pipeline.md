@@ -588,10 +588,14 @@ Run via `firebase emulators:exec --only firestore --project demo-ssbmax-rules-te
 |--------|--------|
 | `upload_ppdt_images.js` | Superseded by Python pipeline |
 | `upload_ppdt_images_simple.js` | Superseded |
-| `update_ppdt_urls_smart.js` | Superseded |
-| `update_ppdt_image_urls_fixed.js` | Superseded |
-| `make_ppdt_images_public.js` | Superseded |
-| `add_remaining_ppdt_images.js` | Superseded |
+
+Deleted 2026-08-30 (image-CSP/`makePublic()` migration, Phase 4): `update_ppdt_urls_smart.js`,
+`update_ppdt_urls_fixed.js`, `update_ppdt_image_urls.js`, `make_ppdt_images_public.js`,
+`add_remaining_ppdt_images.js`, `upload_ppdt_images.sh`, and the stale `PPDT_IMAGES_READY.txt`/
+`PPDT_IMAGE_UPLOAD_GUIDE.txt`/`PPDT_UPLOAD_README.txt` guides — all dead code/docs for the
+`makePublic()`-based flow this table already listed as superseded by `step3_upload.py`. The
+remaining two above are kept since they don't use `makePublic()` and weren't in that migration's
+scope, but they are still superseded by the Python pipeline for actual uploads.
 
 ---
 

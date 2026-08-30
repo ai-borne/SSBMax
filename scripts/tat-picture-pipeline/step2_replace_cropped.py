@@ -145,6 +145,7 @@ def upload_cropped_images(bucket: Any, dry_run: bool = False) -> dict[str, tuple
     Upload cropped images to Firebase Storage.
     Returns {image_id: (image_url, storage_path)}
     """
+    sys.path.insert(0, str(SCRIPT_DIR.parent / "lib"))
     from firebase_image_upload import upload_image_and_get_url
 
     urls: dict[str, tuple[str, str]] = {}
