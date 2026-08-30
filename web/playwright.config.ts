@@ -30,5 +30,10 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Firestore reads against the 'ssbmax-demo' placeholder project used in this dev server
+    // otherwise hit real gRPC backoff on permission-denied for many seconds before falling
+    // back to bundled dev content (src/config/firebase.ts) -- disable the network up front so
+    // e2e runs at the speed of the fallback, not of a doomed real Firestore round trip.
+    env: { VITE_E2E: 'true' },
   },
 });
