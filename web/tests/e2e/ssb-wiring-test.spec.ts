@@ -28,21 +28,26 @@ test.describe('SSB Test Wiring & Firestore Binding Audit', () => {
       expect(exists, `Launch button for [${testId}] must be rendered`).toBe(true);
 
       await launchBtn.click();
-      await page.waitForTimeout(400);
 
       const heading = await page.locator('h2, h1, h3').first().innerText().catch(() => 'No Heading');
-      const bodyText = await page.locator('body').innerText().catch(() => '');
-
       console.log(`[AUDIT] ${testId.toUpperCase()} -> Heading: "${heading}"`);
 
+      // Content resolves via a real Firestore getDoc() call that falls back to bundled dev
+      // content on error (ContentRepository) -- on a contended CI runner that round trip
+      // (including Firestore's own connect/backoff before it fails) can take several seconds,
+      // so poll for the rendered result instead of asserting after one fixed short delay.
       if (testId === 'piq') {
-        expect(bodyText).toContain('Personal Information Questionnaire');
+        await expect.poll(() => page.locator('body').innerText(), { timeout: 15_000 })
+          .toContain('Personal Information Questionnaire');
       } else if (testId === 'oir') {
-        expect(bodyText.toLowerCase()).toContain('oir');
+        await expect.poll(() => page.locator('body').innerText().then((t) => t.toLowerCase()), { timeout: 15_000 })
+          .toContain('oir');
       } else if (['tat', 'wat', 'srt', 'ppdt'].includes(testId)) {
         // Psychology runner test state
-        const isRunnerMounted = bodyText.includes('Slide') || bodyText.includes('Psychology') || bodyText.includes('TAT') || bodyText.includes('WAT') || bodyText.includes('SRT') || bodyText.includes('PPDT') || bodyText.includes('Failed to load');
-        expect(isRunnerMounted).toBe(true);
+        const isRunnerMounted = (text: string) =>
+          text.includes('Slide') || text.includes('Psychology') || text.includes('TAT') || text.includes('WAT') || text.includes('SRT') || text.includes('PPDT') || text.includes('Failed to load');
+        await expect.poll(() => page.locator('body').innerText().then(isRunnerMounted), { timeout: 15_000 })
+          .toBe(true);
       }
     });
   }
