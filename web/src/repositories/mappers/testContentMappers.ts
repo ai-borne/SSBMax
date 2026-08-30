@@ -241,7 +241,7 @@ export function mapDocToOIRBatch(id: string, data?: Record<string, unknown>, bat
         const q = asRecord(raw) ?? {};
         const questionNumber = typeof q.questionNumber === 'number' ? q.questionNumber : index + 1;
         const type: 'VERBAL' | 'NON_VERBAL' = q.type === 'NON_VERBAL' || q.questionType === 'NON_VERBAL' ? 'NON_VERBAL' : 'VERBAL';
-        const rawImg = asString(q.imageUrl ?? q.image);
+        const rawImg = asString(q.questionImageUrl ?? q.imageUrl ?? q.image);
         const imageUrl = normalizeStorageUrl(rawImg) || undefined;
 
         const options: string[] = Array.isArray(q.options)

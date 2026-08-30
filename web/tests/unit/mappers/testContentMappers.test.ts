@@ -138,5 +138,28 @@ describe('testContentMappers Unit Tests', () => {
       expect((q as unknown as Record<string, unknown>).answerKey).toBeUndefined();
       expect((q as unknown as Record<string, unknown>).explanation).toBeUndefined();
     });
+
+    it('reads the questionImageUrl field the upload scripts and KMP actually write, not just imageUrl', () => {
+      // scripts/oir-extraction/upload-oir-batch.js and shared/.../domain/model/OIRTest.kt both
+      // use `questionImageUrl`. The mapper previously read only `imageUrl`/`image`, so every
+      // OIR diagram question (e.g. "which cube belongs to Group A?") silently rendered with no
+      // image on web even after the CSP/makePublic() migration fixed the URL itself.
+      const rawData = {
+        items: [
+          {
+            id: 'q1',
+            questionNumber: 1,
+            questionText: 'Which one of the following cubes can possibly belong to Group A?',
+            options: ['1', '2', '3', '4', '5'],
+            questionImageUrl: 'https://firebasestorage.googleapis.com/v0/b/x/o/oir%2Fcube.png?alt=media&token=abc'
+          }
+        ]
+      };
+
+      const result = mapDocToOIRBatch('batch_0', rawData, 0);
+      expect(result.items[0].imageUrl).toBe(
+        'https://firebasestorage.googleapis.com/v0/b/x/o/oir%2Fcube.png?alt=media&token=abc'
+      );
+    });
   });
 });
