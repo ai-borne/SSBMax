@@ -31,24 +31,26 @@ export const StudyMaterialPage: FC<StudyMaterialPageProps> = ({
   const [selectedMaterial, setSelectedMaterial] = useState<StudyMaterial | null>(null);
   const [, setRefreshState] = useState(0);
   const [materialsLoaded, setMaterialsLoaded] = useState(false);
-  const [authUser, setAuthUser] = useState<UserProfile | null>(
-    propUser !== undefined ? propUser : authService.getCurrentUser()
-  );
+  const [subscribedUser, setSubscribedUser] = useState<UserProfile | null>(authService.getCurrentUser());
+  const authUser = propUser !== undefined ? propUser : subscribedUser;
   const [expandedDay, setExpandedDay] = useState<string | null>('1');
 
   useEffect(() => {
     if (propUser !== undefined) {
-      setAuthUser(propUser);
       return;
     }
     const unsubscribe = authService.onAuthStateChanged((u) => {
-      setAuthUser(u);
+      setSubscribedUser(u);
     });
     return () => unsubscribe();
   }, [propUser]);
 
   useEffect(() => {
     let isMounted = true;
+    // Standard fetch-on-dependency-change reset: not derivable at render time since the
+    // previous materialsLoaded value must be flipped back to false to show loading UI
+    // while vm.loadMaterials() is in flight.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMaterialsLoaded(false);
     vm.loadMaterials()
       .then(() => {

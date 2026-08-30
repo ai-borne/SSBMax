@@ -31,7 +31,7 @@ export function filterMaterialsForTestCard(
 
   return materials.filter((material) => {
     // 1. Type matching logic
-    let typeMatches = false;
+    let typeMatches: boolean;
 
     if (targetTypes.size === 0) {
       typeMatches = true;

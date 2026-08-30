@@ -109,11 +109,11 @@ export class OIRTestViewModel {
         isLoading: false,
         batchId: batch.id
       };
-    } catch (err: any) {
+    } catch (err) {
       this.state = {
         ...this.state,
         isLoading: false,
-        error: err.message || 'Failed to load OIR questions'
+        error: err instanceof Error ? err.message : 'Failed to load OIR questions'
       };
     }
     this.notify();
@@ -188,7 +188,7 @@ export class OIRTestViewModel {
       await this.offlineQueueService.enqueueSubmission({
         testType: 'OIR',
         userId,
-        payload: submission
+        payload: submission as unknown as Record<string, unknown>
       });
 
       this.state = {
@@ -249,11 +249,11 @@ export class OIRTestViewModel {
         isCompleted: true,
         result: evalResult
       };
-    } catch (err: any) {
+    } catch (err) {
       this.state = {
         ...this.state,
         isSubmitting: false,
-        error: err.message || 'Failed to submit test'
+        error: err instanceof Error ? err.message : 'Failed to submit test'
       };
     }
     this.notify();

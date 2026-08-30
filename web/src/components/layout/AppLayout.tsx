@@ -45,16 +45,16 @@ export const AppLayout: FC<AppLayoutProps> = ({
   const isOnline = useOnlineStatus();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [authUser, setAuthUser] = useState<UserProfile | null>(propUser !== undefined ? propUser : authService.getCurrentUser());
+  const [subscribedUser, setSubscribedUser] = useState<UserProfile | null>(authService.getCurrentUser());
   const [authInitializing, setAuthInitializing] = useState<boolean>(false);
+  const authUser = propUser !== undefined ? propUser : subscribedUser;
 
   useEffect(() => {
     if (propUser !== undefined) {
-      setAuthUser(propUser);
       return;
     }
     const unsubscribe = authService.onAuthStateChanged((user) => {
-      setAuthUser(user);
+      setSubscribedUser(user);
       setAuthInitializing(false);
     });
     return () => unsubscribe();

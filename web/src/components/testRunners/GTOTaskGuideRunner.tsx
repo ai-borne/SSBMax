@@ -15,15 +15,23 @@ export const GTOTaskGuideRunner: FC<GTOTaskGuideRunnerProps> = ({
   onExitTest,
 }) => {
   const config = getTestConfigById(testId);
-  const [isRunning, setIsRunning] = useState(false);
-  const [secondsRemaining, setSecondsRemaining] = useState(0);
-
-  useEffect(() => {
-    if (!config) return;
+  const initialSecondsForConfig = (): number => {
+    if (!config) return 0;
     const minutesMatch = config.timeLimit.match(/\d+/);
     const mins = minutesMatch ? parseInt(minutesMatch[0], 10) : 30;
-    setSecondsRemaining(mins * 60);
-  }, [config]);
+    return mins * 60;
+  };
+  const [isRunning, setIsRunning] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState(initialSecondsForConfig);
+
+  // Reset the countdown when the test config changes -- adjusted during render (React's
+  // "adjusting state when a prop changes" pattern) rather than in an effect, since it's
+  // purely derived from config.
+  const [prevConfig, setPrevConfig] = useState(config);
+  if (config !== prevConfig) {
+    setPrevConfig(config);
+    setSecondsRemaining(initialSecondsForConfig());
+  }
 
   useEffect(() => {
     if (!isRunning || secondsRemaining <= 0) return;

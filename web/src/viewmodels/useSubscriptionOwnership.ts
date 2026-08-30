@@ -24,6 +24,9 @@ export function useSubscriptionOwnership(
   useEffect(() => {
     let isMounted = true;
     if (!userId) {
+      // Standard guard-clause reset: not derivable at render time since it depends on the
+      // previous ownership value.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOwnership(EMPTY_OWNERSHIP);
       return;
     }

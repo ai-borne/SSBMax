@@ -188,11 +188,11 @@ export function usePaymentViewModel(
           onSuccess,
           onFailure
         });
-      } catch (err: any) {
+      } catch (err) {
         setState((prev) => ({
           ...prev,
           status: 'error',
-          errorMessage: err.message || strings.payment.paymentFailed
+          errorMessage: err instanceof Error ? err.message : strings.payment.paymentFailed
         }));
       }
     },

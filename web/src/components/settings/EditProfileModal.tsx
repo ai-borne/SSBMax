@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from 'react';
+import { FC, useState } from 'react';
 import { strings } from '../../constants/strings';
 import { BaseModal } from '../common/BaseModal';
 import { PIQChipsSelector } from '../practice/piq/PIQChipsSelector';
@@ -53,14 +53,20 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setFullName(profile?.fullName ?? '');
-    setAge(profile?.age?.toString() ?? '');
-    setGender(profile?.gender ?? 'MALE');
-    setEntryType(profile?.entryType ?? 'ENTRY_10_PLUS_2');
-    setError(null);
-  }, [isOpen, profile]);
+  // Reset the form fields when the modal opens with the latest profile -- adjusted during
+  // render (React's "adjusting state when a prop changes" pattern) rather than in an effect,
+  // since it's purely derived from the isOpen transition.
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setFullName(profile?.fullName ?? '');
+      setAge(profile?.age?.toString() ?? '');
+      setGender(profile?.gender ?? 'MALE');
+      setEntryType(profile?.entryType ?? 'ENTRY_10_PLUS_2');
+      setError(null);
+    }
+  }
 
   const parsedAge = Number(age);
   const isFullNameValid = fullName.trim().length > 0;

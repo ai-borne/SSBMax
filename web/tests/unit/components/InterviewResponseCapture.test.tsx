@@ -1,20 +1,22 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, type Mocked } from 'vitest';
 import { InterviewResponseCapture } from '../../../src/components/testRunners/InterviewResponseCapture';
+import { SubmissionService } from '../../../src/services/SubmissionService';
+import { EligibilityService } from '../../../src/services/EligibilityService';
 
-function mockService(overrides: Partial<Record<string, any>> = {}) {
+function mockService(overrides: Partial<Record<keyof SubmissionService, unknown>> = {}): Mocked<SubmissionService> {
   return {
     submitInterviewResponse: vi.fn().mockResolvedValue({ success: true, responseId: 'resp-1' }),
     evaluateInterviewResponse: vi.fn().mockResolvedValue({ success: true }),
     ...overrides
-  } as any;
+  } as unknown as Mocked<SubmissionService>;
 }
 
-function mockEligibility(overrides: Partial<Record<string, any>> = {}) {
+function mockEligibility(overrides: Partial<Record<keyof EligibilityService, unknown>> = {}): Mocked<EligibilityService> {
   return {
     recordTestUsage: vi.fn().mockResolvedValue({ success: true, alreadyRecorded: false, used: 1, limit: 3 }),
     ...overrides
-  } as any;
+  } as unknown as Mocked<EligibilityService>;
 }
 
 describe('InterviewResponseCapture', () => {

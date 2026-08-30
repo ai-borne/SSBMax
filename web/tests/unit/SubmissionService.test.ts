@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SubmissionService } from '../../src/services/SubmissionService';
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallable, HttpsCallable } from 'firebase/functions';
 
 vi.mock('firebase/functions', () => ({
   httpsCallable: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('../../src/config/firebase', () => ({
 describe('SubmissionService', () => {
   function mockCallableReturning(data: unknown) {
     const callable = vi.fn().mockResolvedValue({ data });
-    vi.mocked(httpsCallable).mockReturnValue(callable as any);
+    vi.mocked(httpsCallable).mockReturnValue(callable as unknown as HttpsCallable);
     return callable;
   }
 

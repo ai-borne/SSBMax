@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from 'react';
+import { FC, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { ACCOUNT_DELETION_GRACE_PERIOD_DAYS } from '../../constants/accountDeletion';
@@ -29,9 +29,13 @@ export const DeleteAccountModal: FC<DeleteAccountModalProps> = ({
   // `BaseModal` unmounts its own contents while closed but this component stays mounted (the
   // parent renders it unconditionally so isOpen can flip), so the checkbox must be reset here --
   // otherwise a close-then-reopen would leave the irreversibility guard already satisfied.
-  useEffect(() => {
+  // Adjusted during render (React's "adjusting state when a prop changes" pattern) rather than
+  // in an effect, since it's purely derived from the isOpen transition.
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) setAcknowledged(false);
-  }, [isOpen]);
+  }
 
   const days = String(ACCOUNT_DELETION_GRACE_PERIOD_DAYS);
   const body = strings.account.deleteAccountConfirmBody.replace('{days}', days);

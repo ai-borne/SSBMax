@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AccountRepository } from '../../src/repositories/AccountRepository';
-import { httpsCallable } from 'firebase/functions';
-import { getDoc } from 'firebase/firestore';
+import { httpsCallable, HttpsCallable } from 'firebase/functions';
+import { getDoc, DocumentSnapshot } from 'firebase/firestore';
 
 vi.mock('firebase/functions', () => ({
   httpsCallable: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock('../../src/config/firebase', () => ({
 describe('AccountRepository', () => {
   it('requestAccountDeletion invokes the requestAccountDeletion callable with no payload', async () => {
     const callable = vi.fn().mockResolvedValue({ data: { success: true } });
-    vi.mocked(httpsCallable).mockReturnValue(callable as any);
+    vi.mocked(httpsCallable).mockReturnValue(callable as unknown as HttpsCallable);
 
     await new AccountRepository().requestAccountDeletion();
 
@@ -36,7 +36,7 @@ describe('AccountRepository', () => {
 
   it('cancelAccountDeletion invokes the cancelAccountDeletion callable with no payload', async () => {
     const callable = vi.fn().mockResolvedValue({ data: { success: true } });
-    vi.mocked(httpsCallable).mockReturnValue(callable as any);
+    vi.mocked(httpsCallable).mockReturnValue(callable as unknown as HttpsCallable);
 
     await new AccountRepository().cancelAccountDeletion();
 
@@ -48,7 +48,7 @@ describe('AccountRepository', () => {
     vi.mocked(getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({ deletionRequestedAt: { toMillis: () => 12345 } })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const status = await new AccountRepository().getDeletionStatus('user-1');
 
@@ -59,7 +59,7 @@ describe('AccountRepository', () => {
     vi.mocked(getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({})
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const status = await new AccountRepository().getDeletionStatus('user-1');
 

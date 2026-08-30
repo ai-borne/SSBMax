@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AnalyticsRepository } from '../../src/repositories/AnalyticsRepository';
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallable, HttpsCallable } from 'firebase/functions';
 
 vi.mock('firebase/functions', () => ({
   httpsCallable: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock('../../src/config/firebase', () => ({
 describe('AnalyticsRepository', () => {
   it('recordSignup calls the recordSignup callable with no payload', async () => {
     const callable = vi.fn().mockResolvedValue({ data: { date: '2026-08-29' } });
-    vi.mocked(httpsCallable).mockReturnValue(callable as any);
+    vi.mocked(httpsCallable).mockReturnValue(callable as unknown as HttpsCallable);
 
     const repository = new AnalyticsRepository();
     await repository.recordSignup();
@@ -32,7 +32,7 @@ describe('AnalyticsRepository', () => {
   it('getAnalyticsSummary calls the getAnalyticsSummary callable and returns its data', async () => {
     const summary = { days: [{ date: '2026-08-29', signups: 3 }], totalSignups: 3, sinceDate: '2026-08-29' };
     const callable = vi.fn().mockResolvedValue({ data: summary });
-    vi.mocked(httpsCallable).mockReturnValue(callable as any);
+    vi.mocked(httpsCallable).mockReturnValue(callable as unknown as HttpsCallable);
 
     const repository = new AnalyticsRepository();
     const result = await repository.getAnalyticsSummary();

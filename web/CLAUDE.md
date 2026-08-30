@@ -364,6 +364,9 @@ npm run dev             # Vite dev server (hot reload)
 npm run build           # tsc -b && vite build (output: dist/)
 npm run preview         # Preview production bundle locally
 
+# Lint (ESLint flat config: web/eslint.config.js — typescript-eslint + react-hooks + react-refresh)
+npm run lint             # Required in pre-commit (.githooks/pre-commit) and CI (web-ci job)
+
 # Security audit (required before declaring any phase complete)
 ../scripts/validate-security.sh
 ```

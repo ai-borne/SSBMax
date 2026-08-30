@@ -4,7 +4,7 @@ export interface QueuedSubmission {
   id: string;
   testType: 'OIR' | 'TAT' | 'WAT' | 'SRT' | 'SD' | 'PPDT';
   userId: string;
-  payload: any;
+  payload: Record<string, unknown>;
   timestamp: number;
   checksum?: string;
   isTampered?: boolean;
@@ -15,7 +15,7 @@ export class OfflineQueueService {
   private static STORE_NAME = 'pendingSubmissions';
   private static memoryFallback: QueuedSubmission[] = [];
 
-  public static async computeChecksum(data: { testType: string; userId: string; payload: any; timestamp: number }): Promise<string> {
+  public static async computeChecksum(data: { testType: string; userId: string; payload: Record<string, unknown>; timestamp: number }): Promise<string> {
     const serialized = JSON.stringify({
       testType: data.testType,
       userId: data.userId,
@@ -94,7 +94,7 @@ export class OfflineQueueService {
 
   async getQueuedSubmissions(): Promise<QueuedSubmission[]> {
     const db = await this.openDB();
-    let rawItems: QueuedSubmission[] = [];
+    let rawItems: QueuedSubmission[];
 
     if (!db) {
       rawItems = [...OfflineQueueService.memoryFallback];
@@ -180,7 +180,7 @@ export class OfflineQueueService {
         } else {
           failedCount++;
         }
-      } catch (err) {
+      } catch {
         failedCount++;
       }
     }

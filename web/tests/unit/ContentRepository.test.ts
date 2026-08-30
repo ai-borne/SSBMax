@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ContentRepository } from '../../src/repositories/ContentRepository';
-import { getDocs, getDoc } from 'firebase/firestore';
+import { getDocs, getDoc, QuerySnapshot, DocumentSnapshot } from 'firebase/firestore';
 
 // Mock Firebase firestore methods
 vi.mock('firebase/firestore', () => ({
@@ -30,7 +30,7 @@ describe('ContentRepository Unit Tests', () => {
   it('should return fallback study materials when firestore is empty or offline', async () => {
     vi.mocked(getDocs).mockResolvedValueOnce({
       forEach: vi.fn()
-    } as any);
+    } as unknown as QuerySnapshot);
 
     const materials = await repository.getStudyMaterials();
     expect(materials).toBeDefined();
@@ -41,7 +41,7 @@ describe('ContentRepository Unit Tests', () => {
 
   it('falls back to a markdown-stripped summary, not a literal-syntax raw slice, when the doc has no summary field', async () => {
     vi.mocked(getDocs).mockResolvedValueOnce({
-      forEach: (callback: (doc: any) => void) =>
+      forEach: (callback: (doc: unknown) => void) =>
         [
           {
             id: 'oir_1',
@@ -53,7 +53,7 @@ describe('ContentRepository Unit Tests', () => {
             })
           }
         ].forEach(callback)
-    } as any);
+    } as unknown as QuerySnapshot);
 
     const materials = await repository.getStudyMaterials();
 
@@ -84,8 +84,8 @@ describe('ContentRepository Unit Tests', () => {
     ];
 
     vi.mocked(getDocs).mockResolvedValueOnce({
-      forEach: (callback: (doc: any) => void) => mockDocSnapshots.forEach(callback)
-    } as any);
+      forEach: (callback: (doc: unknown) => void) => mockDocSnapshots.forEach(callback)
+    } as unknown as QuerySnapshot);
 
     const materials = await repository.getStudyMaterials();
     expect(materials).toHaveLength(2);
@@ -101,8 +101,8 @@ describe('ContentRepository Unit Tests', () => {
       { id: 'psy_1', data: () => ({ title: 'Psychology Guide', topicType: 'PSYCHOLOGY', category: 'Psychology Tests' }) }
     ];
     vi.mocked(getDocs).mockResolvedValueOnce({
-      forEach: (callback: (doc: any) => void) => mockDocSnapshots.forEach(callback)
-    } as any);
+      forEach: (callback: (doc: unknown) => void) => mockDocSnapshots.forEach(callback)
+    } as unknown as QuerySnapshot);
 
     const materials = await repository.getStudyMaterials();
     expect(materials[0].testTypeId).toBeUndefined();
@@ -116,8 +116,8 @@ describe('ContentRepository Unit Tests', () => {
       { id: 'med_1', data: () => ({ title: 'Medical Guide', topicType: 'MEDICALS', category: 'SSB Preparation' }) }
     ];
     vi.mocked(getDocs).mockResolvedValueOnce({
-      forEach: (callback: (doc: any) => void) => mockDocSnapshots.forEach(callback)
-    } as any);
+      forEach: (callback: (doc: unknown) => void) => mockDocSnapshots.forEach(callback)
+    } as unknown as QuerySnapshot);
 
     const materials = await repository.getStudyMaterials();
     expect(materials[0].testTypeId).toBeUndefined();
@@ -127,7 +127,7 @@ describe('ContentRepository Unit Tests', () => {
   it('should return study material by id from fallback when not found', async () => {
     vi.mocked(getDocs).mockResolvedValueOnce({
       docs: []
-    } as any);
+    } as unknown as QuerySnapshot);
 
     const material = await repository.getStudyMaterialById('ssb-overview-01');
     expect(material).not.toBeNull();
@@ -147,7 +147,7 @@ describe('ContentRepository Unit Tests', () => {
           })
         }
       ]
-    } as any);
+    } as unknown as QuerySnapshot);
 
     const material = await repository.getStudyMaterialById('doc_wat');
     expect(material).not.toBeNull();
@@ -159,7 +159,7 @@ describe('ContentRepository Unit Tests', () => {
   it('should return null for non-existent material id', async () => {
     vi.mocked(getDocs).mockResolvedValueOnce({
       docs: []
-    } as any);
+    } as unknown as QuerySnapshot);
 
     const material = await repository.getStudyMaterialById('invalid_id_999');
     expect(material).toBeNull();
@@ -169,7 +169,7 @@ describe('ContentRepository Unit Tests', () => {
     vi.mocked(getDocs).mockResolvedValueOnce({
       empty: true,
       forEach: vi.fn()
-    } as any);
+    } as unknown as QuerySnapshot);
 
     const batches = await repository.getAvailableBatches('wat');
     expect(batches).toEqual([]);
@@ -188,7 +188,7 @@ describe('ContentRepository Unit Tests', () => {
         words: ['COURAGE', 'HONESTY'],
         displayDurationSeconds: 15
       })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const wat = await repository.getWATBatch('wat_batch_1');
     expect(wat.id).toBe('wat_batch_1');
@@ -204,19 +204,19 @@ describe('ContentRepository Unit Tests', () => {
           { id: 'gpe_1', imageUrl: 'gs://bucket/gpe/scenario_1.png', scenario: 'A flooded village.', solution: 'Build a bridge.', resources: ['rope'] }
         ]
       })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const gpe = await repository.getGPEBatch('batch_001');
     expect(gpe.items).toHaveLength(1);
     expect(gpe.items[0].scenario).toBe('A flooded village.');
-    expect((gpe.items[0] as any).solution).toBeUndefined();
+    expect((gpe.items[0] as unknown as Record<string, unknown>).solution).toBeUndefined();
   });
 
   it('should throw ContentUnavailableError when the GPE batch is missing', async () => {
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => false,
       data: () => null
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     await expect(repository.getGPEBatch('missing_batch')).rejects.toThrow();
   });
@@ -225,7 +225,7 @@ describe('ContentRepository Unit Tests', () => {
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => true,
       data: () => ({ batchCount: 28, contentVersion: 2 })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const meta = await repository.getOIRContentVersion();
     expect(meta.batchCount).toBe(28);
@@ -236,7 +236,7 @@ describe('ContentRepository Unit Tests', () => {
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => false,
       data: () => null
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     await expect(repository.getOIRContentVersion()).rejects.toThrow();
   });
@@ -244,7 +244,7 @@ describe('ContentRepository Unit Tests', () => {
   // Phase 5 (docs/plans/write-the-phased-plan-wobbly-pancake.md, D2 side documents).
   describe('getStudyMaterialSections', () => {
     it('returns null when no study_material_sections doc has been published for this material', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as unknown as DocumentSnapshot);
 
       expect(await repository.getStudyMaterialSections('mat_1')).toBeNull();
     });
@@ -272,7 +272,7 @@ describe('ContentRepository Unit Tests', () => {
             }
           ]
         })
-      } as any);
+      } as unknown as DocumentSnapshot);
 
       const model = await repository.getStudyMaterialSections('mat_1');
 

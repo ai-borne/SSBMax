@@ -36,7 +36,7 @@ export const PIQWizardContainer: FC<PIQWizardContainerProps> = ({
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('ssbmax_piq_draft');
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+        try { return JSON.parse(saved); } catch { /* ignore */ }
       }
     }
     return DEFAULT_PIQ;

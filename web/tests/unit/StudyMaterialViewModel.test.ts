@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StudyMaterialViewModel } from '../../src/viewmodels/StudyMaterialViewModel';
 import { IContentRepository } from '../../src/repositories/interfaces/IContentRepository';
-import { StudyMaterial, BatchDocument, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, GPEImage, OIRContentMeta } from '../../src/types/testContent';
+import { StudyMaterial, BatchDocument, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, GPEImage, OIRContentMeta, TestBatchInfo } from '../../src/types/testContent';
 
 class MockContentRepository implements IContentRepository {
   async getStudyMaterials(): Promise<StudyMaterial[]> {
@@ -69,7 +69,7 @@ class MockContentRepository implements IContentRepository {
     return { contentVersion: 1, batchCount: 1 };
   }
 
-  async getAvailableBatches(): Promise<any[]> {
+  async getAvailableBatches(): Promise<TestBatchInfo[]> {
     return [];
   }
 

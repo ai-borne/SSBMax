@@ -205,6 +205,13 @@ fi
 # ============================================
 WEB_FILES=$(echo "$STAGED_FILES" | grep -E '^web/' || true)
 if [ -n "$WEB_FILES" ]; then
+    echo "🔍 Running Web platform lint checks..."
+    if ! (cd web && npm run lint); then
+        echo -e "${RED}❌ ERROR: Web platform ESLint check failed!${NC}"
+        echo "   → Run locally: cd web && npm run lint"
+        ERRORS=$((ERRORS + 1))
+    fi
+
     echo "🔍 Running Web platform build & TypeScript checks..."
     if ! (cd web && npm run build && npm test -- --run); then
         echo -e "${RED}❌ ERROR: Web platform build or TypeScript check failed!${NC}"

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { getDoc } from 'firebase/firestore';
+import { getDoc, type DocumentSnapshot } from 'firebase/firestore';
 import { SubscriptionPage } from '../../../src/components/subscription/SubscriptionPage';
 import { strings } from '../../../src/constants/strings';
 
@@ -16,8 +16,8 @@ vi.mock('../../../src/config/firebase', () => ({
 // Mock Razorpay SDK on window
 beforeEach(() => {
   vi.restoreAllMocks();
-  vi.mocked(getDoc).mockResolvedValue({ exists: () => false, data: () => undefined } as any);
-  (window as any).Razorpay = vi.fn().mockImplementation(() => ({
+  vi.mocked(getDoc).mockResolvedValue({ exists: () => false, data: () => undefined } as unknown as DocumentSnapshot);
+  (window as unknown as { Razorpay: unknown }).Razorpay = vi.fn().mockImplementation(() => ({
     open: vi.fn()
   }));
 });
@@ -78,7 +78,7 @@ describe('SubscriptionPage Component', () => {
     vi.mocked(getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({ tier: 'PRO', source: 'REVENUECAT', expiryDate: null })
-    } as any);
+    } as unknown as DocumentSnapshot);
     const mockCreateOrder = vi.fn();
 
     render(<SubscriptionPage userId="user_1" createOrderFn={mockCreateOrder} />);
@@ -93,7 +93,7 @@ describe('SubscriptionPage Component', () => {
   });
 
   it('does not block purchase when there is no active mobile subscription', async () => {
-    vi.mocked(getDoc).mockResolvedValue({ exists: () => false, data: () => undefined } as any);
+    vi.mocked(getDoc).mockResolvedValue({ exists: () => false, data: () => undefined } as unknown as DocumentSnapshot);
 
     render(<SubscriptionPage userId="user_1" />);
 
@@ -133,7 +133,7 @@ describe('SubscriptionPage Component', () => {
     vi.mocked(getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({ tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, willRenew: true })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     render(<SubscriptionPage userId="user_1" isPaidMember={true} cancelSubscriptionFn={vi.fn()} />);
 
@@ -146,7 +146,7 @@ describe('SubscriptionPage Component', () => {
     vi.mocked(getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({ tier: 'PRO', source: 'REVENUECAT', expiryDate: Date.now() + 100000, willRenew: true })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     render(<SubscriptionPage userId="user_1" isPaidMember={true} cancelSubscriptionFn={vi.fn()} />);
 
@@ -160,7 +160,7 @@ describe('SubscriptionPage Component', () => {
     vi.mocked(getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({ tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, willRenew: false })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     render(<SubscriptionPage userId="user_1" isPaidMember={true} cancelSubscriptionFn={vi.fn()} />);
 
@@ -174,7 +174,7 @@ describe('SubscriptionPage Component', () => {
     vi.mocked(getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({ tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, willRenew: true })
-    } as any);
+    } as unknown as DocumentSnapshot);
     const mockCancel = vi.fn().mockResolvedValue({ success: true, subscriptionId: 'sub_1' });
 
     render(<SubscriptionPage userId="user_1" isPaidMember={true} cancelSubscriptionFn={mockCancel} />);
@@ -195,7 +195,7 @@ describe('SubscriptionPage Component', () => {
     vi.mocked(getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({ tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, willRenew: true })
-    } as any);
+    } as unknown as DocumentSnapshot);
     const mockCancel = vi.fn();
 
     render(<SubscriptionPage userId="user_1" isPaidMember={true} cancelSubscriptionFn={mockCancel} />);
@@ -214,7 +214,7 @@ describe('SubscriptionPage Component', () => {
     vi.mocked(getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({ tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, willRenew: true })
-    } as any);
+    } as unknown as DocumentSnapshot);
     const mockCancel = vi.fn().mockRejectedValue(new Error('internal'));
 
     render(<SubscriptionPage userId="user_1" isPaidMember={true} cancelSubscriptionFn={mockCancel} />);

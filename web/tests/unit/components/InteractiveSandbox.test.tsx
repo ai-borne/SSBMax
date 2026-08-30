@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { InteractiveSandbox, evaluateResponseLocally } from '../../../src/components/landing/InteractiveSandbox';
+import { InteractiveSandbox } from '../../../src/components/landing/InteractiveSandbox';
+import { evaluateResponseLocally } from '../../../src/components/landing/evaluateResponseLocally';
 import { strings } from '../../../src/constants/strings';
 
 describe('InteractiveSandbox Component & Local Evaluator', () => {

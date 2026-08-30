@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallable, type HttpsCallable } from 'firebase/functions';
 import { AnalyticsDashboardPage } from '../../../src/components/analytics/AnalyticsDashboardPage';
 import { strings } from '../../../src/constants/strings';
 
@@ -20,7 +20,7 @@ vi.mock('../../../src/config/firebase', () => ({
  */
 describe('AnalyticsDashboardPage', () => {
   it('renders the loading state before the callable resolves', () => {
-    vi.mocked(httpsCallable).mockReturnValue(vi.fn(() => new Promise(() => {})) as any);
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn(() => new Promise(() => {})) as unknown as HttpsCallable);
 
     render(<AnalyticsDashboardPage />);
 
@@ -29,7 +29,7 @@ describe('AnalyticsDashboardPage', () => {
 
   it('renders the admin-facing permission-denied copy when the callable rejects with functions/permission-denied', async () => {
     const error = Object.assign(new Error('Admin access required'), { code: 'functions/permission-denied' });
-    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as any);
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as unknown as HttpsCallable);
 
     render(<AnalyticsDashboardPage />);
 
@@ -38,7 +38,7 @@ describe('AnalyticsDashboardPage', () => {
 
   it('renders the generic error copy for any other failure', async () => {
     const error = Object.assign(new Error('boom'), { code: 'functions/internal' });
-    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as any);
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as unknown as HttpsCallable);
 
     render(<AnalyticsDashboardPage />);
 
@@ -47,7 +47,7 @@ describe('AnalyticsDashboardPage', () => {
 
   it('renders the "no data yet" copy when no day docs exist', async () => {
     vi.mocked(httpsCallable).mockReturnValue(
-      vi.fn().mockResolvedValue({ data: { days: [], totalSignups: 0, sinceDate: null } }) as any
+      vi.fn().mockResolvedValue({ data: { days: [], totalSignups: 0, sinceDate: null } }) as unknown as HttpsCallable
     );
 
     render(<AnalyticsDashboardPage />);
@@ -64,7 +64,7 @@ describe('AnalyticsDashboardPage', () => {
       totalSignups: 7,
       sinceDate: '2026-08-28'
     };
-    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: summary }) as any);
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: summary }) as unknown as HttpsCallable);
 
     render(<AnalyticsDashboardPage />);
 

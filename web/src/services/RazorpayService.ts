@@ -31,9 +31,13 @@ export interface RazorpaySubscriptionOptions {
   onFailure: (error: { code?: string; description?: string }) => void;
 }
 
+interface RazorpayCheckoutInstance {
+  open(): void;
+}
+
 declare global {
   interface Window {
-    Razorpay?: any;
+    Razorpay?: new (options: Record<string, unknown>) => RazorpayCheckoutInstance;
   }
 }
 

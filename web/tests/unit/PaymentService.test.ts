@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { PaymentService } from '../../src/services/PaymentService';
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallable, HttpsCallable } from 'firebase/functions';
 
 vi.mock('firebase/functions', () => ({
   httpsCallable: vi.fn(),
@@ -22,7 +22,7 @@ describe('PaymentService', () => {
     const callable = vi.fn().mockResolvedValue({
       data: { success: true, orderId: 'order_1', amount: 49900, currency: 'INR', keyId: 'rzp_test_key' }
     });
-    vi.mocked(httpsCallable).mockReturnValue(callable as any);
+    vi.mocked(httpsCallable).mockReturnValue(callable as unknown as HttpsCallable);
 
     const service = new PaymentService();
     const result = await service.createOrder('pro_monthly');
@@ -41,7 +41,7 @@ describe('PaymentService', () => {
     const callable = vi.fn().mockResolvedValue({
       data: { success: true, subscriptionId: 'sub_abc123' }
     });
-    vi.mocked(httpsCallable).mockReturnValue(callable as any);
+    vi.mocked(httpsCallable).mockReturnValue(callable as unknown as HttpsCallable);
 
     const service = new PaymentService();
     const result = await service.cancelSubscription();

@@ -29,6 +29,9 @@ export function useUserProfileViewModel(
 
   useEffect(() => {
     if (!userId) {
+      // Standard guard-clause reset: not derivable at render time since it depends on the
+      // previous state (isLoading must be flipped back to false).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ profile: null, isLoading: false, error: null });
       return;
     }

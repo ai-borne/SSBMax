@@ -40,8 +40,8 @@ describe('Shared-corpus emulator contract tests (Phase 6)', () => {
     expect(result.items).toHaveLength(2);
     expect(result.items[0].questionText).toContain('CANDID');
     result.items.forEach((item) => {
-      expect((item as any).correctAnswerId).toBeUndefined();
-      expect((item as any).explanation).toBeUndefined();
+      expect((item as unknown as Record<string, unknown>).correctAnswerId).toBeUndefined();
+      expect((item as unknown as Record<string, unknown>).explanation).toBeUndefined();
     });
   });
 
@@ -79,7 +79,7 @@ describe('Shared-corpus emulator contract tests (Phase 6)', () => {
     expect(result.items[0].scenario).toContain('flooded river');
     expect(result.items[0].resources).toContain('rope');
     result.items.forEach((item) => {
-      expect((item as any).solution).toBeUndefined();
+      expect((item as unknown as Record<string, unknown>).solution).toBeUndefined();
     });
   });
 

@@ -109,6 +109,9 @@ export function useOLQDashboardViewModel(
     // which tab is active, since this hook must be called unconditionally per the
     // Rules of Hooks.
     if (!userId || !enabled) {
+      // Standard guard-clause reset: not derivable at render time since it depends on the
+      // previous state (isLoading must be flipped back to false).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ isLoading: false, olqScores: [], dossier: null, completedTestsCount: 0 });
       return;
     }

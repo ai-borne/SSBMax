@@ -66,9 +66,9 @@ export const GTOResponseForm: FC<GTOResponseFormProps> = ({
       }
       setSubmissionId(newSubmissionId);
       setStatus('submitted');
-    } catch (err: any) {
+    } catch (err) {
       setStatus('error');
-      setError(err.message || 'Failed to submit');
+      setError(err instanceof Error ? err.message : 'Failed to submit');
     }
   };
 

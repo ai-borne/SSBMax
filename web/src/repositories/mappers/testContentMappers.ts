@@ -18,10 +18,18 @@ export function normalizeStorageUrl(url?: string): string {
   return trimmed;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+}
+
+function asString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
 /**
  * Maps WAT batch documents, supporting polymorphic payload schemas.
  */
-export function mapDocToWATBatch(id: string, data?: Record<string, any>): WATBatch {
+export function mapDocToWATBatch(id: string, data?: Record<string, unknown>): WATBatch {
   if (!data) {
     return {
       id,
@@ -30,19 +38,20 @@ export function mapDocToWATBatch(id: string, data?: Record<string, any>): WATBat
     };
   }
 
-  const rawWords = data.words || data.wordList || data.items || [];
+  const rawWords = data.words ?? data.wordList ?? data.items ?? [];
   const words: string[] = Array.isArray(rawWords)
     ? rawWords
-        .map((item: any) => {
+        .map((item: unknown) => {
           if (typeof item === 'string') return item.trim();
-          if (item && typeof item === 'object') return (item.word || item.text || item.title || '').trim();
-          return String(item || '');
+          const record = asRecord(item);
+          if (record) return asString(record.word ?? record.text ?? record.title).trim();
+          return String(item ?? '');
         })
         .filter(Boolean)
     : [];
 
   return {
-    id: data.id || id,
+    id: asString(data.id, id),
     words: words.length > 0 ? words : ['LEADERSHIP', 'COURAGE', 'HONESTY', 'CHALLENGE', 'TEAMWORK', 'SUCCESS'],
     displayDurationSeconds: typeof data.displayDurationSeconds === 'number' ? data.displayDurationSeconds : 15
   };
@@ -51,7 +60,7 @@ export function mapDocToWATBatch(id: string, data?: Record<string, any>): WATBat
 /**
  * Maps SRT batch documents, supporting polymorphic payload schemas.
  */
-export function mapDocToSRTBatch(id: string, data?: Record<string, any>): SRTBatch {
+export function mapDocToSRTBatch(id: string, data?: Record<string, unknown>): SRTBatch {
   if (!data) {
     return {
       id,
@@ -64,19 +73,20 @@ export function mapDocToSRTBatch(id: string, data?: Record<string, any>): SRTBat
     };
   }
 
-  const rawSituations = data.situations || data.situationList || data.items || [];
+  const rawSituations = data.situations ?? data.situationList ?? data.items ?? [];
   const situations: string[] = Array.isArray(rawSituations)
     ? rawSituations
-        .map((item: any) => {
+        .map((item: unknown) => {
           if (typeof item === 'string') return item.trim();
-          if (item && typeof item === 'object') return (item.situation || item.text || item.description || '').trim();
-          return String(item || '');
+          const record = asRecord(item);
+          if (record) return asString(record.situation ?? record.text ?? record.description).trim();
+          return String(item ?? '');
         })
         .filter(Boolean)
     : [];
 
   return {
-    id: data.id || id,
+    id: asString(data.id, id),
     situations: situations.length > 0 ? situations : [
       'He was going to appear for an exam and saw a road accident victim. He...',
       'While leading a trekking expedition, one of his teammates injured his leg severely. He...',
@@ -89,7 +99,7 @@ export function mapDocToSRTBatch(id: string, data?: Record<string, any>): SRTBat
 /**
  * Maps TAT slide sets, normalizing URLs and appending the 12th blank card per SSB protocol.
  */
-export function mapDocToTATSet(id: string, data?: Record<string, any>): TATSet {
+export function mapDocToTATSet(id: string, data?: Record<string, unknown>): TATSet {
   if (!data) {
     const fallbackUrls = [
       'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80',
@@ -109,14 +119,19 @@ export function mapDocToTATSet(id: string, data?: Record<string, any>): TATSet {
     };
   }
 
-  const rawItems = data.imageUrls || data.slides || data.images || [];
+  const rawItems = data.imageUrls ?? data.slides ?? data.images ?? [];
   let entries: { url: string; contentId: string | null }[] = Array.isArray(rawItems)
     ? rawItems
-        .map((item: any) => ({
-          url: normalizeStorageUrl(typeof item === 'string' ? item : item?.url || item?.imageUrl || ''),
-          contentId: typeof item === 'object' && item?.id ? String(item.id) : null
-        }))
-        .filter((e: { url: string }) => Boolean(e.url))
+        .map((item: unknown) => {
+          const record = asRecord(item);
+          const url = typeof item === 'string' ? item : asString(record?.url ?? record?.imageUrl);
+          const rawId = record?.id;
+          return {
+            url: normalizeStorageUrl(url),
+            contentId: rawId ? String(rawId) : null
+          };
+        })
+        .filter((e) => Boolean(e.url))
     : [];
 
   if (entries.length === 0) {
@@ -138,8 +153,8 @@ export function mapDocToTATSet(id: string, data?: Record<string, any>): TATSet {
   const imageIds = entries.map((e, i) => e.contentId || `tat-img-${i + 1}`);
 
   return {
-    id: data.id || id,
-    setName: data.setName || data.title || 'TAT Practice Set 1',
+    id: asString(data.id, id),
+    setName: asString(data.setName ?? data.title, 'TAT Practice Set 1'),
     imageUrls,
     imageIds,
     slideDurationSeconds: typeof data.slideDurationSeconds === 'number' ? data.slideDurationSeconds : 240,
@@ -150,7 +165,7 @@ export function mapDocToTATSet(id: string, data?: Record<string, any>): TATSet {
 /**
  * Maps PPDT context documents with storage URL normalization.
  */
-export function mapDocToPPDTContext(id: string, data?: Record<string, any>): PPDTContext {
+export function mapDocToPPDTContext(id: string, data?: Record<string, unknown>): PPDTContext {
   if (!data) {
     return {
       id,
@@ -162,18 +177,22 @@ export function mapDocToPPDTContext(id: string, data?: Record<string, any>): PPD
     };
   }
 
-  let item: any = data;
-  if (Array.isArray(data.images) && data.images.length > 0) {
-    const found = data.images.find((img: any) => img.id === id || img.imageUrl === id);
+  let item: Record<string, unknown> = data;
+  const images = data.images;
+  if (Array.isArray(images) && images.length > 0) {
+    const found = images.find((img: unknown) => {
+      const record = asRecord(img);
+      return record && (record.id === id || record.imageUrl === id);
+    });
     if (found) {
-      item = found;
+      item = asRecord(found) ?? data;
     } else {
-      const randomIndex = Math.floor(Math.random() * data.images.length);
-      item = data.images[randomIndex];
+      const randomIndex = Math.floor(Math.random() * images.length);
+      item = asRecord(images[randomIndex]) ?? data;
     }
   }
 
-  const rawUrl = item.imageUrl || item.image || item.url || data.imageUrl || data.image || '';
+  const rawUrl = asString(item.imageUrl ?? item.image ?? item.url ?? data.imageUrl ?? data.image);
   const imageUrl = normalizeStorageUrl(rawUrl) || 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80';
 
   const writingTimeSeconds = typeof item.writingTimeSeconds === 'number'
@@ -182,22 +201,22 @@ export function mapDocToPPDTContext(id: string, data?: Record<string, any>): PPD
     ? item.writingTimeMinutes * 60
     : 240;
 
-  const rawContext = item.context || item.imageContext || data.context || data.imageContext;
+  const rawContext = asRecord(item.context ?? item.imageContext ?? data.context ?? data.imageContext);
   const imageContext = rawContext ? {
-    sceneDescription: rawContext.sceneDescription || '',
+    sceneDescription: asString(rawContext.sceneDescription),
     coreElements: Array.isArray(rawContext.coreElements) ? rawContext.coreElements : [],
     ambiguousElements: Array.isArray(rawContext.ambiguousElements) ? rawContext.ambiguousElements : [],
     expectedThemes: Array.isArray(rawContext.expectedThemes) ? rawContext.expectedThemes : [],
     penalizedThemes: Array.isArray(rawContext.penalizedThemes) ? rawContext.penalizedThemes : [],
     primaryOLQs: Array.isArray(rawContext.primaryOLQs) ? rawContext.primaryOLQs : [],
-    deviationTolerance: rawContext.deviationTolerance || 'MEDIUM',
+    deviationTolerance: asString(rawContext.deviationTolerance, 'MEDIUM'),
     exemplarGoodHints: Array.isArray(rawContext.exemplarGoodHints) ? rawContext.exemplarGoodHints : [],
     exemplarBadHints: Array.isArray(rawContext.exemplarBadHints) ? rawContext.exemplarBadHints : []
   } : undefined;
 
   return {
-    id: item.id || data.id || id,
-    title: item.title || item.imageDescription || data.title || data.setName || 'PPDT Image Test',
+    id: asString(item.id ?? data.id, id),
+    title: asString(item.title ?? item.imageDescription ?? data.title ?? data.setName, 'PPDT Image Test'),
     imageUrl,
     viewingTimeSeconds: typeof item.viewingTimeSeconds === 'number' ? item.viewingTimeSeconds : 30,
     writingTimeSeconds,
@@ -211,32 +230,34 @@ export function mapDocToPPDTContext(id: string, data?: Record<string, any>): PPD
 /**
  * Maps OIR question batch documents, performing anti-cheating answer key sanitization.
  */
-export function mapDocToOIRBatch(id: string, data?: Record<string, any>, batchIndex = 0): BatchDocument<OIRQuestion> {
+export function mapDocToOIRBatch(id: string, data?: Record<string, unknown>, batchIndex = 0): BatchDocument<OIRQuestion> {
   if (!data) {
     return { id: `batch_${batchIndex}`, batchIndex, totalItems: 0, items: [] };
   }
 
-  const rawItems = data.questions || data.items || data.questionList || [];
+  const rawItems = data.questions ?? data.items ?? data.questionList ?? [];
   const items: OIRQuestion[] = Array.isArray(rawItems)
-    ? rawItems.map((q: any, index: number) => {
+    ? rawItems.map((raw: unknown, index: number) => {
+        const q = asRecord(raw) ?? {};
         const questionNumber = typeof q.questionNumber === 'number' ? q.questionNumber : index + 1;
         const type: 'VERBAL' | 'NON_VERBAL' = q.type === 'NON_VERBAL' || q.questionType === 'NON_VERBAL' ? 'NON_VERBAL' : 'VERBAL';
-        const rawImg = q.imageUrl || q.image || '';
+        const rawImg = asString(q.imageUrl ?? q.image);
         const imageUrl = normalizeStorageUrl(rawImg) || undefined;
 
         const options: string[] = Array.isArray(q.options)
-          ? q.options.map((opt: any) => {
+          ? q.options.map((opt: unknown) => {
               if (typeof opt === 'string') return opt.trim();
-              if (opt && typeof opt === 'object') return (opt.text || opt.label || opt.value || opt.id || '').trim();
-              return String(opt || '');
+              const record = asRecord(opt);
+              if (record) return asString(record.text ?? record.label ?? record.value ?? record.id).trim();
+              return String(opt ?? '');
             }).filter(Boolean)
           : [];
 
         // Anti-cheating: explicitly pick only safe client fields
         return {
-          id: String(q.id || `oir_${batchIndex}_${questionNumber}`),
+          id: String(q.id ?? `oir_${batchIndex}_${questionNumber}`),
           questionNumber,
-          questionText: String(q.questionText || q.text || q.question || ''),
+          questionText: asString(q.questionText ?? q.text ?? q.question),
           options: options.length > 0 ? options : ['Option A', 'Option B', 'Option C', 'Option D'],
           imageUrl,
           type
@@ -245,7 +266,7 @@ export function mapDocToOIRBatch(id: string, data?: Record<string, any>, batchIn
     : [];
 
   return {
-    id: data.id || id || `batch_${batchIndex}`,
+    id: asString(data.id, id) || `batch_${batchIndex}`,
     batchIndex: typeof data.batchIndex === 'number' ? data.batchIndex : batchIndex,
     totalItems: items.length,
     items
@@ -256,21 +277,22 @@ export function mapDocToOIRBatch(id: string, data?: Record<string, any>, batchIn
  * Maps GPE (Group Planning Exercise) scenario batch documents, performing anti-cheating
  * `solution` stripping -- same pattern as OIR's correctAnswerId (see GitLiveGPEImageCacheManager).
  */
-export function mapDocToGPEBatch(id: string, data?: Record<string, any>, batchIndex = 0): BatchDocument<GPEImage> {
+export function mapDocToGPEBatch(id: string, data?: Record<string, unknown>, batchIndex = 0): BatchDocument<GPEImage> {
   if (!data) {
     return { id: `batch_${batchIndex}`, batchIndex, totalItems: 0, items: [] };
   }
 
-  const rawItems = data.images || data.items || [];
+  const rawItems = data.images ?? data.items ?? [];
   const items: GPEImage[] = Array.isArray(rawItems)
-    ? rawItems.map((img: any, index: number) => {
+    ? rawItems.map((raw: unknown, index: number) => {
+        const img = asRecord(raw) ?? {};
         // Anti-cheating: explicitly pick only safe client fields -- `solution` never included.
         return {
-          id: String(img.id || `gpe_${batchIndex}_${index + 1}`),
-          imageUrl: normalizeStorageUrl(img.imageUrl || img.image || ''),
-          scenario: String(img.scenario || ''),
-          imageDescription: String(img.imageDescription || ''),
-          resources: Array.isArray(img.resources) ? img.resources.map((r: any) => String(r)) : [],
+          id: String(img.id ?? `gpe_${batchIndex}_${index + 1}`),
+          imageUrl: normalizeStorageUrl(asString(img.imageUrl ?? img.image)),
+          scenario: asString(img.scenario),
+          imageDescription: asString(img.imageDescription),
+          resources: Array.isArray(img.resources) ? img.resources.map((r: unknown) => String(r)) : [],
           viewingTimeSeconds: typeof img.viewingTimeSeconds === 'number' ? img.viewingTimeSeconds : 30,
           planningTimeSeconds: typeof img.planningTimeSeconds === 'number' ? img.planningTimeSeconds : 300,
           minCharacters: typeof img.minCharacters === 'number' ? img.minCharacters : undefined,
@@ -282,7 +304,7 @@ export function mapDocToGPEBatch(id: string, data?: Record<string, any>, batchIn
     : [];
 
   return {
-    id: data.id || id || `batch_${batchIndex}`,
+    id: asString(data.id, id) || `batch_${batchIndex}`,
     batchIndex: typeof data.batchIndex === 'number' ? data.batchIndex : batchIndex,
     totalItems: items.length,
     items

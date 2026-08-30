@@ -559,6 +559,10 @@ jobs:
       - name: Run Codebase Audit
         run: node scripts/audit-web-codebase.js
 
+      - name: Run ESLint
+        working-directory: web
+        run: npm run lint
+
       - name: Run Web Unit Tests
         working-directory: web
         run: npm test

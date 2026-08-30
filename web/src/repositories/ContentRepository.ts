@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, limit, orderBy, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, limit, orderBy, where, FirestoreError, type DocumentData } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { FirestorePaths } from '../generated/contracts';
 import { IContentRepository } from './interfaces/IContentRepository';
@@ -61,7 +61,7 @@ export class ContentRepository implements IContentRepository {
     }
   }
 
-  private mapDocToStudyMaterial(id: string, data: Record<string, any>): StudyMaterial {
+  private mapDocToStudyMaterial(id: string, data: DocumentData): StudyMaterial {
     const topicType = typeof data.topicType === 'string' ? data.topicType : undefined;
     const content = data.contentMarkdown || data.introduction || data.content || '';
     const readTime = typeof data.readTime === 'number'
@@ -101,10 +101,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`OIR batch ${batchId} is unavailable`);
       }
       return mapDocToOIRBatch(snap.id, snap.data(), batchIndex);
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for OIR batch ${batchId}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for OIR batch ${batchId}:`, firestoreError?.message || error);
         return getFallbackOIRBatch(batchIndex);
       }
       throw error;
@@ -118,10 +119,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`PPDT context ${id} is unavailable`);
       }
       return mapDocToPPDTContext(id, snap.data());
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for PPDT context ${id}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for PPDT context ${id}:`, firestoreError?.message || error);
         return getFallbackPPDTContext(id);
       }
       throw error;
@@ -135,10 +137,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`TAT set ${id} is unavailable`);
       }
       return mapDocToTATSet(snap.id, snap.data());
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for TAT set ${id}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for TAT set ${id}:`, firestoreError?.message || error);
         return getFallbackTATSet(id);
       }
       throw error;
@@ -152,10 +155,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`WAT batch ${id} is unavailable`);
       }
       return mapDocToWATBatch(id, snap.data());
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for WAT batch ${id}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for WAT batch ${id}:`, firestoreError?.message || error);
         return getFallbackWATBatch(id);
       }
       throw error;
@@ -169,10 +173,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`SRT batch ${id} is unavailable`);
       }
       return mapDocToSRTBatch(id, snap.data());
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for SRT batch ${id}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for SRT batch ${id}:`, firestoreError?.message || error);
         return getFallbackSRTBatch(id);
       }
       throw error;

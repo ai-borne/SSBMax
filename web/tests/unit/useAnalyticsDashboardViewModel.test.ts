@@ -2,12 +2,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useAnalyticsDashboardViewModel } from '../../src/viewmodels/useAnalyticsDashboardViewModel';
 import type { AnalyticsDailySummary } from '../../src/repositories/AnalyticsRepository';
+import type { AnalyticsRepository } from '../../src/repositories/AnalyticsRepository';
 
-function mockRepository(overrides: Partial<Record<string, any>> = {}) {
+function mockRepository(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     getAnalyticsSummary: vi.fn(),
     ...overrides
-  } as any;
+  } as unknown as AnalyticsRepository;
 }
 
 const SUMMARY: AnalyticsDailySummary = {

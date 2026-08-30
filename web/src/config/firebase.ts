@@ -22,7 +22,7 @@ try {
       tabManager: persistentMultipleTabManager()
     })
   });
-} catch (e) {
+} catch {
   // If already initialized (e.g. during re-renders or hot module reloads)
   db = getFirestore(app);
 }

@@ -25,6 +25,9 @@ export function useStudyMaterialSections(
 
   useEffect(() => {
     let isMounted = true;
+    // Standard fetch-on-dependency-change reset: clears stale sections from the previous
+    // materialId while the new fetch below is in flight.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSections(null);
 
     if (!materialId) {

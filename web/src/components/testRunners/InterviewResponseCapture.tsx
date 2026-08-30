@@ -54,9 +54,9 @@ export const InterviewResponseCapture: FC<InterviewResponseCaptureProps> = ({
         submissionService.evaluateInterviewResponse({ responseId, sessionId })
       );
       setStatus('submitted');
-    } catch (err: any) {
+    } catch (err) {
       setStatus('error');
-      setError(err.message || 'Failed to submit');
+      setError(err instanceof Error ? err.message : 'Failed to submit');
     }
   };
 

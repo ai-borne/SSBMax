@@ -80,7 +80,7 @@ describe('subscriptionEligibility', () => {
             : bucketKey === 'SD' ? 'sdTestsUsed'
             : bucketKey === 'GTO' ? 'gtoTestsUsed'
             : 'interviewTestsUsed';
-          (atLimitUsage as any)[field] = limit;
+          atLimitUsage[field as keyof typeof atLimitUsage] = limit;
           expect(checkTestEligibility(testType, tier, atLimitUsage).status).toBe('LIMIT_REACHED');
         }
       });

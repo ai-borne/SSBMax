@@ -1,13 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useSubmissionResultViewModel } from '../../src/viewmodels/useSubmissionResultViewModel';
+import type { SubmissionRepository } from '../../src/repositories/SubmissionRepository';
 
-function mockRepository(overrides: Partial<Record<string, any>> = {}) {
+function mockRepository(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     getSubmissionStatus: vi.fn(),
     getResult: vi.fn(),
     ...overrides
-  } as any;
+  } as unknown as SubmissionRepository;
 }
 
 describe('useSubmissionResultViewModel', () => {

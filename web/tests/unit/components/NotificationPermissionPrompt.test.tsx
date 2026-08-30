@@ -8,16 +8,16 @@ vi.mock('../../../src/config/messaging', () => ({
 }));
 
 describe('NotificationPermissionPrompt', () => {
-  const originalNotification = (globalThis as any).Notification;
+  const originalNotification = (globalThis as unknown as { Notification: { permission: NotificationPermission } }).Notification;
 
   beforeEach(() => {
     localStorage.clear();
     vi.mocked(requestPushPermission).mockReset();
-    (globalThis as any).Notification = { permission: 'default' };
+    (globalThis as unknown as { Notification: { permission: NotificationPermission } }).Notification = { permission: 'default' };
   });
 
   afterEach(() => {
-    (globalThis as any).Notification = originalNotification;
+    (globalThis as unknown as { Notification: { permission: NotificationPermission } }).Notification = originalNotification;
   });
 
   it('renders when permission is still default and not previously dismissed', () => {
@@ -26,7 +26,7 @@ describe('NotificationPermissionPrompt', () => {
   });
 
   it('does not render once the user already granted or denied permission at the browser level', () => {
-    (globalThis as any).Notification = { permission: 'granted' };
+    (globalThis as unknown as { Notification: { permission: NotificationPermission } }).Notification = { permission: 'granted' };
     render(<NotificationPermissionPrompt userId="user_1" />);
     expect(screen.queryByTestId('notification-permission-prompt')).not.toBeInTheDocument();
   });

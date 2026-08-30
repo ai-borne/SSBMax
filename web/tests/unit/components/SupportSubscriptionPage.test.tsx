@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallable, type HttpsCallable } from 'firebase/functions';
 import { SupportSubscriptionPage } from '../../../src/components/support/SupportSubscriptionPage';
 import { strings } from '../../../src/constants/strings';
 
@@ -29,7 +29,7 @@ describe('SupportSubscriptionPage', () => {
 
   it('renders the admin-facing permission-denied copy when the callable rejects with functions/permission-denied', async () => {
     const error = Object.assign(new Error('Admin access required'), { code: 'functions/permission-denied' });
-    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as any);
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as unknown as HttpsCallable);
 
     render(<SupportSubscriptionPage />);
     submitLookup('user-1');
@@ -39,7 +39,7 @@ describe('SupportSubscriptionPage', () => {
 
   it('renders the generic error copy for any other failure (e.g. internal)', async () => {
     const error = Object.assign(new Error('Unable to verify subscription'), { code: 'functions/internal' });
-    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as any);
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as unknown as HttpsCallable);
 
     render(<SupportSubscriptionPage />);
     submitLookup('user-1');
@@ -49,7 +49,7 @@ describe('SupportSubscriptionPage', () => {
 
   it('renders a distinct "no user found" message for functions/not-found (a typo\'d email or uid, not a server fault)', async () => {
     const error = Object.assign(new Error('No user found for that email'), { code: 'functions/not-found' });
-    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as any);
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockRejectedValue(error) as unknown as HttpsCallable);
 
     render(<SupportSubscriptionPage />);
     submitLookup('nobody@example.com');
@@ -66,7 +66,7 @@ describe('SupportSubscriptionPage', () => {
       alerts: { items: [], hasMore: false },
       conflict: null
     };
-    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: snapshot }) as any);
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: snapshot }) as unknown as HttpsCallable);
 
     render(<SupportSubscriptionPage />);
     submitLookup('user-1');
@@ -92,7 +92,7 @@ describe('SupportSubscriptionPage', () => {
       alerts: { unavailable: true },
       conflict: null
     };
-    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: snapshot }) as any);
+    vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: snapshot }) as unknown as HttpsCallable);
 
     render(<SupportSubscriptionPage />);
     submitLookup('user-1');

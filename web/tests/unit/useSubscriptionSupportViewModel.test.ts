@@ -2,12 +2,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useSubscriptionSupportViewModel } from '../../src/viewmodels/useSubscriptionSupportViewModel';
 import type { SubscriptionSupportSnapshot } from '../../src/repositories/SupportRepository';
+import type { SupportRepository } from '../../src/repositories/SupportRepository';
 
-function mockRepository(overrides: Partial<Record<string, any>> = {}) {
+function mockRepository(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     getSubscriptionSupportSnapshot: vi.fn(),
     ...overrides
-  } as any;
+  } as unknown as SupportRepository;
 }
 
 const SNAPSHOT: SubscriptionSupportSnapshot = {

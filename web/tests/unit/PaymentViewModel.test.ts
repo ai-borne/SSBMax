@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { usePaymentViewModel, waitForTierUpgrade } from '../../src/viewmodels/PaymentViewModel';
-import { RazorpayService } from '../../src/services/RazorpayService';
+import { RazorpayService, type RazorpayOrderOptions } from '../../src/services/RazorpayService';
 
 // Mock RazorpayService
 vi.mock('../../src/services/RazorpayService', () => {
@@ -62,10 +62,10 @@ describe('usePaymentViewModel', () => {
 
   it('should handle checkout failure callback', async () => {
     vi.mocked(RazorpayService).mockImplementationOnce(() => ({
-      openCheckout: vi.fn().mockImplementation((options) => {
+      openCheckout: vi.fn().mockImplementation((options: RazorpayOrderOptions) => {
         options.onFailure({ description: 'User cancelled payment' });
       })
-    }) as any);
+    }) as unknown as RazorpayService);
 
     const { result } = renderHook(() => usePaymentViewModel());
 

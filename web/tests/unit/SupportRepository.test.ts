@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SupportRepository } from '../../src/repositories/SupportRepository';
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallable, HttpsCallable } from 'firebase/functions';
 
 vi.mock('firebase/functions', () => ({
   httpsCallable: vi.fn(),
@@ -29,7 +29,7 @@ describe('SupportRepository', () => {
       conflict: null
     };
     const callable = vi.fn().mockResolvedValue({ data: snapshot });
-    vi.mocked(httpsCallable).mockReturnValue(callable as any);
+    vi.mocked(httpsCallable).mockReturnValue(callable as unknown as HttpsCallable);
 
     const repository = new SupportRepository();
     const result = await repository.getSubscriptionSupportSnapshot('user-1');

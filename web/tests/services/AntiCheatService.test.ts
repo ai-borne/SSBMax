@@ -121,7 +121,7 @@ describe('AntiCheatService Cross-Platform Tests', () => {
     expect(warningMessages[0].message).toBe(strings.anticheat.pasteBlocked);
 
     // 2. IME Composition Paste Event (should NOT be prevented)
-    const imeEvent = new Event('paste', { cancelable: true, bubbles: true }) as any;
+    const imeEvent = new Event('paste', { cancelable: true, bubbles: true }) as Event & { isComposing?: boolean };
     imeEvent.isComposing = true;
     const imePreventSpy = vi.spyOn(imeEvent, 'preventDefault');
 

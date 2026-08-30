@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { NotificationRepository } from '../../src/repositories/NotificationRepository';
-import { onSnapshot, updateDoc, getDocs, writeBatch, getDoc, setDoc } from 'firebase/firestore';
+import { onSnapshot, updateDoc, getDocs, writeBatch, getDoc, setDoc, WriteBatch, QuerySnapshot, DocumentSnapshot } from 'firebase/firestore';
 import type { SSBMaxNotification } from '../../src/types/notification';
 
 vi.mock('firebase/firestore', () => ({
@@ -37,8 +37,8 @@ function notification(overrides: Partial<SSBMaxNotification> = {}): SSBMaxNotifi
 describe('NotificationRepository', () => {
   it('subscribeToNotifications sorts newest-first and returns the unsubscribe fn', () => {
     const unsubscribe = vi.fn();
-    vi.mocked(onSnapshot).mockImplementation((_q: any, onNext: any) => {
-      onNext({
+    vi.mocked(onSnapshot).mockImplementation((_q: unknown, onNext: unknown) => {
+      (onNext as (snapshot: unknown) => void)({
         docs: [
           { data: () => notification({ id: 'old', createdAt: 1 }) },
           { data: () => notification({ id: 'new', createdAt: 2 }) }
@@ -60,8 +60,8 @@ describe('NotificationRepository', () => {
   });
 
   it('subscribeToUnreadCount reports the snapshot size', () => {
-    vi.mocked(onSnapshot).mockImplementation((_q: any, onNext: any) => {
-      onNext({ size: 3 });
+    vi.mocked(onSnapshot).mockImplementation((_q: unknown, onNext: unknown) => {
+      (onNext as (snapshot: unknown) => void)({ size: 3 });
       return vi.fn();
     });
 
@@ -79,10 +79,10 @@ describe('NotificationRepository', () => {
   it('markAllAsRead batches an update per unread doc for the user', async () => {
     const update = vi.fn();
     const commit = vi.fn();
-    vi.mocked(writeBatch).mockReturnValue({ update, commit } as any);
+    vi.mocked(writeBatch).mockReturnValue({ update, commit } as unknown as WriteBatch);
     vi.mocked(getDocs).mockResolvedValueOnce({
       docs: [{ ref: 'ref1' }, { ref: 'ref2' }]
-    } as any);
+    } as unknown as QuerySnapshot);
 
     await new NotificationRepository().markAllAsRead('user_1');
 
@@ -91,7 +91,7 @@ describe('NotificationRepository', () => {
   });
 
   it('getPreferences falls back to defaults when no doc exists', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as unknown as DocumentSnapshot);
     const prefs = await new NotificationRepository().getPreferences('user_1');
     expect(prefs.userId).toBe('user_1');
     expect(prefs.enablePushNotifications).toBe(true);

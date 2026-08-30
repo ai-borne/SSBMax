@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useAccountDeletionViewModel } from '../../src/viewmodels/useAccountDeletionViewModel';
+import type { AccountRepository } from '../../src/repositories/AccountRepository';
 
 /**
  * docs/plans/AccountDeletion.md Phase 3: encodes the irreversibility guard -- opening the
@@ -17,7 +18,7 @@ describe('useAccountDeletionViewModel', () => {
 
   it('loads deletion status for the signed-in user', async () => {
     const repository = makeRepository(999);
-    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as any));
+    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as unknown as AccountRepository));
 
     await waitFor(() => expect(result.current.deletionRequestedAt).toBe(999));
     expect(repository.getDeletionStatus).toHaveBeenCalledWith('user-1');
@@ -25,7 +26,7 @@ describe('useAccountDeletionViewModel', () => {
 
   it('opening the confirmation modal does not call requestAccountDeletion', async () => {
     const repository = makeRepository();
-    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as any));
+    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as unknown as AccountRepository));
     await waitFor(() => expect(repository.getDeletionStatus).toHaveBeenCalled());
 
     act(() => result.current.openModal());
@@ -36,7 +37,7 @@ describe('useAccountDeletionViewModel', () => {
 
   it('confirmDelete calls requestAccountDeletion and resolves true on success', async () => {
     const repository = makeRepository();
-    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as any));
+    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as unknown as AccountRepository));
 
     let succeeded: boolean = false;
     await act(async () => {
@@ -50,7 +51,7 @@ describe('useAccountDeletionViewModel', () => {
 
   it('cancelDeletion calls cancelAccountDeletion, not requestAccountDeletion', async () => {
     const repository = makeRepository(999);
-    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as any));
+    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as unknown as AccountRepository));
     await waitFor(() => expect(result.current.deletionRequestedAt).toBe(999));
 
     await act(async () => {
@@ -65,7 +66,7 @@ describe('useAccountDeletionViewModel', () => {
   it('surfaces an error message and leaves the modal open when confirmDelete fails', async () => {
     const repository = makeRepository();
     repository.requestAccountDeletion.mockRejectedValue(new Error('boom'));
-    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as any));
+    const { result } = renderHook(() => useAccountDeletionViewModel('user-1', repository as unknown as AccountRepository));
 
     await act(async () => {
       await result.current.confirmDelete();

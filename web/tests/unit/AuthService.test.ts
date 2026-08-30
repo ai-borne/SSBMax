@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthService } from '../../src/services/AuthService';
+import type { Auth, User } from 'firebase/auth';
+import type { AnalyticsRepository } from '../../src/repositories/AnalyticsRepository';
 
 let mockIsNewUser = false;
 
@@ -22,28 +24,27 @@ vi.mock('firebase/auth', () => {
       callback(mockUser);
       return () => {};
     }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getAdditionalUserInfo: vi.fn(() => ({ isNewUser: mockIsNewUser }) as any)
+    getAdditionalUserInfo: vi.fn(() => ({ isNewUser: mockIsNewUser }))
   };
 });
 
 describe('AuthService Unit Tests', () => {
   let authService: AuthService;
   let mockAnalyticsRepository: { recordSignup: ReturnType<typeof vi.fn> };
-  const mockAuth: any = {
+  const mockAuth = {
     currentUser: {
       uid: 'test-uid-123',
       email: 'candidate@ssbmax.in',
       displayName: 'Test Candidate',
       photoURL: 'https://example.com/avatar.png'
-    }
-  };
+    } as unknown as User
+  } as unknown as Auth;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsNewUser = false;
     mockAnalyticsRepository = { recordSignup: vi.fn().mockResolvedValue(undefined) };
-    authService = new AuthService(mockAuth, mockAnalyticsRepository as any);
+    authService = new AuthService(mockAuth, mockAnalyticsRepository as unknown as AnalyticsRepository);
   });
 
   it('should return mapped user profile on getCurrentUser', () => {

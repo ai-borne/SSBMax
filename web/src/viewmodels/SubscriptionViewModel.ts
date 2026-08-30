@@ -29,6 +29,10 @@ export function useSubscriptionViewModel(
   useEffect(() => {
     let isMounted = true;
     if (!userId) {
+      // Resetting to defaults when userId is cleared, and flipping isLoading back to true
+      // to start a new fetch below, are both standard fetch-on-dependency-change resets --
+      // not derivable at render time since they depend on the previous state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRealTier('FREE');
       setUsage(EMPTY_USAGE);
       setIsLoading(false);

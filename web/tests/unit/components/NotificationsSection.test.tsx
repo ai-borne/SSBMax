@@ -11,15 +11,15 @@ vi.mock('../../../src/config/messaging', () => ({
 }));
 
 describe('NotificationsSection', () => {
-  const originalNotification = (globalThis as any).Notification;
+  const originalNotification = (globalThis as unknown as { Notification: { permission: NotificationPermission } }).Notification;
 
   beforeEach(() => {
-    (globalThis as any).Notification = { permission: 'granted' };
+    (globalThis as unknown as { Notification: { permission: NotificationPermission } }).Notification = { permission: 'granted' };
     vi.mocked(requestPushPermission).mockReset();
   });
 
   afterEach(() => {
-    (globalThis as any).Notification = originalNotification;
+    (globalThis as unknown as { Notification: { permission: NotificationPermission } }).Notification = originalNotification;
   });
 
   it('hides the push toggle for a signed-out user (no userId), same as the bell', () => {

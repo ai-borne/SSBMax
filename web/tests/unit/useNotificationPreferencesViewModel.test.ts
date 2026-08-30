@@ -2,13 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useNotificationPreferencesViewModel } from '../../src/viewmodels/useNotificationPreferencesViewModel';
 import { defaultNotificationPreferences } from '../../src/types/notification';
+import type { NotificationRepository } from '../../src/repositories/NotificationRepository';
 
-function mockRepository(overrides: Partial<Record<string, any>> = {}) {
+function mockRepository(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     getPreferences: vi.fn().mockResolvedValue(defaultNotificationPreferences('user_1')),
     savePreferences: vi.fn().mockResolvedValue(undefined),
     ...overrides
-  } as any;
+  } as unknown as NotificationRepository;
 }
 
 describe('useNotificationPreferencesViewModel', () => {
