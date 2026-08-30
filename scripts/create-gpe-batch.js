@@ -56,6 +56,7 @@ Identify the problems, prioritize them, and produce a plan to handle all situati
             return {
                 id: `gpe_generated_${String(index + 1).padStart(3, '0')}`,
                 imageUrl: img.publicUrl,
+                imageStoragePath: img.storagePath,
                 scenario: scenarioData.scenario,
                 imageDescription: scenarioData.description,
                 resources: scenarioData.resources,

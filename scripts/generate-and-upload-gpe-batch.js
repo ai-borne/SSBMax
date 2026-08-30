@@ -1,7 +1,7 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
-const uuid = require('uuid');
+const { uploadImageAndGetUrl } = require('./lib/firebaseImageUpload');
 
 // Service Account
 const serviceAccount = require('../.firebase/service-account.json');
@@ -178,26 +178,16 @@ async function main() {
             }
 
             const fileName = `gpe_map_${map.type}_${Date.now()}.png`;
-            const storagePath = `gpe_images/batch_002/${fileName}`;
+            const destination = `gpe_images/batch_002/${fileName}`;
 
-            await bucket.upload(map.path, {
-                destination: storagePath,
-                metadata: {
-                    contentType: 'image/png',
-                    metadata: {
-                        firebaseStorageDownloadTokens: uuid.v4()
-                    }
-                }
-            });
+            const { imageUrl, storagePath } = await uploadImageAndGetUrl(bucket, map.path, destination, 'image/png');
 
-            await bucket.file(storagePath).makePublic();
-            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
-
-            console.log(`   ✅ Uploaded: ${publicUrl}`);
+            console.log(`   ✅ Uploaded: ${imageUrl}`);
 
             mapUploads.push({
                 type: map.type,
-                url: publicUrl,
+                url: imageUrl,
+                storagePath,
                 desc: map.description
             });
         }
@@ -217,6 +207,7 @@ async function main() {
                 imagesList.push({
                     id: id,
                     imageUrl: map.url,
+                    imageStoragePath: map.storagePath,
                     scenario: s.scenario,
                     solution: s.solution, // NEW FIELD
                     title: s.title,

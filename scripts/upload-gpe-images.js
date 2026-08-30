@@ -1,6 +1,7 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
+const { uploadImageAndGetUrl } = require('./lib/firebaseImageUpload');
 
 // Initialize Firebase Admin
 const serviceAccount = require('../.firebase/service-account.json');
@@ -31,35 +32,21 @@ async function uploadGPEImages() {
 
         const uploadedImages = [];
 
-        const storagePath = `gpe_images/${fileName}`;
+        const destination = `gpe_images/${fileName}`;
 
         console.log(`Uploading ${fileName}...`);
 
         try {
-            // Upload to Firebase Storage
-            await bucket.upload(localPath, {
-                destination: storagePath,
-                metadata: {
-                    contentType: 'image/png', // It's a PNG
-                    metadata: {
-                        firebaseStorageDownloadTokens: require('uuid').v4()
-                    }
-                }
-            });
-
-            // Make file publicly accessible
-            await bucket.file(storagePath).makePublic();
-
-            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+            const { imageUrl, storagePath } = await uploadImageAndGetUrl(bucket, localPath, destination, 'image/png');
 
             uploadedImages.push({
                 fileName: fileName,
                 storagePath: storagePath,
-                publicUrl: publicUrl,
+                publicUrl: imageUrl,
                 index: 1
             });
 
-            console.log(`   ✅ Uploaded: ${publicUrl}\n`);
+            console.log(`   ✅ Uploaded: ${imageUrl}\n`);
         } catch (error) {
             console.error(`   ❌ Failed to upload ${fileName}:`, error.message);
             throw error;
