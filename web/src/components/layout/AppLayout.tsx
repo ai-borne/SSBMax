@@ -5,8 +5,10 @@ import { authService, UserProfile } from '../../services/AuthService';
 import { strings } from '../../constants/strings';
 import { useTheme } from '../../hooks/useTheme';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useOfflineQueueSync } from '../../hooks/useOfflineQueueSync';
 import { Footer } from '../legal/Footer';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { OfflineSyncStatus } from './OfflineSyncStatus';
 import type { SSBMaxNotification } from '../../types/notification';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -48,6 +50,7 @@ export const AppLayout: FC<AppLayoutProps> = ({
   const [subscribedUser, setSubscribedUser] = useState<UserProfile | null>(authService.getCurrentUser());
   const [authInitializing, setAuthInitializing] = useState<boolean>(false);
   const authUser = propUser !== undefined ? propUser : subscribedUser;
+  const offlineSyncResult = useOfflineQueueSync(authUser?.uid);
 
   useEffect(() => {
     if (propUser !== undefined) {
@@ -154,6 +157,7 @@ export const AppLayout: FC<AppLayoutProps> = ({
                     {isOnline ? <Wifi className="w-3.5 h-3.5 text-emerald-500" /> : <WifiOff className="w-3.5 h-3.5 text-amber-500" />}
                     <span>{isOnline ? strings.header.statusOnline : strings.header.statusOffline}</span>
                   </div>
+                  <OfflineSyncStatus result={offlineSyncResult} />
 
                   {deferredPrompt && (
                     <button
