@@ -24,19 +24,13 @@ describe('ssbTestConfigs card -> contract mapping', () => {
     expect(conference?.contractTestType).toBeUndefined();
   });
 
-  it('marks "fgt" as a non-gradable content card with no contractTestType (no matching GTOSubmission variant or contract TestType member)', () => {
-    const fgt = DAY_3_4_TESTS.find((config) => config.id === 'fgt');
-    expect(fgt).toBeDefined();
-    expect(fgt?.contractTestType).toBeUndefined();
-  });
-
   it('keeps "snake_race" gradable, mapped 1:1 to GTO_GOR (GTOSubmission.GORSubmission is a real gradeable type)', () => {
     const snakeRace = DAY_3_4_TESTS.find((config) => config.id === 'snake_race');
     expect(snakeRace).toBeDefined();
     expect(snakeRace?.contractTestType).toBe('GTO_GOR');
   });
 
-  it('maps every other gradeable GTO sub-type 1:1 to its contract TestType member', () => {
+  it('maps every other GTO sub-type 1:1 to its contract TestType member (GTO taxonomy parity fix -- FGT and Lecturette now have real contract TestType members too, matching every other GTO sub-type, even though only GD/GPE/Lecturette have a built submission flow today)', () => {
     const expected: Record<string, string> = {
       gd: 'GTO_GD',
       gpe: 'GTO_GPE',
@@ -44,6 +38,8 @@ describe('ssbTestConfigs card -> contract mapping', () => {
       hgt: 'GTO_HGT',
       iot: 'GTO_IO',
       command_task: 'GTO_CT',
+      fgt: 'GTO_FGT',
+      lecturette: 'GTO_LECTURETTE',
     };
     for (const [id, contractTestType] of Object.entries(expected)) {
       const config = DAY_3_4_TESTS.find((c) => c.id === id);

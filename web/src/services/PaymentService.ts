@@ -35,6 +35,14 @@ export interface CreateSubscriptionResponse {
   keyId: string;
 }
 
+/** Phase 5 (H5a, Payment Ecosystem Hardening plan): `cancelRazorpaySubscription`
+ * (`functions/src/razorpaySubscriptionCancel.js`) -- no payload, the callable always targets the
+ * caller's own subscription doc (`context.auth.uid`), never a client-supplied id. */
+export interface CancelSubscriptionResponse {
+  success: boolean;
+  subscriptionId: string;
+}
+
 export class PaymentService {
   constructor(private readonly functionsInstance: Functions = defaultFunctions) {}
 
@@ -49,4 +57,10 @@ export class PaymentService {
       this.functionsInstance,
       'createRazorpaySubscription'
     )({ planId }).then((r) => r.data);
+
+  cancelSubscription = (): Promise<CancelSubscriptionResponse> =>
+    httpsCallable<undefined, CancelSubscriptionResponse>(
+      this.functionsInstance,
+      'cancelRazorpaySubscription'
+    )().then((r) => r.data);
 }

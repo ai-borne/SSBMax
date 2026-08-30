@@ -69,7 +69,8 @@ This study material is stored in our cloud database. Please check:
 - **App Update**: Make sure you have the latest version of SSBMax
 - **Try Again**: Pull down to refresh or close and reopen the material
 
-All study materials are available offline once loaded (cached for 7 days).
+Study materials require an internet connection to load -- they aren't stored on your device
+for offline reading yet.
 
 If the problem persists, please contact support@ssbmax.com.
         """.trimIndent(),

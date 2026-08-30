@@ -12,7 +12,7 @@ describe('SubmissionResultView', () => {
         ({
           getSubmissionStatus: vi.fn().mockResolvedValue({ status: 'ANALYZING' }),
           getResult: vi.fn()
-        }) as any
+        }) as unknown as SubmissionRepository
     );
 
     render(<SubmissionResultView submissionId="sub1" resultCollection="psych_results" />);
@@ -31,7 +31,7 @@ describe('SubmissionResultView', () => {
             recommendations: ['Keep practicing'],
             aiConfidence: 80
           })
-        }) as any
+        }) as unknown as SubmissionRepository
     );
 
     render(<SubmissionResultView submissionId="sub1" resultCollection="psych_results" />);
@@ -44,7 +44,7 @@ describe('SubmissionResultView', () => {
         ({
           getSubmissionStatus: vi.fn().mockResolvedValue({ status: 'FAILED' }),
           getResult: vi.fn()
-        }) as any
+        }) as unknown as SubmissionRepository
     );
 
     render(<SubmissionResultView submissionId="sub1" resultCollection="psych_results" />);
@@ -57,7 +57,7 @@ describe('SubmissionResultView', () => {
         ({
           getSubmissionStatus: vi.fn().mockResolvedValue(null),
           getResult: vi.fn()
-        }) as any
+        }) as unknown as SubmissionRepository
     );
 
     render(<SubmissionResultView submissionId="missing" resultCollection="psych_results" />);

@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
+import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.ui.notifications.NotificationCenterScreen
 import com.ssbmax.shared.ui.phase.Phase1DetailScreen
 import com.ssbmax.shared.ui.phase.Phase2DetailScreen
@@ -46,6 +47,9 @@ fun NavGraphBuilder.studyContentGraph(navController: NavHostController) {
             onNavigateBack = { navController.navigateUp() },
             onNavigateToRelatedMaterial = { relatedId ->
                 navController.navigate(SSBMaxDestinations.StudyMaterialDetail(relatedId))
+            },
+            onNavigateToTest = { testType ->
+                navController.navigate(destinationForTestType(testType))
             }
         )
     }
@@ -170,4 +174,29 @@ fun NavGraphBuilder.studyContentGraph(navController: NavHostController) {
         val screen = backStackEntry.toRoute<SSBMaxDestinations.NotYetPorted>().screen
         NotYetPortedScreen(screen)
     }
+}
+
+/**
+ * The "Practice this now" CTA's [TestType] -> destination resolution (Phase 7, docs/plans/
+ * write-the-phased-plan-wobbly-pancake.md). Deliberately exhaustive over [TestType] (no `else`
+ * branch) rather than mirroring [studyContentGraph]'s testId-prefix `when` above -- a renamed or
+ * newly added [TestType] member must fail this `when` to compile rather than silently falling
+ * through, since [testTypeForTopicType] only ever resolves to a handful of members today (a
+ * PSYCHOLOGY/GTO topic is intentionally ambiguous and returns null upstream, never reaching
+ * here) but the mapping must stay correct as new test types are wired up.
+ */
+internal fun destinationForTestType(testType: TestType): SSBMaxDestinations = when (testType) {
+    TestType.OIR -> SSBMaxDestinations.OIRTest("oir_standard")
+    TestType.PPDT -> SSBMaxDestinations.PPDTTest("ppdt_standard")
+    TestType.PIQ -> SSBMaxDestinations.PIQTest("piq_standard")
+    TestType.TAT -> SSBMaxDestinations.TATTest("tat_standard")
+    TestType.WAT -> SSBMaxDestinations.WATTest("wat_standard")
+    TestType.SRT -> SSBMaxDestinations.SRTTest("srt_standard")
+    TestType.SD -> SSBMaxDestinations.SDTest("sd_standard")
+    TestType.GTO_GD -> SSBMaxDestinations.GTOGDTest("gto_gd_standard")
+    TestType.GTO_LECTURETTE -> SSBMaxDestinations.GTOLecturetteTest("gto_lecturette_standard")
+    TestType.GTO_GPE -> SSBMaxDestinations.GTOGPETest("gto_gpe_standard")
+    TestType.IO -> SSBMaxDestinations.StartInterview
+    TestType.GTO_PGT, TestType.GTO_GOR, TestType.GTO_HGT, TestType.GTO_IO, TestType.GTO_CT, TestType.GTO_FGT ->
+        SSBMaxDestinations.NotYetPorted("Test(${testType.name})")
 }

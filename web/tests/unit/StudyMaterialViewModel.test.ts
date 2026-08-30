@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { StudyMaterialViewModel } from '../../src/viewmodels/StudyMaterialViewModel';
 import { IContentRepository } from '../../src/repositories/interfaces/IContentRepository';
-import { StudyMaterial, BatchDocument, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, GPEImage, OIRContentMeta } from '../../src/types/testContent';
+import { StudyMaterial, BatchDocument, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, GPEImage, OIRContentMeta, TestBatchInfo } from '../../src/types/testContent';
 
 class MockContentRepository implements IContentRepository {
   async getStudyMaterials(): Promise<StudyMaterial[]> {
@@ -69,13 +69,21 @@ class MockContentRepository implements IContentRepository {
     return { contentVersion: 1, batchCount: 1 };
   }
 
-  async getAvailableBatches(): Promise<any[]> {
+  async getAvailableBatches(): Promise<TestBatchInfo[]> {
     return [];
+  }
+
+  async getStudyMaterialSections() {
+    return null;
   }
 }
 
 
 describe('StudyMaterialViewModel Unit Tests', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('should load study materials and populate categories', async () => {
     const vm = new StudyMaterialViewModel(new MockContentRepository());
     await vm.loadMaterials();
@@ -101,5 +109,17 @@ describe('StudyMaterialViewModel Unit Tests', () => {
 
     vm.markAsCompleted('mat_1');
     expect(vm.isCompleted('mat_1')).toBe(true);
+  });
+
+  it('should persist completed materials to localStorage so state survives a remount', async () => {
+    // Study content has no auth gate and no server-side "mark as read" -- an anonymous
+    // visitor's only persistence option is localStorage, and it must survive the ViewModel
+    // being recreated (e.g. on navigation away from and back to the Study tab).
+    const vm1 = new StudyMaterialViewModel(new MockContentRepository());
+    vm1.markAsCompleted('mat_1');
+
+    const vm2 = new StudyMaterialViewModel(new MockContentRepository());
+    expect(vm2.isCompleted('mat_1')).toBe(true);
+    expect(vm2.isCompleted('mat_2')).toBe(false);
   });
 });

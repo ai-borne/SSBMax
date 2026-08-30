@@ -24,11 +24,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,6 +45,8 @@ import ssbmax.shared.generated.resources.subscription_mgmt_cd_back
 import ssbmax.shared.generated.resources.subscription_mgmt_loading
 import ssbmax.shared.generated.resources.subscription_mgmt_compare_plans
 import ssbmax.shared.generated.resources.subscription_mgmt_error_generic
+import ssbmax.shared.generated.resources.subscription_mgmt_manage_billing
+import ssbmax.shared.generated.resources.subscription_mgmt_manage_billing_error
 import ssbmax.shared.generated.resources.subscription_mgmt_retry
 import ssbmax.shared.generated.resources.subscription_mgmt_title
 
@@ -110,9 +114,20 @@ fun SubscriptionManagementScreen(
                 )
             }
             else -> {
+                val uriHandler = LocalUriHandler.current
                 SubscriptionContent(
                     uiState = uiState,
                     onUpgrade = onUpgrade,
+                    onManageBilling = {
+                        val url = uiState.managementUrl
+                        if (url != null) {
+                            runCatching { uriHandler.openUri(url) }
+                                .onFailure { viewModel.onManageBillingUnavailable() }
+                        } else {
+                            viewModel.onManageBillingUnavailable()
+                        }
+                    },
+                    onDismissManageBillingError = { viewModel.dismissManageBillingError() },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
@@ -127,6 +142,8 @@ fun SubscriptionManagementScreen(
 private fun SubscriptionContent(
     uiState: SubscriptionManagementUiState,
     onUpgrade: () -> Unit,
+    onManageBilling: () -> Unit,
+    onDismissManageBillingError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -150,7 +167,51 @@ private fun SubscriptionContent(
             Text(text = stringResource(Res.string.subscription_mgmt_compare_plans))
         }
 
+        if (uiState.showManageBilling) {
+            ManageBillingAction(
+                error = uiState.manageBillingError,
+                onManageBilling = onManageBilling,
+                onDismissError = onDismissManageBillingError
+            )
+        }
+
         SubscriptionFAQ()
+    }
+}
+
+/**
+ * "Manage Billing" action for an active RevenueCat-sourced subscription (Phase 6, payment
+ * ecosystem hardening plan) -- deep-links to the store's own subscription-management page since
+ * Apple/Google forbid a backend from cancelling a StoreKit/Play subscription directly. Kept
+ * inline rather than split into a sibling file (unlike [SubscriptionPlanCards]/[SubscriptionFAQ])
+ * because it's a single small composable, not a growing card.
+ */
+@Composable
+private fun ManageBillingAction(
+    error: Boolean,
+    onManageBilling: () -> Unit,
+    onDismissError: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        OutlinedButton(
+            onClick = {
+                if (error) onDismissError()
+                onManageBilling()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = stringResource(Res.string.subscription_mgmt_manage_billing))
+        }
+
+        if (error) {
+            Text(
+                text = stringResource(Res.string.subscription_mgmt_manage_billing_error),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
     }
 }
 

@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mocked } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PsychologyTestRunner } from '../../src/components/testRunners/PsychologyTestRunner';
+import type { PsychologyTestViewModel } from '../../src/viewmodels/PsychologyTestViewModel';
 import { strings } from '../../src/constants/strings';
 
 describe('PsychologyTestRunner Component Unit Tests', () => {
-  let mockViewModel: any;
+  let mockViewModel: Mocked<PsychologyTestViewModel>;
 
   beforeEach(() => {
     mockViewModel = {
@@ -30,7 +31,7 @@ describe('PsychologyTestRunner Component Unit Tests', () => {
       updateResponse: vi.fn(),
       nextSlide: vi.fn().mockReturnValue(false),
       submitTest: vi.fn()
-    };
+    } as unknown as Mocked<PsychologyTestViewModel>;
   });
 
   it('should render WAT prompt and response textarea', () => {
@@ -53,13 +54,16 @@ describe('PsychologyTestRunner Component Unit Tests', () => {
   it('should render Return to SSB Tests button on completion screen and trigger onExitTest when clicked', () => {
     mockViewModel.getState.mockReturnValue({
       testType: 'WAT',
+      batchId: 'batch_001',
       slides: [],
       currentSlideIndex: 0,
       responses: {},
       isLoading: false,
       isSubmitting: false,
       isCompleted: true,
-      error: null
+      error: null,
+      lastSubmissionId: null,
+      lastResultCollection: null
     });
     const onExitTestSpy = vi.fn();
 

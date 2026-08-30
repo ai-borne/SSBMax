@@ -70,23 +70,26 @@ enum class TestType {
     WAT,        // Word Association Test
     SRT,        // Situation Reaction Test
     SD,         // Self Description
-    // GTO Tasks (8 individual tests)
+    // GTO Tasks (9 individual tests). GTO_GOR/GTO_HGT/GTO_IO/GTO_CT/GTO_FGT have no dedicated
+    // test-taking screen wired in GTOGraph.kt yet (only GD/GPE/LECTURETTE do) -- recognized topic
+    // and study-material entries, not yet gradeable. See docs/plans -- GTO taxonomy parity.
     GTO_GD,     // Group Discussion
     GTO_GPE,    // Group Planning Exercise
     GTO_PGT,    // Progressive Group Task
-    GTO_GOR,    // Group Obstacle Race
+    GTO_GOR,    // Group Obstacle Race (Snake Race)
     GTO_HGT,    // Half Group Task
     GTO_LECTURETTE, // Lecturette
     GTO_IO,     // Individual Obstacles
     GTO_CT,     // Command Task
+    GTO_FGT,    // Final Group Task
     IO;         // Interview Test - AI-powered SSB interview simulation
-    
+
     val phase: TestPhase
         get() = when (this) {
             OIR, PPDT -> TestPhase.PHASE_1
-            PIQ, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, IO -> TestPhase.PHASE_2
+            PIQ, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, GTO_FGT, IO -> TestPhase.PHASE_2
         }
-    
+
     val displayName: String
         get() = when (this) {
             OIR -> "OIR Test"
@@ -105,9 +108,10 @@ enum class TestType {
             GTO_LECTURETTE -> "Lecturette"
             GTO_IO -> "Individual Obstacles"
             GTO_CT -> "Command Task"
+            GTO_FGT -> "Final Group Task"
             IO -> "Interview"
         }
-    
+
     val fullName: String
         get() = when (this) {
             OIR -> "Officer Intelligence Rating"
@@ -126,9 +130,10 @@ enum class TestType {
             GTO_LECTURETTE -> "Lecturette"
             GTO_IO -> "Individual Obstacles"
             GTO_CT -> "Command Task"
+            GTO_FGT -> "Final Group Task"
             IO -> "Interview Officer Assessment"
         }
-    
+
     val description: String
         get() = when (this) {
             OIR -> "Test your reasoning, verbal, and non-verbal intelligence"
@@ -147,14 +152,15 @@ enum class TestType {
             GTO_LECTURETTE -> "Deliver a short speech on a chosen topic"
             GTO_IO -> "Complete individual physical challenges and obstacles"
             GTO_CT -> "Command and lead your group through tactical exercises"
+            GTO_FGT -> "Complete a final group task combining everything you've practiced"
             IO -> "Personal interview with the Interviewing Officer"
         }
-    
+
     val hasAutoGrading: Boolean
         get() = this == OIR
-    
+
     val requiresInstructorReview: Boolean
-        get() = this in listOf(PPDT, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, IO) // PIQ is for reference, not graded
+        get() = this in listOf(PPDT, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, GTO_FGT, IO) // PIQ is for reference, not graded
 }
 
 /**

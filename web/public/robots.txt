@@ -1,0 +1,41 @@
+# SSBMax robots.txt (Phase 3, docs/plans/i-just-watched-a-nested-russell.md, LOW 12)
+#
+# Retrieval crawlers (produce citations/referral clicks) are allowed. Training crawlers
+# (ingest content into a model's weights, no referral traffic) are disallowed -- this
+# captures AI-answer-engine referral traffic without granting free training rights over
+# a paid product's content. Decided, not a default "allow everything AI" stance.
+
+# Retrieval / answer-engine crawlers -- allowed
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+# Training crawlers -- disallowed
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+# Everything else: allow public content, keep the authenticated app surfaces out of the
+# crawl (they 403/redirect to auth for an anonymous crawler anyway, but keep them out of
+# the crawl budget explicitly).
+User-agent: *
+Allow: /
+Disallow: /?tab=
+
+Sitemap: https://ssbmax.in/sitemap.xml

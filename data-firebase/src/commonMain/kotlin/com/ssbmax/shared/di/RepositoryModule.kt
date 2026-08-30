@@ -20,6 +20,7 @@ import com.ssbmax.shared.data.repository.GitLiveInterviewRepository
 import com.ssbmax.shared.data.repository.GitLiveNotificationCacheManager
 import com.ssbmax.shared.data.repository.GitLiveNotificationRepository
 import com.ssbmax.shared.data.repository.GitLiveOirResultRepository
+import com.ssbmax.shared.data.repository.GitLiveMobileEntitlementRepairClient
 import com.ssbmax.shared.data.repository.GitLiveOIREvaluationClient
 import com.ssbmax.shared.data.repository.GitLiveOIRQuestionCacheManager
 import com.ssbmax.shared.data.repository.GitLiveOIRQuestionSelector
@@ -53,6 +54,7 @@ import com.ssbmax.shared.domain.repository.GTORepository
 import com.ssbmax.shared.domain.repository.InterviewRepository
 import com.ssbmax.shared.domain.repository.NotificationRepository
 import com.ssbmax.shared.domain.repository.OirResultRepository
+import com.ssbmax.shared.domain.repository.MobileEntitlementRepairClient
 import com.ssbmax.shared.domain.repository.OIREvaluationClient
 import com.ssbmax.shared.domain.repository.StudyContentRepository
 import com.ssbmax.shared.domain.repository.StudyProgressRepository
@@ -109,6 +111,7 @@ val repositoryModule = module {
     singleOf(::GitLiveAuthRepository) bind AuthRepository::class
     singleOf(::GitLiveOirResultRepository) bind OirResultRepository::class
     singleOf(::GitLiveOIREvaluationClient) bind OIREvaluationClient::class
+    singleOf(::GitLiveMobileEntitlementRepairClient) bind MobileEntitlementRepairClient::class
     singleOf(::GitLiveEvaluationFunctionsClient) bind EvaluationFunctionsClient::class
     singleOf(::GitLiveUserProfileRepository) bind UserProfileRepository::class
     // Phase 3/4 (KMP-convergence plan): wraps the real repository in the dev-tier-override
@@ -119,7 +122,7 @@ val repositoryModule = module {
     // CheckInterviewPrerequisitesUseCase, SubscriptionManagementViewModel, UpgradeViewModel) with
     // zero edits at those call sites.
     single<SubscriptionRepository> {
-        val plain = GitLiveSubscriptionRepository()
+        val plain = GitLiveSubscriptionRepository(get())
         if (isDebugBuild()) DebugOverrideSubscriptionRepository(plain, get()) else plain
     }
     singleOf(::GitLiveFeatureFlagRepository) bind FeatureFlagRepository::class

@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PsychologyTestViewModel } from '../../src/viewmodels/PsychologyTestViewModel';
 import { IContentRepository } from '../../src/repositories/interfaces/IContentRepository';
+import type { OfflineQueueService } from '../../src/services/OfflineQueueService';
+import type { SubmissionService } from '../../src/services/SubmissionService';
+import type { EligibilityService } from '../../src/services/EligibilityService';
+import type { Mocked } from 'vitest';
 
 describe('PsychologyTestViewModel TDD Unit Tests', () => {
   let mockRepo: IContentRepository;
-  let mockOfflineQueue: any;
-  let mockSubmissionService: any;
-  let mockEligibilityService: any;
+  let mockOfflineQueue: OfflineQueueService;
+  let mockSubmissionService: Mocked<SubmissionService>;
+  let mockEligibilityService: Mocked<EligibilityService>;
 
   beforeEach(() => {
     mockRepo = {
@@ -41,12 +45,13 @@ describe('PsychologyTestViewModel TDD Unit Tests', () => {
       }),
       getGPEBatch: vi.fn(),
       getOIRContentVersion: vi.fn(),
-      getAvailableBatches: vi.fn().mockResolvedValue([])
+      getAvailableBatches: vi.fn().mockResolvedValue([]),
+      getStudyMaterialSections: vi.fn()
     };
 
     mockOfflineQueue = {
       enqueueSubmission: vi.fn().mockResolvedValue(undefined)
-    };
+    } as unknown as OfflineQueueService;
 
     mockSubmissionService = {
       submitPPDTTest: vi.fn().mockResolvedValue({ success: true, submissionId: 'ppdt-sub-1' }),
@@ -59,11 +64,11 @@ describe('PsychologyTestViewModel TDD Unit Tests', () => {
       evaluateWAT: vi.fn().mockResolvedValue({ success: true, status: 'PENDING_ANALYSIS' }),
       evaluateSRT: vi.fn().mockResolvedValue({ success: true, status: 'PENDING_ANALYSIS' }),
       evaluateSD: vi.fn().mockResolvedValue({ success: true, status: 'PENDING_ANALYSIS' })
-    };
+    } as unknown as Mocked<SubmissionService>;
 
     mockEligibilityService = {
       recordTestUsage: vi.fn().mockResolvedValue({ success: true, alreadyRecorded: false, used: 1, limit: 10 })
-    };
+    } as unknown as Mocked<EligibilityService>;
   });
 
   it('should load WAT slides correctly', async () => {

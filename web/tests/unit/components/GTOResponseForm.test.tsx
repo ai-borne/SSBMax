@@ -1,23 +1,25 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, type Mocked } from 'vitest';
 import { GTOResponseForm } from '../../../src/components/testRunners/GTOResponseForm';
 import { SubmissionRepository } from '../../../src/repositories/SubmissionRepository';
+import { SubmissionService } from '../../../src/services/SubmissionService';
+import { EligibilityService } from '../../../src/services/EligibilityService';
 
 vi.mock('../../../src/repositories/SubmissionRepository');
 
-function mockService(overrides: Partial<Record<string, any>> = {}) {
+function mockService(overrides: Partial<Record<keyof SubmissionService, unknown>> = {}): Mocked<SubmissionService> {
   return {
     submitGTOTest: vi.fn().mockResolvedValue({ success: true, submissionId: 'gto-sub-1' }),
     evaluateGTO: vi.fn().mockResolvedValue({ success: true, status: 'PENDING_ANALYSIS' }),
     ...overrides
-  } as any;
+  } as unknown as Mocked<SubmissionService>;
 }
 
-function mockEligibility(overrides: Partial<Record<string, any>> = {}) {
+function mockEligibility(overrides: Partial<Record<keyof EligibilityService, unknown>> = {}): Mocked<EligibilityService> {
   return {
     recordTestUsage: vi.fn().mockResolvedValue({ success: true, alreadyRecorded: false, used: 1, limit: 3 }),
     ...overrides
-  } as any;
+  } as unknown as Mocked<EligibilityService>;
 }
 
 describe('GTOResponseForm', () => {
@@ -123,7 +125,7 @@ describe('GTOResponseForm', () => {
 
   it('shows the live SubmissionResultView for an evaluable type once submitted, so the user sees their score once analysis completes', async () => {
     vi.mocked(SubmissionRepository).mockImplementation(
-      () => ({ getSubmissionStatus: vi.fn().mockResolvedValue({ status: 'ANALYZING' }), getResult: vi.fn() }) as any
+      () => ({ getSubmissionStatus: vi.fn().mockResolvedValue({ status: 'ANALYZING' }), getResult: vi.fn() }) as unknown as SubmissionRepository
     );
     const service = mockService();
     render(

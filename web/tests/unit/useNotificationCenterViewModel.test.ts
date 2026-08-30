@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useNotificationCenterViewModel } from '../../src/viewmodels/useNotificationCenterViewModel';
 import type { SSBMaxNotification } from '../../src/types/notification';
+import type { NotificationRepository } from '../../src/repositories/NotificationRepository';
 
 function notification(overrides: Partial<SSBMaxNotification> = {}): SSBMaxNotification {
   return {
@@ -17,14 +18,14 @@ function notification(overrides: Partial<SSBMaxNotification> = {}): SSBMaxNotifi
   };
 }
 
-function mockRepository(overrides: Partial<Record<string, any>> = {}) {
+function mockRepository(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     subscribeToNotifications: vi.fn(() => vi.fn()),
     subscribeToUnreadCount: vi.fn(() => vi.fn()),
     markAsRead: vi.fn().mockResolvedValue(undefined),
     markAllAsRead: vi.fn().mockResolvedValue(undefined),
     ...overrides
-  } as any;
+  } as unknown as NotificationRepository;
 }
 
 describe('useNotificationCenterViewModel', () => {

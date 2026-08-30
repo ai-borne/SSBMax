@@ -4,14 +4,13 @@ import com.ssbmax.shared.data.repository.ContentSource
 import com.ssbmax.shared.data.repository.TopicContentData
 import com.ssbmax.shared.domain.config.ContentFeatureFlags
 import com.ssbmax.shared.domain.model.TestProgress
-import com.ssbmax.shared.domain.model.TestStatus
 import com.ssbmax.shared.domain.model.TestType
-import com.ssbmax.shared.domain.model.interview.InterviewResult
 import com.ssbmax.shared.domain.repository.InterviewRepository
 import com.ssbmax.shared.domain.repository.StudyContentRepository
 import com.ssbmax.shared.domain.repository.TestProgressRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.util.DomainLogger
+import com.ssbmax.shared.platform.settings.ReadStateSettings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -53,7 +54,8 @@ class TopicViewModel(
     private val observeCurrentUser: ObserveCurrentUserUseCase,
     private val studyContentRepository: StudyContentRepository,
     private val interviewRepository: InterviewRepository,
-    private val logger: DomainLogger
+    private val logger: DomainLogger,
+    private val readStateSettings: ReadStateSettings
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TopicUiState())
     val uiState: StateFlow<TopicUiState> = _uiState.asStateFlow()
@@ -62,6 +64,16 @@ class TopicViewModel(
 
     private companion object {
         const val TAG = "TopicViewModel"
+    }
+
+    init {
+        readStateSettings.readSectionIdsFlow
+            .onEach { ids -> _uiState.update { it.copy(readSectionIds = ids) } }
+            .launchIn(viewModelScope)
+    }
+
+    fun toggleSectionRead(sectionId: String) {
+        readStateSettings.toggleSectionRead(sectionId)
     }
 
     fun loadTopic(topicId: String) {
@@ -172,12 +184,16 @@ class TopicViewModel(
         }
 
         val testProgress = loadTestProgress(userId)
+        // D4 forbids parsing `data.introduction` (live Firestore markdown) into a DocumentModel
+        // at runtime, so this fetches the D2 side document instead -- see the function's doc.
+        val structuredIntroduction = structuredIntroductionFor(testType)
 
         _uiState.update {
             it.copy(
                 testType = testType,
                 topicTitle = data.title,
                 introduction = data.introduction,
+                introductionSections = structuredIntroduction,
                 studyMaterials = materials,
                 availableTests = getTestsForTopic(testType),
                 testCompletionStatus = testProgress?.status,
@@ -193,12 +209,14 @@ class TopicViewModel(
         try {
             val topicInfo = TopicContentLoader.getTopicInfo(testType)
             val testProgress = loadTestProgress(userId)
+            val structuredIntroduction = structuredIntroductionFor(testType)
 
             _uiState.update {
                 it.copy(
                     testType = testType,
                     topicTitle = topicInfo.title,
                     introduction = topicInfo.introduction,
+                    introductionSections = structuredIntroduction,
                     studyMaterials = topicInfo.studyMaterials,
                     availableTests = topicInfo.tests,
                     testCompletionStatus = testProgress?.status,
@@ -212,6 +230,39 @@ class TopicViewModel(
             logger.e(TAG, "Failed to load local content", e)
             _uiState.update { it.copy(isLoading = false, error = "Failed to load local content: ${e.message}") }
         }
+    }
+
+    /**
+     * Prefers the D2 side document `topic_sections/{testType}` (Phase 5, docs/plans/
+     * write-the-phased-plan-wobbly-pancake.md) fetched via [studyContentRepository], falling
+     * back to [TopicContentLoader.getStructuredIntroduction]'s generated offline copy of the
+     * exact same source (never a network call). The per-topic rollout flag this used to check
+     * (`ContentFeatureFlags.isStructuredRenderingEnabled`) was removed in the Phase 8 sweep once
+     * all 9 topics reached parity; a null result now only means both the network fetch and the
+     * generated offline fallback came back empty. Shared by both [loadFromLocal] and
+     * [applyCloudContent] so the same resolution order applies regardless of which tier the rest
+     * of the screen's content came from.
+     */
+    private suspend fun structuredIntroductionFor(testType: String): com.ssbmax.shared.ui.content.blocks.DocumentModel? {
+        val cloudResult = studyContentRepository.getTopicSections(testType)
+        val cloudSections = cloudResult.getOrNull()
+        val cloudHeadedCount = cloudSections?.sections?.count { it.heading != null }
+        val local = TopicContentLoader.getStructuredIntroduction(testType)
+        val localHeadedCount = local?.sections?.count { it.heading != null }
+        val resolved = cloudSections ?: local
+        val resolvedSource = if (cloudSections != null) "CLOUD" else if (local != null) "LOCAL_FALLBACK" else "NONE"
+        // Diagnostic for the Q3 missing-TOC investigation (docs/plans -- TOC card only renders when
+        // headedSections.size > 1): logs which tier actually won and its heading count, since static
+        // analysis found both the live Firestore docs and the generated local fallback well-formed
+        // for every topic, yet the TOC visibly fails to render for some topics on-device.
+        logger.d(
+            TAG,
+            "structuredIntroductionFor($testType): cloudFetchFailed=${cloudResult.isFailure}, " +
+                "cloudExists=${cloudSections != null}, cloudHeadedSections=$cloudHeadedCount, " +
+                "localHeadedSections=$localHeadedCount, resolvedSource=$resolvedSource, " +
+                "resolvedHeadedSections=${resolved?.sections?.count { it.heading != null }}"
+        )
+        return resolved
     }
 
     private suspend fun loadTestProgress(userId: String?): TestProgress? {
@@ -239,7 +290,7 @@ class TopicViewModel(
             "PSYCHOLOGY" -> listOf(TestType.TAT, TestType.WAT, TestType.SRT, TestType.SD)
             "GTO" -> listOf(
                 TestType.GTO_GD, TestType.GTO_GPE, TestType.GTO_PGT, TestType.GTO_GOR,
-                TestType.GTO_HGT, TestType.GTO_LECTURETTE, TestType.GTO_IO, TestType.GTO_CT
+                TestType.GTO_HGT, TestType.GTO_LECTURETTE, TestType.GTO_IO, TestType.GTO_CT, TestType.GTO_FGT
             )
             "INTERVIEW" -> listOf(TestType.IO)
             else -> emptyList()
@@ -250,33 +301,3 @@ class TopicViewModel(
         loadTopicContent()
     }
 }
-
-/**
- * UI State for Topic Screen
- */
-data class TopicUiState(
-    val testType: String = "",
-    val topicTitle: String = "",
-    val introduction: String = "",
-    val studyMaterials: List<StudyMaterialItem> = emptyList(),
-    val availableTests: List<TestType> = emptyList(),
-    val testCompletionStatus: TestStatus? = null,
-    val testLatestScore: Float? = null,
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val contentSource: String = "Local",
-    val pastInterviewResults: List<InterviewResult> = emptyList(),
-    val isLoadingInterviewHistory: Boolean = false
-) {
-    fun hasPastInterviews(): Boolean = pastInterviewResults.isNotEmpty()
-}
-
-/**
- * Study material item for list display
- */
-data class StudyMaterialItem(
-    val id: String,
-    val title: String,
-    val duration: String,
-    val isPremium: Boolean
-)

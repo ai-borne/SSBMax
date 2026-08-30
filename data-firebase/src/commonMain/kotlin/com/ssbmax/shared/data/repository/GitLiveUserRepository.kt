@@ -6,7 +6,10 @@ import com.ssbmax.shared.domain.model.StudentProfile
 import com.ssbmax.shared.domain.model.UserRole
 import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.firestore.DocumentSnapshot
+import dev.gitlive.firebase.firestore.Timestamp
 import dev.gitlive.firebase.firestore.firestore
+import dev.gitlive.firebase.firestore.toMilliseconds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -38,7 +41,7 @@ class GitLiveUserRepository {
     suspend fun getUser(userId: String): Result<SSBMaxUser?> {
         return try {
             val snapshot = userDoc(userId).get()
-            val user = if (snapshot.exists) snapshot.data(UserDto.serializer()).toDomain() else null
+            val user = if (snapshot.exists) snapshot.data(UserDto.serializer()).toDomain().withDeletionStatus(snapshot) else null
             Result.success(user)
         } catch (e: Exception) {
             Result.failure(Exception("Failed to get user: ${e.message}", e))
@@ -64,7 +67,9 @@ class GitLiveUserRepository {
 
     fun observeUser(userId: String): Flow<SSBMaxUser?> =
         userDoc(userId).snapshots
-            .map { snapshot -> if (snapshot.exists) snapshot.data(UserDto.serializer()).toDomain() else null }
+            .map { snapshot ->
+                if (snapshot.exists) snapshot.data(UserDto.serializer()).toDomain().withDeletionStatus(snapshot) else null
+            }
             .catch { emit(null) }
 
     suspend fun updateUserRole(userId: String, role: UserRole): Result<Unit> {
@@ -112,6 +117,19 @@ class GitLiveUserRepository {
         }
     }
 
+}
+
+private const val FIELD_DELETION_REQUESTED_AT = "deletionRequestedAt"
+
+/**
+ * `deletionRequestedAt` is read outside [UserDto]'s serializer on purpose -- that DTO lives in
+ * `shared` (root CLAUDE.md: "carries no Firebase"), so it can't declare a GitLive [Timestamp]
+ * field. Read here instead and merged onto the already-decoded domain user.
+ */
+private fun SSBMaxUser.withDeletionStatus(snapshot: DocumentSnapshot): SSBMaxUser {
+    if (!snapshot.contains(FIELD_DELETION_REQUESTED_AT)) return this
+    val timestamp = snapshot.get<Timestamp?>(FIELD_DELETION_REQUESTED_AT) ?: return this
+    return copy(deletionRequestedAt = timestamp.toMilliseconds().toLong())
 }
 
 private fun StudentProfile.toDtoMap(): Map<String, Any?> = mapOf(

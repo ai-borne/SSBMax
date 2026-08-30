@@ -10,8 +10,10 @@ import com.ssbmax.shared.domain.model.interview.InterviewMode
 import com.ssbmax.shared.domain.model.interview.InterviewResult
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.util.NoOpLogger
+import com.ssbmax.shared.platform.settings.ReadStateSettings
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
 import com.ssbmax.shared.presentation.testing.FakeInterviewRepository
+import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeStudyContentRepository
 import com.ssbmax.shared.presentation.testing.FakeTestProgressRepository
 import com.ssbmax.shared.presentation.testing.testUser
@@ -64,7 +66,8 @@ class TopicViewModelTest {
         observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
         studyContentRepository = studyContentRepository,
         interviewRepository = interviewRepository,
-        logger = NoOpLogger()
+        logger = NoOpLogger(),
+        readStateSettings = ReadStateSettings(FakeSettings())
     )
 
     @Test
@@ -103,6 +106,54 @@ class TopicViewModelTest {
         assertEquals("Cloud (Firestore)", state.contentSource)
         assertEquals("Cloud OIR Overview", state.topicTitle)
         assertEquals(1, state.studyMaterials.size)
+    }
+
+    @Test
+    fun `loadTopic falls back to the generated structured model when no D2 side document is published`() = runTest(testDispatcher) {
+        // Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md's exit criterion: a
+        // missing side document falls back to the generated offline copy, not a blank section.
+        studyContentRepository.topicSectionsResult = Result.success(null)
+        val viewModel = buildViewModel()
+
+        viewModel.loadTopic("OIR")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val sections = viewModel.uiState.value.introductionSections
+        assertEquals(TopicContentLoader.getStructuredIntroduction("OIR"), sections)
+    }
+
+    @Test
+    fun `loadTopic also returns structured sections for a non-OIR topic -- Phase 8 removed the flag and all 9 topics are on`() = runTest(testDispatcher) {
+        studyContentRepository.topicSectionsResult = Result.success(null)
+        val viewModel = buildViewModel()
+
+        viewModel.loadTopic("MEDICALS")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val sections = viewModel.uiState.value.introductionSections
+        assertEquals(TopicContentLoader.getStructuredIntroduction("MEDICALS"), sections)
+    }
+
+    @Test
+    fun `loadTopic prefers the D2 side document over the generated fallback when one is published`() = runTest(testDispatcher) {
+        val cloudModel = com.ssbmax.shared.ui.content.blocks.DocumentModel(
+            sections = listOf(
+                com.ssbmax.shared.ui.content.blocks.DocSection(
+                    id = "topics/OIR.md#root",
+                    slug = "intro",
+                    heading = null,
+                    level = 0,
+                    blocks = listOf(com.ssbmax.shared.ui.content.blocks.ParagraphBlock("Cloud-authored intro"))
+                )
+            )
+        )
+        studyContentRepository.topicSectionsResult = Result.success(cloudModel)
+        val viewModel = buildViewModel()
+
+        viewModel.loadTopic("OIR")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(cloudModel, viewModel.uiState.value.introductionSections)
     }
 
     @Test

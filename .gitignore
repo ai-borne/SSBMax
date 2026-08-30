@@ -152,6 +152,7 @@ web/playwright-report/
 !GUIDELINES.md
 !**/CLAUDE.md
 !docs/**/*.md
+!content/**/*.md
 
 # Temporary/Debug Documentation (may contain sensitive data during cleanup)
 *CLEANUP*.md

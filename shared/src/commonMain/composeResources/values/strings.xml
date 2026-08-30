@@ -19,9 +19,9 @@
          violation forward. -->
     <string name="role_selection_title">Welcome to SSBMax!</string>
     <string name="role_selection_subtitle">How would you like to use SSBMax?</string>
-    <string name="role_selection_student_title">I\'m a Student</string>
+    <string name="role_selection_student_title">I'm a Student</string>
     <string name="role_selection_student_description">Prepare for SSB interviews, take tests, and track progress</string>
-    <string name="role_selection_instructor_title">I\'m an Instructor</string>
+    <string name="role_selection_instructor_title">I'm an Instructor</string>
     <string name="role_selection_instructor_description">Create batches, grade tests, and guide students</string>
     <string name="role_selection_continue">Continue</string>
     <string name="role_selection_both">I want to use both roles</string>
@@ -70,7 +70,7 @@
     <string name="dashboard_your_progress">Your SSB Progress</string>
     <string name="cd_refresh_dashboard">Refresh dashboard</string>
     <string name="dashboard_tests">Tests</string>
-    <string name="dashboard_some_unavailable">Some results couldn\'t load. Tap retry.</string>
+    <string name="dashboard_some_unavailable">Some results couldn't load. Tap retry.</string>
     <string name="dashboard_retry">Retry</string>
     <string name="dashboard_overall_average">Overall Average</string>
     <string name="dashboard_your_strengths">🌟 Your Strengths</string>
@@ -197,7 +197,7 @@
     <string name="test_limit_title">Test Limit Reached</string>
     <string name="test_limit_upgrade_now">Upgrade Now</string>
     <string name="test_limit_maybe_later">Maybe Later</string>
-    <string name="test_limit_usage_stats">You\'ve completed %1$d of %2$d tests this month on the %3$s plan.</string>
+    <string name="test_limit_usage_stats">You've completed %1$d of %2$d tests this month on the %3$s plan.</string>
     <string name="test_limit_resets_label">Your test limit resets on:</string>
     <string name="test_limit_upgrade_heading">Upgrade to continue practicing:</string>
     <string name="test_limit_pro_title">Pro Plan</string>
@@ -269,7 +269,7 @@
     <string name="ppdt_profile_required_message">Your gender is needed for PPDT assessment. Set it in Settings before continuing.</string>
     <string name="ppdt_profile_go_to_settings">Go to Settings</string>
     <string name="ppdt_profile_required_cancel">Cancel</string>
-    <string name="ppdt_image_observe_instruction">Observe the image carefully. Try to identify characters, their mood, and what\'s happening.</string>
+    <string name="ppdt_image_observe_instruction">Observe the image carefully. Try to identify characters, their mood, and what's happening.</string>
     <string name="ppdt_image_content_description">PPDT Test Image</string>
     <string name="ppdt_topbar_title">PPDT Test</string>
     <string name="ppdt_review_button">Review</string>
@@ -287,13 +287,13 @@
     <string name="ppdt_instructions_title">PPDT Instructions</string>
     <string name="ppdt_instruction_1">You will be shown a hazy picture for 30 seconds</string>
     <string name="ppdt_instruction_2">Observe carefully: characters, their age, gender, mood</string>
-    <string name="ppdt_instruction_3">After viewing, you\'ll have 4 minutes to write a story</string>
+    <string name="ppdt_instruction_3">After viewing, you'll have 4 minutes to write a story</string>
     <string name="ppdt_instruction_4">Your story should include:\n• What led to this situation?\n• What is happening now?\n• What will be the outcome?</string>
     <string name="ppdt_instruction_5">Write a clear, positive, and imaginative story</string>
-    <string name="ppdt_instructions_note">Your story will be reviewed by your instructor. You\'ll receive AI-based preliminary feedback immediately.</string>
+    <string name="ppdt_instructions_note">Your story will be reviewed by your instructor. You'll receive AI-based preliminary feedback immediately.</string>
     <string name="ppdt_start_test_button">Start Test</string>
     <string name="ppdt_writing_title">Write your story based on the image you saw</string>
-    <string name="ppdt_writing_subtitle">Include: What led to this? What\'s happening? What will be the outcome?</string>
+    <string name="ppdt_writing_subtitle">Include: What led to this? What's happening? What will be the outcome?</string>
     <string name="ppdt_writing_placeholder">Start writing your story here...</string>
     <string name="ppdt_writing_minimum_label">Minimum: %1$d characters</string>
     <string name="ppdt_writing_count_format">%1$d / %2$d</string>
@@ -343,7 +343,7 @@
     <string name="tat_tips_title">Tips for Success</string>
     <string name="tat_tip_1">• Create complete stories with beginning, middle, and end</string>
     <string name="tat_tip_2">• Show leadership qualities and positive outlook</string>
-    <string name="tat_tip_3">• Describe characters\' emotions and motivations</string>
+    <string name="tat_tip_3">• Describe characters' emotions and motivations</string>
     <string name="tat_tip_4">• Focus on action and resolution</string>
     <string name="tat_start_test_button">Start Test</string>
     <string name="tat_image_number">Picture %1$d of %2$d</string>
@@ -387,7 +387,7 @@
     <string name="wat_instruction_1">You will see 60 words, one at a time</string>
     <string name="wat_instruction_2">You have 15 seconds to respond to each word</string>
     <string name="wat_instruction_3">Write the first thought that comes to mind</string>
-    <string name="wat_instruction_4">Respond quickly -- don\'t overthink it</string>
+    <string name="wat_instruction_4">Respond quickly -- don't overthink it</string>
     <string name="wat_instruction_5">The test auto-advances if you run out of time</string>
     <string name="wat_important">Important</string>
     <string name="wat_important_message">There are no right or wrong answers. Be spontaneous and honest -- your first reaction matters most.</string>
@@ -395,7 +395,7 @@
     <string name="wat_tip_1">• Write short, natural phrases or sentences</string>
     <string name="wat_tip_2">• Reflect a positive, constructive outlook</string>
     <string name="wat_tip_3">• Avoid negative or violent associations</string>
-    <string name="wat_tip_4">• Don\'t skip unless truly stuck -- every response counts</string>
+    <string name="wat_tip_4">• Don't skip unless truly stuck -- every response counts</string>
     <string name="wat_start_test">Start Test</string>
 
     <!-- SRT result screen (Phase 5 port of app/.../ui/tests/srt/SRTSubmissionResultScreen.kt). -->
@@ -419,7 +419,7 @@
     <string name="srt_tip_1">• Be practical and realistic</string>
     <string name="srt_tip_2">• Show initiative and leadership</string>
     <string name="srt_tip_3">• Focus on action, not just thinking</string>
-    <string name="srt_tip_4">• Consider others\' wellbeing</string>
+    <string name="srt_tip_4">• Consider others' wellbeing</string>
     <string name="srt_tip_5">• Demonstrate responsibility</string>
     <string name="srt_start_test">Start Test</string>
     <string name="srt_situation_number">Situation %1$d of %2$d</string>
@@ -436,7 +436,7 @@
     <string name="srt_submit_title">Submit Test?</string>
     <string name="srt_submit_message">You have completed %1$d/%2$d situations.</string>
     <string name="srt_submit_incomplete">You have %1$d pending situations. They will be marked as unattempted.</string>
-    <string name="srt_time_up_title">Time\'s Up!</string>
+    <string name="srt_time_up_title">Time's Up!</string>
     <string name="srt_time_up_message">Submitting your test...</string>
     <string name="srt_submit">Submit</string>
     <string name="srt_cancel">Cancel</string>
@@ -535,22 +535,22 @@
     <string name="piq_marital_status">Marital Status</string>
     <string name="piq_family_enhancement">Family Enhancement</string>
     <string name="piq_parents_alive">Parents Alive</string>
-    <string name="piq_age_father_death">Age at Father\'s Death</string>
-    <string name="piq_age_mother_death">Age at Mother\'s Death</string>
+    <string name="piq_age_father_death">Age at Father's Death</string>
+    <string name="piq_age_mother_death">Age at Mother's Death</string>
     <string name="piq_guardian_section">Guardian Information</string>
     <string name="piq_guardian_name">Guardian Name</string>
     <string name="piq_guardian_occupation">Guardian Occupation</string>
     <string name="piq_guardian_education">Guardian Education</string>
     <string name="piq_guardian_income">Guardian Income</string>
-    <string name="piq_father_section">Father\'s Information</string>
-    <string name="piq_father_name">Father\'s Name</string>
-    <string name="piq_father_occupation">Father\'s Occupation</string>
-    <string name="piq_father_education">Father\'s Education</string>
-    <string name="piq_father_income">Father\'s Annual Income</string>
-    <string name="piq_mother_section">Mother\'s Information</string>
-    <string name="piq_mother_name">Mother\'s Name</string>
-    <string name="piq_mother_occupation">Mother\'s Occupation</string>
-    <string name="piq_mother_education">Mother\'s Education</string>
+    <string name="piq_father_section">Father's Information</string>
+    <string name="piq_father_name">Father's Name</string>
+    <string name="piq_father_occupation">Father's Occupation</string>
+    <string name="piq_father_education">Father's Education</string>
+    <string name="piq_father_income">Father's Annual Income</string>
+    <string name="piq_mother_section">Mother's Information</string>
+    <string name="piq_mother_name">Mother's Name</string>
+    <string name="piq_mother_occupation">Mother's Occupation</string>
+    <string name="piq_mother_education">Mother's Education</string>
     <string name="piq_siblings_section">Siblings Information</string>
     <string name="piq_elder_sibling">Elder Brother/Sister</string>
     <string name="piq_younger_sibling">Younger Brother/Sister</string>
@@ -654,7 +654,7 @@
     <string name="gto_submitted_title">Test Submitted!</string>
     <string name="gto_submitted_message">Your %1$s response has been submitted successfully.</string>
     <string name="gto_analyzing_message">AI is analyzing your response</string>
-    <string name="gto_analyzing_detail">You\'ll receive a notification when your results are ready. This usually takes 1-2 minutes.</string>
+    <string name="gto_analyzing_detail">You'll receive a notification when your results are ready. This usually takes 1-2 minutes.</string>
     <string name="gto_go_home">Go to Home</string>
     <string name="gto_loading_test">Loading test...</string>
     <string name="gto_char_count_label">Characters: %1$d</string>
@@ -664,7 +664,7 @@
     <string name="gd_back_cd">Back</string>
     <string name="gd_instructions_headline">Group Discussion Test</string>
     <string name="gd_instruction_topic_title">Topic</string>
-    <string name="gd_instruction_topic_desc">You\'ll be given a topic to discuss</string>
+    <string name="gd_instruction_topic_desc">You'll be given a topic to discuss</string>
     <string name="gd_instruction_time_title">Time Limit</string>
     <string name="gd_instruction_time_desc">20 minutes to write your thoughts</string>
     <string name="gd_instruction_chars_title">Character Count</string>
@@ -765,12 +765,12 @@
     <string name="gpe_exit_cd">Exit group planning exercise</string>
     <string name="lecturette_exit_cd">Exit lecturette</string>
     <string name="interview_exit_title">Exit Interview?</string>
-    <string name="interview_exit_message">Are you sure you want to exit? Your progress will be saved, but you\'ll need to start a new interview session to continue.</string>
+    <string name="interview_exit_message">Are you sure you want to exit? Your progress will be saved, but you'll need to start a new interview session to continue.</string>
     <string name="interview_exit_confirm">Exit</string>
     <string name="interview_button_cancel">Cancel</string>
     <string name="interview_button_ok">OK</string>
     <string name="interview_results_pending_title">Results Being Analyzed</string>
-    <string name="interview_results_pending_message">Your interview is complete! Results will be ready shortly. We\'ll notify you when they\'re available.</string>
+    <string name="interview_results_pending_message">Your interview is complete! Results will be ready shortly. We'll notify you when they're available.</string>
     <string name="interview_question_label">Question</string>
     <string name="interview_cd_speaking">Interviewer is speaking the question</string>
     <string name="interview_interviewer_speaking">Speaking…</string>
@@ -854,10 +854,10 @@
     <string name="developer_override_force_basic">Force Basic</string>
     <string name="developer_override_force_pro">Force Pro</string>
     <string name="developer_override_force_premium">Force Premium</string>
-    <string name="developer_override_offline_note">Unlike the old bypass flag, an active override still requires network -- it exercises the real eligibility lookup instead of skipping it, so it won\'t work offline.</string>
+    <string name="developer_override_offline_note">Unlike the old bypass flag, an active override still requires network -- it exercises the real eligibility lookup instead of skipping it, so it won't work offline.</string>
     <string name="developer_bypass_interview_prerequisites_title">Bypass Interview Prerequisites</string>
     <string name="developer_bypass_interview_prerequisites_description">Skip PIQ/OIR/PPDT completion checks when starting an interview</string>
-    <string name="developer_known_limitation_note">Toggling doesn\'t refresh already-loaded screens -- re-enter a screen to see the change.</string>
+    <string name="developer_known_limitation_note">Toggling doesn't refresh already-loaded screens -- re-enter a screen to see the change.</string>
 
     <string name="notification_settings_title">Notifications</string>
     <string name="notification_settings_description">Manage your notification preferences</string>
@@ -868,7 +868,7 @@
     <string name="notification_feedback_title">Feedback Available</string>
     <string name="notification_feedback_description">When new feedback is added</string>
     <string name="notification_batch_invitations_title">Batch Invitations</string>
-    <string name="notification_batch_invitations_description">When you\'re invited to a batch</string>
+    <string name="notification_batch_invitations_description">When you're invited to a batch</string>
     <string name="notification_announcements_title">Announcements</string>
     <string name="notification_announcements_description">General updates from SSBMax</string>
     <string name="notification_study_reminders_title">Study Reminders</string>
@@ -894,17 +894,19 @@
     <string name="subscription_mgmt_cd_back">Back</string>
     <string name="subscription_mgmt_current_plan_label">Current Plan</string>
     <string name="subscription_mgmt_renews_on">Renews on %1$s</string>
-    <string name="subscription_mgmt_expires_no_renew">Expires %1$s (won\'t auto-renew)</string>
-    <string name="subscription_mgmt_usage_title">This Month\'s Usage</string>
+    <string name="subscription_mgmt_expires_no_renew">Expires %1$s (won't auto-renew)</string>
+    <string name="subscription_mgmt_usage_title">This Month's Usage</string>
     <string name="subscription_mgmt_expand_cd">Expand</string>
     <string name="subscription_mgmt_collapse_cd">Collapse</string>
     <string name="subscription_mgmt_na">N/A</string>
     <string name="subscription_mgmt_used_suffix">%1$d used</string>
     <string name="subscription_mgmt_used_of_limit">%1$d/%2$d</string>
     <string name="subscription_mgmt_compare_plans">Compare Plans</string>
+    <string name="subscription_mgmt_manage_billing">Manage Billing</string>
+    <string name="subscription_mgmt_manage_billing_error">Unable to open billing management right now</string>
     <string name="subscription_mgmt_faq_title">Frequently Asked Questions</string>
     <string name="subscription_mgmt_faq_q1">Can I cancel anytime?</string>
-    <string name="subscription_mgmt_faq_a1">Yes! You can cancel your subscription at any time. You\'ll continue to have access until the end of your billing period.</string>
+    <string name="subscription_mgmt_faq_a1">Yes! You can cancel your subscription at any time. You'll continue to have access until the end of your billing period.</string>
     <string name="subscription_mgmt_faq_q2">What payment methods do you accept?</string>
     <string name="subscription_mgmt_faq_a2">We accept UPI, credit/debit cards, net banking, and popular digital wallets.</string>
     <string name="subscription_mgmt_faq_q3">Do test limits reset monthly?</string>
@@ -958,7 +960,7 @@
     <string name="submission_detail_feedback_title">Feedback</string>
     <string name="submission_detail_strengths_title">Strengths</string>
     <string name="submission_detail_improvement_title">Areas for Improvement</string>
-    <string name="submission_detail_pending_message">Your submission is awaiting instructor review. You\'ll be notified once it\'s graded.</string>
+    <string name="submission_detail_pending_message">Your submission is awaiting instructor review. You'll be notified once it's graded.</string>
     <string name="submission_detail_action_retry">Retry</string>
 
     <!-- Grading (Test Detail Grading) screen -->
@@ -1151,6 +1153,16 @@
     <string name="drawer_quick_access">Quick Access</string>
     <string name="drawer_account">Account</string>
     <string name="drawer_sign_out">Sign Out</string>
+    <string name="drawer_delete_account">Delete Account</string>
+    <string name="drawer_cancel_deletion">Cancel Deletion</string>
+    <string name="delete_account_confirm_title">Delete your Candidate Account?</string>
+    <string name="delete_account_confirm_body">Your account will be scheduled for permanent deletion, including all test submissions, AI dossier reports, and profile data. You have %1$d days to change your mind -- sign back in and cancel from Settings. After that, deletion cannot be undone.</string>
+    <string name="delete_account_confirm_checkbox">I understand this cannot be undone after the %1$d-day grace period.</string>
+    <string name="delete_account_confirm_button">Yes, Delete My Account</string>
+    <string name="delete_account_cancel_button">Cancel</string>
+    <string name="delete_account_failed">Failed to schedule account deletion. Please try again.</string>
+    <string name="deletion_pending_banner">Account deletion scheduled. You can cancel anytime within the grace period.</string>
+    <string name="cancel_deletion_failed">Failed to cancel account deletion. Please try again.</string>
     <string name="drawer_phase1_title">Phase 1 - Screening Tests (Day 1)</string>
     <string name="drawer_oir_test">OIR Test</string>
     <string name="drawer_ppdt">PPDT</string>
@@ -1200,12 +1212,18 @@
     <string name="topic_tab_study_material">Study Material</string>
     <string name="topic_interview_score_suffix">/10</string>
     <string name="topic_no_study_materials">No study materials available yet</string>
+    <string name="content_takeaways_heading">Key takeaways</string>
+    <string name="content_toc_heading">On this page</string>
+    <string name="content_estimated_minutes">%1$d min read</string>
+    <string name="content_practice_now_cta">Practice this now →</string>
+    <string name="content_section_unread_cd">Mark section as read</string>
+    <string name="content_section_isread_cd">Section read</string>
     <string name="topic_no_tests_available">No tests available yet</string>
     <string name="topic_retry_button">Retry</string>
     <string name="piq_bullet_separator">• </string>
     <string name="notifications_screen_title">Notifications</string>
     <string name="notifications_empty_title">No notifications yet</string>
-    <string name="notifications_empty_subtitle">You\'ll see updates here when they arrive</string>
+    <string name="notifications_empty_subtitle">You'll see updates here when they arrive</string>
     <string name="update_required_title">Update Required</string>
     <string name="update_required_body">This version of SSBMax is no longer supported. Please update to the latest version from your app store to continue.</string>
 </resources>

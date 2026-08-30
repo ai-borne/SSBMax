@@ -50,5 +50,15 @@ user_data.rules.test.mjs|a client cannot update expiryDate on their own subscrip
 user_data.rules.test.mjs|a user can still read their own subscription doc
 user_data.rules.test.mjs|a user can still write their own profile doc (the narrowing must not break profile saves)
 user_data.rules.test.mjs|another user cannot read or write someone else's subscription doc
+# Phase 8 (docs/plans -- Payment Ecosystem Hardening, "One alert destination"). ops_alerts carries
+# the real (unhashed) userId -- deliberately, for Phase 9's support view -- so a client-readable
+# ops_alerts collection would be a data leak, and a client-writable one would let anyone forge
+# alerts to bury a real one in noise. Pinned for the same reason C1's rules tests are pinned: an
+# additive-rules mistake here would read as "obviously denied" on inspection while being wide open.
+ops_alerts.rules.test.mjs|a signed-in client cannot read ops_alerts, even their own userId's alert
+ops_alerts.rules.test.mjs|a signed-in client cannot list ops_alerts
+ops_alerts.rules.test.mjs|a signed-in client cannot create an ops_alerts doc (no forging a fake alert to hide a real one behind noise)
+ops_alerts.rules.test.mjs|a signed-in client cannot write to an existing ops_alerts doc
+ops_alerts.rules.test.mjs|an unauthenticated client cannot read or write ops_alerts
 submissions.rules.test.mjs|a first OIR submission under a fresh, session-decoupled id succeeds under the create rule
 submissions.rules.test.mjs|a retake creates a second, distinct OIR submission doc against the same test_sessions doc

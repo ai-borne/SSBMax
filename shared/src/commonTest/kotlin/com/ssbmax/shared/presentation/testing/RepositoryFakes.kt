@@ -25,6 +25,7 @@ import com.ssbmax.shared.domain.model.scoring.OLQAnalysisResult
 import com.ssbmax.shared.domain.model.FeatureFlags
 import com.ssbmax.shared.domain.repository.AuthRepository
 import com.ssbmax.shared.domain.repository.FeatureFlagRepository
+import com.ssbmax.shared.domain.repository.MobileEntitlementRepairClient
 import com.ssbmax.shared.domain.repository.OIREvaluationClient
 import com.ssbmax.shared.domain.repository.OIREvaluationResult
 import com.ssbmax.shared.domain.repository.OIRSubmittedAnswer
@@ -41,6 +42,7 @@ import com.ssbmax.shared.domain.util.DomainLogger
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatProductPrice
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatPurchaseOutcome
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -63,6 +65,8 @@ class FakeAuthRepository(
         { Result.failure(UnsupportedOperationException("not stubbed")) }
     var updateUserRoleResult: Result<Unit> = Result.success(Unit)
     var signOutResult: Result<Unit> = Result.success(Unit)
+    var requestAccountDeletionResult: Result<Unit> = Result.success(Unit)
+    var cancelAccountDeletionResult: Result<Unit> = Result.success(Unit)
     var isAuthenticatedResult: Boolean = true
 
     override suspend fun signIn(email: String, password: String) = signInResult
@@ -71,6 +75,8 @@ class FakeAuthRepository(
     override suspend fun handleGoogleSignInResult(data: GoogleSignInData) = handleGoogleSignInResultFn(data)
     override suspend fun updateUserRole(role: UserRole) = updateUserRoleResult
     override suspend fun signOut() = signOutResult
+    override suspend fun requestAccountDeletion() = requestAccountDeletionResult
+    override suspend fun cancelAccountDeletion() = cancelAccountDeletionResult
     override suspend fun isAuthenticated() = isAuthenticatedResult
 }
 
@@ -115,8 +121,19 @@ class FakeRevenueCatClient : RevenueCatClient {
     var restoreCallCount = 0
     var logOutCallCount = 0
 
-    override fun configure(appUserId: String?) {
+    /** H4 (payment ecosystem hardening plan): [configure]'s outcome, defaulting to success. */
+    var configureResult: Result<Unit> = Result.success(Unit)
+
+    /** When set, [configure] suspends on this until the test completes it -- lets a test observe
+     * UpgradeViewModel's behavior while the identity switch is still in flight (e.g. asserting
+     * upgradeToPlan/restorePurchases stay blocked). Left `null` (the default), [configure]
+     * resolves immediately, matching every other fake's synchronous-by-default convention. */
+    var configureGate: CompletableDeferred<Unit>? = null
+
+    override suspend fun configure(appUserId: String?): Result<Unit> {
         lastConfiguredAppUserId = appUserId
+        configureGate?.await()
+        return configureResult
     }
 
     override suspend fun purchase(productId: String): Result<RevenueCatPurchaseOutcome> {
@@ -135,6 +152,19 @@ class FakeRevenueCatClient : RevenueCatClient {
 
     override fun logOut() {
         logOutCallCount++
+    }
+}
+
+/** Phase 7 (payment ecosystem hardening plan). */
+class FakeMobileEntitlementRepairClient : MobileEntitlementRepairClient {
+    var repairResult: Result<Unit> = Result.success(Unit)
+    var lastClaimedTier: SubscriptionTier? = null
+    var repairCallCount = 0
+
+    override suspend fun repairEntitlement(claimedTier: SubscriptionTier): Result<Unit> {
+        repairCallCount++
+        lastClaimedTier = claimedTier
+        return repairResult
     }
 }
 
@@ -764,6 +794,8 @@ class FakeStudyContentRepository : com.ssbmax.shared.domain.repository.StudyCont
     var topicContentFlow: Flow<Result<Any>> = flowOf(Result.success(Unit))
     var studyMaterialResult: Result<com.ssbmax.shared.domain.model.CloudStudyMaterial> =
         Result.success(com.ssbmax.shared.domain.model.CloudStudyMaterial(id = "mat-1", title = "Material"))
+    var topicSectionsResult: Result<com.ssbmax.shared.ui.content.blocks.DocumentModel?> = Result.success(null)
+    var studyMaterialSectionsResult: Result<com.ssbmax.shared.ui.content.blocks.DocumentModel?> = Result.success(null)
 
     private fun unused(name: String): Nothing = error("FakeStudyContentRepository.$name not stubbed for this test")
 
@@ -771,6 +803,8 @@ class FakeStudyContentRepository : com.ssbmax.shared.domain.repository.StudyCont
     override suspend fun getStudyMaterials(topicType: String) = unused("getStudyMaterials")
     override suspend fun getStudyMaterial(materialId: String) = studyMaterialResult
     override suspend fun refreshContent(topicType: String) = unused("refreshContent")
+    override suspend fun getTopicSections(topicType: String) = topicSectionsResult
+    override suspend fun getStudyMaterialSections(materialId: String) = studyMaterialSectionsResult
 }
 
 /** Fake for [com.ssbmax.shared.domain.repository.StudyProgressRepository], used by [com.ssbmax.shared.presentation.study.StudyMaterialDetailViewModel]'s use cases. */

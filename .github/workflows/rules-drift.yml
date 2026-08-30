@@ -1,0 +1,70 @@
+name: Firestore Rules Drift
+
+# Detects the failure `functions/scripts/check-rules-drift.js` exists for (Phase 8, Payment
+# Ecosystem Hardening plan): `firestore.rules` is the SSOT for data-access control, C1 (Phase 1)
+# was a rules bug, and `firebase deploy --only firestore:rules` is a MANUAL step that appears
+# nowhere else in CI. Two failure modes follow, neither otherwise detectable: a rules change
+# merges and is never deployed (the repo says secure, production is not), or someone edits rules
+# in the Firebase console and the repo silently stops matching production. This exact check was
+# run by hand to confirm C1's fix was actually live before this workflow existed.
+#
+# NON-BLOCKING by design, mirroring deploy-drift.yml: scheduled only, never on pull_request/push,
+# so it gates nothing and needs no entry in main-ci.yml's `CI Success` `needs` list. It also needs
+# GCP credentials CI may not have (a service account key stored as a repository secret) -- a
+# missing secret or a transient API failure must not turn a required check red, or a security
+# check that cries wolf trains people to ignore security checks (same rationale deploy-drift.yml
+# documents for its own network-failure handling).
+'on':
+  schedule:
+    - cron: '52 6 * * *'   # daily, 06:52 UTC -- offset from deploy-drift.yml's 06:17 run
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-rules-drift:
+    name: Deployed Firestore rules vs firestore.rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Check for GCP credentials
+        id: creds
+        run: |
+          if [ -z "${{ secrets.OPS_ALERTING_GCP_SA_KEY }}" ]; then
+            echo "::warning::OPS_ALERTING_GCP_SA_KEY secret not set -- skipping (non-blocking check, needs GCP credentials CI may not have)."
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        if: steps.creds.outputs.has_creds == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Install functions dependencies
+        if: steps.creds.outputs.has_creds == 'true'
+        working-directory: functions
+        run: npm ci
+
+      - name: Write service account credentials
+        if: steps.creds.outputs.has_creds == 'true'
+        run: |
+          echo '${{ secrets.OPS_ALERTING_GCP_SA_KEY }}' > "$RUNNER_TEMP/gcp-sa-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/gcp-sa-key.json" >> "$GITHUB_ENV"
+
+      - name: Run check-rules-drift.js
+        if: steps.creds.outputs.has_creds == 'true'
+        working-directory: functions
+        run: |
+          set -uo pipefail
+          if ! node scripts/check-rules-drift.js; then
+            echo "::warning::Firestore rules drift detected (or the check itself failed) -- see the job log above. This is a non-blocking scheduled check; investigate manually."
+          fi

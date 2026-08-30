@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mocked } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { OIRTestRunner } from '../../src/components/testRunners/OIRTestRunner';
+import type { OIRTestViewModel } from '../../src/viewmodels/OIRTestViewModel';
 import { strings } from '../../src/constants/strings';
 
 describe('OIRTestRunner Component Unit Tests', () => {
-  let mockViewModel: any;
+  let mockViewModel: Mocked<OIRTestViewModel>;
 
   beforeEach(() => {
     mockViewModel = {
@@ -33,7 +34,7 @@ describe('OIRTestRunner Component Unit Tests', () => {
       nextQuestion: vi.fn(),
       previousQuestion: vi.fn(),
       submitTest: vi.fn()
-    };
+    } as unknown as Mocked<OIRTestViewModel>;
   });
 
   it('should render question text and option choices', () => {
@@ -56,13 +57,14 @@ describe('OIRTestRunner Component Unit Tests', () => {
   it('should render Return to SSB Tests button on completion screen and trigger onExitTest when clicked', () => {
     mockViewModel.getState.mockReturnValue({
       questions: [],
+      batchId: 'batch_001',
       currentIndex: 0,
       answers: {},
       isLoading: false,
       isSubmitting: false,
       isCompleted: true,
       error: null,
-      result: { score: 45, totalQuestions: 50, oirRating: 1 },
+      result: { score: 45, totalQuestions: 50, oirRating: 1, percentage: 90 },
       timeRemainingSeconds: 0
     });
     const onExitTestSpy = vi.fn();

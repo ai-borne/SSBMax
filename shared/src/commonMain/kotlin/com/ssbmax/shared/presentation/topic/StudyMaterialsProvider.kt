@@ -54,14 +54,19 @@ object StudyMaterialsProvider {
         item("psy_8", "Psychological Mindset Development", "16 min read")
     )
 
+    // Ordered by GTO sub-test seniority (1. Group Discussion through 9. Final Group Task),
+    // matching content/study-materials/gto_*.md's displayOrder -- keep in sync with that file.
     private fun gtoMaterials() = listOf(
         item("gto_1", "GTO Tasks Overview", "12 min read"),
         item("gto_2", "Group Discussion Mastery", "15 min read"),
+        item("gto_8", "Group Planning Exercise Guide", "16 min read"),
         item("gto_3", "Progressive Group Task Tips", "18 min read"),
+        item("gto_7", "Snake Race & FGT Strategies", "16 min read"),
         item("gto_4", "Half Group Task Techniques", "14 min read"),
         item("gto_5", "Lecturette Preparation", "10 min read"),
+        item("gto_10", "Individual Obstacles Test Guide", "13 min read"),
         item("gto_6", "Command Task Leadership", "12 min read"),
-        item("gto_7", "Snake Race & FGT Strategies", "16 min read")
+        item("gto_9", "Final Group Task Strategy", "14 min read")
     )
 
     private fun interviewMaterials() = listOf(

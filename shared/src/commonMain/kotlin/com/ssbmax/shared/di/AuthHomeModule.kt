@@ -1,7 +1,9 @@
 package com.ssbmax.shared.di
 
 import com.ssbmax.shared.domain.usecase.GetOirResultUseCase
+import com.ssbmax.shared.domain.usecase.auth.CancelAccountDeletionUseCase
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
+import com.ssbmax.shared.domain.usecase.auth.RequestAccountDeletionUseCase
 import com.ssbmax.shared.domain.usecase.auth.SignInWithGoogleUseCase
 import com.ssbmax.shared.domain.usecase.auth.SignOutUseCase
 import com.ssbmax.shared.domain.usecase.auth.UpdateUserRoleUseCase
@@ -31,6 +33,8 @@ val authHomeModule = module {
     factoryOf(::SignInWithGoogleUseCase)
     factoryOf(::UpdateUserRoleUseCase)
     factoryOf(::SignOutUseCase)
+    factoryOf(::RequestAccountDeletionUseCase)
+    factoryOf(::CancelAccountDeletionUseCase)
     factoryOf(::ObserveCurrentUserUseCase)
     factoryOf(::GetOirResultUseCase)
     factoryOf(::GetOLQDashboardUseCase)

@@ -210,6 +210,7 @@ These supplement the root CLAUDE.md security principles:
 npm run test            # Single vitest run (CI mode)
 npm run test:watch      # Watch mode (local dev)
 npm run test:coverage   # Coverage report
+npm run test:e2e        # Playwright, against a real browser
 ```
 
 **Test location:** `web/tests/` (mirrors `src/` structure):
@@ -217,7 +218,8 @@ npm run test:coverage   # Coverage report
 tests/
 ├── security/   # CSP/HSTS header tests, Firestore rules tests
 ├── services/   # AntiCheatService, OfflineQueueService, AuthService
-└── unit/       # ViewModel and Repository unit tests
+├── unit/       # ViewModel and Repository unit tests
+└── e2e/        # Playwright specs (playwright.config.ts, testDir-scoped to just this folder)
 ```
 
 **Rules:**
@@ -225,6 +227,11 @@ tests/
 - Security tests (`tests/security/`) are mandatory for every security-surface change.
 - A phase/task is not done until `npm run test` is green. No skipped tests counted as passing.
 - Mock Firebase and Cloud Function calls in tests — never hit real Firestore from the test suite.
+- `npm run test:e2e` runs against a real Chromium via Playwright, not JSDOM — `playwright.config.ts`'s
+  `webServer` starts `npm run dev` itself and waits for it, so no manual server start is needed
+  locally or in CI. It is a required step in `web-ci` (`.github/workflows/main-ci.yml`); do not run
+  Playwright with no config/testDir argument outside this project — Playwright's own default testDir
+  would also match the Vitest files under `tests/unit/` and crash trying to load them.
 
 ---
 
@@ -262,6 +269,91 @@ must never be deployed.
 
 ---
 
+## SEO / AI Search (GEO)
+
+Public content routes (`/study/*`, `/faq`, and any future content path under `src/routes/`)
+exist to be read by AI answer engines (ChatGPT, Perplexity, Google AI Overviews, Claude) as
+well as humans — most of these crawlers do not execute JavaScript, so a route that only renders
+after hydration is invisible to them. This section is the convention set from the
+`ai_search_readiness` GEO plan (`docs/plans/ai_search_readiness*`); read that plan for the "why"
+behind each rule below.
+
+- **Public routes must be prerendered, full-text, non-hydrated static HTML.** `web/scripts/
+  prerenderContentRoutes.mjs` + `prerenderHtml.mjs` run inside `npm run build` (never as a
+  separate/optional step) and emit `dist/<route>/index.html` containing the actual prose — not
+  a loading skeleton. Never seed `window.__INITIAL_DATA__` for these pages instead: that
+  reintroduces the inline-script CSP problem for no benefit. `curl <url> | grep` for body text
+  is the source-of-truth check, not "it renders in a browser."
+- **Content is data, authored in git, not in TSX.** New long-form public content goes under
+  `web/content/` (or `content/` at repo root for the KMP-shared prose) as markdown +
+  frontmatter, loaded at build time via `web/scripts/loadContent.mjs`. It is exempt from the
+  300-LOC rule (content, not code) but the *loader/renderer* code is not.
+- **Metadata + JSON-LD are mandatory on every public route**, not optional polish: `<title>`,
+  `description`, `og:*`/`twitter:*` via `useDocumentMeta`/`contentSeo.ts`, and a schema.org
+  JSON-LD block appropriate to the page type (`Course`/`LearningResource`, `BreadcrumbList`,
+  `FAQPage`). JSON-LD ships CSP-safe — either a per-build `sha256-…` script-src hash
+  (`web/scripts/cspHashes.mjs`/`cspHeaders.mjs`) or external static JSON. Never loosen
+  `web/public/_headers`' CSP (no `'unsafe-inline'`) to make a JSON-LD block work; `web/tests/
+  security/headers.test.ts` and `structuredData.test.ts` enforce this.
+- **`web/scripts/generateSeoFiles.mjs` regenerates `robots.txt`/`sitemap.xml`/`llms.txt` from
+  the live route list on every build** — a route added under `src/routes/` without a
+  corresponding content/seo entry will not silently appear half-configured; extend the
+  generator, don't hand-edit `dist/sitemap.xml`.
+- **Gated routes (anything behind auth — SSB Tests, results, dashboards) must stay `noindex`
+  and excluded from the sitemap.** Only Study/FAQ/marketing content is public; the auth wall on
+  SSB Tests itself is a tier/quota control (`CheckTestEligibilityUseCase`), not a GEO decision,
+  and must not be relaxed as a side effect of GEO work.
+- **URLs are permanent once indexed.** A content route's slug is a one-time decision (see the
+  plan's Phase 2 "URL structure is permanent" gate) — changing an indexed slug later costs the
+  indexing already earned and needs a 301, not a rename. Pick intent-matching slugs
+  (`/study/ssb-psychology-tat-wat-srt-sd`, not `/study/day-1`) before merging, not after.
+- **robots.txt distinguishes training crawlers from retrieval crawlers on purpose** (`GPTBot`,
+  `ClaudeBot`, `Google-Extended` disallowed; `ChatGPT-User`, `Claude-User`, `Claude-SearchBot`,
+  `PerplexityBot`, `Googlebot` allowed). This is a deliberate monetization/citation tradeoff
+  (root `CLAUDE.md` Rule 7) — don't "fix" it toward allow-all without re-litigating that
+  decision with the user.
+- **`content/` under repo root is the shared SSOT with KMP**, not a web-only fork: web reads it
+  at build time (no Firestore credentials in the web build); a publish script pushes the same
+  source to Firestore `topic_content`/`study_materials` for mobile; `scripts/content/
+  generateKmpFallback.js` regenerates KMP's offline fallback prose
+  (`shared/.../presentation/topic/TopicIntro*.kt`) from it. Writing content once should improve
+  both platforms — never hand-write competing prose in `web/content/` and `shared/` for the
+  same topic.
+
+### Structured content rendering (docs/plans/write-the-phased-plan-wobbly-pancake.md)
+
+Every `content/*.md` body is parsed once, at build time, into a typed `DocumentModel`
+(`scripts/content/parseDocument.js` — the one parser; do not write a second one in TSX or
+Kotlin) and rendered natively on each platform instead of as one markdown blob per page.
+
+- **The block taxonomy is a plain string, not an enum (D1).** `block.type` values:
+  `paragraph`, `list`, `specTable`, `callout`, `comparison`, `timeline`, `table`. An unrecognised
+  type must render as `paragraph` on both web (`web/src/components/content/blockRegistry.ts`)
+  and KMP (`shared/.../ui/content/blocks/blockRegistry.kt`) — this lets a shipped mobile build
+  survive a new block type introduced after it was released. Promote to
+  `contracts/enums.yaml` only once the taxonomy is stable across a release or two.
+- **Sections ship expanded by default (D3).** No hidden/collapsed content on first render — AI
+  retrieval crawlers' handling of `<details>` is undocumented and Google has historically
+  down-weighted hidden text. Where a collapse control is offered, it is a local user preference
+  applied on top of native `<details>` markup (content stays in the DOM), never React
+  conditional rendering — that would strip prose from the prerendered HTML.
+- **No markdown parsing in the browser or on device, ever (D4).** All parsing happens once, at
+  build/publish time, in `parseDocument.js`. `StudyReaderModal` and every other surface render
+  the parsed `DocumentModel` via `DocumentView`/`blockRegistry`; there is no runtime
+  markdown-to-HTML fallback path. `web/src/utils/renderMarkdown.ts` and the `marked` dependency
+  were deleted for this reason (Phase 8 sweep) — do not reintroduce a runtime markdown parser
+  as a "just in case" fallback when a fetch is slow or fails; render a loading state instead.
+- **Structure is authored in `content/`, never in TSX or Compose.** A renderer's job is to map
+  an existing block type to markup, not to encode document structure itself. New prose goes into
+  a `.md` file conforming to `content/SCHEMA.md`; new *shapes* (a new block type) go into
+  `parseDocument.js`'s classifier plus both `blockRegistry`s together (the parity gate,
+  `content/__fixtures__/blocks.json`, fails both builds until they agree).
+- **The parity gate is mechanical, not convention** — the one place in this codebase where
+  `shared` and `web` are kept in sync by a build-time check rather than a CLAUDE.md instruction
+  (see root `CLAUDE.md`'s four-consumer section on Tier 3 having no such enforcement elsewhere).
+
+---
+
 ## Build & Dev Commands
 
 ```bash
@@ -271,6 +363,9 @@ npm run dev             # Vite dev server (hot reload)
 # Production build
 npm run build           # tsc -b && vite build (output: dist/)
 npm run preview         # Preview production bundle locally
+
+# Lint (ESLint flat config: web/eslint.config.js — typescript-eslint + react-hooks + react-refresh)
+npm run lint             # Required in pre-commit (.githooks/pre-commit) and CI (web-ci job)
 
 # Security audit (required before declaring any phase complete)
 ../scripts/validate-security.sh

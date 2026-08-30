@@ -1,0 +1,25 @@
+{
+  "sections": [
+    {
+      "id": "fixture:timeline.md#0",
+      "slug": "day-2-schedule",
+      "heading": "Day 2 Schedule",
+      "level": 2,
+      "blocks": [
+        {
+          "type": "timeline",
+          "steps": [
+            {
+              "label": "9:00 AM",
+              "text": "Reporting and briefing"
+            },
+            {
+              "label": "9:30 AM",
+              "text": "TAT (approximately 1 hour)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

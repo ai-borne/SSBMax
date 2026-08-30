@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContentRepository } from '../../../src/repositories/ContentRepository';
 import { ContentUnavailableError } from '../../../src/types/errors';
-import { getDocs, getDoc, doc, collection } from 'firebase/firestore';
+import { getDocs, getDoc, doc, collection, DocumentSnapshot, QuerySnapshot } from 'firebase/firestore';
 
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn((_db, ...paths) => ({ id: paths.join('/') })),
@@ -9,7 +9,8 @@ vi.mock('firebase/firestore', () => ({
   getDoc: vi.fn(),
   getDocs: vi.fn(),
   query: vi.fn((ref) => ref),
-  limit: vi.fn((n) => n)
+  limit: vi.fn((n) => n),
+  FirestoreError: class FirestoreError extends Error {}
 }));
 
 vi.mock('../../../src/config/firebase', () => ({
@@ -41,7 +42,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
         words: mock60Words,
         displayDurationSeconds: 15
       })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const result = await repository.getWATBatch('batch_0');
 
@@ -53,7 +54,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
   });
 
   it('CONTRACT: a missing WAT batch fails loudly with ContentUnavailableError, not a fabricated word list', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as unknown as DocumentSnapshot);
     await expect(repository.getWATBatch('batch_missing')).rejects.toBeInstanceOf(ContentUnavailableError);
   });
 
@@ -66,7 +67,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
         situations: mock60Situations,
         totalTimeMinutes: 30
       })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const result = await repository.getSRTBatch('batch_0');
 
@@ -78,7 +79,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
   });
 
   it('CONTRACT: a missing SRT batch fails loudly with ContentUnavailableError', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as unknown as DocumentSnapshot);
     await expect(repository.getSRTBatch('batch_missing')).rejects.toBeInstanceOf(ContentUnavailableError);
   });
 
@@ -92,7 +93,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
         imageUrls: mock11Slides,
         slideDurationSeconds: 240
       })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const result = await repository.getTATSet('tat_set_1');
 
@@ -106,7 +107,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
   });
 
   it('CONTRACT: a missing TAT set fails loudly with ContentUnavailableError', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as unknown as DocumentSnapshot);
     await expect(repository.getTATSet('tat_set_missing')).rejects.toBeInstanceOf(ContentUnavailableError);
   });
 
@@ -129,7 +130,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
         batchIndex: 0,
         questions: mock50Questions
       })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const result = await repository.getOIRQuestions(0);
 
@@ -140,14 +141,14 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
 
     // Anti-cheating verification: answer key & explanation MUST NOT leak to client
     result.items.forEach((item) => {
-      expect((item as any).correctAnswerIndex).toBeUndefined();
-      expect((item as any).answerKey).toBeUndefined();
-      expect((item as any).explanation).toBeUndefined();
+      expect((item as unknown as Record<string, unknown>).correctAnswerIndex).toBeUndefined();
+      expect((item as unknown as Record<string, unknown>).answerKey).toBeUndefined();
+      expect((item as unknown as Record<string, unknown>).explanation).toBeUndefined();
     });
   });
 
   it('CONTRACT: a missing OIR batch fails loudly with ContentUnavailableError, never scores/renders a fabricated question set', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as unknown as DocumentSnapshot);
     await expect(repository.getOIRQuestions(0)).rejects.toBeInstanceOf(ContentUnavailableError);
   });
 
@@ -162,7 +163,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
         writingTimeSeconds: 240,
         instructions: ['Observe for 30s', 'Write story in 4m']
       })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const result = await repository.getPPDTContext('ppdt_1');
 
@@ -196,7 +197,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
           }
         ]
       })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const result = await repository.getPPDTContext('batch_001');
 
@@ -210,7 +211,7 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
   });
 
   it('CONTRACT: a missing PPDT context fails loudly with ContentUnavailableError', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as unknown as DocumentSnapshot);
     await expect(repository.getPPDTContext('ppdt_missing')).rejects.toBeInstanceOf(ContentUnavailableError);
   });
 
@@ -222,8 +223,8 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
 
     vi.mocked(getDocs).mockResolvedValueOnce({
       empty: false,
-      forEach: (cb: any) => mockBatchDocs.forEach(cb)
-    } as any);
+      forEach: (cb: (doc: unknown) => void) => mockBatchDocs.forEach(cb)
+    } as unknown as QuerySnapshot);
 
     const batches = await repository.getAvailableBatches('oir');
 

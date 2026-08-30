@@ -11,6 +11,15 @@ import { readFileSync } from 'fs';
 // separate "keep these in sync" step here.
 const { version: appVersion } = JSON.parse(readFileSync(path.resolve(__dirname, './package.json'), 'utf-8'));
 
+// Phase 8 (ai_search_readiness plan): both are legitimately optional (unset in local/CI builds
+// that never get deployed -- see web/CLAUDE.md's Deployment section on the demo Firebase
+// fallback). Vite's %VAR% index.html replacement only substitutes keys present in its merged
+// env; an unset key is left as the literal "%VITE_...%" string in shipped HTML instead of an
+// empty attribute, which is what actually breaks (a real Pages-configured value in process.env
+// is untouched by `??=` and still wins).
+process.env.VITE_GSC_VERIFICATION_CODE ??= '';
+process.env.VITE_CF_BEACON_TOKEN ??= '';
+
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(appVersion)

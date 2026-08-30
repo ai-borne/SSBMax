@@ -67,7 +67,7 @@ export class AntiCheatService {
     if (document.body) {
       document.body.style.webkitUserSelect = 'none';
       document.body.style.userSelect = 'none';
-      (document.body.style as any).webkitTouchCallout = 'none';
+      (document.body.style as CSSStyleDeclaration & { webkitTouchCallout?: string }).webkitTouchCallout = 'none';
     }
   }
 
@@ -89,7 +89,7 @@ export class AntiCheatService {
     if (document.body) {
       document.body.style.webkitUserSelect = '';
       document.body.style.userSelect = '';
-      (document.body.style as any).webkitTouchCallout = '';
+      (document.body.style as CSSStyleDeclaration & { webkitTouchCallout?: string }).webkitTouchCallout = '';
     }
   }
 
@@ -136,8 +136,8 @@ export class AntiCheatService {
 
   private handlePaste(e: ClipboardEvent): void {
     // Preserve Input Method Editor (IME) composition for vernacular / virtual keyboards
-    const target = e.target as any;
-    if ((e as any).isComposing || target?.isComposing) {
+    const target = e.target as HTMLElement & { isComposing?: boolean };
+    if ((e as ClipboardEvent & { isComposing?: boolean }).isComposing || target?.isComposing) {
       return;
     }
     e.preventDefault();
@@ -168,19 +168,27 @@ export class AntiCheatService {
   }
 
   private handleFullscreenChange(): void {
+    const vendorDocument = document as Document & {
+      webkitFullscreenEnabled?: boolean;
+      mozFullScreenEnabled?: boolean;
+      msFullscreenEnabled?: boolean;
+      webkitFullscreenElement?: Element;
+      mozFullScreenElement?: Element;
+      msFullscreenElement?: Element;
+    };
     const isFullscreenSupported = typeof document !== 'undefined' && (
       document.fullscreenEnabled ||
-      (document as any).webkitFullscreenEnabled ||
-      (document as any).mozFullScreenEnabled ||
-      (document as any).msFullscreenEnabled
+      vendorDocument.webkitFullscreenEnabled ||
+      vendorDocument.mozFullScreenEnabled ||
+      vendorDocument.msFullscreenEnabled
     );
     if (!isFullscreenSupported) return;
 
     const isFullscreen = !!(
       document.fullscreenElement ||
-      (document as any).webkitFullscreenElement ||
-      (document as any).mozFullScreenElement ||
-      (document as any).msFullscreenElement
+      vendorDocument.webkitFullscreenElement ||
+      vendorDocument.mozFullScreenElement ||
+      vendorDocument.msFullscreenElement
     );
 
     if (!isFullscreen) {

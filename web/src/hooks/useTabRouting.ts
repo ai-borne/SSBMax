@@ -1,9 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type TabId = 'home' | 'study' | 'tests' | 'reports' | 'settings' | 'subscription' | 'privacy' | 'terms';
+export type TabId = 'home' | 'study' | 'tests' | 'reports' | 'settings' | 'subscription' | 'privacy' | 'terms' | 'support' | 'analytics';
 
 export const CORE_TABS: TabId[] = ['home', 'study', 'tests', 'reports', 'settings'];
-export const VALID_TABS: TabId[] = ['home', 'study', 'tests', 'reports', 'settings', 'subscription', 'privacy', 'terms'];
+// 'support' (Phase 9, Payment Ecosystem Hardening plan) and 'analytics' (Phase 8,
+// ai_search_readiness plan) are deliberately absent from CORE_TABS and AppLayout's navItems --
+// both are admin-only internal tools, not candidate-facing surfaces, so they stay reachable via
+// `?tab=support`/`?tab=analytics` without appearing in the nav bar. The real access control is
+// server-side (each callable's admin claim check), not this omission -- see
+// `SupportSubscriptionPage.tsx`/`AnalyticsDashboardPage.tsx`'s doc comments.
+export const VALID_TABS: TabId[] = ['home', 'study', 'tests', 'reports', 'settings', 'subscription', 'privacy', 'terms', 'support', 'analytics'];
 
 export const TAB_ALIASES: Record<string, TabId> = {
   practice: 'tests',

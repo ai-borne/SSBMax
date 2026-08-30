@@ -124,9 +124,9 @@ describe('testContentMappers Unit Tests', () => {
       expect(q).toHaveProperty('questionText');
       expect(q).toHaveProperty('options');
       // Anti-cheating verification: answer keys MUST NOT exist on return object
-      expect((q as any).correctAnswerIndex).toBeUndefined();
-      expect((q as any).answerKey).toBeUndefined();
-      expect((q as any).explanation).toBeUndefined();
+      expect((q as unknown as Record<string, unknown>).correctAnswerIndex).toBeUndefined();
+      expect((q as unknown as Record<string, unknown>).answerKey).toBeUndefined();
+      expect((q as unknown as Record<string, unknown>).explanation).toBeUndefined();
     });
   });
 });

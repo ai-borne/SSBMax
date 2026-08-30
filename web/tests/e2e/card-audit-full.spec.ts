@@ -22,6 +22,12 @@ const ALL_TEST_IDS = [
 
 test.describe('Comprehensive SSB Test Cards Runtime Audit', () => {
   test('Audit all 17 test cards on localhost:5173 for launch, content loading, and errors', async ({ page }) => {
+    // 17 cards x (navigation + 300ms + click + 1000ms wait + assertions) is ~35-45s on its
+    // own even with Firestore's network disabled in e2e (playwright.config.ts) -- this is a
+    // deliberately exhaustive full-card audit, not a hang, so it needs more than Playwright's
+    // default 30s test timeout rather than a smaller card set or shorter waits.
+    test.setTimeout(120_000);
+
     // 1. Force Dev Tier Override to FORCE_PREMIUM so all cards are unlocked
     await page.goto('http://localhost:5173/?tab=settings');
     await page.waitForLoadState('domcontentloaded');

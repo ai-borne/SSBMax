@@ -34,8 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ssbmax.shared.domain.model.TestType
 import com.ssbmax.shared.presentation.topic.StudyMaterialItem
 import com.ssbmax.shared.ui.common.MarkdownText
+import com.ssbmax.shared.ui.content.DocumentView
+import com.ssbmax.shared.ui.content.blocks.DocumentModel
 import org.jetbrains.compose.resources.stringResource
 import ssbmax.shared.generated.resources.Res
 import ssbmax.shared.generated.resources.premium_badge_label
@@ -89,13 +92,42 @@ private fun formatBreadcrumbText(text: String): String {
 }
 
 @Composable
-internal fun IntroductionTab(introduction: String, isLoading: Boolean, modifier: Modifier = Modifier) {
+internal fun IntroductionTab(
+    introduction: String,
+    isLoading: Boolean,
+    introductionSections: DocumentModel? = null,
+    modifier: Modifier = Modifier,
+    readSectionIds: Set<String> = emptySet(),
+    onToggleSectionRead: (String) -> Unit = {},
+    practiceTestType: TestType? = null,
+    onPracticeClick: (TestType) -> Unit = {}
+) {
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         return
     }
 
-    LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    // Phase 2/8 (docs/plans/write-the-phased-plan-wobbly-pancake.md): when a structured model is
+    // available, render it via DocumentView's real per-section LazyColumn instead of the
+    // single-item MarkdownText card below -- the fallback now only fires on a genuine missing
+    // fetch and missing generated offline copy, not a rollout flag (removed in the Phase 8 sweep).
+    if (introductionSections != null) {
+        DocumentView(
+            model = introductionSections,
+            modifier = modifier.fillMaxSize(),
+            readSectionIds = readSectionIds,
+            onToggleSectionRead = onToggleSectionRead,
+            practiceTestType = practiceTestType,
+            onPracticeClick = onPracticeClick
+        )
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         item {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

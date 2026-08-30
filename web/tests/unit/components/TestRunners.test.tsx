@@ -4,6 +4,7 @@ import { UnifiedTestRunner } from '../../../src/components/testRunners/UnifiedTe
 import { OIRTestViewModel } from '../../../src/viewmodels/OIRTestViewModel';
 import { PsychologyTestViewModel } from '../../../src/viewmodels/PsychologyTestViewModel';
 import { strings } from '../../../src/constants/strings';
+import { IContentRepository } from '../../../src/repositories/interfaces/IContentRepository';
 
 class MockContentRepository {
   async getOIRQuestions() {
@@ -76,7 +77,7 @@ describe('TestRunners Components Suite', () => {
   });
 
   it('renders OIR MCQ runner and allows option selection', async () => {
-    const vm = new OIRTestViewModel(mockRepo as any);
+    const vm = new OIRTestViewModel(mockRepo as unknown as IContentRepository);
     render(<UnifiedTestRunner testType="OIR" oirViewModel={vm} userId="user-123" />);
 
     const optionBtn = await screen.findByText('2');
@@ -87,7 +88,7 @@ describe('TestRunners Components Suite', () => {
   });
 
   it('renders TAT slide viewer and records candidate response', async () => {
-    const vm = new PsychologyTestViewModel('TAT', mockRepo as any);
+    const vm = new PsychologyTestViewModel('TAT', mockRepo as unknown as IContentRepository);
     render(<UnifiedTestRunner testType="TAT" psychologyViewModel={vm} userId="user-123" />);
 
     expect(await screen.findByText(strings.psychology.tatTitle)).toBeInTheDocument();
@@ -98,28 +99,28 @@ describe('TestRunners Components Suite', () => {
   });
 
   it('renders WAT word viewer with word prompt', async () => {
-    const vm = new PsychologyTestViewModel('WAT', mockRepo as any);
+    const vm = new PsychologyTestViewModel('WAT', mockRepo as unknown as IContentRepository);
     render(<UnifiedTestRunner testType="WAT" psychologyViewModel={vm} userId="user-123" />);
 
     expect(await screen.findByText('LEADER')).toBeInTheDocument();
   });
 
   it('renders SRT card viewer with situation text', async () => {
-    const vm = new PsychologyTestViewModel('SRT', mockRepo as any);
+    const vm = new PsychologyTestViewModel('SRT', mockRepo as unknown as IContentRepository);
     render(<UnifiedTestRunner testType="SRT" psychologyViewModel={vm} userId="user-123" />);
 
     expect(await screen.findByText(/He was on a train when a fire broke out/)).toBeInTheDocument();
   });
 
   it('renders PPDT canvas viewer with perception details', async () => {
-    const vm = new PsychologyTestViewModel('PPDT', mockRepo as any);
+    const vm = new PsychologyTestViewModel('PPDT', mockRepo as unknown as IContentRepository);
     render(<UnifiedTestRunner testType="PPDT" psychologyViewModel={vm} userId="user-123" />);
 
     expect(await screen.findByText(strings.psychology.ppdtTitle)).toBeInTheDocument();
   });
 
   it('triggers exit modal and handles exit confirmation for OIR runner', async () => {
-    const vm = new OIRTestViewModel(mockRepo as any);
+    const vm = new OIRTestViewModel(mockRepo as unknown as IContentRepository);
     const handleExit = vi.fn();
     const { OIRTestRunner } = await import('../../../src/components/testRunners/OIRTestRunner');
     
@@ -136,7 +137,7 @@ describe('TestRunners Components Suite', () => {
   });
 
   it('triggers exit modal and handles exit confirmation for Psychology runner', async () => {
-    const vm = new PsychologyTestViewModel('TAT', mockRepo as any);
+    const vm = new PsychologyTestViewModel('TAT', mockRepo as unknown as IContentRepository);
     const handleExit = vi.fn();
     const { PsychologyTestRunner } = await import('../../../src/components/testRunners/PsychologyTestRunner');
     

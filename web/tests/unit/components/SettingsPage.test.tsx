@@ -22,8 +22,8 @@ describe('SettingsPage Component', () => {
     expect(screen.getByTestId('pwa-status-value')).toHaveTextContent('Active (Workbox SW)');
   });
 
-  it('triggers account action handlers for edit diagnostic, upgrade pass, and sign out', () => {
-    const onEditDiagnostic = vi.fn();
+  it('triggers account action handlers for edit profile, upgrade pass, and sign out', () => {
+    const onEditProfile = vi.fn();
     const onUpgrade = vi.fn();
     const onSignOut = vi.fn();
 
@@ -31,14 +31,14 @@ describe('SettingsPage Component', () => {
       <SettingsPage
         isGuest={false}
         isPro={false}
-        onEditDiagnostic={onEditDiagnostic}
+        onEditProfile={onEditProfile}
         onUpgrade={onUpgrade}
         onSignOut={onSignOut}
       />
     );
 
     fireEvent.click(screen.getByTestId('edit-diagnostic-btn'));
-    expect(onEditDiagnostic).toHaveBeenCalledTimes(1);
+    expect(onEditProfile).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId('upgrade-pass-btn'));
     expect(onUpgrade).toHaveBeenCalledTimes(1);

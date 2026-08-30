@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { FeatureFlagRepository } from '../../src/repositories/FeatureFlagRepository';
-import { getDoc } from 'firebase/firestore';
+import { getDoc, DocumentSnapshot } from 'firebase/firestore';
 import { SAFE_DEFAULT_FEATURE_FLAGS } from '../../src/types/featureFlags';
 
 vi.mock('firebase/firestore', () => ({
@@ -14,7 +14,7 @@ vi.mock('../../src/config/firebase', () => ({
 
 describe('FeatureFlagRepository', () => {
   it('falls back to SAFE_DEFAULT_FEATURE_FLAGS when the doc does not exist', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => null } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => null } as unknown as DocumentSnapshot);
 
     const flags = await new FeatureFlagRepository().getFeatureFlags();
 
@@ -33,7 +33,7 @@ describe('FeatureFlagRepository', () => {
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => true,
       data: () => ({ minimumSupportedAppVersion: '9.9.9', flags: { gtoOthers: true } })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const flags = await new FeatureFlagRepository().getFeatureFlags();
 
@@ -45,7 +45,7 @@ describe('FeatureFlagRepository', () => {
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => true,
       data: () => ({ minimumSupportedAppVersion: '2.0.0', flags: {} })
-    } as any);
+    } as unknown as DocumentSnapshot);
 
     const repository = new FeatureFlagRepository();
     await repository.getFeatureFlags();

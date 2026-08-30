@@ -422,6 +422,26 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // D2 side documents (docs/plans/write-the-phased-plan-wobbly-pancake.md
+    // Phase 5): structured DocumentModel published alongside -- never onto --
+    // topic_content / study_materials, fetched only when a topic/material
+    // detail screen is actually opened. Each mirrors its own legacy sibling's
+    // rule, not a single shared one: topic_sections mirrors topic_content
+    // (authenticated-only -- KMP is the only reader). study_material_sections
+    // mirrors study_materials (public -- the web Study tab's StudyReaderModal
+    // reads it unauthenticated, same as study_materials itself); mirroring
+    // topic_content here instead was a real bug caught live -- an anonymous
+    // web visitor got Missing or insufficient permissions on every material.
+    match /topic_sections/{topicId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /study_material_sections/{materialId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ============================================
     // STUDY PROGRESS (per-user, doc id `${userId}_${materialId}`)
     // ============================================
@@ -444,8 +464,11 @@ service cloud.firestore {
     // ============================================
     
     match /study_materials/{materialId} {
-      // All authenticated users can read study materials
-      allow read: if isAuthenticated();
+      // Study content is public -- the web Study tab and its content routes
+      // read this collection unauthenticated (docs/plans/i-just-watched-a-nested-russell.md
+      // Phase 4: un-gating). Study material was never behind auth for a security
+      // reason, only a lead-capture one, which is now a soft CTA instead.
+      allow read: if true;
       allow write: if false;
     }
     
@@ -618,6 +641,22 @@ service cloud.firestore {
     // Admin SDK (which bypasses these rules entirely). Explicit deny-all
     // here for defense in depth, matching webhook_logs above.
     match /payments/{paymentId} {
+      allow read, write: if false;
+    }
+
+    // Ops alerts (Phase 7, Payment Ecosystem Hardening plan) - written only by
+    // functions/src/lib/opsAlert.js via the Admin SDK. Server-only, same
+    // defense-in-depth stance as webhook_logs/payments above -- Phase 9's
+    // support view reads this through an admin-gated callable, never
+    // directly from a client SDK.
+    match /ops_alerts/{alertId} {
+      allow read, write: if false;
+    }
+
+    // Analytics daily signup counters (Phase 8, ai_search_readiness plan) - written only by
+    // functions/src/analytics/recordSignup.js via the Admin SDK, read only through the
+    // admin-gated getAnalyticsSummary callable. Same defense-in-depth stance as ops_alerts above.
+    match /analytics_daily/{dateId} {
       allow read, write: if false;
     }
 

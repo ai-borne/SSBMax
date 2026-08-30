@@ -10,6 +10,7 @@ import { DataCacheSection } from './DataCacheSection';
 import { FAQSection } from './FAQSection';
 import { DeveloperSettingsCard } from './DeveloperSettingsCard';
 import { DevTierOverride } from '../../constants/ssbSelectionProcess';
+import { Gender, EntryType } from '../../types/userProfile';
 
 import { GridCardContainer } from '../common/GridCardContainer';
 
@@ -18,18 +19,24 @@ export interface SettingsPageProps {
   theme?: ThemeMode;
   onToggleTheme?: () => void;
   onClearCache?: () => void;
-  onEditDiagnostic?: () => void;
+  onEditProfile?: () => void;
   onUpgrade?: () => void;
   onSignOut?: () => void;
+  onDeleteAccount?: () => void;
+  onCancelDeletion?: () => void;
+  deletionRequestedAt?: number | null;
+  deletionScheduledForLabel?: string;
   onViewPrivacy?: () => void;
   onViewTerms?: () => void;
   userEmail?: string | null;
   userName?: string | null;
   isGuest?: boolean;
   isPro?: boolean;
-  targetBoard?: string;
-  entryStream?: string;
-  prepStatus?: string;
+  age?: number;
+  gender?: Gender;
+  entryType?: EntryType;
+  hasProfile?: boolean;
+  isProfileLoading?: boolean;
   devTierOverride?: DevTierOverride;
   onSelectDevTier?: (override: DevTierOverride) => void;
 }
@@ -39,18 +46,24 @@ export const SettingsPage: FC<SettingsPageProps> = ({
   theme: customTheme,
   onToggleTheme,
   onClearCache,
-  onEditDiagnostic,
+  onEditProfile,
   onUpgrade,
   onSignOut,
+  onDeleteAccount,
+  onCancelDeletion,
+  deletionRequestedAt,
+  deletionScheduledForLabel,
   onViewPrivacy,
   onViewTerms,
   userEmail,
   userName,
   isGuest = true,
   isPro = false,
-  targetBoard,
-  entryStream,
-  prepStatus,
+  age,
+  gender,
+  entryType,
+  hasProfile = false,
+  isProfileLoading = false,
   devTierOverride = 'FOLLOW_REAL',
   onSelectDevTier,
 }) => {
@@ -79,12 +92,18 @@ export const SettingsPage: FC<SettingsPageProps> = ({
           userName={userName}
           isGuest={isGuest}
           isPro={isPro}
-          targetBoard={targetBoard}
-          entryStream={entryStream}
-          prepStatus={prepStatus}
-          onEditDiagnostic={onEditDiagnostic}
+          age={age}
+          gender={gender}
+          entryType={entryType}
+          hasProfile={hasProfile}
+          isProfileLoading={isProfileLoading}
+          onEditProfile={onEditProfile}
           onUpgrade={onUpgrade}
           onSignOut={onSignOut}
+          onDeleteAccount={onDeleteAccount}
+          onCancelDeletion={onCancelDeletion}
+          deletionRequestedAt={deletionRequestedAt}
+          deletionScheduledForLabel={deletionScheduledForLabel}
         />
 
         {/* Section 2: Appearance & Display Theme */}

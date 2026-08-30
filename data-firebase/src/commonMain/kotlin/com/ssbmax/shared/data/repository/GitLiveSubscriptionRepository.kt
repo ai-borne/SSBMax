@@ -4,10 +4,13 @@ import com.ssbmax.shared.domain.model.SubscriptionTier
 import com.ssbmax.shared.domain.repository.SubscriptionOwnership
 import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.repository.UsageInfo
+import com.ssbmax.shared.domain.util.DomainLogger
 import com.ssbmax.shared.contracts.SsbContracts
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlin.time.Clock
+
+private const val TAG = "GitLiveSubscriptionRepository"
 
 /**
  * GitLive-Firebase-backed port of the Android SubscriptionRepositoryImpl.
@@ -21,7 +24,7 @@ import kotlin.time.Clock
  * denies client writes to that document outright -- see [SubscriptionRepository] for the full
  * rationale. Only the payment webhooks (Admin SDK) write tier.
  */
-class GitLiveSubscriptionRepository : SubscriptionRepository {
+class GitLiveSubscriptionRepository(private val logger: DomainLogger) : SubscriptionRepository {
 
     override suspend fun getSubscriptionTier(userId: String): Result<SubscriptionTier> {
         return try {
@@ -34,7 +37,7 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
             }
             Result.success(tier)
         } catch (e: Exception) {
-            Result.success(SubscriptionTier.FREE)
+            Result.success(subscriptionReadFailureFallback(logger, userId, e))
         }
     }
 
@@ -85,6 +88,7 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
             }
             Result.success(startDate)
         } catch (e: Exception) {
+            logger.e(TAG, "Failed to read subscription start date for user $userId -- returning null (fail-open, not a fatal error)", e)
             Result.success(null)
         }
     }
@@ -113,6 +117,21 @@ class GitLiveSubscriptionRepository : SubscriptionRepository {
         .collection(SsbContracts.FirestorePaths.USER_DATA_SUBCOLLECTION)
         .document(SsbContracts.FirestorePaths.USER_SUBSCRIPTION_TIER_DOC_ID)
 
+}
+
+/**
+ * L2 (Payment Ecosystem Hardening plan, Phase 12): [getSubscriptionTier]'s catch block used to
+ * swallow every exception -- a network blip, a malformed doc, an expired Firebase session --
+ * into `Result.success(FREE)`, exactly the same value a genuinely free user's read returns.
+ * Nothing distinguished "this user is on FREE" from "we have no idea, the read failed". Logging
+ * distinctly here (rather than inline in the `catch` block) keeps the fail-open behavior --
+ * blocking a paid user's whole app on a transient read error is worse than the everyday
+ * mispricing risk swallowing it already accepted -- while making the failure observable, and
+ * lets a test assert the log call without needing a real/mocked Firestore.
+ */
+internal fun subscriptionReadFailureFallback(logger: DomainLogger, userId: String, e: Throwable): SubscriptionTier {
+    logger.e(TAG, "Failed to read subscription tier for user $userId -- defaulting to FREE (fail-open, not a fatal error)", e)
+    return SubscriptionTier.FREE
 }
 
 /**

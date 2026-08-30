@@ -9,7 +9,9 @@ import com.ssbmax.shared.domain.usecase.study.GetStudyMaterialDetailUseCase
 import com.ssbmax.shared.domain.usecase.study.GetStudyProgressUseCase
 import com.ssbmax.shared.domain.usecase.study.SaveStudyProgressUseCase
 import com.ssbmax.shared.domain.usecase.study.TrackStudySessionUseCase
+import com.ssbmax.shared.platform.settings.ReadStateSettings
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
+import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeStudyContentRepository
 import com.ssbmax.shared.presentation.testing.FakeStudyProgressRepository
 import com.ssbmax.shared.presentation.testing.testUser
@@ -58,7 +60,9 @@ class StudyMaterialDetailViewModelTest {
         saveStudyProgress = SaveStudyProgressUseCase(studyProgressRepository),
         trackStudySession = TrackStudySessionUseCase(studyProgressRepository),
         getStudyProgress = GetStudyProgressUseCase(studyProgressRepository),
-        observeCurrentUser = ObserveCurrentUserUseCase(authRepository)
+        observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
+        studyContentRepository = studyContentRepository,
+        readStateSettings = ReadStateSettings(FakeSettings())
     )
 
     @Test
@@ -78,6 +82,82 @@ class StudyMaterialDetailViewModelTest {
         assertEquals("SSB Expert", state.material?.author) // blank author falls back
         assertEquals("10 min read", state.material?.readTime) // blank readTime falls back
         assertEquals("session-1", state.activeSessionId)
+    }
+
+    @Test
+    fun `loadMaterial falls back to markdown when the D2 side document is missing`() = runTest(testDispatcher) {
+        // Every topic is behind ContentFeatureFlags.isStructuredStudyMaterialRenderingEnabled
+        // today -- this pins Phase 5, docs/plans/write-the-phased-plan-wobbly-pancake.md's exit
+        // criterion that a missing side document renders markdown, not a blank screen.
+        studyContentRepository.studyMaterialResult = Result.success(
+            CloudStudyMaterial(id = "mat-1", title = "OIR Basics", topicType = "OIR", contentMarkdown = "# Hello")
+        )
+        studyContentRepository.studyMaterialSectionsResult = Result.success(null)
+        val viewModel = buildViewModel()
+
+        viewModel.loadMaterial("mat-1")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.material)
+        assertEquals(null, state.material?.sections)
+        assertEquals("# Hello", state.material?.content)
+    }
+
+    @Test
+    fun `loadMaterial uses the D2 side document's DocumentModel when one is published`() = runTest(testDispatcher) {
+        val model = com.ssbmax.shared.ui.content.blocks.DocumentModel(
+            sections = listOf(
+                com.ssbmax.shared.ui.content.blocks.DocSection(
+                    id = "study-materials/oir_1.md#0",
+                    slug = "intro",
+                    heading = null,
+                    level = 0,
+                    blocks = listOf(com.ssbmax.shared.ui.content.blocks.ParagraphBlock("Hello"))
+                )
+            )
+        )
+        studyContentRepository.studyMaterialResult = Result.success(
+            CloudStudyMaterial(id = "mat-1", title = "OIR Basics", topicType = "OIR", contentMarkdown = "# Hello")
+        )
+        studyContentRepository.studyMaterialSectionsResult = Result.success(model)
+        val viewModel = buildViewModel()
+
+        viewModel.loadMaterial("mat-1")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(model, viewModel.uiState.value.material?.sections)
+    }
+
+    @Test
+    fun `loadMaterial uses the D2 side document for a non-OIR topic too -- SRT belongs to PSYCHOLOGY`() = runTest(testDispatcher) {
+        // Regression test for the bug this fix closes: study-material bodies used to be gated
+        // behind ContentFeatureFlags.isStructuredRenderingEnabled (OIR-only, meant for topic
+        // intros' offline-fallback readiness), which silently fell back to markdown for every
+        // other topic even though its Firestore side document existed. The per-topic rollout
+        // flag was removed entirely in the Phase 8 sweep once it covered all 9 topics -- every
+        // material with a published side document now renders structured, unconditionally.
+        val model = com.ssbmax.shared.ui.content.blocks.DocumentModel(
+            sections = listOf(
+                com.ssbmax.shared.ui.content.blocks.DocSection(
+                    id = "study-materials/psy_4.md#0",
+                    slug = "intro",
+                    heading = null,
+                    level = 0,
+                    blocks = listOf(com.ssbmax.shared.ui.content.blocks.ParagraphBlock("Hello"))
+                )
+            )
+        )
+        studyContentRepository.studyMaterialResult = Result.success(
+            CloudStudyMaterial(id = "mat-2", title = "SRT Situation Analysis", topicType = "PSYCHOLOGY", contentMarkdown = "# Hello")
+        )
+        studyContentRepository.studyMaterialSectionsResult = Result.success(model)
+        val viewModel = buildViewModel()
+
+        viewModel.loadMaterial("mat-2")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(model, viewModel.uiState.value.material?.sections)
     }
 
     @Test

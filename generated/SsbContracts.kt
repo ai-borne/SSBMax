@@ -43,6 +43,8 @@ object SsbContracts {
         const val TEST_SESSIONS = "test_sessions"
         const val CONTENT_VERSIONS = "content_versions"
         const val TOPIC_CONTENT = "topic_content"
+        const val TOPIC_SECTIONS = "topic_sections"
+        const val STUDY_MATERIAL_SECTIONS = "study_material_sections"
         const val HEALTH_CHECK = "health_check"
         const val PAYMENTS = "payments"
         const val WEBHOOK_LOGS = "webhook_logs"
@@ -53,6 +55,8 @@ object SsbContracts {
         const val CONTENT_VERSIONS_GLOBAL_DOC_ID = "global"
         const val FEATURE_FLAGS = "feature_flags"
         const val FEATURE_FLAGS_CONFIG_DOC_ID = "config"
+        const val OPS_ALERTS = "ops_alerts"
+        const val ANALYTICS_DAILY = "analytics_daily"
 
         object TestContent {
             const val OIR_BATCHES = "test_content/oir/batches"
@@ -73,7 +77,7 @@ object SsbContracts {
     }
 
     object Enums {
-        enum class TestType { OIR, PPDT, PIQ, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, IO }
+        enum class TestType { OIR, PPDT, PIQ, TAT, WAT, SRT, SD, GTO_GD, GTO_GPE, GTO_PGT, GTO_GOR, GTO_HGT, GTO_LECTURETTE, GTO_IO, GTO_CT, GTO_FGT, IO }
         enum class TestPhase { PHASE_1, PHASE_2 }
         enum class TestStatus { NOT_ATTEMPTED, IN_PROGRESS, SUBMITTED_PENDING_REVIEW, GRADED, COMPLETED }
         enum class SubscriptionTier { FREE, BASIC, PRO, PREMIUM }
@@ -108,7 +112,7 @@ object SsbContracts {
             SubscriptionLimit("WAT", listOf("WAT"), 0, 5, 8, 15),
             SubscriptionLimit("SRT", listOf("SRT"), 0, 5, 8, 15),
             SubscriptionLimit("SD", listOf("SD"), 0, 5, 8, 15),
-            SubscriptionLimit("GTO", listOf("GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT"), 0, 5, 8, 15),
+            SubscriptionLimit("GTO", listOf("GTO_GD", "GTO_GPE", "GTO_PGT", "GTO_GOR", "GTO_HGT", "GTO_LECTURETTE", "GTO_IO", "GTO_CT", "GTO_FGT"), 0, 5, 8, 15),
             SubscriptionLimit("INTERVIEW", listOf("IO"), 0, 1, 3, 10)
         )
     }
@@ -140,7 +144,8 @@ object SsbContracts {
             TestConfigEntry("GTO_HGT", mapOf("totalSeconds" to 900)),
             TestConfigEntry("GTO_GOR", mapOf("totalSeconds" to 1200)),
             TestConfigEntry("GTO_IO", mapOf("totalSeconds" to 1800)),
-            TestConfigEntry("GTO_CT", mapOf("totalSeconds" to 900))
+            TestConfigEntry("GTO_CT", mapOf("totalSeconds" to 900)),
+            TestConfigEntry("GTO_FGT", mapOf("totalSeconds" to 1800))
         )
     }
 

@@ -147,7 +147,9 @@ echo ""
 echo -e "${BLUE}[5/10] Checking file LOC limits (< 300 LOC per file)...${NC}"
 
 OVER_LIMIT=0
-for file in $(find web/src functions/src -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" \)); do
+# Generated files are exempt (contracts/README.md "Generated-file LOC exemption"): a generated
+# artifact mirrors its contract source 1:1 and splitting it would break that mapping.
+for file in $(find web/src functions/src -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" \) -not -path "*/generated/*"); do
     LINES=$(wc -l < "$file")
     if [ "$LINES" -gt 350 ]; then
         echo -e "${RED}❌ File exceeds 350 LOC limit: $file ($LINES lines)${NC}"

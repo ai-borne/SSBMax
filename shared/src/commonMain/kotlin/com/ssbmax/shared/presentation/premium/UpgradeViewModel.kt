@@ -12,7 +12,6 @@ import com.ssbmax.shared.platform.billing.BillingCancelledException
 import com.ssbmax.shared.platform.billing.SSBMaxProductIds
 import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
 import com.ssbmax.shared.platform.settings.DeveloperSettings
-import com.ssbmax.shared.ui.theme.TierColors
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlin.time.Clock
@@ -114,8 +113,22 @@ class UpgradeViewModel(
 
     private suspend fun loadCurrentSubscriptionFor(currentUser: SSBMaxUser?) {
         currentUserId = currentUser?.id
-        revenueCatClient.configure(appUserId = currentUser?.id)
-        _uiState.update { it.copy(isLoading = true) }
+        _uiState.update { it.copy(isLoading = true, identityResolved = false) }
+
+        // H4 (payment ecosystem hardening plan): awaited, not fire-and-forget -- upgradeToPlan/
+        // restorePurchases gate on `identityResolved`, so a purchase can never start against RC's
+        // previous identity while this switch is still in flight. A failure surfaces as
+        // `purchaseError` instead of being swallowed; `identityResolved` stays false, so purchase
+        // actions stay blocked until the *next* successful identity switch (e.g. app restart, or
+        // the user's auth state settling) rather than silently proceeding on a stale identity.
+        val identityError = revenueCatClient.configure(appUserId = currentUser?.id).exceptionOrNull()
+        if (identityError != null) {
+            logger.e(TAG, "RevenueCat identity switch failed for ${currentUser?.id}", identityError)
+        }
+        _uiState.update {
+            it.copy(identityResolved = identityError == null, purchaseError = identityError?.message ?: it.purchaseError)
+        }
+
         try {
             if (currentUser == null) {
                 logger.w(TAG, "No user logged in, defaulting to FREE tier")
@@ -149,38 +162,9 @@ class UpgradeViewModel(
         }
     }
 
-    /**
-     * One card per [SubscriptionTier] (FREE/BASIC/PRO/PREMIUM) -- previously this listed
-     * "Premium (AI)" and "Premium" as two separate cards for the same tier, an SSOT violation
-     * flagged during the pricing restructure. Feature bullets come from [SubscriptionTier.features]
-     * (itself generated from the contract, see `SubscriptionTier.kt`) rather than a fourth
-     * hand-written copy, so this can't drift from the tier's real limits again.
-     */
+    /** Plan-card building itself lives in [availableUpgradePlans] (Phase 12, 300-LOC split). */
     private fun loadAvailablePlans() {
-        val plans = SubscriptionTier.entries.map(::planFor)
-        _uiState.update { it.copy(availablePlans = plans) }
-    }
-
-    private data class PlanMeta(val name: String, val tagline: String, val isRecommended: Boolean)
-
-    private fun planFor(tier: SubscriptionTier): SubscriptionPlan {
-        val meta = when (tier) {
-            SubscriptionTier.FREE -> PlanMeta("Free", "Get Started with SSB Prep", isRecommended = false)
-            SubscriptionTier.BASIC -> PlanMeta("Basic", "Build Your Foundation", isRecommended = false)
-            SubscriptionTier.PRO -> PlanMeta("Pro", "Accelerate Your Preparation", isRecommended = true)
-            SubscriptionTier.PREMIUM -> PlanMeta("Premium", "Complete SSB Solution", isRecommended = false)
-        }
-        return SubscriptionPlan(
-            tier = tier,
-            name = meta.name,
-            tagline = meta.tagline,
-            priceMonthly = tier.monthlyPriceInt.toDouble(),
-            priceQuarterly = tier.quarterlyPriceInt?.toDouble() ?: 0.0,
-            priceAnnually = tier.yearlyPriceInt?.toDouble() ?: 0.0,
-            features = tier.features.map { PlanFeature(it, isIncluded = true) },
-            isRecommended = meta.isRecommended,
-            gradient = TierColors.gradient(tier)
-        )
+        _uiState.update { it.copy(availablePlans = availableUpgradePlans()) }
     }
 
     fun selectBillingCycle(cycle: BillingCycle) {
@@ -194,16 +178,30 @@ class UpgradeViewModel(
             logger.w(TAG, "upgradeToPlan called with no signed-in user or no product for $tier")
             return
         }
-        if (_uiState.value.activeOnWebInstead) {
-            // Neither webhook reconciles against what the other already wrote (see
-            // `SubscriptionOwnership`'s doc comment) -- block a second, separate mobile purchase
-            // rather than risk one silently stomping the web-purchased tier/expiry.
-            logger.w(TAG, "upgradeToPlan blocked: user already has an active web (Razorpay) subscription")
+        if (!_uiState.value.identityResolved) {
+            // H4: RevenueCat's identity switch for this user hasn't confirmed yet (or failed) --
+            // starting a purchase now risks it landing against the previous/anonymous identity.
+            logger.w(TAG, "upgradeToPlan blocked: RevenueCat identity not yet resolved for $userId")
             return
         }
-
         _uiState.update { it.copy(isPurchasing = true, purchaseError = null, selectedPlanForUpgrade = tier) }
         viewModelScope.launch {
+            // L5 (Payment Ecosystem Hardening plan, Phase 12): `activeOnWebInstead` in `_uiState`
+            // is only recomputed by `observeCurrentSubscription`'s collector -- when the signed-in
+            // user or the dev-override setting changes, not on any refresh tied to this screen
+            // remaining open. A web (Razorpay) purchase completed in another session/tab while this
+            // screen stayed open would leave the cached flag stale (false), letting a second,
+            // conflicting mobile purchase start against real money. Re-read ownership fresh, right
+            // before spending it, instead of trusting whatever was true when the screen first loaded.
+            val blockedByWeb = subscriptionRepository.getSubscriptionOwnership(userId)
+                .getOrElse { SubscriptionOwnership(source = null, expiryDate = null) }
+                .let { it.source == WEB_PAYMENT_SOURCE && it.isActive(Clock.System.now().toEpochMilliseconds()) }
+            if (blockedByWeb) {
+                logger.w(TAG, "upgradeToPlan blocked: user already has an active web (Razorpay) subscription")
+                _uiState.update { it.copy(isPurchasing = false, activeOnWebInstead = true, selectedPlanForUpgrade = null) }
+                return@launch
+            }
+
             revenueCatClient.purchase(productId)
                 .onSuccess { outcome ->
                     // Local UiState only -- deliberately NOT persisted. The optimistic
@@ -243,15 +241,28 @@ class UpgradeViewModel(
             logger.w(TAG, "restorePurchases called with no signed-in user")
             return
         }
-        if (_uiState.value.activeOnWebInstead) {
-            // Same gate as upgradeToPlan -- restoring RC entitlements would otherwise silently
-            // overwrite an active Razorpay-sourced tier just like a fresh purchase would.
-            logger.w(TAG, "restorePurchases blocked: user already has an active web (Razorpay) subscription")
+        if (!_uiState.value.identityResolved) {
+            // Same H4 gate as upgradeToPlan -- restoring against the wrong identity would surface
+            // another RC account's entitlements as this user's own.
+            logger.w(TAG, "restorePurchases blocked: RevenueCat identity not yet resolved for $userId")
             return
         }
-
         _uiState.update { it.copy(isRestoring = true, purchaseError = null) }
         viewModelScope.launch {
+            // L5 (Phase 12): same staleness gap as `upgradeToPlan` -- re-read ownership fresh
+            // rather than trusting `_uiState.value.activeOnWebInstead`, which is only recomputed
+            // when the signed-in user or dev-override setting changes, not on every restore attempt.
+            val blockedByWeb = subscriptionRepository.getSubscriptionOwnership(userId)
+                .getOrElse { SubscriptionOwnership(source = null, expiryDate = null) }
+                .let { it.source == WEB_PAYMENT_SOURCE && it.isActive(Clock.System.now().toEpochMilliseconds()) }
+            if (blockedByWeb) {
+                // Same gate as upgradeToPlan -- restoring RC entitlements would otherwise silently
+                // overwrite an active Razorpay-sourced tier just like a fresh purchase would.
+                logger.w(TAG, "restorePurchases blocked: user already has an active web (Razorpay) subscription")
+                _uiState.update { it.copy(isRestoring = false, activeOnWebInstead = true) }
+                return@launch
+            }
+
             revenueCatClient.restorePurchases()
                 .onSuccess { outcome ->
                     // Local UiState only -- see the identical note in upgradeToPlan for why there is

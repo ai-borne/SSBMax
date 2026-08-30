@@ -57,6 +57,12 @@ collections:
     path: content_versions
   - name: TOPIC_CONTENT
     path: topic_content
+  - name: TOPIC_SECTIONS
+    path: topic_sections
+    note: "D2 side document (docs/plans/write-the-phased-plan-wobbly-pancake.md Phase 5) -- structured DocumentModel for a topic intro, published alongside (never onto) topic_content."
+  - name: STUDY_MATERIAL_SECTIONS
+    path: study_material_sections
+    note: "D2 side document (docs/plans/write-the-phased-plan-wobbly-pancake.md Phase 5) -- structured DocumentModel for a study material body, published alongside (never onto) study_materials."
   - name: HEALTH_CHECK
     path: health_check
     note: "Connectivity-check doc read by ops scripts (scripts/verify-indexes.js, scripts/setup-firestore.js), not by app code."
@@ -87,6 +93,12 @@ collections:
   - name: FEATURE_FLAGS_CONFIG_DOC_ID
     path: config
     note: "Fixed doc id under FEATURE_FLAGS."
+  - name: OPS_ALERTS
+    path: ops_alerts
+    note: "Phase 7 (Payment Ecosystem Hardening plan) drift-repair alerts, formalized into a full delivery channel in Phase 8. Tier 2, functions-only (functions/src/lib/opsAlert.js). Server-only: allow read, write: if false in firestore.rules -- Admin SDK only, never a client."
+  - name: ANALYTICS_DAILY
+    path: analytics_daily
+    note: "Phase 8 (ai_search_readiness plan) daily signup counters, doc id is the yyyy-MM-dd date. Tier 2, functions-only (functions/src/analytics/recordSignup.js writes, getAnalyticsSummary.js reads). Server-only: allow read, write: if false in firestore.rules, same stance as OPS_ALERTS/WEBHOOK_LOGS/PAYMENTS."
 
 # test_content/{testType}/... sub-paths. Each entry is relative to
 # collections.TEST_CONTENT ("test_content").

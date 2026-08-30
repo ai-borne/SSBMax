@@ -29,7 +29,15 @@ data class SSBMaxUser(
     val studentProfile: StudentProfile? = null,
     val instructorProfile: InstructorProfile? = null,
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
-    val lastLoginAt: Long = Clock.System.now().toEpochMilliseconds()
+    val lastLoginAt: Long = Clock.System.now().toEpochMilliseconds(),
+    /**
+     * Epoch millis of a pending account-deletion request (`users/{uid}.deletionRequestedAt`,
+     * set by `functions/src/account/requestAccountDeletion.js`), or null when none is pending.
+     * Not part of [com.ssbmax.shared.data.repository.UserDto] -- that DTO must stay Firebase-free
+     * (root CLAUDE.md: `shared` carries no Firebase), so `data-firebase`'s GitLiveUserRepository
+     * reads this field separately as a GitLive `Timestamp` and merges it in.
+     */
+    val deletionRequestedAt: Long? = null
 )
 
 /**

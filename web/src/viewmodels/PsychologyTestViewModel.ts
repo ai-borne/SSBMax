@@ -155,11 +155,11 @@ export class PsychologyTestViewModel {
         batchId,
         isLoading: false
       };
-    } catch (err: any) {
+    } catch (err) {
       this.state = {
         ...this.state,
         isLoading: false,
-        error: err.message || 'Failed to load psychology test content'
+        error: err instanceof Error ? err.message : 'Failed to load psychology test content'
       };
     }
     this.notify();
@@ -214,7 +214,7 @@ export class PsychologyTestViewModel {
       await this.offlineQueueService.enqueueSubmission({
         testType: this.state.testType,
         userId,
-        payload
+        payload: payload as unknown as Record<string, unknown>
       });
 
       this.state = {
@@ -236,11 +236,11 @@ export class PsychologyTestViewModel {
         lastSubmissionId: submissionId,
         lastResultCollection: resultCollection
       };
-    } catch (err: any) {
+    } catch (err) {
       this.state = {
         ...this.state,
         isSubmitting: false,
-        error: err.message || 'Failed to submit psychology test'
+        error: err instanceof Error ? err.message : 'Failed to submit psychology test'
       };
     }
     this.notify();

@@ -15,6 +15,7 @@ const { handleRazorpayWebhook } = require('./webhooks');
 const { handleRevenueCatWebhook } = require('./revenueCatWebhook');
 const { createRazorpayOrder } = require('./payments');
 const { createRazorpaySubscription } = require('./razorpaySubscriptions');
+const { cancelRazorpaySubscription } = require('./razorpaySubscriptionCancel');
 const { evaluateOIRAnswers } = require('./oirScoring');
 const { onOirSubmissionCreated } = require('./notifications/onOirSubmissionCreated');
 const { notifyGradingComplete } = require('./notifications/notifyGradingComplete');
@@ -30,9 +31,17 @@ const { completeInterviewSession } = require('./interview/completeInterviewSessi
 const { archiveOldSubmissions } = require('./archival/archiveOldSubmissions');
 const { scheduledFirestoreBackup } = require('./archival/scheduledFirestoreBackup');
 const { scheduledSubscriptionReconciliation } = require('./subscriptions/scheduledSubscriptionReconciliation');
+const { scheduledRazorpayDriftSweep } = require('./subscriptions/scheduledRazorpayDriftSweep');
+const { repairMobileEntitlement } = require('./subscriptions/repairMobileEntitlement');
+const { getSubscriptionSupportSnapshot } = require('./subscriptions/getSubscriptionSupportSnapshot');
+const { recordSignup } = require('./analytics/recordSignup');
+const { getAnalyticsSummary } = require('./analytics/getAnalyticsSummary');
 const { evaluateGTO } = require('./evaluation/gtoEvaluate');
 const { evaluatePPDT } = require('./evaluation/ppdtEvaluate');
 const { evaluateTAT } = require('./evaluation/tatEvaluate');
+const { requestAccountDeletion } = require('./account/requestAccountDeletion');
+const { cancelAccountDeletion } = require('./account/cancelAccountDeletion');
+const { purgeExpiredAccounts } = require('./account/purgeExpiredAccounts');
 const {
   submitPIQTest,
   submitPPDTTest,
@@ -54,6 +63,10 @@ exports.createRazorpayOrder = createRazorpayOrder;
 // (deprecated-but-live) -- web's checkout cutover is feature-flag gated, not atomic with this
 // function's deploy.
 exports.createRazorpaySubscription = createRazorpaySubscription;
+// Phase 5 (H5a, Payment Ecosystem Hardening plan): server-side half of Razorpay cancellation --
+// calls Razorpay's cancel API for the caller's own subscription; the existing
+// `subscription.cancelled` webhook flips `willRenew: false` once Razorpay confirms it.
+exports.cancelRazorpaySubscription = cancelRazorpaySubscription;
 exports.evaluateOIRAnswers = evaluateOIRAnswers;
 // Fires notifyEvaluationComplete for OIR specifically -- evaluateOIRAnswers above has no
 // submissionId to notify against (it runs before the submission doc exists, see
@@ -105,6 +118,19 @@ exports.scheduledFirestoreBackup = scheduledFirestoreBackup;
 // the new `data` collectionGroup composite index (firestore.indexes.json) to be deployed before
 // its first real run -- see that function's doc comment.
 exports.scheduledSubscriptionReconciliation = scheduledSubscriptionReconciliation;
+// Phase 7 (Payment Ecosystem Hardening plan): the upward counterpart -- reconciliation only ever
+// downgrades; this daily sweep enumerates Razorpay's `status=active` subscriptions and repairs any
+// Firestore doc stranded behind what Razorpay actually confirms (a missed grant/renewal webhook).
+exports.scheduledRazorpayDriftSweep = scheduledRazorpayDriftSweep;
+// Phase 7: RevenueCat has no cheap bulk "all active subscribers" endpoint, so this is the
+// client-triggered counterpart to the sweep above -- the device detects local drift, this callable
+// re-verifies against RevenueCat's REST API server-side before writing anything (never trusts the
+// client's claim -- see this function's doc comment for the C1-regression guard it enforces).
+exports.repairMobileEntitlement = repairMobileEntitlement;
+// Phase 9: the one support-view lookup -- joins the Firestore subscription doc, the Razorpay
+// subscription (if any), the RevenueCat subscriber state, and recent `ops_alerts` for one user.
+// Admin-only (`admin: true` custom claim, checked inside the callable); read-only, no write path.
+exports.getSubscriptionSupportSnapshot = getSubscriptionSupportSnapshot;
 // Phase 8 Ship (Web SSB Test Flow Parity plan): behind KMP's `gto_server_evaluation`
 // feature flag, default off -- see GTOAnalysisOrchestrator. GD/GPE/Lecturette only
 // (scope correction, confirmed with the user -- see gtoPrompts.js's class doc for why
@@ -139,3 +165,19 @@ exports.submitGTOTest = submitGTOTest;
 // trusts a client-supplied score), matching KMP's SubmitOIRTestUseCase's score-then-persist shape.
 exports.submitOIRTest = submitOIRTest;
 exports.submitInterviewResponse = submitInterviewResponse;
+
+// Phase 8 (ai_search_readiness plan, "Measurement & Instrumentation"): signup counter and its
+// admin-only read. Auth-required write, admin-claim-gated read -- see analytics/recordSignup.js
+// and analytics/getAnalyticsSummary.js's doc comments for why this is a counter, not an event
+// log, and why traffic/referrer segmentation is intentionally NOT duplicated here.
+exports.recordSignup = recordSignup;
+
+// Phase 1 (docs/plans/AccountDeletion.md): soft-delete grace-period account deletion --
+// `functions/src/account/` is the sole cascade-delete authority (root CLAUDE.md's
+// four-consumer SSOT section). requestAccountDeletion/cancelAccountDeletion are the
+// client-facing callables; purgeExpiredAccounts is the daily sweep that runs the real
+// cascade once the grace period elapses.
+exports.requestAccountDeletion = requestAccountDeletion;
+exports.cancelAccountDeletion = cancelAccountDeletion;
+exports.purgeExpiredAccounts = purgeExpiredAccounts;
+exports.getAnalyticsSummary = getAnalyticsSummary;

@@ -2,13 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OIRTestViewModel } from '../../src/viewmodels/OIRTestViewModel';
 import { IContentRepository } from '../../src/repositories/interfaces/IContentRepository';
 import { BatchDocument, OIRQuestion } from '../../src/types/testContent';
+import type { OfflineQueueService } from '../../src/services/OfflineQueueService';
+import type { SubmissionService } from '../../src/services/SubmissionService';
+import type { EligibilityService } from '../../src/services/EligibilityService';
+import type { Mocked } from 'vitest';
 
 describe('OIRTestViewModel TDD Unit Tests', () => {
   let viewModel: OIRTestViewModel;
   let mockRepo: IContentRepository;
-  let mockOfflineQueue: any;
-  let mockScoringService: any;
-  let mockEligibilityService: any;
+  let mockOfflineQueue: OfflineQueueService;
+  let mockScoringService: SubmissionService;
+  let mockEligibilityService: Mocked<EligibilityService>;
 
   const sampleQuestions: OIRQuestion[] = [
     {
@@ -45,13 +49,14 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
       getSRTBatch: vi.fn(),
       getGPEBatch: vi.fn(),
       getOIRContentVersion: vi.fn(),
-      getAvailableBatches: vi.fn().mockResolvedValue([])
+      getAvailableBatches: vi.fn().mockResolvedValue([]),
+      getStudyMaterialSections: vi.fn()
     };
 
 
     mockOfflineQueue = {
       enqueueSubmission: vi.fn().mockResolvedValue(undefined)
-    };
+    } as unknown as OfflineQueueService;
 
     mockScoringService = {
       submitOIRTest: vi.fn().mockResolvedValue({
@@ -62,11 +67,11 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
         percentage: 50,
         oirRating: 3
       })
-    };
+    } as unknown as SubmissionService;
 
     mockEligibilityService = {
       recordTestUsage: vi.fn().mockResolvedValue({ success: true, alreadyRecorded: false, used: 1, limit: 5 })
-    };
+    } as unknown as Mocked<EligibilityService>;
 
     viewModel = new OIRTestViewModel(mockRepo, mockOfflineQueue, mockScoringService, mockEligibilityService);
   });

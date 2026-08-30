@@ -5,8 +5,16 @@ package com.ssbmax.shared.domain.config
  * 
  * Migration complete - all 9 topics migrated to Firestore and flags permanently enabled.
  * Query methods retained as they are used by content loading logic throughout the app.
- * 
+ *
  * All properties are immutable (val) since migration is complete and flags are permanent.
+ *
+ * The structured-content-renderer rollout flags (`isStructuredRenderingEnabled` /
+ * `isStructuredStudyMaterialRenderingEnabled`, docs/plans/
+ * write-the-phased-plan-wobbly-pancake.md) were removed here in the Phase 8 sweep: all 9 topics
+ * had reached parity with web's equivalent (now-deleted) `contentFeatureFlags.ts`, so the
+ * per-topic allowlists were dead weight. Callers now always attempt the structured path,
+ * falling back to markdown only on a genuine missing/failed fetch -- the resilience path, not a
+ * rollout gate.
  */
 object ContentFeatureFlags {
     // Master switch: Enable/disable cloud content
@@ -45,7 +53,7 @@ object ContentFeatureFlags {
     // Query optimization flags
     val enableOfflinePersistence: Boolean = true
     val cacheExpiryDays: Int = 7
-    
+
     /**
      * Get current configuration as string (for debugging)
      */

@@ -1,6 +1,7 @@
 package com.ssbmax.shared.ui.settings
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -89,6 +90,60 @@ class SubscriptionManagementScreenUiTest {
         onNodeWithText("Subscription & Billing").assertIsDisplayed()
         onAllNodesWithText("Free").onFirst().assertIsDisplayed()
         onNodeWithText("Compare Plans").assertIsDisplayed()
+    }
+
+    @Test
+    fun manageBilling_shownForRevenueCatSourcedSubscription() = runComposeUiTest {
+        uiStateFlow.value = SubscriptionManagementUiState(
+            currentTier = SubscriptionTierModel.PRO,
+            showManageBilling = true,
+            managementUrl = "https://apps.apple.com/manage"
+        )
+        setContent {
+            SubscriptionManagementScreen(
+                onNavigateBack = {},
+                onUpgrade = {},
+                viewModel = mockViewModel
+            )
+        }
+
+        onNodeWithText("Manage Billing").assertIsDisplayed()
+    }
+
+    @Test
+    fun manageBilling_hiddenWhenNotRevenueCatSourced() = runComposeUiTest {
+        uiStateFlow.value = SubscriptionManagementUiState(
+            currentTier = SubscriptionTierModel.PRO,
+            showManageBilling = false
+        )
+        setContent {
+            SubscriptionManagementScreen(
+                onNavigateBack = {},
+                onUpgrade = {},
+                viewModel = mockViewModel
+            )
+        }
+
+        onAllNodesWithText("Manage Billing").assertCountEquals(0)
+    }
+
+    @Test
+    fun manageBilling_missingUrlSurfacesHandledErrorInsteadOfCrashing() = runComposeUiTest {
+        uiStateFlow.value = SubscriptionManagementUiState(
+            currentTier = SubscriptionTierModel.PRO,
+            showManageBilling = true,
+            managementUrl = null
+        )
+        setContent {
+            SubscriptionManagementScreen(
+                onNavigateBack = {},
+                onUpgrade = {},
+                viewModel = mockViewModel
+            )
+        }
+
+        onNodeWithText("Manage Billing").performClick()
+        verify { mockViewModel.onManageBillingUnavailable() }
     }
 
     @Test

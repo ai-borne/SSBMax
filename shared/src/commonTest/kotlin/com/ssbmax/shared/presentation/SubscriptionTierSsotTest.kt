@@ -17,6 +17,7 @@ import com.ssbmax.shared.presentation.settings.SubscriptionManagementViewModel
 import com.ssbmax.shared.presentation.settings.SubscriptionTierModel
 import com.ssbmax.shared.presentation.testing.FakeAuthRepository
 import com.ssbmax.shared.presentation.testing.FakeLogger
+import com.ssbmax.shared.presentation.testing.FakeMobileEntitlementRepairClient
 import com.ssbmax.shared.presentation.testing.FakeRevenueCatClient
 import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
@@ -105,6 +106,8 @@ class SubscriptionTierSsotTest {
                 getSubscriptionTier = getSubscriptionTier,
                 getMonthlyUsage = GetMonthlyUsageUseCase(subscriptionRepository),
                 subscriptionRepository = subscriptionRepository,
+                revenueCatClient = FakeRevenueCatClient(),
+                mobileEntitlementRepairClient = FakeMobileEntitlementRepairClient(),
                 logger = FakeLogger()
             )
             testDispatcher.scheduler.advanceUntilIdle()

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SubscriptionRepository, deriveEffectiveTier } from '../../src/repositories/SubscriptionRepository';
-import { getDoc } from 'firebase/firestore';
+import { getDoc, DocumentSnapshot } from 'firebase/firestore';
 
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn(),
@@ -21,7 +21,7 @@ describe('SubscriptionRepository', () => {
   const repository = new SubscriptionRepository();
 
   it('fails closed to FREE when the tier document does not exist', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as unknown as DocumentSnapshot);
     expect(await repository.getTier('user_1')).toBe('FREE');
   });
 
@@ -31,25 +31,25 @@ describe('SubscriptionRepository', () => {
   });
 
   it('fails closed to FREE on an unrecognized tier value rather than trusting it', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'GOLD' }) } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'GOLD' }) } as unknown as DocumentSnapshot);
     expect(await repository.getTier('user_1')).toBe('FREE');
   });
 
   it('reads BASIC, PRO and PREMIUM tiers verbatim (case-insensitively)', async () => {
     // BASIC (added Phase 2) was previously dropped to FREE here -- a real regression fixed as
     // part of Phase 3, since this file's getTier is now also relied on for the anniversary reset.
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'basic' }) } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'basic' }) } as unknown as DocumentSnapshot);
     expect(await repository.getTier('user_1')).toBe('BASIC');
 
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'pro' }) } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'pro' }) } as unknown as DocumentSnapshot);
     expect(await repository.getTier('user_1')).toBe('PRO');
 
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'PREMIUM' }) } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'PREMIUM' }) } as unknown as DocumentSnapshot);
     expect(await repository.getTier('user_1')).toBe('PREMIUM');
   });
 
   it('returns zeroed usage when the monthly usage document does not exist', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as unknown as DocumentSnapshot);
     const usage = await repository.getMonthlyUsage('user_1', '2026-08');
     expect(usage.oirTestsUsed).toBe(0);
     expect(usage.interviewTestsUsed).toBe(0);
@@ -63,7 +63,7 @@ describe('SubscriptionRepository', () => {
 
   describe('getStartDate (Phase 3)', () => {
     it('returns null when the tier document does not exist', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as any);
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as unknown as DocumentSnapshot);
       expect(await repository.getStartDate('user_1')).toBeNull();
     });
 
@@ -73,15 +73,15 @@ describe('SubscriptionRepository', () => {
     });
 
     it('returns null when startDate is absent or zero, not a falsy-but-wrong value', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'FREE' }) } as any);
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'FREE' }) } as unknown as DocumentSnapshot);
       expect(await repository.getStartDate('user_1')).toBeNull();
 
-      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'PRO', startDate: 0 }) } as any);
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'PRO', startDate: 0 }) } as unknown as DocumentSnapshot);
       expect(await repository.getStartDate('user_1')).toBeNull();
     });
 
     it('returns the real startDate when present', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'PRO', startDate: 1_700_000_000_000 }) } as any);
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => true, data: () => ({ tier: 'PRO', startDate: 1_700_000_000_000 }) } as unknown as DocumentSnapshot);
       expect(await repository.getStartDate('user_1')).toBe(1_700_000_000_000);
     });
   });
@@ -94,7 +94,7 @@ describe('SubscriptionRepository', () => {
    */
   describe('getOwnership (Phase 4 amendment)', () => {
     it('returns null source/expiryDate and willRenew:true when the tier document does not exist', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as any);
+      vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as unknown as DocumentSnapshot);
       expect(await repository.getOwnership('user_1')).toEqual({ source: null, expiryDate: null, willRenew: true });
     });
 
@@ -107,7 +107,7 @@ describe('SubscriptionRepository', () => {
       vi.mocked(getDoc).mockResolvedValueOnce({
         exists: () => true,
         data: () => ({ tier: 'PRO', source: 'REVENUECAT', expiryDate: 1_700_000_000_000 })
-      } as any);
+      } as unknown as DocumentSnapshot);
       expect(await repository.getOwnership('user_1')).toEqual({ source: 'REVENUECAT', expiryDate: 1_700_000_000_000, willRenew: true });
     });
 
@@ -115,7 +115,7 @@ describe('SubscriptionRepository', () => {
       vi.mocked(getDoc).mockResolvedValueOnce({
         exists: () => true,
         data: () => ({ tier: 'PRO', source: 123, expiryDate: 'not-a-number' })
-      } as any);
+      } as unknown as DocumentSnapshot);
       expect(await repository.getOwnership('user_1')).toEqual({ source: null, expiryDate: null, willRenew: true });
     });
 
@@ -123,7 +123,7 @@ describe('SubscriptionRepository', () => {
       vi.mocked(getDoc).mockResolvedValueOnce({
         exists: () => true,
         data: () => ({ tier: 'PRO', source: 'RAZORPAY', expiryDate: 1_700_000_000_000, willRenew: false })
-      } as any);
+      } as unknown as DocumentSnapshot);
       expect(await repository.getOwnership('user_1')).toEqual({ source: 'RAZORPAY', expiryDate: 1_700_000_000_000, willRenew: false });
     });
   });
@@ -138,7 +138,7 @@ describe('SubscriptionRepository', () => {
       vi.mocked(getDoc).mockResolvedValueOnce({
         exists: () => true,
         data: () => ({ tier: 'PREMIUM', expiryDate: Date.now() - 1_000 })
-      } as any);
+      } as unknown as DocumentSnapshot);
       expect(await repository.getTier('user_1')).toBe('FREE');
     });
 
@@ -146,7 +146,7 @@ describe('SubscriptionRepository', () => {
       vi.mocked(getDoc).mockResolvedValueOnce({
         exists: () => true,
         data: () => ({ tier: 'PREMIUM', expiryDate: Date.now() + 1_000_000 })
-      } as any);
+      } as unknown as DocumentSnapshot);
       expect(await repository.getTier('user_1')).toBe('PREMIUM');
     });
 
@@ -154,7 +154,7 @@ describe('SubscriptionRepository', () => {
       vi.mocked(getDoc).mockResolvedValueOnce({
         exists: () => true,
         data: () => ({ tier: 'PREMIUM' })
-      } as any);
+      } as unknown as DocumentSnapshot);
       expect(await repository.getTier('user_1')).toBe('PREMIUM');
     });
   });

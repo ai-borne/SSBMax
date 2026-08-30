@@ -9,3 +9,14 @@ export class ContentUnavailableError extends Error {
     this.name = 'ContentUnavailableError';
   }
 }
+
+/**
+ * Thrown when a `UserProfile` fails validation before being written to Firestore.
+ * Mirrors KMP `UserProfile`'s init guards (`fullName.isNotBlank()`, `age in 18..35`).
+ */
+export class ProfileValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProfileValidationError';
+  }
+}

@@ -15,7 +15,8 @@ const {
   recordAndEnforce,
   currentYearMonth,
   currentPeriodKey,
-  daysInMonth
+  daysInMonth,
+  readSubscriptionDoc
 } = require('../src/eligibility');
 
 /**
@@ -23,7 +24,7 @@ const {
  * reads (tier + usage_{month}) and the one transactional set() eligibility
  * needs. Tracks writes so tests can assert exactly what was persisted.
  */
-function makeFakeDb({ tier = 'FREE', startDate = null, usageDoc = null } = {}) {
+function makeFakeDb({ tier = 'FREE', startDate = null, expiryDate = null, usageDoc = null } = {}) {
   const writes = [];
   const state = { usage: usageDoc };
 
@@ -33,7 +34,7 @@ function makeFakeDb({ tier = 'FREE', startDate = null, usageDoc = null } = {}) {
     return {
       async get() {
         if (isTierDoc) {
-          return { exists: true, data: () => ({ tier, startDate }) };
+          return { exists: true, data: () => ({ tier, startDate, expiryDate }) };
         }
         if (isUsageDoc) {
           return { exists: state.usage !== null, data: () => state.usage };
@@ -198,6 +199,49 @@ test('Phase 3: recordAndEnforce writes to the anniversary-keyed usage doc for a 
   assert.equal(db._writes.at(-1).month, period);
   // A paid tier with a real startDate must not collide with the legacy calendar-month key.
   assert.notEqual(period, currentYearMonth());
+});
+
+test('Phase 2 (H1): an expired PREMIUM doc reads as FREE for quota purposes', async () => {
+  const { tier } = await readSubscriptionDoc(
+    makeFakeDb({ tier: 'PREMIUM', expiryDate: Date.now() - 1000 }),
+    'expired-user'
+  );
+  assert.equal(tier, 'FREE');
+});
+
+test('Phase 2 (H1): a future expiryDate keeps the stored tier honored', async () => {
+  const { tier } = await readSubscriptionDoc(
+    makeFakeDb({ tier: 'PREMIUM', expiryDate: Date.now() + 1000 * 60 * 60 * 24 }),
+    'active-user'
+  );
+  assert.equal(tier, 'PREMIUM');
+});
+
+test('Phase 2 (H1): expiryDate == null honors the stored tier (legacy grandfathering)', async () => {
+  const { tier } = await readSubscriptionDoc(makeFakeDb({ tier: 'PRO', expiryDate: null }), 'legacy-user');
+  assert.equal(tier, 'PRO');
+});
+
+test('Phase 2 (H1): recordAndEnforce enforces FREE limits for a stored PREMIUM tier past its expiryDate', async () => {
+  process.env.ENFORCE_QUOTA = 'true';
+  try {
+    // FREE's OIR quota is 1; a still-live PREMIUM would allow far more (15) -- if this test
+    // passes with a resource-exhausted rejection, the expiry derivation is actually gating.
+    const db = makeFakeDb({
+      tier: 'PREMIUM',
+      expiryDate: Date.now() - 1000,
+      usageDoc: { userId: 'u6', month: currentYearMonth(), oirTestsUsed: 1, recordedSubmissionIds: ['s1'] }
+    });
+    await assert.rejects(
+      () => recordAndEnforce(db, 'u6', 'OIR', 's2'),
+      (err) => {
+        assert.equal(err.code, 'resource-exhausted');
+        return true;
+      }
+    );
+  } finally {
+    delete process.env.ENFORCE_QUOTA;
+  }
 });
 
 test('Phase 5: GTO sub-types share one bucket -- GTO_GD usage counts against GTO_CT quota', async () => {

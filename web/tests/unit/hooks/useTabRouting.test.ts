@@ -33,6 +33,10 @@ describe('useTabRouting Hook', () => {
     expect(getTabFromUrl('?tab=subscription')).toBe('subscription');
   });
 
+  it('routes support as its own real tab -- Phase 9 (Payment Ecosystem Hardening plan) wires SupportSubscriptionPage into it; deliberately not in navItems, but still a valid direct URL for an admin', () => {
+    expect(getTabFromUrl('?tab=support')).toBe('support');
+  });
+
   it('defaults to home tab when query param is missing or unknown', () => {
     expect(getTabFromUrl('')).toBe('home');
     expect(getTabFromUrl('?tab=invalid_tab')).toBe('home');

@@ -37,6 +37,8 @@ const FirestorePaths = {
   "TEST_SESSIONS": "test_sessions",
   "CONTENT_VERSIONS": "content_versions",
   "TOPIC_CONTENT": "topic_content",
+  "TOPIC_SECTIONS": "topic_sections",
+  "STUDY_MATERIAL_SECTIONS": "study_material_sections",
   "HEALTH_CHECK": "health_check",
   "PAYMENTS": "payments",
   "WEBHOOK_LOGS": "webhook_logs",
@@ -47,6 +49,8 @@ const FirestorePaths = {
   "CONTENT_VERSIONS_GLOBAL_DOC_ID": "global",
   "FEATURE_FLAGS": "feature_flags",
   "FEATURE_FLAGS_CONFIG_DOC_ID": "config",
+  "OPS_ALERTS": "ops_alerts",
+  "ANALYTICS_DAILY": "analytics_daily",
   "TestContent": {
     "OIR_BATCHES": "test_content/oir/batches",
     "OIR_META_CONFIG": "test_content/oir/meta/config",
@@ -82,6 +86,7 @@ const Enums = {
     "GTO_LECTURETTE",
     "GTO_IO",
     "GTO_CT",
+    "GTO_FGT",
     "IO"
   ],
   "TestPhase": [
@@ -288,7 +293,8 @@ const SubscriptionLimits = [
       "GTO_HGT",
       "GTO_LECTURETTE",
       "GTO_IO",
-      "GTO_CT"
+      "GTO_CT",
+      "GTO_FGT"
     ],
     "free": 0,
     "basic": 5,
@@ -428,6 +434,12 @@ const TestConfig = [
     "testType": "GTO_CT",
     "values": {
       "totalSeconds": 900
+    }
+  },
+  {
+    "testType": "GTO_FGT",
+    "values": {
+      "totalSeconds": 1800
     }
   }
 ];

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SubmissionRepository } from '../../src/repositories/SubmissionRepository';
-import { getDoc, getDocs } from 'firebase/firestore';
+import { getDoc, getDocs, DocumentSnapshot, QuerySnapshot } from 'firebase/firestore';
 
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn(),
@@ -31,7 +31,7 @@ describe('SubmissionRepository', () => {
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => true,
       data: () => ({ userId: 'u1', testType: 'WAT', data: { analysisStatus: 'ANALYZING' } })
-    } as any);
+    } as unknown as DocumentSnapshot);
     expect(await repository.getSubmissionStatus('sub1')).toEqual({ status: 'ANALYZING' });
   });
 
@@ -39,12 +39,12 @@ describe('SubmissionRepository', () => {
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => true,
       data: () => ({ userId: 'u1', testType: 'GTO_GD', status: 'COMPLETED' })
-    } as any);
+    } as unknown as DocumentSnapshot);
     expect(await repository.getSubmissionStatus('sub2')).toEqual({ status: 'COMPLETED' });
   });
 
   it('returns null when the submission does not exist', async () => {
-    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as any);
+    vi.mocked(getDoc).mockResolvedValueOnce({ exists: () => false, data: () => undefined } as unknown as DocumentSnapshot);
     expect(await repository.getSubmissionStatus('missing')).toBeNull();
   });
 
@@ -57,7 +57,7 @@ describe('SubmissionRepository', () => {
     vi.mocked(getDoc).mockResolvedValueOnce({
       exists: () => true,
       data: () => ({ overallScore: 6.2 })
-    } as any);
+    } as unknown as DocumentSnapshot);
     const result = await repository.getResult<{ overallScore: number }>('psych_results', 'sub1');
     expect(result?.overallScore).toBe(6.2);
   });
@@ -71,13 +71,13 @@ describe('SubmissionRepository', () => {
     vi.mocked(getDocs).mockResolvedValueOnce({
       empty: false,
       docs: [{ data: () => ({ overallScore: 7 }) }]
-    } as any);
+    } as unknown as QuerySnapshot);
     const result = await repository.getLatestResultByType<{ overallScore: number }>('psych_results', 'user1', 'WAT');
     expect(result?.overallScore).toBe(7);
   });
 
   it('getLatestResultByType returns null when no result exists for that type -- treated as "not attempted"', async () => {
-    vi.mocked(getDocs).mockResolvedValueOnce({ empty: true, docs: [] } as any);
+    vi.mocked(getDocs).mockResolvedValueOnce({ empty: true, docs: [] } as unknown as QuerySnapshot);
     expect(await repository.getLatestResultByType('psych_results', 'user1', 'WAT')).toBeNull();
   });
 

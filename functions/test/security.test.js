@@ -116,6 +116,84 @@ test('Phase 6A Payment Security: Webhook mandatory secret check & currency valid
   process.env.FUNCTIONS_EMULATOR = 'true';
 });
 
+test('Phase 8: an invalid Razorpay webhook signature emits a SIGNATURE_VERIFICATION_FAILED ops alert', async () => {
+  const { handleRazorpayWebhook } = require('../src/webhooks');
+  const { __resetDedupeForTests } = require('../src/lib/opsAlert');
+  __resetDedupeForTests();
+
+  function createMockRes() {
+    const res = {
+      statusCode: 200,
+      body: null,
+      status(code) { res.statusCode = code; return res; },
+      json(data) { res.body = data; return res; }
+    };
+    return res;
+  }
+
+  process.env.FUNCTIONS_EMULATOR = 'true';
+  process.env.RAZORPAY_WEBHOOK_SECRET = 'a_real_secret';
+
+  const req = {
+    headers: { 'x-razorpay-signature': 'not-the-right-signature' },
+    rawBody: Buffer.from(JSON.stringify({ event: 'payment.captured' })),
+    body: { event: 'payment.captured' }
+  };
+  const res = createMockRes();
+
+  // emitOpsAlert never throws (it swallows its own write failure), so its console.error line is
+  // the one observable side effect a test can assert on without depending on a live Firestore
+  // write actually landing -- see opsAlert.js's doc comment on that fail-safe stance.
+  const originalConsoleError = console.error;
+  const errorLines = [];
+  console.error = (...args) => { errorLines.push(args.join(' ')); };
+  try {
+    await handleRazorpayWebhook(req, res);
+  } finally {
+    console.error = originalConsoleError;
+    delete process.env.RAZORPAY_WEBHOOK_SECRET;
+    delete process.env.FUNCTIONS_EMULATOR;
+  }
+
+  assert.equal(res.statusCode, 400, 'an invalid signature must still be rejected regardless of alerting');
+  assert.ok(
+    errorLines.some((line) => line.includes('[ops_alert]') && line.includes('kind=SIGNATURE_VERIFICATION_FAILED')),
+    `expected a SIGNATURE_VERIFICATION_FAILED ops alert log line, got: ${JSON.stringify(errorLines)}`
+  );
+});
+
+test('Phase 11 M5: a Razorpay webhook with no stable event id is rejected, not processed under an invented id', async () => {
+  const { handleRazorpayWebhook } = require('../src/webhooks');
+  const { __resetDedupeForTests } = require('../src/lib/opsAlert');
+  __resetDedupeForTests();
+
+  function createMockRes() {
+    const res = {
+      statusCode: 200,
+      body: null,
+      status(code) { res.statusCode = code; return res; },
+      json(data) { res.body = data; return res; }
+    };
+    return res;
+  }
+
+  process.env.FUNCTIONS_EMULATOR = 'true';
+  delete process.env.RAZORPAY_WEBHOOK_SECRET;
+
+  // No `event_id` field and no `x-razorpay-event-id` header -- the exact shape the old code used
+  // to paper over with `event_${Date.now()}`.
+  const req = {
+    headers: {},
+    body: { event: 'payment.captured', payload: { payment: { entity: { id: 'pay_1', notes: { userId: 'user1' }, amount: 49900 } } } }
+  };
+  const res = createMockRes();
+
+  await handleRazorpayWebhook(req, res);
+
+  assert.equal(res.statusCode, 400, 'must be rejected rather than processed under a fabricated id');
+  assert.equal(res.body.status, 'error');
+});
+
 test('Phase 6B Gemini AI: DoW 4000 character ceiling rejection', async (t) => {
   const { analyzeResponseInline, MAX_RESPONSE_CHARACTERS } = require('../src/aiAnalysis');
 

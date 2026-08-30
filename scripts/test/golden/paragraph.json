@@ -1,0 +1,21 @@
+{
+  "sections": [
+    {
+      "id": "fixture:paragraph.md#root",
+      "slug": "intro",
+      "heading": null,
+      "level": 0,
+      "blocks": [
+        {
+          "type": "subheading",
+          "level": 1,
+          "text": "A subheading"
+        },
+        {
+          "type": "paragraph",
+          "text": "Plain prose about the SSB process."
+        }
+      ]
+    }
+  ]
+}

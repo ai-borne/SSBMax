@@ -118,6 +118,21 @@ test('subscription.activated grants tier + expiryDate + willRenew:true, source R
   assert.ok(webhookLogs.has('rzp_sub_evt_1'));
 });
 
+test('subscription.activated persists subscriptionId (Phase 5, H5a: cancel target)', async () => {
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb();
+  await processRazorpaySubscriptionEvent('subscription.activated', activatedPayload(), 'evt_sub_id', db);
+
+  assert.equal(subscriptionDocs.get('user1').subscriptionId, 'sub_123');
+});
+
+test('subscription.completed keeps the prior subscriptionId (visible for support lookups after revoke)', async () => {
+  const seed = { tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000, subscriptionId: 'sub_123' };
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
+  await processRazorpaySubscriptionEvent('subscription.completed', activatedPayload(), 'evt_sub_id_2', db);
+
+  assert.equal(subscriptionDocs.get('user1').subscriptionId, 'sub_123');
+});
+
 test('duplicate event id is idempotent (no double-processing)', async () => {
   const { db, subscriptionDocs } = makeSubscriptionFakeDb();
   await processRazorpaySubscriptionEvent('subscription.activated', activatedPayload(), 'evt_dup', db);
@@ -137,13 +152,39 @@ test('subscription.completed revokes to FREE, willRenew:false', async () => {
   assert.equal(doc.willRenew, false);
 });
 
-test('refund.processed (payment.entity notes shape) revokes to FREE', async () => {
+test('refund.processed (M4): a full refund of the payment revokes to FREE', async () => {
   const seed = { tier: 'BASIC', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000 };
   const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
-  const payload = { payment: { entity: { notes: { userId: 'user1', planId: 'basic_monthly' } } } };
+  const payload = {
+    payment: { entity: { notes: { userId: 'user1', planId: 'basic_monthly' }, amount: 29900 } },
+    refund: { entity: { amount: 29900 } }
+  };
   await processRazorpaySubscriptionEvent('refund.processed', payload, 'evt_3', db);
 
   assert.equal(subscriptionDocs.get('user1').tier, 'FREE');
+});
+
+test('refund.processed (M4): a partial refund does not revoke -- the user already paid for the rest of the period', async () => {
+  const seed = { tier: 'BASIC', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000 };
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
+  const payload = {
+    payment: { entity: { notes: { userId: 'user1', planId: 'basic_monthly' }, amount: 29900 } },
+    refund: { entity: { amount: 10000 } } // less than the full payment
+  };
+  const result = await processRazorpaySubscriptionEvent('refund.processed', payload, 'evt_3', db);
+
+  assert.equal(subscriptionDocs.get('user1').tier, 'BASIC', 'a partial refund must not strip access');
+  assert.ok(typeof subscriptionDocs.get('user1').partialRefundAt === 'number');
+  assert.equal(result.tier, undefined, 'no tier write happened, unlike a real grant/revoke');
+});
+
+test('refund.processed (M4): unknown amounts on either side fail closed toward NOT revoking', async () => {
+  const seed = { tier: 'BASIC', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000 };
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
+  const payload = { payment: { entity: { notes: { userId: 'user1', planId: 'basic_monthly' } } } }; // no amounts at all
+  await processRazorpaySubscriptionEvent('refund.processed', payload, 'evt_3', db);
+
+  assert.equal(subscriptionDocs.get('user1').tier, 'BASIC');
 });
 
 test('subscription.cancelled only flips willRenew, leaves tier/expiryDate untouched', async () => {
@@ -167,6 +208,28 @@ test('subscription.halted marks billingIssueAt without revoking tier', async () 
   assert.ok(typeof doc.billingIssueAt === 'number');
 });
 
+/**
+ * L3 (Phase 12): before this fix, `subscription.pending` fell through the dispatcher's
+ * unrecognized-event-types branch entirely (`{ ignored: eventType }`) -- not even logged. It's
+ * Razorpay's earlier-in-the-retry-sequence sibling of `subscription.halted` (a charge failed and
+ * a retry is about to happen), so it gets identical grace-period treatment: field-only write, no
+ * tier change.
+ */
+test('subscription.pending marks billingIssueAt without revoking tier, same as subscription.halted', async () => {
+  const seed = { tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000 };
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
+  const result = await processRazorpaySubscriptionEvent('subscription.pending', activatedPayload(), 'evt_pending', db);
+
+  const doc = subscriptionDocs.get('user1');
+  assert.equal(doc.tier, 'PRO');
+  assert.ok(typeof doc.billingIssueAt === 'number');
+  assert.equal(result.success, true);
+});
+
+test('subscription.pending is in the dispatch set', () => {
+  assert.ok(RAZORPAY_SUBSCRIPTION_EVENT_TYPES.has('subscription.pending'));
+});
+
 test('subscription.paused sets willRenew:false, subscription.resumed sets willRenew:true', async () => {
   const seed = { tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000, willRenew: true };
   const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
@@ -180,12 +243,49 @@ test('subscription.paused sets willRenew:false, subscription.resumed sets willRe
 test('reconciliation: an active REVENUECAT-sourced doc is not clobbered by a lower-tier Razorpay grant', async () => {
   const seed = { tier: 'PREMIUM', source: 'REVENUECAT', expiryDate: Date.now() + 100000, startDate: 1000 };
   const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
-  await processRazorpaySubscriptionEvent('subscription.activated', activatedPayload(), 'evt_8', db); // grants PRO
+  const result = await processRazorpaySubscriptionEvent('subscription.activated', activatedPayload(), 'evt_8', db); // grants PRO
 
   const doc = subscriptionDocs.get('user1');
   assert.equal(doc.tier, 'PREMIUM');
   assert.equal(doc.source, 'REVENUECAT');
   assert.ok(doc.conflictDetectedAt !== undefined);
+  // Phase 8: the dispatcher (webhooks.js) reads `result.conflict`/`result.userId` off this return
+  // value to decide whether to call emitOpsAlert -- without these, M2's conflictDetectedAt write
+  // stays exactly as invisible to a human as it was before Phase 8.
+  assert.equal(result.conflict, true, 'the dispatcher needs this to know whether to alert');
+  assert.equal(result.userId, 'user1', 'the dispatcher needs this to attach the alert to the right user');
+});
+
+test('M1: a stale event (older created_at than the last applied event) is ignored, not applied', async () => {
+  const seed = { tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000, lastEventAtMs: 5_000 };
+  const { db, subscriptionDocs, webhookLogs } = makeSubscriptionFakeDb(seed);
+
+  const result = await processRazorpaySubscriptionEvent('subscription.completed', activatedPayload(), 'evt_stale', db, 4_000);
+
+  assert.equal(result.stale, true);
+  assert.equal(subscriptionDocs.get('user1').tier, 'PRO', 'the fresher, already-applied state must not be reverted');
+  assert.ok(webhookLogs.has('rzp_sub_evt_stale'), 'still logged, so a genuine retry of this exact event stays idempotent');
+});
+
+test('M1: an event newer than lastEventAtMs is applied normally and bumps lastEventAtMs', async () => {
+  const seed = { tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000, lastEventAtMs: 5_000 };
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
+
+  await processRazorpaySubscriptionEvent('subscription.completed', activatedPayload(), 'evt_fresh', db, 6_000);
+
+  const doc = subscriptionDocs.get('user1');
+  assert.equal(doc.tier, 'FREE');
+  assert.equal(doc.lastEventAtMs, 6_000);
+});
+
+test('M1: no lastEventAtMs on the stored doc (never set before) never blocks an event', async () => {
+  const seed = { tier: 'PRO', source: 'RAZORPAY', expiryDate: Date.now() + 100000, startDate: 1000 };
+  const { db, subscriptionDocs } = makeSubscriptionFakeDb(seed);
+
+  const result = await processRazorpaySubscriptionEvent('subscription.completed', activatedPayload(), 'evt_first_timestamped', db, 1_000);
+
+  assert.equal(result.stale, undefined);
+  assert.equal(subscriptionDocs.get('user1').tier, 'FREE');
 });
 
 test('missing userId in notes returns a warning, does not throw', async () => {

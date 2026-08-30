@@ -67,3 +67,6 @@ tests:
   - testType: GTO_CT
     totalSeconds: 900
     source: shared/.../domain/model/gto/GTOTest.kt
+  - testType: GTO_FGT
+    totalSeconds: 1800
+    source: shared/.../domain/model/gto/GTOTest.kt

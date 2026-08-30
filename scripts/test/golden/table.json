@@ -1,0 +1,29 @@
+{
+  "sections": [
+    {
+      "id": "fixture:table.md#0",
+      "slug": "general-preparation-timeline",
+      "heading": "General Preparation Timeline",
+      "level": 2,
+      "blocks": [
+        {
+          "type": "table",
+          "rows": [
+            [
+              "Timeframe before SSB",
+              "Action"
+            ],
+            [
+              "3-6 months",
+              "Eye exam, dental check-up"
+            ],
+            [
+              "1-3 months",
+              "Build/maintain fitness routine"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

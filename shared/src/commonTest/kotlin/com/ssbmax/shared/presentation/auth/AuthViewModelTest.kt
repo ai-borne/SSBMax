@@ -2,7 +2,9 @@ package com.ssbmax.shared.presentation.auth
 
 import com.ssbmax.shared.domain.model.GoogleSignInData
 import com.ssbmax.shared.domain.model.UserRole
+import com.ssbmax.shared.domain.usecase.auth.CancelAccountDeletionUseCase
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
+import com.ssbmax.shared.domain.usecase.auth.RequestAccountDeletionUseCase
 import com.ssbmax.shared.domain.usecase.auth.SignInWithGoogleUseCase
 import com.ssbmax.shared.domain.usecase.auth.SignOutUseCase
 import com.ssbmax.shared.domain.usecase.auth.UpdateUserRoleUseCase
@@ -48,7 +50,9 @@ class AuthViewModelTest {
         signInWithGoogleUseCase = SignInWithGoogleUseCase(authRepository),
         updateUserRoleUseCase = UpdateUserRoleUseCase(authRepository),
         signOutUseCase = SignOutUseCase(authRepository),
-        observeCurrentUserUseCase = ObserveCurrentUserUseCase(authRepository)
+        observeCurrentUserUseCase = ObserveCurrentUserUseCase(authRepository),
+        requestAccountDeletionUseCase = RequestAccountDeletionUseCase(authRepository),
+        cancelAccountDeletionUseCase = CancelAccountDeletionUseCase(authRepository)
     )
 
     @Test
@@ -160,4 +164,121 @@ class AuthViewModelTest {
 
         assertIs<AuthUiState.Initial>(viewModel.uiState.value)
     }
+
+    @Test
+    fun `initial account deletion state is Idle`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        assertIs<AccountDeletionState.Idle>(viewModel.accountDeletionState.value)
+    }
+
+    @Test
+    fun `showAccountDeletionConfirmation moves to ConfirmPending without calling the callable`() =
+        runTest(testDispatcher) {
+            val viewModel = buildViewModel()
+
+            viewModel.showAccountDeletionConfirmation()
+
+            assertIs<AccountDeletionState.ConfirmPending>(viewModel.accountDeletionState.value)
+        }
+
+    @Test
+    fun `dismissAccountDeletionConfirmation returns to Idle without calling the callable`() =
+        runTest(testDispatcher) {
+            authRepository.requestAccountDeletionResult = Result.failure(Exception("should not be called"))
+            val viewModel = buildViewModel()
+            viewModel.showAccountDeletionConfirmation()
+
+            viewModel.dismissAccountDeletionConfirmation()
+
+            assertIs<AccountDeletionState.Idle>(viewModel.accountDeletionState.value)
+        }
+
+    @Test
+    fun `confirmAccountDeletion success moves to DeletionPending`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        viewModel.showAccountDeletionConfirmation()
+
+        viewModel.confirmAccountDeletion()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertIs<AccountDeletionState.DeletionPending>(viewModel.accountDeletionState.value)
+    }
+
+    @Test
+    fun `confirmAccountDeletion failure surfaces error`() = runTest(testDispatcher) {
+        authRepository.requestAccountDeletionResult = Result.failure(Exception("network down"))
+        val viewModel = buildViewModel()
+
+        viewModel.confirmAccountDeletion()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = assertIs<AccountDeletionState.Error>(viewModel.accountDeletionState.value)
+        assertEquals("network down", state.message)
+    }
+
+    @Test
+    fun `cancelAccountDeletion success returns to Idle`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        viewModel.confirmAccountDeletion()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.cancelAccountDeletion()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertIs<AccountDeletionState.Idle>(viewModel.accountDeletionState.value)
+    }
+
+    @Test
+    fun `cancelAccountDeletion failure surfaces error`() = runTest(testDispatcher) {
+        authRepository.cancelAccountDeletionResult = Result.failure(Exception("already purged"))
+        val viewModel = buildViewModel()
+
+        viewModel.cancelAccountDeletion()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = assertIs<AccountDeletionState.Error>(viewModel.accountDeletionState.value)
+        assertEquals("already purged", state.message)
+    }
+
+    @Test
+    fun `seeds DeletionPending from a persisted deletionRequestedAt on the current user`() =
+        runTest(testDispatcher) {
+            // Regression test for the KMP-web parity gap found in Phase 4 review: without this,
+            // killing the app while a deletion is pending would show "Delete Account" again on
+            // relaunch instead of "Cancel Deletion", since accountDeletionState previously only
+            // changed via the confirm/cancel button flow, never from the persisted user doc.
+            authRepository.userFlow.value = testUser().copy(deletionRequestedAt = 1_700_000_000_000L)
+            val viewModel = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertIs<AccountDeletionState.DeletionPending>(viewModel.accountDeletionState.value)
+        }
+
+    @Test
+    fun `clears DeletionPending back to Idle when deletionRequestedAt is cleared on another device`() =
+        runTest(testDispatcher) {
+            authRepository.userFlow.value = testUser().copy(deletionRequestedAt = 1_700_000_000_000L)
+            val viewModel = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertIs<AccountDeletionState.DeletionPending>(viewModel.accountDeletionState.value)
+
+            authRepository.userFlow.value = testUser().copy(deletionRequestedAt = null)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertIs<AccountDeletionState.Idle>(viewModel.accountDeletionState.value)
+        }
+
+    @Test
+    fun `does not clobber an in-flight ConfirmPending when the user flow re-emits`() =
+        runTest(testDispatcher) {
+            val viewModel = buildViewModel()
+            viewModel.showAccountDeletionConfirmation()
+
+            // A currentUser re-emission (e.g. an unrelated profile field changing) must not
+            // reset the confirm dialog the user has open back to Idle/DeletionPending.
+            authRepository.userFlow.value = testUser()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertIs<AccountDeletionState.ConfirmPending>(viewModel.accountDeletionState.value)
+        }
 }

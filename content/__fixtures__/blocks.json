@@ -1,0 +1,47 @@
+{
+  "_comment": "Phase 2 parity gate fixture (docs/plans/write-the-phased-plan-wobbly-pancake.md). One instance of every DocumentModel block type from content/SCHEMA.md's taxonomy, shaped exactly as scripts/content/blockClassifier.js emits it. Both the web and Compose block registries must have a renderer for every type here -- the coverage test in each platform enumerates these types and fails if one has no registered renderer.",
+  "sections": [
+    {
+      "id": "fixtures.md#0",
+      "slug": "fixture-section",
+      "heading": "Fixture Section",
+      "level": 2,
+      "blocks": [
+        { "type": "subheading", "level": 3, "text": "A Subheading" },
+        { "type": "paragraph", "text": "A plain prose paragraph, the fallback for anything that doesn't fit another type." },
+        { "type": "list", "items": ["First item", "Second item", "Third item"] },
+        {
+          "type": "specTable",
+          "entries": [
+            { "label": "Duration", "text": "20-30 minutes" },
+            { "label": "Group Size", "text": "8-10 candidates" }
+          ]
+        },
+        { "type": "callout", "marker": "Remember", "text": "GTO wants to see a team player, not a solo hero." },
+        {
+          "type": "comparison",
+          "pairs": [
+            { "label": "Wrong", "text": "Courage means bravery in danger." },
+            { "label": "Right", "text": "I show courage when I speak up even if my view is unpopular." }
+          ]
+        },
+        {
+          "type": "timeline",
+          "steps": [
+            { "label": "9:00 AM", "text": "Reporting and briefing" },
+            { "label": "9:30 AM", "text": "Group discussion begins" }
+          ]
+        },
+        {
+          "type": "table",
+          "rows": [
+            ["Week", "Focus"],
+            ["1", "Fundamentals"],
+            ["2", "Mock tests"]
+          ]
+        },
+        { "type": "unknownFutureBlockType", "text": "A block type from a future release that this fixture pins on purpose (decision D1): both registries must render it as a paragraph rather than fail." }
+      ]
+    }
+  ]
+}

@@ -1,10 +1,13 @@
-import { collection, doc, getDoc, getDocs, query, limit } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, limit, orderBy, where, FirestoreError, type DocumentData } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { FirestorePaths } from '../generated/contracts';
 import { IContentRepository } from './interfaces/IContentRepository';
 import { StudyMaterial, OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, TestBatchInfo, GPEImage, OIRContentMeta } from '../types/testContent';
 import { ContentUnavailableError } from '../types/errors';
+import type { DocumentModel, DocSection } from '../components/content/blocks/types';
+import { summarizeMarkdown } from '../utils/summarizeMarkdown';
 import { getFallbackStudyMaterials, getFallbackStudyMaterialById } from '../constants/fallbackStudyMaterials';
+import { primaryTestTypeIdForTopicType } from '../constants/topicTypeMapping';
 import {
   mapDocToWATBatch,
   mapDocToSRTBatch,
@@ -25,7 +28,9 @@ import {
 export class ContentRepository implements IContentRepository {
   async getStudyMaterials(): Promise<StudyMaterial[]> {
     try {
-      const querySnapshot = await getDocs(query(collection(db, FirestorePaths.STUDY_MATERIALS), limit(50)));
+      const querySnapshot = await getDocs(
+        query(collection(db, FirestorePaths.STUDY_MATERIALS), orderBy('displayOrder'), limit(500))
+      );
       const materials: StudyMaterial[] = [];
       querySnapshot.forEach((docSnap) => {
         materials.push(this.mapDocToStudyMaterial(docSnap.id, docSnap.data()));
@@ -37,10 +42,16 @@ export class ContentRepository implements IContentRepository {
     }
   }
 
+  // KMP (GitLiveStudyContentRepository.getStudyMaterial) looks a material up by its `id`
+  // field, not by Firestore doc path -- aligned here (Phase 7, MEDIUM 4c) so both clients
+  // resolve the same document even if a doc's path ever diverges from its `id` field.
   async getStudyMaterialById(id: string): Promise<StudyMaterial | null> {
     try {
-      const docSnap = await getDoc(doc(db, FirestorePaths.STUDY_MATERIALS, id));
-      if (!docSnap.exists()) {
+      const querySnapshot = await getDocs(
+        query(collection(db, FirestorePaths.STUDY_MATERIALS), where('id', '==', id), limit(1))
+      );
+      const docSnap = querySnapshot.docs[0];
+      if (!docSnap) {
         return getFallbackStudyMaterialById(id);
       }
       return this.mapDocToStudyMaterial(docSnap.id, docSnap.data());
@@ -50,8 +61,8 @@ export class ContentRepository implements IContentRepository {
     }
   }
 
-  private mapDocToStudyMaterial(id: string, data: Record<string, any>): StudyMaterial {
-    const rawTestType = data.testTypeId || data.topicType || data.category;
+  private mapDocToStudyMaterial(id: string, data: DocumentData): StudyMaterial {
+    const topicType = typeof data.topicType === 'string' ? data.topicType : undefined;
     const content = data.contentMarkdown || data.introduction || data.content || '';
     const readTime = typeof data.readTime === 'number'
       ? data.readTime
@@ -62,33 +73,21 @@ export class ContentRepository implements IContentRepository {
     return {
       id,
       title: data.title || '',
-      category: data.category || data.topicType || 'General',
-      summary: data.summary || (content ? content.slice(0, 150) + '...' : ''),
+      category: data.category || topicType || 'General',
+      summary: data.summary || (content ? summarizeMarkdown(content) : ''),
       contentMarkdown: content,
       estimatedReadTimeMinutes: readTime,
       tags: data.tags || [],
       createdAt: typeof data.lastUpdated === 'number' ? new Date(data.lastUpdated).toISOString() : data.createdAt || new Date().toISOString(),
       dayNumber: data.dayNumber ? (String(data.dayNumber) as StudyMaterial['dayNumber']) : undefined,
-      testTypeId: this.parseTestTypeId(rawTestType)
+      topicType,
+      // Explicit testTypeId field wins if the document ever carries one directly;
+      // otherwise derive it from topicType via the explicit table (see
+      // constants/topicTypeMapping.ts) -- undefined, not guessed, when topicType maps to
+      // more than one testTypeId (GTO, PSYCHOLOGY) or none (MEDICALS, SSB_OVERVIEW).
+      testTypeId: (typeof data.testTypeId === 'string' ? data.testTypeId : undefined) as StudyMaterial['testTypeId']
+        ?? primaryTestTypeIdForTopicType(topicType)
     };
-  }
-
-  private parseTestTypeId(val: unknown): StudyMaterial['testTypeId'] {
-    if (typeof val !== 'string') return undefined;
-    const norm = val.trim().toLowerCase().replace(/[\s-]+/g, '_');
-    const valid: StudyMaterial['testTypeId'][] = [
-      'oir', 'ppdt', 'piq', 'tat', 'wat', 'srt', 'sd', 'gd', 'gpe', 'pgt', 'hgt', 'iot', 'command_task', 'snake_race', 'fgt', 'interview', 'conference'
-    ];
-    if (valid.includes(norm as StudyMaterial['testTypeId'])) return norm as StudyMaterial['testTypeId'];
-    const keywordMap: Array<[string, StudyMaterial['testTypeId']]> = [
-      ['oir', 'oir'], ['ppdt', 'ppdt'], ['piq', 'piq'], ['tat', 'tat'], ['psychology', 'tat'],
-      ['wat', 'wat'], ['srt', 'srt'], ['sd', 'sd'], ['self', 'sd'], ['gd', 'gd'], ['discussion', 'gd'],
-      ['gpe', 'gpe'], ['planning', 'gpe'], ['pgt', 'pgt'], ['hgt', 'hgt'], ['iot', 'iot'], ['obstacle', 'iot'],
-      ['command', 'command_task'], ['snake', 'snake_race'], ['gor', 'snake_race'], ['fgt', 'fgt'],
-      ['interview', 'interview'], ['conference', 'conference'], ['medicals', 'conference']
-    ];
-    const match = keywordMap.find(([kw]) => norm.includes(kw));
-    return match ? match[1] : undefined;
   }
 
   /**
@@ -102,10 +101,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`OIR batch ${batchId} is unavailable`);
       }
       return mapDocToOIRBatch(snap.id, snap.data(), batchIndex);
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for OIR batch ${batchId}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for OIR batch ${batchId}:`, firestoreError?.message || error);
         return getFallbackOIRBatch(batchIndex);
       }
       throw error;
@@ -119,10 +119,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`PPDT context ${id} is unavailable`);
       }
       return mapDocToPPDTContext(id, snap.data());
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for PPDT context ${id}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for PPDT context ${id}:`, firestoreError?.message || error);
         return getFallbackPPDTContext(id);
       }
       throw error;
@@ -136,10 +137,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`TAT set ${id} is unavailable`);
       }
       return mapDocToTATSet(snap.id, snap.data());
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for TAT set ${id}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for TAT set ${id}:`, firestoreError?.message || error);
         return getFallbackTATSet(id);
       }
       throw error;
@@ -153,10 +155,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`WAT batch ${id} is unavailable`);
       }
       return mapDocToWATBatch(id, snap.data());
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for WAT batch ${id}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for WAT batch ${id}:`, firestoreError?.message || error);
         return getFallbackWATBatch(id);
       }
       throw error;
@@ -170,10 +173,11 @@ export class ContentRepository implements IContentRepository {
         throw new ContentUnavailableError(`SRT batch ${id} is unavailable`);
       }
       return mapDocToSRTBatch(id, snap.data());
-    } catch (error: any) {
+    } catch (error) {
+      const firestoreError = error instanceof FirestoreError ? error : undefined;
       if (error instanceof ContentUnavailableError) throw error;
-      if (import.meta.env.DEV || error?.code === 'permission-denied') {
-        console.warn(`[DEV MODE] Using offline fallback for SRT batch ${id}:`, error?.message || error);
+      if (import.meta.env.DEV || firestoreError?.code === 'permission-denied') {
+        console.warn(`[DEV MODE] Using offline fallback for SRT batch ${id}:`, firestoreError?.message || error);
         return getFallbackSRTBatch(id);
       }
       throw error;
@@ -238,6 +242,38 @@ export class ContentRepository implements IContentRepository {
     } catch (error) {
       console.warn(`Failed to query batches for module ${normModule}`, error);
       return [];
+    }
+  }
+
+  /**
+   * D2 side document `study_material_sections/{id}` (Phase 5, docs/plans/
+   * write-the-phased-plan-wobbly-pancake.md) -- fetched only when a material's reader is
+   * actually opened (StudyReaderModal), never as part of the study-materials list query, same
+   * "fetched only on detail open" contract as KMP's `GitLiveStudyContentRepository.
+   * getStudyMaterialSections`. `table` blocks' rows come back wrapped as `{ cells }`
+   * (`publishContent.js`'s `sanitizeForFirestore` -- Firestore rejects a directly-nested
+   * array), unwrapped back to `string[][]` here to match every other DocumentModel consumer
+   * (the build-time bundle, KMP).
+   */
+  async getStudyMaterialSections(id: string): Promise<DocumentModel | null> {
+    try {
+      const snap = await getDoc(doc(db, FirestorePaths.STUDY_MATERIAL_SECTIONS, id));
+      if (!snap.exists()) return null;
+      const data = snap.data() as { sections?: DocSection[] };
+      if (!Array.isArray(data.sections)) return null;
+      return {
+        sections: data.sections.map((section) => ({
+          ...section,
+          blocks: section.blocks.map((block) =>
+            block.type === 'table'
+              ? { ...block, rows: (block as unknown as { rows: { cells: string[] }[] }).rows.map((r) => r.cells) }
+              : block
+          ),
+        })),
+      };
+    } catch (error) {
+      console.warn(`Failed to fetch study material sections for ${id}`, error);
+      return null;
     }
   }
 }

@@ -77,16 +77,20 @@ describe('materialMatcher Unit Tests', () => {
       testTypeId: 'sd'
     },
     {
-      id: 'mat_legacy_1',
-      title: 'Legacy Obstacle Guide',
-      category: 'GTO Command Tasks',
+      id: 'mat_gto_1',
+      title: 'GTO Command Task Guide',
+      category: 'GTO Preparation',
       summary: 'Subordinate selection tactics',
       contentMarkdown: '# Command Guide',
       estimatedReadTimeMinutes: 5,
-      tags: ['command_task'],
+      tags: [],
       createdAt: '2026-01-01T00:00:00Z',
-      dayNumber: '3-4'
-      // testTypeId is omitted to test fallback tag/category matching
+      dayNumber: '3-4',
+      // testTypeId is intentionally omitted: GTO's topicType covers 8 testTypeIds and
+      // ContentRepository leaves testTypeId undefined rather than guessing one (Phase 7,
+      // MEDIUM 4c) -- topicType is the only signal this fixture carries, exercising the
+      // explicit constants/topicTypeMapping.ts fallback below.
+      topicType: 'GTO'
     }
   ];
 
@@ -133,12 +137,19 @@ describe('materialMatcher Unit Tests', () => {
     expect(result).toHaveLength(0);
   });
 
-  it('should match legacy items without testTypeId via category or tags', () => {
+  it('should match a material with no testTypeId via its topicType\'s explicit test-type list (Phase 7, no fuzzy fallback)', () => {
     const result = filterMaterialsForTestCard(sampleMaterials, {
       testTypeId: 'command_task'
     });
     expect(result).toHaveLength(1);
-    expect(result[0].id).toBe('mat_legacy_1');
+    expect(result[0].id).toBe('mat_gto_1');
+  });
+
+  it('should not match a topicType-only material against a testTypeId its topicType does not cover', () => {
+    const result = filterMaterialsForTestCard(sampleMaterials, {
+      testTypeId: 'interview'
+    });
+    expect(result.map((m) => m.id)).not.toContain('mat_gto_1');
   });
 
   it('should return all materials when no testTypeId or compositeTestTypeIds is specified', () => {

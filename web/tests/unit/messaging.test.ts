@@ -12,9 +12,10 @@ vi.mock('../../src/config/firebase', () => ({
 }));
 
 import { getDeviceId, requestPushPermission } from '../../src/config/messaging';
+import type { NotificationRepository } from '../../src/repositories/NotificationRepository';
 
 function mockRepository() {
-  return { saveFCMToken: vi.fn().mockResolvedValue(undefined) } as any;
+  return { saveFCMToken: vi.fn().mockResolvedValue(undefined) } as unknown as NotificationRepository;
 }
 
 describe('getDeviceId', () => {
@@ -29,7 +30,7 @@ describe('getDeviceId', () => {
 });
 
 describe('requestPushPermission', () => {
-  const originalNotification = (globalThis as any).Notification;
+  const originalNotification = (globalThis as Record<string, unknown>).Notification;
   const originalEnv = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
   beforeEach(() => {
@@ -43,25 +44,25 @@ describe('requestPushPermission', () => {
   });
 
   afterEach(() => {
-    (globalThis as any).Notification = originalNotification;
+    (globalThis as Record<string, unknown>).Notification = originalNotification;
     import.meta.env.VITE_FIREBASE_VAPID_KEY = originalEnv;
   });
 
   it('returns unsupported when the browser has no Notification API, so callers can hide the toggle instead of throwing', async () => {
-    delete (globalThis as any).Notification;
+    delete (globalThis as Record<string, unknown>).Notification;
     const result = await requestPushPermission('user_1', mockRepository());
     expect(result.status).toBe('unsupported');
   });
 
   it('does not silently no-op when the VAPID key is unconfigured -- surfaces an explicit error per Rule 12', async () => {
-    (globalThis as any).Notification = { requestPermission: vi.fn(), permission: 'default' };
+    (globalThis as Record<string, unknown>).Notification = { requestPermission: vi.fn(), permission: 'default' };
     import.meta.env.VITE_FIREBASE_VAPID_KEY = '';
     const result = await requestPushPermission('user_1', mockRepository());
     expect(result.status).toBe('error');
   });
 
   it('registers the service worker, fetches a token, and saves it via NotificationRepository with platform "web" on grant', async () => {
-    (globalThis as any).Notification = { requestPermission: vi.fn().mockResolvedValue('granted'), permission: 'default' };
+    (globalThis as Record<string, unknown>).Notification = { requestPermission: vi.fn().mockResolvedValue('granted'), permission: 'default' };
     vi.mocked(getToken).mockResolvedValue('fcm-token-abc');
     const repository = mockRepository();
 
@@ -74,7 +75,7 @@ describe('requestPushPermission', () => {
   });
 
   it('reports denied without registering a token when the user declines the browser prompt', async () => {
-    (globalThis as any).Notification = { requestPermission: vi.fn().mockResolvedValue('denied'), permission: 'default' };
+    (globalThis as Record<string, unknown>).Notification = { requestPermission: vi.fn().mockResolvedValue('denied'), permission: 'default' };
     const repository = mockRepository();
 
     const result = await requestPushPermission('user_1', repository);

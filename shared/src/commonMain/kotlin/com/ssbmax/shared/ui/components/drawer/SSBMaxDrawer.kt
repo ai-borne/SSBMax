@@ -30,6 +30,8 @@ fun SSBMaxDrawer(
     onTogglePhase1: () -> Unit,
     onTogglePhase2: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
+    isDeletionPending: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -51,7 +53,9 @@ fun SSBMaxDrawer(
             onNavigateToSettings = onNavigateToSettings,
             onTogglePhase1 = onTogglePhase1,
             onTogglePhase2 = onTogglePhase2,
-            onSignOut = onSignOut
+            onSignOut = onSignOut,
+            onDeleteAccount = onDeleteAccount,
+            isDeletionPending = isDeletionPending
         )
     }
 }

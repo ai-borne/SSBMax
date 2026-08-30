@@ -153,6 +153,7 @@ data class SubmissionDetailUiState(
             TestType.GTO_LECTURETTE -> "GTO - Lecturette"
             TestType.GTO_IO -> "GTO - Individual Obstacles"
             TestType.GTO_CT -> "GTO - Command Task"
+            TestType.GTO_FGT -> "GTO - Final Group Task"
             TestType.IO -> "IO - Interview Officer"
         }
 

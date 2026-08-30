@@ -20,6 +20,7 @@ import com.ssbmax.shared.presentation.testing.FakeSettings
 import com.ssbmax.shared.presentation.testing.FakeSubscriptionRepository
 import com.ssbmax.shared.presentation.testing.testUser
 import com.ssbmax.shared.ui.theme.TierColors
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -337,4 +338,137 @@ class UpgradeViewModelTest {
         assertEquals(0, revenueCatClient.restoreCallCount)
         assertEquals(false, viewModel.uiState.value.isRestoring)
     }
+
+    /**
+     * L5 (Payment Ecosystem Hardening plan, Phase 12): `activeOnWebInstead` used to be computed
+     * once when the screen loaded and never refreshed -- a web purchase completed in another
+     * session/tab while this screen stayed open left the cached flag stale (false), so a second,
+     * conflicting mobile purchase could start. This pins the fix: the screen loads with NO active
+     * web subscription (cached flag false), ownership then changes underneath it (simulating the
+     * other-session purchase) with no explicit refresh call, and `upgradeToPlan` must still block
+     * because it re-reads ownership fresh instead of trusting the stale cached flag.
+     */
+    @Test
+    fun `upgradeToPlan re-checks ownership fresh and blocks even when the cached activeOnWebInstead flag is stale`() = runTest(testDispatcher) {
+        subscriptionRepository.ownershipResult = Result.success(
+            SubscriptionOwnership(source = "REVENUECAT", expiryDate = null)
+        )
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(false, viewModel.uiState.value.activeOnWebInstead, "sanity: screen loaded with no web subscription blocking")
+
+        // Simulate a web (Razorpay) purchase completing in another session -- nothing in this
+        // screen's own state triggers a re-read, so the cached flag above is now stale.
+        subscriptionRepository.ownershipResult = Result.success(
+            SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
+        )
+
+        viewModel.upgradeToPlan(SubscriptionTier.PRO)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(null, revenueCatClient.lastPurchasedProductId, "must not purchase against a fresh but unread web conflict")
+        assertEquals(false, viewModel.uiState.value.isPurchasing)
+        assertEquals(true, viewModel.uiState.value.activeOnWebInstead, "the fresh read must also correct the now-stale cached flag")
+    }
+
+    @Test
+    fun `restorePurchases re-checks ownership fresh and blocks even when the cached activeOnWebInstead flag is stale`() = runTest(testDispatcher) {
+        subscriptionRepository.ownershipResult = Result.success(
+            SubscriptionOwnership(source = "REVENUECAT", expiryDate = null)
+        )
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(false, viewModel.uiState.value.activeOnWebInstead)
+
+        subscriptionRepository.ownershipResult = Result.success(
+            SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
+        )
+
+        viewModel.restorePurchases()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, revenueCatClient.restoreCallCount)
+        assertEquals(false, viewModel.uiState.value.isRestoring)
+        assertEquals(true, viewModel.uiState.value.activeOnWebInstead)
+    }
+
+    /**
+     * Phase 4 (H4, payment ecosystem hardening plan): `configure` used to be fire-and-forget --
+     * `upgradeToPlan` could start a purchase while RevenueCat's `logIn` for the just-signed-in user
+     * was still in flight, landing the purchase against RC's previous identity instead. `identityResolved`
+     * closes that window: it stays false for the whole time `configure` is suspended.
+     */
+    @Test
+    fun `upgradeToPlan is blocked while RevenueCat identity is still resolving`() = runTest(testDispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        revenueCatClient.configureGate = gate
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(false, viewModel.uiState.value.identityResolved)
+        viewModel.upgradeToPlan(SubscriptionTier.PRO)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(null, revenueCatClient.lastPurchasedProductId)
+        assertEquals(false, viewModel.uiState.value.isPurchasing)
+
+        gate.complete(Unit)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(true, viewModel.uiState.value.identityResolved)
+    }
+
+    @Test
+    fun `restorePurchases is blocked while RevenueCat identity is still resolving`() = runTest(testDispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        revenueCatClient.configureGate = gate
+        val viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.restorePurchases()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, revenueCatClient.restoreCallCount)
+        gate.complete(Unit)
+    }
+
+    @Test
+    fun `a RevenueCat identity switch failure surfaces as purchaseError instead of being silently swallowed`() =
+        runTest(testDispatcher) {
+            revenueCatClient.configureResult = Result.failure(Exception("RevenueCat logIn failed"))
+            val viewModel = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(false, state.identityResolved)
+            assertEquals("RevenueCat logIn failed", state.purchaseError)
+        }
+
+    @Test
+    fun `upgradeToPlan is blocked when the RevenueCat identity switch failed not just while pending`() =
+        runTest(testDispatcher) {
+            revenueCatClient.configureResult = Result.failure(Exception("RevenueCat logIn failed"))
+            val viewModel = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.upgradeToPlan(SubscriptionTier.PRO)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(null, revenueCatClient.lastPurchasedProductId)
+        }
+
+    @Test
+    fun `identityResolved is true once configure succeeds allowing a purchase to proceed`() =
+        runTest(testDispatcher) {
+            revenueCatClient.purchaseResult = Result.success(
+                RevenueCatPurchaseOutcome(activeEntitlementIds = setOf("pro"))
+            )
+            val viewModel = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(true, viewModel.uiState.value.identityResolved)
+            viewModel.upgradeToPlan(SubscriptionTier.PRO)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(SSBMaxProductIds.PRO_MONTHLY, revenueCatClient.lastPurchasedProductId)
+        }
 }

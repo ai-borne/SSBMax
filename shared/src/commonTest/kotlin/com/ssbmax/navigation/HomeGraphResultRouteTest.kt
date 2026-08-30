@@ -56,5 +56,6 @@ class HomeGraphResultRouteTest {
         assertNull(homeResultRoute(TestType.GTO_HGT, "s"))
         assertNull(homeResultRoute(TestType.GTO_IO, "s"))
         assertNull(homeResultRoute(TestType.GTO_CT, "s"))
+        assertNull(homeResultRoute(TestType.GTO_FGT, "s"))
     }
 }

@@ -39,6 +39,8 @@ const GTO_CONTRACT_TYPE_BY_ID: Record<string, TestType> = {
   iot: 'GTO_IO',
   command_task: 'GTO_CT',
   snake_race: 'GTO_GOR',
+  lecturette: 'GTO_LECTURETTE',
+  fgt: 'GTO_FGT',
 };
 
 export const DAY_1_TESTS: TestSimulatorConfig[] = [

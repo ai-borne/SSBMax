@@ -5,6 +5,7 @@ import com.ssbmax.shared.domain.model.CloudStudyMaterial
 import com.ssbmax.shared.domain.model.TopicContent
 import com.ssbmax.shared.domain.repository.StudyContentRepository
 import com.ssbmax.shared.contracts.SsbContracts
+import com.ssbmax.shared.ui.content.blocks.DocumentModel
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.storage.storage
@@ -28,6 +29,8 @@ class GitLiveStudyContentRepository : StudyContentRepository {
     private val topicsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.TOPIC_CONTENT)
     private val materialsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.STUDY_MATERIALS)
     private val versionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.CONTENT_VERSIONS)
+    private val topicSectionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.TOPIC_SECTIONS)
+    private val materialSectionsCollection = Firebase.firestore.collection(SsbContracts.FirestorePaths.STUDY_MATERIAL_SECTIONS)
 
     override fun getTopicContent(topicType: String): Flow<Result<TopicContentData>> = flow {
         val normalizedType = topicType.uppercase()
@@ -88,6 +91,32 @@ class GitLiveStudyContentRepository : StudyContentRepository {
     suspend fun getDownloadUrl(storagePath: String): Result<String> {
         return runCatching {
             Firebase.storage.reference.child(storagePath).getDownloadUrl()
+        }
+    }
+
+    /**
+     * D2 side document (Phase 5) -- separate from [loadFromCloud]/[refreshContent] on purpose,
+     * so a topic screen that only needs the markdown path never pays for this fetch (see the
+     * class doc's "fetched only on detail open" note). `null` (success) means no
+     * `topic_sections/{topicType}` document exists yet, e.g. this topic hasn't been through the
+     * Phase-5 publish; a decode failure (an unmodelled document shape) is treated the same way,
+     * not surfaced as an error -- both cases fall back to the markdown `introduction` field one
+     * layer up, never a blank screen.
+     */
+    override suspend fun getTopicSections(topicType: String): Result<DocumentModel?> {
+        return runCatching {
+            val doc = topicSectionsCollection.document(topicType.uppercase()).get()
+            if (!doc.exists) return@runCatching null
+            runCatching { doc.data(DocumentModelDto.serializer()).toDomain() }.getOrNull()
+        }
+    }
+
+    /** Same null-means-not-published / decode-failure-tolerant contract as [getTopicSections]. */
+    override suspend fun getStudyMaterialSections(materialId: String): Result<DocumentModel?> {
+        return runCatching {
+            val doc = materialSectionsCollection.document(materialId).get()
+            if (!doc.exists) return@runCatching null
+            runCatching { doc.data(DocumentModelDto.serializer()).toDomain() }.getOrNull()
         }
     }
 
