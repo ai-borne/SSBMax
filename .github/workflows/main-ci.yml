@@ -1,8 +1,14 @@
 name: SSBMax CI
 
 # Triggers cover every branch without a brittle name list:
-#  - pull_request runs on PRs from ANY source branch (feature/*, fix/*, etc.)
-#  - push runs only on protected branches, so PR commits aren't built twice.
+#  - push gives direct feedback on feature/fix/etc. branches before a PR exists.
+#  - pull_request covers PRs from ANY source branch.
+#  - Both fire on the same commit once a PR is open. Don't rely on the
+#    concurrency group to collapse that pair by cancelling one of them: a
+#    cancelled run still posts its jobs as failed status checks on the SHA,
+#    which blocks merges even though the surviving run is green. The
+#    should-run gate job below skips the push-triggered run's real work
+#    instead, so it reports skipped (fine) rather than cancelled (blocking).
 'on':
   pull_request:
   push:
@@ -10,7 +16,7 @@ name: SSBMax CI
   merge_group:
   workflow_dispatch:
 
-# Cancel superseded runs on the same ref to save CI minutes — but never cancel
+# Cancel superseded runs on the same ref to save CI minutes -- but never cancel
 # a run on a protected branch (those builds gate merges / publish caches).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,10 +30,41 @@ env:
   GRADLE_OPTS: "-Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.jvmargs=-Xmx4g"
 
 jobs:
+  # ── Skip the push-triggered run's real work when a PR already covers this
+  # commit, so we don't pay for (or report failures from) the same commit
+  # twice. pull_request/merge_group/workflow_dispatch always run.
+  should-run:
+    name: Check for duplicate PR run
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      pull-requests: read
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Skip if this push's branch already has an open PR
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          open_prs=$(gh api "repos/${{ github.repository }}/pulls?state=open&head=${{ github.repository_owner }}:${{ github.ref_name }}" --jq 'length')
+          if [ "$open_prs" -gt 0 ]; then
+            echo "Branch ${{ github.ref_name }} already has an open PR — pull_request event covers this commit, skipping."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # ── Supply-chain: verify the Gradle wrapper jar hasn't been tampered with ──
   wrapper-validation:
     name: Gradle Wrapper Validation
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 5
     steps:
       - name: Checkout code
@@ -41,6 +78,8 @@ jobs:
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -107,6 +146,8 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -141,6 +182,8 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 20
     # checks:write lets the test reporter publish a PR check with inline
     # annotations on failing tests (no more digging through HTML artifacts).
@@ -224,6 +267,8 @@ jobs:
   ios-tests:
     name: iOS (shared tests + Xcode build)
     runs-on: macos-15
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 45
     # Overrides the workflow-level GRADLE_OPTS, which pins -Xmx4g. The
     # Kotlin/Native compiler runs inside the Gradle daemon and needs more than
@@ -242,6 +287,16 @@ jobs:
         uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1
         with:
           xcode-version: '26.2'
+
+      # xcodebuild re-resolves Firebase/RevenueCat etc. from SPM on every run
+      # without this — keyed on Package.resolved so a dependency bump busts it.
+      - name: Cache SPM packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('iosApp/iosApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
 
       - name: Set up JDK 21
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
@@ -316,7 +371,8 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
-    needs: [lint, unit-tests]
+    needs: [should-run, lint, unit-tests]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -349,6 +405,8 @@ jobs:
   firestore-rules:
     name: Firestore Rules
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -419,6 +477,8 @@ jobs:
   detekt:
     name: Detekt
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -450,6 +510,8 @@ jobs:
   contracts:
     name: Contracts Check
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 5
     steps:
       - name: Checkout code
@@ -476,6 +538,8 @@ jobs:
   functions:
     name: Cloud Functions Tests
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -525,6 +589,8 @@ jobs:
   validate-security-script:
     name: Security & Compliance Audit
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -540,6 +606,8 @@ jobs:
   web-ci:
     name: Web Platform CI (ssbmax-web)
     runs-on: ubuntu-latest
+    needs: [should-run]
+    if: needs.should-run.outputs.run == 'true'
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -605,36 +673,41 @@ jobs:
     # success while the iOS job was red -- the second half of why a broken iOS
     # target survived five commits (the first half being the machine-specific
     # org.gradle.java.home in gradle.properties, which failed every job).
-    needs: [wrapper-validation, security-scan, lint, detekt, unit-tests, ios-tests, build, firestore-rules, contracts, functions, validate-security-script, web-ci]
+    needs: [should-run, wrapper-validation, security-scan, lint, detekt, unit-tests, ios-tests, build, firestore-rules, contracts, functions, validate-security-script, web-ci]
     steps:
-      - name: Verify all jobs succeeded
+      - name: Verify all jobs succeeded or were correctly skipped
+        # 'skipped' is accepted for every job but should-run itself: that's
+        # what a push-triggered run looks like once should-run finds an open
+        # PR for this branch and everything downstream skips as designed.
         run: |
-          echo "wrapper-validation:      ${{ needs.wrapper-validation.result }}"
-          echo "security-scan:           ${{ needs.security-scan.result }}"
-          echo "lint:                    ${{ needs.lint.result }}"
-          echo "detekt:                  ${{ needs.detekt.result }}"
-          echo "unit-tests:              ${{ needs.unit-tests.result }}"
-          echo "ios-tests:               ${{ needs.ios-tests.result }}"
-          echo "build:                   ${{ needs.build.result }}"
-          echo "firestore-rules:         ${{ needs.firestore-rules.result }}"
-          echo "contracts:               ${{ needs.contracts.result }}"
-          echo "functions:               ${{ needs.functions.result }}"
-          echo "validate-security-script: ${{ needs.validate-security-script.result }}"
-          echo "web-ci:                  ${{ needs.web-ci.result }}"
-          if [ "${{ needs.wrapper-validation.result }}" != "success" ] || \
-             [ "${{ needs.security-scan.result }}" != "success" ] || \
-             [ "${{ needs.lint.result }}" != "success" ] || \
-             [ "${{ needs.detekt.result }}" != "success" ] || \
-             [ "${{ needs.unit-tests.result }}" != "success" ] || \
-             [ "${{ needs.ios-tests.result }}" != "success" ] || \
-             [ "${{ needs.build.result }}" != "success" ] || \
-             [ "${{ needs.firestore-rules.result }}" != "success" ] || \
-             [ "${{ needs.contracts.result }}" != "success" ] || \
-             [ "${{ needs.functions.result }}" != "success" ] || \
-             [ "${{ needs.validate-security-script.result }}" != "success" ] || \
-             [ "${{ needs.web-ci.result }}" != "success" ]; then
+          declare -A results=(
+            [should-run]="${{ needs.should-run.result }}"
+            [wrapper-validation]="${{ needs.wrapper-validation.result }}"
+            [security-scan]="${{ needs.security-scan.result }}"
+            [lint]="${{ needs.lint.result }}"
+            [detekt]="${{ needs.detekt.result }}"
+            [unit-tests]="${{ needs.unit-tests.result }}"
+            [ios-tests]="${{ needs.ios-tests.result }}"
+            [build]="${{ needs.build.result }}"
+            [firestore-rules]="${{ needs.firestore-rules.result }}"
+            [contracts]="${{ needs.contracts.result }}"
+            [functions]="${{ needs.functions.result }}"
+            [validate-security-script]="${{ needs.validate-security-script.result }}"
+            [web-ci]="${{ needs.web-ci.result }}"
+          )
+          failed=0
+          for job in "${!results[@]}"; do
+            result="${results[$job]}"
+            echo "$job: $result"
+            if [ "$job" = "should-run" ]; then
+              [ "$result" = "success" ] || failed=1
+            else
+              [ "$result" = "success" ] || [ "$result" = "skipped" ] || failed=1
+            fi
+          done
+          if [ "$failed" -eq 1 ]; then
             echo "❌ One or more CI jobs failed."
             exit 1
           fi
-          echo "✅ All CI jobs passed."
+          echo "✅ All CI jobs passed (or were correctly skipped as a duplicate PR run)."
 
