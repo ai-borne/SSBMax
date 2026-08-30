@@ -39,4 +39,32 @@ async function uploadImageAndGetUrl(bucket, localPath, destination, contentType)
   return { imageUrl, storagePath: destination };
 }
 
-module.exports = { uploadImageAndGetUrl };
+/**
+ * Backfill helper: for an object already sitting in Storage (no re-upload), ensures
+ * it has a `firebaseStorageDownloadTokens` value — generating and patching one via
+ * `setMetadata` if missing — then returns its download-token URL. Used to migrate
+ * pre-existing `storage.googleapis.com` records to the CSP-allowlisted host without
+ * touching object bytes or the existing public ACL (that revocation is a deliberate,
+ * separate step — see docs/plans/fuzzy-dreaming-storm.md Phase 5).
+ *
+ * @param {import('firebase-admin/storage').Bucket} bucket
+ * @param {string} storagePath - existing object path within the bucket
+ * @param {{ dryRun?: boolean }} [options] - dryRun: true inspects only, never calls
+ *   setMetadata, and returns null if no token exists yet (so callers can report
+ *   "would patch" without actually mutating Storage).
+ * @returns {Promise<string | null>} the download-token URL, or null in dry-run mode
+ *   when no token exists yet
+ */
+async function getOrCreateDownloadUrl(bucket, storagePath, options = {}) {
+  const file = bucket.file(storagePath);
+  const [metadata] = await file.getMetadata();
+  const hasToken = !!(metadata.metadata && metadata.metadata.firebaseStorageDownloadTokens);
+
+  if (!hasToken) {
+    if (options.dryRun) return null;
+    await file.setMetadata({ metadata: { firebaseStorageDownloadTokens: uuidv4() } });
+  }
+  return getDownloadURL(file);
+}
+
+module.exports = { uploadImageAndGetUrl, getOrCreateDownloadUrl };

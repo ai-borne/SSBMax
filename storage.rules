@@ -22,6 +22,14 @@ service firebase.storage {
       allow write: if false;
     }
 
+    // GPE test images (actual production path referenced by gpe_scenarios docs —
+    // gpe_images/ above covers an orphaned upload location; this one had no rule at
+    // all and fell to default deny, found during Phase 5 backfill recon)
+    match /gto/gpe/images/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // OIR test images - Authenticated read, no client write
     match /oir/pdf_questions/{allPaths=**} {
       allow read: if request.auth != null;
