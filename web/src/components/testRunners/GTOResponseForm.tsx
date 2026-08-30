@@ -9,14 +9,7 @@ import { SubmissionResultView } from '../evaluation/SubmissionResultView';
 import { FirestorePaths } from '../../generated/contracts';
 import { authService } from '../../services/AuthService';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-
-/**
- * Only GD/GPE/Lecturette have a matching `evaluateGTO` prompt path today
- * (`GTO_SUBTYPE_CONFIG` in `functions/src/evaluation/gtoEvaluate.js`) -- PGT/HGT/GOR/CT/IO
- * submissions are still created (capture-UI groundwork, plan §C.4) but never trigger
- * evaluation, since calling `evaluateGTO` on one would fail with `invalid-argument`.
- */
-const EVALUABLE_GTO_TYPES = new Set(['GTO_GD', 'GTO_GPE', 'GTO_LECTURETTE']);
+import { EVALUABLE_GTO_TYPES } from '../../constants/gtoEvaluableTypes';
 
 /** Builds the `data` payload each `gtoType` server-side prompt builder actually reads. */
 function buildSubmissionData(gtoType: string, topic: string, text: string): Record<string, unknown> {
