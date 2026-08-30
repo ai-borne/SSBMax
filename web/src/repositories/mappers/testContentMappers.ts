@@ -1,20 +1,20 @@
 import { OIRQuestion, PPDTContext, TATSet, WATBatch, SRTBatch, BatchDocument, GPEImage } from '../../types/testContent';
 
 /**
- * Normalizes gs:// Google Cloud Storage URLs to HTTPS URLs accessible via web client.
+ * Passes through Firestore-stored image URLs, dropping any stray `gs://` value.
+ *
+ * `gs://` paths used to be rewritten to `https://storage.googleapis.com/...`, but that
+ * host isn't in web's CSP `img-src` allowlist (only `firebasestorage.googleapis.com`
+ * is) and requires a `firebaseStorageDownloadTokens` value this client doesn't have —
+ * so a resolvable, CSP-compliant URL can't be built here. Upload scripts now write a
+ * pre-resolved `firebasestorage.googleapis.com` download-token URL directly, so a
+ * `gs://` value at this point means an un-backfilled placeholder; returning '' lets
+ * each caller's own no-image fallback take over instead of emitting a CSP-blocked img.
  */
 export function normalizeStorageUrl(url?: string): string {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
-  if (trimmed.startsWith('gs://')) {
-    const noGs = trimmed.slice(5);
-    const slashIdx = noGs.indexOf('/');
-    if (slashIdx !== -1) {
-      const bucket = noGs.slice(0, slashIdx);
-      const path = noGs.slice(slashIdx + 1);
-      return `https://storage.googleapis.com/${bucket}/${encodeURIComponent(path).replace(/%2F/g, '/')}`;
-    }
-  }
+  if (trimmed.startsWith('gs://')) return '';
   return trimmed;
 }
 

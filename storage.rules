@@ -21,7 +21,13 @@ service firebase.storage {
       allow read: if request.auth != null;
       allow write: if false;
     }
-    
+
+    // OIR test images - Authenticated read, no client write
+    match /oir/pdf_questions/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // User uploads and candidate submissions - AUTHENTICATED & OWNER ONLY (max 10MB & valid MIME types)
     match /user_uploads/{userId}/{allPaths=**} {
       allow read: if request.auth != null && request.auth.uid == userId;

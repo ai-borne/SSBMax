@@ -41,7 +41,6 @@ if (!fs.existsSync(batchPath)) {
 }
 
 const batch = JSON.parse(fs.readFileSync(batchPath, 'utf8'));
-const publicUrl = (file) => `https://storage.googleapis.com/${BUCKET}/${STORAGE_DIR}/${file}`;
 
 /**
  * Ingestion gate — fail-closed write-time enforcement of the SAME structural
@@ -113,6 +112,25 @@ if (validationErrors.length) {
 }
 console.log(`🔒 Ingestion gate: all ${batch.questions.length} questions pass structural validation.`);
 
+/**
+ * Non-blocking figure check (the class of bug that shipped the missing cube-question
+ * image). NOT a hard gate: `OIRQuestionType` (shared/.../domain/model/OIRTest.kt) has
+ * only 4 broad values — VERBAL_REASONING, NON_VERBAL_REASONING, NUMERICAL_ABILITY,
+ * SPATIAL_REASONING — and neither the extractor (oir_extract_v2.py/oir_extract_part3.py)
+ * nor the Kotlin validator enforces a strict type -> questionImageUrl invariant: mixed
+ * batches legitimately contain NON_VERBAL_REASONING/SPATIAL_REASONING questions with no
+ * diagram. Blocking on this would reject valid batches, so it's a warning for manual
+ * review, not an ingestion-gate failure.
+ */
+const FIGURE_LIKELY_TYPES = new Set(['NON_VERBAL_REASONING', 'SPATIAL_REASONING']);
+const suspectMissingFigure = batch.questions.filter(
+  (q) => FIGURE_LIKELY_TYPES.has(q.type) && !q.questionImageUrl
+);
+if (suspectMissingFigure.length) {
+  console.warn(`⚠️  ${suspectMissingFigure.length} question(s) are ${[...FIGURE_LIKELY_TYPES].join('/')} with no questionImageUrl — verify these aren't missing a diagram:`);
+  suspectMissingFigure.forEach((q) => console.warn(`   ${q.id} (${q.type})`));
+}
+
 // Collect the figure files referenced by this batch and validate they exist locally.
 const figures = [];
 let missing = [];
@@ -134,7 +152,7 @@ async function main() {
   if (dryRun) {
     console.log('🧪 DRY RUN — no uploads, no Firestore writes.');
     console.log(`   Would upload ${figures.length} figures to gs://${BUCKET}/${STORAGE_DIR}/`);
-    if (figures[0]) console.log(`   Sample public URL: ${publicUrl(figures[0].file)}`);
+    if (figures[0]) console.log(`   Sample storage path: ${STORAGE_DIR}/${figures[0].file}`);
     console.log(`   Would write Firestore doc: test_content/oir/batches/${batchId}`);
     const types = batch.questions.reduce((a, q) => ((a[q.type] = (a[q.type] || 0) + 1), a), {});
     console.log('   Question types:', types);
@@ -144,7 +162,8 @@ async function main() {
 
   // ---- shared Firebase initialisation (used by live upload, verify, and repair)
   const admin = require('firebase-admin');
-  const { v4: uuidv4 } = require('uuid');
+  const { getDownloadURL } = require('firebase-admin/storage');
+  const { uploadImageAndGetUrl } = require('../lib/firebaseImageUpload');
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT ||
     path.join(process.env.HOME, 'Downloads/SSBMax/firebase-admin-key.json');
   if (!fs.existsSync(serviceAccountPath)) {
@@ -200,28 +219,32 @@ async function main() {
     }
     const storedQuestions = snap.data().questions || [];
     let repaired = 0;
+    const urlByFile = {};
     for (const { file, local } of figures) {
       const destination = `${STORAGE_DIR}/${file}`;
       const [exists] = await bucket.file(destination).exists();
       if (!exists) {
-        await bucket.upload(local, {
-          destination,
-          metadata: { contentType: 'image/png', metadata: { firebaseStorageDownloadTokens: uuidv4() } },
-        });
-        await bucket.file(destination).makePublic();
+        const { imageUrl } = await uploadImageAndGetUrl(bucket, local, destination, 'image/png');
+        urlByFile[file] = imageUrl;
         console.log(`   ✅ Re-uploaded: ${file}`);
         repaired++;
+      } else {
+        urlByFile[file] = await getDownloadURL(bucket.file(destination));
       }
     }
     if (repaired === 0) {
       console.log('   ℹ️  All images already present in Storage — no re-uploads needed.');
     }
-    // Patch any placeholder gs:// URLs still in the stored questions
+    // Patch any placeholder gs:// URLs (and add storagePath) still in the stored questions
     let patched = false;
     for (const q of storedQuestions) {
       if (q.questionImageUrl && q.questionImageUrl.startsWith('gs://')) {
-        q.questionImageUrl = publicUrl(q.questionImageUrl.split('/').pop());
-        patched = true;
+        const file = q.questionImageUrl.split('/').pop();
+        if (urlByFile[file]) {
+          q.questionImageUrl = urlByFile[file];
+          q.questionImageStoragePath = `${STORAGE_DIR}/${file}`;
+          patched = true;
+        }
       }
     }
     if (patched) {
@@ -234,22 +257,21 @@ async function main() {
 
   // ---- live upload
   console.log(`📤 Uploading ${figures.length} figures...`);
+  const urlByFile = {};
   for (const { file, local } of figures) {
     const destination = `${STORAGE_DIR}/${file}`;
-    await bucket.upload(local, {
-      destination,
-      metadata: {
-        contentType: 'image/png',
-        metadata: { firebaseStorageDownloadTokens: uuidv4() },
-      },
-    });
-    await bucket.file(destination).makePublic();
+    const { imageUrl } = await uploadImageAndGetUrl(bucket, local, destination, 'image/png');
+    urlByFile[file] = imageUrl;
   }
-  console.log('   ✅ Figures uploaded & made public.');
+  console.log('   ✅ Figures uploaded.');
 
-  // Rewrite questionImageUrl placeholders to public URLs.
+  // Rewrite questionImageUrl placeholders to download-token URLs, and add storagePath.
   for (const q of batch.questions) {
-    if (q.questionImageUrl) q.questionImageUrl = publicUrl(q.questionImageUrl.split('/').pop());
+    if (q.questionImageUrl) {
+      const file = q.questionImageUrl.split('/').pop();
+      q.questionImageUrl = urlByFile[file];
+      q.questionImageStoragePath = `${STORAGE_DIR}/${file}`;
+    }
   }
 
   await docRef.set({

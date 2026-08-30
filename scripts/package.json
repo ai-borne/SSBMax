@@ -13,7 +13,9 @@
     "content:kmp-fallback:generate": "node content/generateKmpFallback.js",
     "content:kmp-fallback:check": "node content/generateKmpFallback.js --check",
     "test:content": "node --test test/content-parser.test.js test/content-document-parser.test.js test/generate-kmp-fallback.drift.test.js test/content-publish.emulator.test.js",
-    "test:content:emulator": "firebase emulators:exec --only firestore --project demo-ssbmax --config ../firebase.json \"npm run test:content\""
+    "test:content:emulator": "firebase emulators:exec --only firestore --project demo-ssbmax --config ../firebase.json \"npm run test:content\"",
+    "test:storage": "node --test test/firebase-image-upload.test.js",
+    "test:storage:emulator": "firebase emulators:exec --only storage --project demo-ssbmax --config ../firebase.json \"npm run test:storage\""
   },
   "dependencies": {
     "firebase-admin": "^12.0.0",

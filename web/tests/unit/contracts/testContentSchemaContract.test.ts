@@ -101,7 +101,11 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
     expect(result.setName).toBe('TAT Practice Set Alpha');
     expect(result.totalSlides).toBe(12);
     expect(result.imageUrls).toHaveLength(12);
-    expect(result.imageUrls[0]).toBe('https://storage.googleapis.com/ssbmax-prod.appspot.com/tat/slide_1.jpg');
+    // gs:// URLs are un-backfilled placeholders now: normalizeStorageUrl drops them
+    // (storage.googleapis.com isn't in the CSP img-src allowlist) and the mapper
+    // falls back to its Unsplash placeholder set rather than emitting a blocked URL.
+    expect(result.imageUrls[0]).not.toContain('gs://');
+    expect(result.imageUrls[0]).not.toContain('storage.googleapis.com');
     // SSB Protocol: 12th slide MUST be the blank card slide
     expect(result.imageUrls[11]).toBe('blank');
   });
@@ -169,7 +173,10 @@ describe('Firestore Test Content Schema SSOT Contract Tests (Phase 0b)', () => {
 
     expect(doc).toHaveBeenCalledWith(expect.anything(), 'test_content/ppdt/image_batches', 'ppdt_1');
     expect(result.title).toBe('PPDT Standard Image 1');
-    expect(result.imageUrl).toBe('https://storage.googleapis.com/ssbmax-prod.appspot.com/ppdt/image_1.png');
+    // gs:// is an un-backfilled placeholder: dropped, not rewritten to the CSP-blocked
+    // storage.googleapis.com host (see the TAT contract test above for the same rule).
+    expect(result.imageUrl).not.toContain('gs://');
+    expect(result.imageUrl).not.toContain('storage.googleapis.com');
     expect(result.viewingTimeSeconds).toBe(30);
     expect(result.writingTimeSeconds).toBe(240);
   });

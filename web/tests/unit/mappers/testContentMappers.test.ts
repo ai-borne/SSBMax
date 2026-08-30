@@ -10,10 +10,9 @@ import {
 
 describe('testContentMappers Unit Tests', () => {
   describe('normalizeStorageUrl', () => {
-    it('converts gs:// URLs to storage.googleapis.com HTTPS URLs', () => {
+    it('drops gs:// URLs instead of rewriting them to the CSP-blocked storage.googleapis.com host', () => {
       const gsUrl = 'gs://ssbmax-prod.appspot.com/tat/slide_01.jpg';
-      const normalized = normalizeStorageUrl(gsUrl);
-      expect(normalized).toBe('https://storage.googleapis.com/ssbmax-prod.appspot.com/tat/slide_01.jpg');
+      expect(normalizeStorageUrl(gsUrl)).toBe('');
     });
 
     it('preserves existing HTTPS and HTTP URLs', () => {
@@ -71,7 +70,7 @@ describe('testContentMappers Unit Tests', () => {
   });
 
   describe('mapDocToTATSet', () => {
-    it('normalizes URLs and appends 12th blank card per SSB protocol', () => {
+    it('drops un-backfilled gs:// slides and falls back rather than emitting a CSP-blocked URL', () => {
       const result = mapDocToTATSet('tat_1', {
         setName: 'TAT Set Alpha',
         imageUrls: [
@@ -83,8 +82,18 @@ describe('testContentMappers Unit Tests', () => {
       expect(result.setName).toBe('TAT Set Alpha');
       expect(result.totalSlides).toBe(12);
       expect(result.imageUrls).toHaveLength(12);
-      expect(result.imageUrls[0]).toBe('https://storage.googleapis.com/ssbmax-prod.appspot.com/tat/pic1.jpg');
+      expect(result.imageUrls[0]).not.toContain('gs://');
+      expect(result.imageUrls[0]).not.toContain('storage.googleapis.com');
       expect(result.imageUrls[11]).toBe('blank');
+    });
+
+    it('normalizes already-resolved firebasestorage.googleapis.com URLs unchanged', () => {
+      const url = 'https://firebasestorage.googleapis.com/v0/b/ssbmax-49e68.firebasestorage.app/o/tat%2Fpic1.jpg?alt=media&token=abc';
+      const result = mapDocToTATSet('tat_2', {
+        setName: 'TAT Set Beta',
+        imageUrls: [url]
+      });
+      expect(result.imageUrls[0]).toBe(url);
     });
   });
 
@@ -95,7 +104,8 @@ describe('testContentMappers Unit Tests', () => {
         imageUrl: 'gs://ssbmax-prod.appspot.com/ppdt/pic.png'
       });
       expect(result.title).toBe('PPDT Officer Picture');
-      expect(result.imageUrl).toBe('https://storage.googleapis.com/ssbmax-prod.appspot.com/ppdt/pic.png');
+      expect(result.imageUrl).not.toContain('gs://');
+      expect(result.imageUrl).not.toContain('storage.googleapis.com');
       expect(result.viewingTimeSeconds).toBe(30);
       expect(result.writingTimeSeconds).toBe(240);
     });
