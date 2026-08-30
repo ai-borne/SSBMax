@@ -148,18 +148,22 @@ describe('OIRTestViewModel TDD Unit Tests', () => {
     expect(state.error).toBeTruthy();
   });
 
-  it('should enqueue submission offline when network is unavailable', async () => {
+  it('should enqueue submission offline when network is unavailable, in the exact payload shape submitOIRTest expects', async () => {
     await viewModel.loadQuestions(0);
     viewModel.selectOption('q1', 1);
 
     await viewModel.submitTest('user-123', false);
     const state = viewModel.getState();
 
-    expect(mockOfflineQueue.enqueueSubmission).toHaveBeenCalledWith(
-      expect.objectContaining({
-        testType: 'OIR'
-      })
-    );
+    expect(mockOfflineQueue.enqueueSubmission).toHaveBeenCalledWith({
+      testType: 'OIR',
+      userId: 'user-123',
+      payload: {
+        batchId: 'oir-batch-0',
+        userAnswers: { q1: 1 },
+        timeTakenSeconds: expect.any(Number)
+      }
+    });
     expect(state.isCompleted).toBe(true);
   });
 });

@@ -1,21 +1,8 @@
 import { OIRQuestion } from '../types/testContent';
 import { IContentRepository } from '../repositories/interfaces/IContentRepository';
 import { OfflineQueueService } from '../services/OfflineQueueService';
-import { SubmissionService } from '../services/SubmissionService';
+import { SubmissionService, OIRSubmitPayload } from '../services/SubmissionService';
 import { EligibilityService } from '../services/EligibilityService';
-
-export interface OIRAnswerPayload {
-  questionId: string;
-  selectedOptionIndex: number;
-}
-
-export interface OIRTestSubmission {
-  userId: string;
-  testId: string;
-  answers: OIRAnswerPayload[];
-  timeTakenSeconds: number;
-  submittedAt: string;
-}
 
 export interface OIREvaluationResult {
   score: number;
@@ -168,27 +155,18 @@ export class OIRTestViewModel {
     this.state = { ...this.state, isSubmitting: true, error: null };
     this.notify();
 
-    const formattedAnswers: OIRAnswerPayload[] = Object.entries(this.state.answers).map(
-      ([questionId, selectedOptionIndex]) => ({
-        questionId,
-        selectedOptionIndex
-      })
-    );
-
-    const submission: OIRTestSubmission = {
-      userId,
-      testId: this.state.batchId || 'oir-batch-1',
-      answers: formattedAnswers,
-      timeTakenSeconds: this.totalDurationSeconds - this.state.timeRemainingSeconds,
-      submittedAt: new Date().toISOString()
-    };
-
     if (!isOnline) {
-      // Save offline queue
+      // Enqueue the exact OIRSubmitPayload shape submitOIRTest expects, so resync can
+      // replay it verbatim -- not a separate summary shape that would need reconstruction.
+      const queuedPayload: OIRSubmitPayload = {
+        batchId: this.state.batchId || 'oir-batch-1',
+        userAnswers: this.state.answers,
+        timeTakenSeconds: this.totalDurationSeconds - this.state.timeRemainingSeconds
+      };
       await this.offlineQueueService.enqueueSubmission({
         testType: 'OIR',
         userId,
-        payload: submission as unknown as Record<string, unknown>
+        payload: queuedPayload as unknown as Record<string, unknown>
       });
 
       this.state = {

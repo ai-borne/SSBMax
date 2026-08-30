@@ -100,20 +100,65 @@ describe('PsychologyTestViewModel TDD Unit Tests', () => {
     expect(vm.getState().currentSlideIndex).toBe(1);
   });
 
-  it('should queue psychology test submission offline when internet is unavailable', async () => {
+  it('should queue psychology test submission offline in the exact submitTATTest payload shape, not a summary shape', async () => {
     const vm = new PsychologyTestViewModel('TAT', mockRepo, mockOfflineQueue);
     await vm.loadTestContent('tat-1');
     vm.updateResponse('tat-content-1', 'A young officer planning a village development project.');
+    vm.updateResponse('tat-content-2', 'Story two.');
 
     await vm.submitTest('user-456', false);
     const state = vm.getState();
 
-    expect(mockOfflineQueue.enqueueSubmission).toHaveBeenCalledWith(
-      expect.objectContaining({
-        testType: 'TAT'
-      })
-    );
+    expect(mockOfflineQueue.enqueueSubmission).toHaveBeenCalledWith({
+      testType: 'TAT',
+      userId: 'user-456',
+      payload: {
+        stories: [
+          { questionId: 'tat-content-1', story: 'A young officer planning a village development project.' },
+          { questionId: 'tat-content-2', story: 'Story two.' }
+        ],
+        batchId: 'tat-1'
+      }
+    });
     expect(state.isCompleted).toBe(true);
+  });
+
+  it('should queue WAT offline submissions in the exact submitWATTest payload shape (word/response pairs, not a flat responses map)', async () => {
+    const vm = new PsychologyTestViewModel('WAT', mockRepo, mockOfflineQueue);
+    await vm.loadTestContent('wat-1');
+    vm.updateResponse('wat-word-1', 'Facing danger head-on.');
+    vm.updateResponse('wat-word-2', 'Telling the truth always.');
+
+    await vm.submitTest('user-456', false);
+
+    expect(mockOfflineQueue.enqueueSubmission).toHaveBeenCalledWith({
+      testType: 'WAT',
+      userId: 'user-456',
+      payload: {
+        responses: [
+          { word: 'COURAGE', response: 'Facing danger head-on.', timeTakenSeconds: 0 },
+          { word: 'HONESTY', response: 'Telling the truth always.', timeTakenSeconds: 0 }
+        ]
+      }
+    });
+  });
+
+  it('should queue PPDT offline submissions with questionId/batchId/story, matching submitPPDTTest', async () => {
+    const vm = new PsychologyTestViewModel('PPDT', mockRepo, mockOfflineQueue);
+    await vm.loadTestContent('ppdt-batch-1');
+    vm.updateResponse('ppdt-1', 'A story about resilience.');
+
+    await vm.submitTest('user-456', false);
+
+    expect(mockOfflineQueue.enqueueSubmission).toHaveBeenCalledWith({
+      testType: 'PPDT',
+      userId: 'user-456',
+      payload: {
+        questionId: 'ppdt-1',
+        batchId: 'ppdt-batch-1',
+        story: 'A story about resilience.'
+      }
+    });
   });
 
   describe('online submission (Phase 11b -- was previously a no-op stub)', () => {

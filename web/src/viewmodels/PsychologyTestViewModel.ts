@@ -1,10 +1,11 @@
 import { TATSet, WATBatch, SRTBatch, PPDTContext } from '../types/testContent';
 import { IContentRepository } from '../repositories/interfaces/IContentRepository';
 import { OfflineQueueService } from '../services/OfflineQueueService';
-import { SubmissionService } from '../services/SubmissionService';
+import { SubmissionService, PPDTSubmitPayload, TATSubmitPayload, WATResponseItem, SRTResponseItem, SDResponseItem } from '../services/SubmissionService';
 import { EligibilityService } from '../services/EligibilityService';
 import { recordUsageThenEvaluate } from '../services/testEvaluationOrchestrator';
 import { FirestorePaths } from '../generated/contracts';
+import { buildPsychologySubmitPayload } from './psychologySubmitPayload';
 
 export type PsychologyTestType = 'TAT' | 'WAT' | 'SRT' | 'PPDT' | 'SD';
 
@@ -13,13 +14,6 @@ export interface SlideItem {
   index: number;
   content: string; // Image URL for TAT/PPDT, Word for WAT, Situation string for SRT
   durationSeconds: number;
-}
-
-export interface PsychologySubmissionPayload {
-  userId: string;
-  testType: PsychologyTestType;
-  responses: Record<string, string>; // itemId -> candidate text response
-  submittedAt: string;
 }
 
 export interface PsychologyTestState {
@@ -203,18 +197,14 @@ export class PsychologyTestViewModel {
     this.state = { ...this.state, isSubmitting: true, error: null };
     this.notify();
 
-    const payload: PsychologySubmissionPayload = {
-      userId,
-      testType: this.state.testType,
-      responses: this.state.responses,
-      submittedAt: new Date().toISOString()
-    };
-
     if (!isOnline) {
+      // Enqueue the exact submit*Test payload shape, same derivation createSubmission() uses,
+      // so resync can replay it verbatim instead of reconstructing it from a summary shape.
+      const { testType, slides, responses, batchId } = this.state;
       await this.offlineQueueService.enqueueSubmission({
-        testType: this.state.testType,
+        testType,
         userId,
-        payload: payload as unknown as Record<string, unknown>
+        payload: buildPsychologySubmitPayload(testType, slides, responses, batchId) as unknown as Record<string, unknown>
       });
 
       this.state = {
@@ -254,40 +244,31 @@ export class PsychologyTestViewModel {
    */
   private async createSubmission(): Promise<{ submissionId: string; resultCollection: string }> {
     const { testType, slides, responses, batchId } = this.state;
+    const payload = buildPsychologySubmitPayload(testType, slides, responses, batchId);
 
     switch (testType) {
       case 'PPDT': {
-        const slide = slides[0];
-        const { submissionId } = await this.submissionService.submitPPDTTest({
-          questionId: slide.id,
-          batchId,
-          story: responses[slide.id] || ''
-        });
+        const { submissionId } = await this.submissionService.submitPPDTTest(payload as PPDTSubmitPayload);
         await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluatePPDT({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PPDT_RESULTS };
       }
       case 'TAT': {
-        const stories = slides.map((s) => ({ questionId: s.id, story: responses[s.id] || '' }));
-        const { submissionId } = await this.submissionService.submitTATTest({ stories, batchId });
+        const { submissionId } = await this.submissionService.submitTATTest(payload as TATSubmitPayload);
         await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluateTAT({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
       }
       case 'WAT': {
-        // timeTakenSeconds isn't tracked per-response on web yet; evaluateWAT doesn't score on it.
-        const responseItems = slides.map((s) => ({ word: s.content, response: responses[s.id] || '', timeTakenSeconds: 0 }));
-        const { submissionId } = await this.submissionService.submitWATTest({ responses: responseItems });
+        const { submissionId } = await this.submissionService.submitWATTest(payload as { responses: WATResponseItem[] });
         await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluateWAT({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
       }
       case 'SRT': {
-        const responseItems = slides.map((s) => ({ situation: s.content, response: responses[s.id] || '' }));
-        const { submissionId } = await this.submissionService.submitSRTTest({ responses: responseItems });
+        const { submissionId } = await this.submissionService.submitSRTTest(payload as { responses: SRTResponseItem[] });
         await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluateSRT({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
       }
       case 'SD': {
-        const responseItems = slides.map((s) => ({ answer: responses[s.id] || '' }));
-        const { submissionId } = await this.submissionService.submitSDTest({ responses: responseItems });
+        const { submissionId } = await this.submissionService.submitSDTest(payload as { responses: SDResponseItem[] });
         await recordUsageThenEvaluate(this.eligibilityService, testType, submissionId, () => this.submissionService.evaluateSD({ submissionId }));
         return { submissionId, resultCollection: FirestorePaths.PSYCH_RESULTS };
       }
