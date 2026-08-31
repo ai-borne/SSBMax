@@ -44,7 +44,7 @@ detekt = "1.23.8"
 
 # KMP Spike (Phase 0) — shared module only, isolated from existing app/core modules
 composeMultiplatform = "1.11.1"
-koin = "4.1.0"
+koin = "4.2.2"
 koinCompose = "4.1.0"
 sqldelight = "2.1.0"
 gitliveFirebase = "2.1.0"
