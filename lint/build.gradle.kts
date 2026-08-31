@@ -17,7 +17,7 @@ dependencies {
     compileOnly("com.android.tools.lint:lint-checks:32.0.0")
 
     // Kotlin standard library
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.4.10")
 
     // Testing dependencies
     testImplementation("junit:junit:4.13.2")
