@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { Lock, FileText, ExternalLink } from 'lucide-react';
+import { Lock, FileText, RefreshCw, Mail } from 'lucide-react';
 import { SSBMaxLogoIcon } from '../common/SSBMaxLogoIcon';
 import { strings } from '../../constants/strings';
 
@@ -41,14 +41,23 @@ export const Footer: FC<FooterProps> = ({ onNavClick }) => {
               <span>{strings.footer.terms}</span>
             </button>
             <span className="text-slate-300 dark:text-slate-700">|</span>
-            <a
-              href="mailto:support@ssbmax.in"
-              className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+            <button
+              onClick={() => onNavClick?.('refund')}
+              className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+              data-testid="footer-link-refund"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+              <span>{strings.footerLinks.refund}</span>
+            </button>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <button
+              onClick={() => onNavClick?.('contact')}
+              className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
               data-testid="footer-link-contact"
             >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>{strings.footer.contact}</span>
-            </a>
+              <Mail className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+              <span>{strings.footerLinks.contact}</span>
+            </button>
           </div>
         </div>
 
