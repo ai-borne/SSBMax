@@ -14,6 +14,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { verifyRazorpaySignature, timingSafeCompare } = require('./lib/razorpaySignature');
 const { emitOpsAlert, ALERT_KINDS, SEVERITIES } = require('./lib/opsAlert');
+const { isForeignAppEvent } = require('./lib/razorpayForeignEvent');
 const {
   TIER_PRICES,
   planIdToTier,
@@ -65,6 +66,13 @@ exports.handleRazorpayWebhook = functions.https.onRequest({ maxInstances: 10, se
       detail: { provider: 'RAZORPAY' }
     });
     return res.status(400).json({ status: 'error', message: 'Invalid signature' });
+  }
+
+  // Shared Razorpay account: another app's event (verified, authentic) is acknowledged and ignored.
+  // A 4xx here would make Razorpay retry it and eventually disable this webhook.
+  if (isForeignAppEvent(req.body)) {
+    console.log(`Razorpay webhook: ${req.body.event} belongs to another app on the shared account -- acknowledged, no action taken`);
+    return res.status(200).json({ status: 'ok', ignored: 'foreign_app' });
   }
 
   const event = req.body.event;
