@@ -13,6 +13,7 @@ import { contentTopicStrings } from './strings/contentTopic';
 import { publicFaqStrings } from './strings/faq';
 import { analyticsStrings } from './strings/analytics';
 import { contentBlockStrings } from './strings/content';
+import { contactStrings } from './strings/contact';
 
 export const strings = {
   ...commonStrings,
@@ -30,5 +31,6 @@ export const strings = {
   ...contentTopicStrings,
   ...publicFaqStrings,
   analytics: analyticsStrings,
-  ...contentBlockStrings
+  ...contentBlockStrings,
+  ...contactStrings
 } as const;

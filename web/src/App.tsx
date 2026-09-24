@@ -12,6 +12,8 @@ import { AnalyticsDashboardPage } from './components/analytics/AnalyticsDashboar
 import { PaymentService } from './services/PaymentService';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { TermsAndRefunds } from './components/legal/TermsAndRefunds';
+import { RefundPolicy } from './components/legal/RefundPolicy';
+import { ContactPage } from './components/legal/ContactPage';
 import { OIRTestRunner } from './components/testRunners/OIRTestRunner';
 import { PsychologyTestRunner } from './components/testRunners/PsychologyTestRunner';
 import { GTOTaskGuideRunner } from './components/testRunners/GTOTaskGuideRunner';
@@ -276,6 +278,12 @@ export const App: FC = () => {
           )}
           {activeTab === 'terms' && (
             <TermsAndRefunds onBackClick={handleBackToHome} />
+          )}
+          {activeTab === 'refund' && (
+            <RefundPolicy onBackClick={handleBackToHome} />
+          )}
+          {activeTab === 'contact' && (
+            <ContactPage onBackClick={handleBackToHome} />
           )}
           {activeTab === 'support' && <SupportSubscriptionPage />}
           {activeTab === 'analytics' && <AnalyticsDashboardPage />}
