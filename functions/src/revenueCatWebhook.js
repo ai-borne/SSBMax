@@ -154,7 +154,7 @@ async function processRevenueCatEvent(event, firestoreDb) {
 }
 
 // DoW-defense cap (Phase 5, cost & scale guardrails) -- cost & scale cap: an unauthenticated-by-nature endpoint needs an instance ceiling.
-exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }, async (req, res) => {
+exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10, secrets: ['REVENUECAT_WEBHOOK_SECRET'] }, async (req, res) => {
   const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
 
   if (!secret) {
