@@ -9,7 +9,7 @@ import { NotificationsSection } from './NotificationsSection';
 import { DataCacheSection } from './DataCacheSection';
 import { FAQSection } from './FAQSection';
 import { DeveloperSettingsCard } from './DeveloperSettingsCard';
-import { DevTierOverride } from '../../constants/ssbSelectionProcess';
+import { DevTierOverride, AccessTier } from '../../constants/ssbSelectionProcess';
 import { Gender, EntryType } from '../../types/userProfile';
 
 import { GridCardContainer } from '../common/GridCardContainer';
@@ -32,6 +32,8 @@ export interface SettingsPageProps {
   userName?: string | null;
   isGuest?: boolean;
   isPro?: boolean;
+  /** Real stored tier, forwarded to the account plan badge. */
+  userTier?: AccessTier;
   age?: number;
   gender?: Gender;
   entryType?: EntryType;
@@ -59,6 +61,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
   userName,
   isGuest = true,
   isPro = false,
+  userTier,
   age,
   gender,
   entryType,
@@ -92,6 +95,7 @@ export const SettingsPage: FC<SettingsPageProps> = ({
           userName={userName}
           isGuest={isGuest}
           isPro={isPro}
+          userTier={userTier}
           age={age}
           gender={gender}
           entryType={entryType}

@@ -60,6 +60,30 @@ describe('AppLayout Component', () => {
     expect(screen.getByTestId('nav-item-home')).toBeInTheDocument();
   });
 
+  it.each([
+    ['BASIC', strings.subscription.ribbonBasicBadge],
+    ['PRO', strings.subscription.ribbonProBadge],
+    ['PREMIUM', strings.subscription.ribbonPremiumBadge]
+  ] as const)('labels the header badge with the real tier (%s), not always PRO', (tier, label) => {
+    render(
+      <AppLayout activeTab="home" user={mockUser} isPaidMember userTier={tier}>
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    expect(screen.getByTestId('pro-membership-badge')).toHaveTextContent(label);
+  });
+
+  it('hides the header badge when userTier is FREE even if isPaidMember is stale-true', () => {
+    render(
+      <AppLayout activeTab="home" user={mockUser} isPaidMember userTier="FREE">
+        <div>Content</div>
+      </AppLayout>
+    );
+
+    expect(screen.queryByTestId('pro-membership-badge')).not.toBeInTheDocument();
+  });
+
   it('does not render the PRO badge for a FREE-tier authenticated user', () => {
     render(
       <AppLayout activeTab="home" user={mockUser} isPaidMember={false}>

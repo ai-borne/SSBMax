@@ -22,6 +22,17 @@ describe('SettingsPage Component', () => {
     expect(screen.getByTestId('pwa-status-value')).toHaveTextContent('Active (Workbox SW)');
   });
 
+  it.each([
+    ['BASIC', strings.subscription.basicPlanTitle],
+    ['PRO', strings.subscription.proPlanTitle],
+    ['PREMIUM', strings.subscription.premiumPlanTitle]
+  ] as const)('shows the real plan (%s) in the account badge, not always Pro', (tier, title) => {
+    render(<SettingsPage isPro userTier={tier} />);
+
+    expect(screen.getByTestId('pro-pass-badge')).toHaveTextContent(title);
+    expect(screen.queryByTestId('upgrade-pass-btn')).not.toBeInTheDocument();
+  });
+
   it('triggers account action handlers for edit profile, upgrade pass, and sign out', () => {
     const onEditProfile = vi.fn();
     const onUpgrade = vi.fn();

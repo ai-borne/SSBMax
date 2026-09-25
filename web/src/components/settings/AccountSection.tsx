@@ -3,6 +3,8 @@ import { User, ShieldAlert, Sparkles, LogOut, Edit3, Award, Target, Trash2, User
 import { strings } from '../../constants/strings';
 import { GridCardContainer } from '../common/GridCardContainer';
 import { Gender, EntryType } from '../../types/userProfile';
+import type { AccessTier } from '../../constants/ssbSelectionProcess';
+import { tierPlanTitle, resolveDisplayTier } from '../../constants/tierLabels';
 
 const GENDER_LABELS: Record<Gender, string> = {
   MALE: 'Male',
@@ -21,6 +23,8 @@ export interface AccountSectionProps {
   userName?: string | null;
   isGuest?: boolean;
   isPro?: boolean;
+  /** Real stored tier; labels the plan badge (Basic / Pro / Premium). Falls back to `isPro`. */
+  userTier?: AccessTier;
   age?: number;
   gender?: Gender;
   entryType?: EntryType;
@@ -41,6 +45,7 @@ export const AccountSection: FC<AccountSectionProps> = ({
   userName = 'Officer Cadet Candidate',
   isGuest = true,
   isPro = false,
+  userTier,
   age,
   gender,
   entryType,
@@ -55,9 +60,11 @@ export const AccountSection: FC<AccountSectionProps> = ({
   onCancelDeletion,
 }) => {
   const deletionPending = deletionRequestedAt != null;
+  const displayTier = resolveDisplayTier(userTier, isPro);
+  const isPaid = displayTier !== 'FREE';
   return (
     <GridCardContainer
-      variant={isPro ? 'pro' : 'free'}
+      variant={isPaid ? 'pro' : 'free'}
       testId="account-section"
       className="p-6 space-y-5"
     >
@@ -70,10 +77,10 @@ export const AccountSection: FC<AccountSectionProps> = ({
           <p className="text-xs text-slate-500 dark:text-slate-400">{strings.account.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          {isPro ? (
+          {isPaid ? (
             <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-1.5" data-testid="pro-pass-badge">
               <Award className="w-3.5 h-3.5" />
-              <span>{strings.subscription.proPlanTitle}</span>
+              <span>{tierPlanTitle(displayTier)}</span>
             </span>
           ) : (
             <span className="px-3 py-1 rounded-full bg-slate-500/10 border border-slate-500/30 text-slate-600 dark:text-slate-400 text-xs font-bold" data-testid="free-pass-badge">
@@ -177,7 +184,7 @@ export const AccountSection: FC<AccountSectionProps> = ({
           </button>
         )}
 
-        {!isPro && onUpgrade && (
+        {!isPaid && onUpgrade && (
           <button
             onClick={onUpgrade}
             className="min-h-[44px] px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-emerald-600 hover:from-sky-500 hover:to-emerald-500 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-2"
