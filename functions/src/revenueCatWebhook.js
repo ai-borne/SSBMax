@@ -5,14 +5,13 @@
  * EXPIRATION/CANCELLATION/PRODUCT_CHANGE/...) and writes `tier`/`startDate`/`expiryDate`/
  * `billingCycle` to `users/{uid}/data/subscription` -- the same Firestore doc shape Phase 3
  * built (`SubscriptionTierDto`) and the one every real gating read path consults
- * (`GitLiveSubscriptionRepository`/web's `SubscriptionRepository`/`eligibility.js`). This is
- * Android/iOS's equivalent of `webhooks.js`'s `applySubscriptionTier` -- RevenueCat doesn't
- * support Razorpay, so web keeps its own Razorpay webhook path.
+ * (`GitLiveSubscriptionRepository`/web's `SubscriptionRepository`/`eligibility.js`). This is the
+ * ONLY writer of that doc: purchases happen in the App Store / Play Store, and the web only
+ * reads the entitlement. A legacy doc carrying `source: 'RAZORPAY'` is simply overwritten.
  *
  * Auth: RevenueCat's HMAC signature scheme -- header `X-RevenueCat-Webhook-Signature`,
  * format `t=<unix_ts>,v1=<hex hmac-sha256 of "<ts>.<raw body>">`, keyed on the signing
- * secret configured alongside the webhook URL in the RC dashboard. Mirrors
- * `webhooks.js`'s `timingSafeCompare` HMAC pattern for Razorpay.
+ * secret configured alongside the webhook URL in the RC dashboard.
  */
 
 const functions = require('firebase-functions');
@@ -25,8 +24,7 @@ const {
   REVOKE_EVENT_TYPES,
   BILLING_ISSUE_EVENT_TYPE,
   TRANSFER_EVENT_TYPE,
-  isSubscriptionActive,
-  resolveReconciliation
+  isSubscriptionActive
 } = require('./lib/revenueCatReconciliation');
 const { processRevenueCatTransferEvent } = require('./lib/revenueCatTransfer');
 const { verifySignature, SIGNATURE_FRESHNESS_WINDOW_MS } = require('./lib/revenueCatSignature');
@@ -125,39 +123,17 @@ async function processRevenueCatEvent(event, firestoreDb) {
       tier: GRANT_EVENT_TYPES.has(eventType) ? entitlementIdsToTier(event.entitlement_ids) : 'FREE',
       expiryDate: event.expiration_at_ms || null
     };
-    const existing = {
-      source: existingData.source || null,
-      tier: existingData.tier || 'FREE',
-      expiryDate: existingData.expiryDate != null ? existingData.expiryDate : null
-    };
-
-    const resolved = resolveReconciliation(existing, incoming, Date.now());
-
-    if (resolved.conflict) {
-      console.error('RevenueCat webhook: cross-platform subscription conflict detected -- not overwriting', {
-        userId,
-        eventType,
-        incoming,
-        existing,
-        resolvedTier: resolved.tier
-      });
-    }
-
     const writeData = {
-      tier: resolved.tier,
+      tier: incoming.tier,
       startDate: GRANT_EVENT_TYPES.has(eventType) ? existingStartDate || Date.now() : existingStartDate || 0,
-      expiryDate: resolved.expiryDate,
+      expiryDate: incoming.expiryDate,
       billingCycle: 'MONTHLY',
-      // Marks this doc as owned by the mobile/RevenueCat path -- see `webhooks.js`'s
-      // `applySubscriptionTier` doc comment for why this exists (dual-purchase gate).
-      source: resolved.source,
+      // Marks this doc as owned by RevenueCat (also re-labels any legacy `RAZORPAY` doc).
+      source: incoming.source,
       // A following GRANT/REVOKE clears any earlier billing-issue flag -- it's resolved either
       // way (the subscription renewed, or it's gone).
       billingIssueAt: null
     };
-    if (resolved.conflict) {
-      writeData.conflictDetectedAt = admin.firestore.FieldValue.serverTimestamp();
-    }
     if (eventAtMs != null) {
       writeData.lastEventAtMs = eventAtMs;
     }
@@ -168,17 +144,16 @@ async function processRevenueCatEvent(event, firestoreDb) {
       eventId,
       userId,
       eventType,
-      tier: resolved.tier,
+      tier: incoming.tier,
       status: 'processed',
       processedAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    return { success: true, tier: resolved.tier, conflict: resolved.conflict, userId };
+    return { success: true, tier: incoming.tier, userId };
   });
 }
 
-// DoW-defense cap (Phase 5, cost & scale guardrails) -- same rationale as webhooks.js's
-// identical addition: an unauthenticated-by-nature endpoint with no prior instance ceiling.
+// DoW-defense cap (Phase 5, cost & scale guardrails) -- cost & scale cap: an unauthenticated-by-nature endpoint needs an instance ceiling.
 exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }, async (req, res) => {
   const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
 
@@ -252,15 +227,6 @@ exports.handleRevenueCatWebhook = functions.https.onRequest({ maxInstances: 10 }
       return res.status(200).json({ status: 'ok', stale: true });
     }
 
-    if (result.conflict) {
-      await emitOpsAlert(db, {
-        kind: ALERT_KINDS.WEBHOOK_RECONCILIATION_CONFLICT,
-        severity: SEVERITIES.HIGH,
-        userId,
-        detail: { source: 'REVENUECAT', eventType, resolvedTier: result.tier }
-      });
-    }
-
     console.log(`RevenueCat webhook: user ${userId} -> ${result.tier} (event ${eventType})`);
     return res.status(200).json({ status: 'ok' });
   } catch (txError) {
@@ -276,7 +242,6 @@ exports.entitlementIdsToTier = entitlementIdsToTier;
 exports.verifySignature = verifySignature;
 exports.SIGNATURE_FRESHNESS_WINDOW_MS = SIGNATURE_FRESHNESS_WINDOW_MS;
 exports.isSubscriptionActive = isSubscriptionActive;
-exports.resolveReconciliation = resolveReconciliation;
 exports.processRevenueCatEvent = processRevenueCatEvent;
 exports.TRANSFER_EVENT_TYPE = TRANSFER_EVENT_TYPE;
 exports.processRevenueCatTransferEvent = processRevenueCatTransferEvent;

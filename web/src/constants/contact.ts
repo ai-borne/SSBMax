@@ -1,4 +1,4 @@
-/** SSOT for the studio's public contact details (support, billing, refunds, Razorpay KYC). */
+/** SSOT for the studio's public contact details (support, billing and refund queries). */
 export const CONTACT_DETAILS = {
   email: 'founder@ai-borne.in',
   phoneE164: '+918936995020',

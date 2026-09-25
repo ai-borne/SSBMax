@@ -2,12 +2,11 @@
  * SSOT for cross-platform subscription drift repair (Phase 7, Payment Ecosystem Hardening plan).
  *
  * `scheduledSubscriptionReconciliation.js` only ever downgrades a stale doc to FREE -- there was
- * no path that detected "the provider (Razorpay/RevenueCat) says this subscription is active, but
+ * no path that detected "the provider (RevenueCat) says this subscription is active, but
  * Firestore says FREE (or a lower tier)". A missed grant/renewal webhook silently strands a paying
  * customer with no detection and no repair, which is commercially worse than a missed downgrade
- * (which merely leaks a little free access). `subscriptions/scheduledRazorpayDriftSweep.js`
- * (server-enumerable Razorpay) and `subscriptions/repairMobileEntitlement.js` (client-triggered,
- * RC-verified) both call this single pure function rather than hand-writing a second copy of the
+ * (which merely leaks a little free access). `subscriptions/repairMobileEntitlement.js` (client-triggered,
+ * RC-verified) calls this single pure function rather than hand-writing a copy of the
  * drift rule -- this is exactly the H1 mistake (four hand-written copies of "is this tier still
  * active") this plan already spent a phase closing; see `lib/effectiveTier.js`'s doc comment.
  *
@@ -35,7 +34,7 @@ const DRIFT_ACTIONS = Object.freeze({
 
 /**
  * @param providerState `{ status: 'ACTIVE'|'CANCELLED'|'HALTED'|'UNKNOWN', tier, expiryDate }` as
- *   read straight from the provider (Razorpay subscription entity / RevenueCat CustomerInfo) --
+ *   read straight from the provider (RevenueCat CustomerInfo) --
  *   `tier`/`expiryDate` are only consulted when `status === 'ACTIVE'`. `null`/`undefined` is
  *   treated the same as `status: 'UNKNOWN'`.
  * @param storedState `{ tier, expiryDate }` as currently written to `users/{uid}/data/subscription`.

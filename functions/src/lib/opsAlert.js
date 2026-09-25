@@ -1,11 +1,10 @@
 /**
  * Ops alert emitter (Payment Ecosystem Hardening plan). Started as a Phase 7 prerequisite so the
- * drift-repair mechanisms (`subscriptions/scheduledRazorpayDriftSweep.js`,
- * `subscriptions/repairMobileEntitlement.js`) had somewhere to signal "I just repaired a stranded
+ * drift-repair mechanism (`subscriptions/repairMobileEntitlement.js`) had somewhere to signal "I just repaired a stranded
  * paying customer" / "a client tried to claim an entitlement RevenueCat doesn't confirm" the
  * moment they shipped, rather than that evidence vanishing into Cloud Logging with nobody
  * subscribed. Phase 8 ("One alert destination") extended it to the whole system -- reconciliation
- * corrections, both webhooks' `conflictDetectedAt` writes, and webhook signature failures all go
+ * corrections, legacy `conflictDetectedAt` writes, and webhook signature failures all go
  * through the same `ALERT_KINDS` map and the same two sinks (`ops_alerts` doc + labelled
  * `console.error`) -- and provisioned the delivery channel that actually turns these log lines
  * into a human notification: `functions/scripts/set-ops-alerting.js` creates the Cloud Monitoring
@@ -32,12 +31,10 @@ const ALERT_KINDS = Object.freeze({
    * docs this run -- each correction is itself evidence a webhook was missed (M2's original
    * framing: this cron's corrections were the intended signal, and until now nothing read them). */
   RECONCILIATION_CORRECTION: 'RECONCILIATION_CORRECTION',
-  /** Phase 8: `revenueCatWebhook.js`/`lib/razorpaySubscriptionWebhook.js`'s `resolveReconciliation`
-   * detected a cross-platform conflict (both an active RevenueCat and an active Razorpay
-   * subscription for the same user) and refused to silently overwrite -- this is what actually
-   * closes M2 for the `conflictDetectedAt` writes, which were previously read by nothing. */
+  /** Phase 8: HISTORICAL -- no longer emitted: it flagged a RevenueCat/Razorpay cross-platform
+   * conflict, and RevenueCat is now the only writer. Kept so old `ops_alerts` docs still map. */
   WEBHOOK_RECONCILIATION_CONFLICT: 'WEBHOOK_RECONCILIATION_CONFLICT',
-  /** Phase 8: a Razorpay or RevenueCat webhook request failed HMAC signature verification -- either
+  /** Phase 8: a RevenueCat webhook request failed HMAC signature verification -- either
    * a misconfigured secret (every legitimate webhook would then fail) or a forged request. */
   SIGNATURE_VERIFICATION_FAILED: 'SIGNATURE_VERIFICATION_FAILED',
   /** Phase 8: `functions/scripts/set-ops-alerting.js --smoke` -- never emitted by production code.
@@ -50,9 +47,8 @@ const ALERT_KINDS = Object.freeze({
    * every sweep the conflict remains unresolved, which is the actual signal a human missed the
    * first alert. */
   UNRESOLVED_SUBSCRIPTION_CONFLICT: 'UNRESOLVED_SUBSCRIPTION_CONFLICT',
-  /** Phase 11 (M5): a Razorpay webhook request carried no stable event id (`event_id` field or
-   * `x-razorpay-event-id` header) -- rejected rather than processed under an invented id, since an
-   * invented id can never dedupe a retry of the same event. */
+  /** Phase 11 (M5): HISTORICAL -- no longer emitted: it was raised by the retired Razorpay webhook when a
+   * request carried no stable event id. Kept so old `ops_alerts` docs still map. */
   MISSING_WEBHOOK_EVENT_ID: 'MISSING_WEBHOOK_EVENT_ID'
 });
 

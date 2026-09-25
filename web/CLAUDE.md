@@ -20,7 +20,7 @@ React 19 + TypeScript 5.7 + Vite 5.4 + Tailwind CSS 3.4 Progressive Web App depl
 | Auth | Firebase Auth v10 (Google OAuth 2.0) |
 | Database | Cloud Firestore (client SDK — reads only; writes via Cloud Functions) |
 | Offline | Workbox PWA (`vite-plugin-pwa`) + IndexedDB (`OfflineQueueService`) |
-| Payments | Razorpay (order creation + HMAC webhook verification via Cloud Functions) |
+| Payments | None on web. Store billing only (App Store / Google Play via RevenueCat); the web reads the entitlement and shows "manage in your app store" |
 | Tests | Vitest + Testing Library + JSDOM |
 | Hosting | Cloudflare Pages (static build, edge CDN) |
 
@@ -43,7 +43,7 @@ src/
 │   │                   #   GTO/Interview capture is plain multiline textarea + char counter, no media)
 │   ├── evaluation/     # PsychologistDossier report viewer
 │   ├── reports/        # AIReportsPage — OLQ dashboard, routed via `activeTab === 'reports'` in App.tsx
-│   ├── subscription/   # SubscriptionPage + Razorpay triggers
+│   ├── subscription/   # SubscriptionPage (read-only entitlement view, no checkout)
 │   ├── settings/       # SettingsPage
 │   ├── account/        # AccountPage
 │   ├── onboarding/     # First-run onboarding
@@ -60,8 +60,7 @@ src/
 ├── services/           # Side-effect singletons
 │   ├── AuthService.ts
 │   ├── AntiCheatService.ts
-│   ├── OfflineQueueService.ts
-│   └── RazorpayService.ts
+│   └── OfflineQueueService.ts
 ├── hooks/              # Reusable React hooks (useTheme, useAntiCheat, useTabRouting…)
 ├── constants/
 │   ├── strings.ts      # SSOT barrel — re-exports all domain string modules
@@ -160,7 +159,6 @@ Services (`src/services/`) are **singletons** that encapsulate side-effectful AP
 | `AuthService` | Firebase Auth sign-in / sign-out / auth state |
 | `AntiCheatService` | Context-menu suppression, DevTools blocking, tab-switch detection |
 | `OfflineQueueService` | IndexedDB queue, SHA-256 HMAC checksum, reconnect sync |
-| `RazorpayService` | Razorpay checkout SDK initialization and order flow |
 
 - Services must not import React hooks or components.
 - `OfflineQueueService` validates `auth.currentUser` before every queue flush — never flush anonymously.
@@ -193,7 +191,7 @@ These behaviors are security controls, not UX polish. Never remove or weaken the
 
 These supplement the root CLAUDE.md security principles:
 
-1. **Zero secrets in client bundle.** `GEMINI_API_KEY`, `RAZORPAY_KEY_SECRET`, and Firebase service account keys never leave Cloud Functions.
+1. **Zero secrets in client bundle.** `GEMINI_API_KEY` and Firebase service account keys never leave Cloud Functions.
 2. **HMAC payment verification** is server-side only (`functions/src/webhooks.js`). Client only triggers; it never trusts its own payment result.
 3. **CSP / HSTS headers** are defined in `web/public/_headers` and must not be loosened. `'unsafe-inline'` scripts are forbidden.
 4. **Candidate written responses** are XML-boundary-escaped before Gemini evaluation (handled in `functions/src/aiAnalysis.js`). Web client must not pre-process or modify the raw response text before sending to Cloud Functions.

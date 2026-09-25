@@ -1,5 +1,7 @@
 # Subscription Tier & Pricing Restructure (SSBMax-kmp)
 
+> **Payments update, 2026-09-25:** this plan predates store-only billing. Razorpay (web orders, subscriptions, the `handleRazorpayWebhook` / `createRazorpayOrder` functions named below) has been **retired**. Purchases happen only in the App Store / Google Play via RevenueCat, RevenueCat is the only writer of the tier document, and the website only reads it. The tier/price/limit model below (FREE / BASIC ₹299 / PRO ₹499 / PREMIUM ₹999, `contracts/pricing.yaml`) is unchanged. For the current payment architecture see [`../architecture/Subscription_Payments_Architecture.md`](../architecture/Subscription_Payments_Architecture.md). The Razorpay-specific steps below are historical.
+
 ## Context
 
 We finalized new subscription economics (see prior analysis): a 4-tier model —

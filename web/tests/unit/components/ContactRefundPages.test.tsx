@@ -1,8 +1,7 @@
 /**
- * Razorpay activation needs a standalone Refund & Cancellation page and a Contact page with
- * email, phone and physical address, both linked from the footer and reachable signed out.
- * The refund page must reuse SSBMax's existing policy copy (strings.terms / strings.subscription),
- * never invent terms of its own.
+ * A standalone Refund & Cancellation page and a Contact page with email, phone and physical
+ * address, both linked from the footer and reachable signed out. Billing is store-only (Apple /
+ * Google), so the refund page must describe store refunds and never promise our own or name Razorpay.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -43,12 +42,20 @@ describe('ContactPage', () => {
 });
 
 describe('RefundPolicy', () => {
-  it('reuses the existing refund and cancellation policy copy and says how to ask', () => {
+  it('describes store billing: refunds and cancellation are handled by Apple / Google, and says how to get help', () => {
     render(<RefundPolicy />);
     expect(screen.getByTestId('refund-title')).toHaveTextContent(strings.refundPolicy.title);
     expect(screen.getByText(strings.terms.sec2Text)).toBeInTheDocument();
-    expect(screen.getByText(strings.subscription.cancelConfirmBody)).toBeInTheDocument();
+    expect(screen.getByText(strings.refundPolicy.cancelText)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: CONTACT_DETAILS.email })).toHaveAttribute('href', `mailto:${CONTACT_DETAILS.email}`);
+    expect(strings.terms.sec2Text).toMatch(/App Store/);
+    expect(strings.terms.sec2Text).toMatch(/Google Play/);
+  });
+
+  it('never mentions Razorpay or a self-issued money-back guarantee anywhere in the user-facing copy', () => {
+    const copy = JSON.stringify([strings.refundPolicy, strings.terms, strings.faq, strings.subscription, strings.upgradeGate]);
+    expect(copy).not.toMatch(/razorpay/i);
+    expect(copy).not.toMatch(/money-back/i);
   });
 
   it('triggers onBackClick', () => {

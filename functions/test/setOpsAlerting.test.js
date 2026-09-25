@@ -1,7 +1,7 @@
 /**
  * Phase 8 (Payment Ecosystem Hardening plan, "One alert destination"): tests for
  * `scripts/set-ops-alerting.js`. Every network call goes through an injectable `{ request }`
- * client (mirroring `lib/razorpayClient.js`'s `fetchImpl` convention) so these run against a fake,
+ * client (an injectable `fetchImpl`-style convention) so these run against a fake,
  * never a live GCP project.
  */
 

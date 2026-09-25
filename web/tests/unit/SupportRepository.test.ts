@@ -23,10 +23,8 @@ describe('SupportRepository', () => {
     const snapshot = {
       userId: 'user-1',
       firestore: { tier: 'PREMIUM' },
-      razorpay: null,
       revenueCat: { status: 'NONE' },
-      alerts: { items: [], hasMore: false },
-      conflict: null
+      alerts: { items: [], hasMore: false }
     };
     const callable = vi.fn().mockResolvedValue({ data: snapshot });
     vi.mocked(httpsCallable).mockReturnValue(callable as unknown as HttpsCallable);

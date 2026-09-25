@@ -1,8 +1,8 @@
 /**
  * Idempotent create-if-absent + `--verify` logic for `set-ops-alerting.js` (Phase 8, Payment
  * Ecosystem Hardening plan). Split out of that file purely to keep it under the 300-LOC cap.
- * Every network call goes through an injectable `client.request()` (mirroring
- * `lib/razorpayClient.js`'s `fetchImpl` convention), so this module is testable against a fake
+ * Every network call goes through an injectable `client.request()` (an
+ * injectable `fetchImpl`-style convention), so this module is testable against a fake
  * client, never a live GCP project.
  */
 

@@ -5,7 +5,7 @@
  * `SubscriptionRepository.ts`) is the primary defense against a missed webhook -- an expired
  * doc already reads as FREE everywhere, even if this cron never ran. This function is the
  * cleanup/monitoring backstop: it downgrades the *stored* `tier` field itself so it stops lying
- * on disk, and every correction it makes is itself a signal that some webhook (RC or Razorpay)
+ * on disk, and every correction it makes is itself a signal that some RevenueCat webhook
  * was missed, worth alerting on.
  *
  * Two independent sweeps run on the same schedule (Phase 11, M2 adds the second):
@@ -19,8 +19,7 @@
  * subcollection (see firestore.rules' `match /data/{document}` comment: "for profile, settings,
  * etc"). A bare `collectionGroup('data')` query would therefore also scan profile docs. Scoped
  * here with `billingCycle == 'MONTHLY'`, a field only ever written by the subscription-tier
- * write paths (`applySubscriptionTier` in webhooks.js, `revenueCatWebhook.js`, and this same
- * file's Razorpay subscription-family handler) -- Firestore excludes documents missing a
+ * write paths (`revenueCatWebhook.js` and `repairMobileEntitlement.js`) -- Firestore excludes documents missing a
  * filtered field, so profile docs (which never set `billingCycle`) never match, before the
  * `tier`/`expiryDate` filters even run.
  */
@@ -70,7 +69,7 @@ const MAX_BATCHES_PER_RUN = 8; // up to 2000 docs/invocation at the default BATC
 /**
  * Sweeps stale (`tier != FREE`, `expiryDate` in the past) subscription docs and downgrades them
  * to FREE, paginated in pages of `batchSize` up to `maxBatches` pages this invocation. Legacy
- * grandfathered Razorpay one-time-order docs (`expiryDate == null`) are naturally excluded --
+ * grandfathered docs (`expiryDate == null`) are naturally excluded --
  * Firestore's `<` comparison never matches a missing/null field.
  *
  * `source` is left untouched (historical record of which platform last owned the doc);
