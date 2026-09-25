@@ -42,6 +42,6 @@ export const upgradeGateStrings = {
   subtext: 'Access Stage II TAT, WAT, SRT, SD batteries and full 15 OLQ radar reports.',
   benefit1: 'Full Stage II Psychology Test Batteries (TAT 12, WAT 60, SRT 60, SD 5)',
   benefit2: 'Instant Assessor Dossier & 15 Officer Like Qualities (OLQ) Breakdowns',
-  benefit3: '100% Refund Policy & 256-Bit Razorpay Encryption Guarantee',
+  benefit3: 'Billed securely through the App Store or Google Play',
   cta: 'Upgrade to Pro Officer Pass'
 } as const;

@@ -31,7 +31,7 @@ This document provides an enterprise-grade architecture overview of **`ssbmax.in
 |          Data & Auth Persistence          |                     |         Serverless Compute Layer          |
 |              Google Firebase              |                     |          Firebase Cloud Functions          |
 |  - Firebase Auth (Google OAuth 2.0)       |                     |  - Gemini 2.5 Flash Evaluation            |
-|  - Firestore DB (Strict Security Rules)   |                     |  - Razorpay Order & HMAC Verification     |
+|  - Firestore DB (Strict Security Rules)   |                     |  - RevenueCat Webhook (entitlement writer)|
 +-------------------------------------------+                     |  - Server-Side OIR Evaluation (Anti-Cheat)|
                                                                   +---------------------+---------------------+
                                                                                         |
@@ -39,7 +39,7 @@ This document provides an enterprise-grade architecture overview of **`ssbmax.in
                                                                   +-------------------------------------------+
                                                                   |         External Vendor Services          |
                                                                   |  - Google Gemini 2.5 Flash API            |
-                                                                  |  - Razorpay Payment Gateway (UPI/Cards)   |
+                                                                  |  - RevenueCat / App Store / Google Play   |
                                                                   +-------------------------------------------+
 ```
 
@@ -54,9 +54,8 @@ This document provides an enterprise-grade architecture overview of **`ssbmax.in
 ### B. Security & Anti-Cheating Framework
 * **OIR Anti-Cheating**: OIR test queries explicitly strip `correctAnswerIndex` on the client. Test responses are submitted to the `evaluateOIRAnswers` Cloud Function for secure server-side scoring.
 * **Gemini Prompt Injection Defense**: Candidate written responses are sanitized and isolated inside `<candidate_response>` XML boundary tags in Cloud Functions before Gemini AI evaluation.
-* **Razorpay HMAC Verification**: Server-side Crypto SHA256 HMAC signature verification on all Razorpay payments.
-* **Razorpay Webhook SSOT**: Server-to-server webhook (`handleRazorpayWebhook`) listening to `payment.captured` acts as the primary authority for updating `isPaidMember: true`.
-* **Zero Secret Exposure**: API keys (`GEMINI_API_KEY`, `RAZORPAY_KEY_SECRET`) strictly isolated in serverless environments. CI runs `./scripts/validate-security.sh` to block key leaks.
+* **Store-only billing**: Razorpay was retired on 2026-09-25. Purchases happen in the App Store / Google Play; RevenueCat's HMAC-verified webhook (`handleRevenueCatWebhook`) is the only writer of `users/{uid}/data/subscription`, and the web only reads it. See `docs/architecture/Subscription_Payments_Architecture.md`.
+* **Zero Secret Exposure**: API keys (`GEMINI_API_KEY`) strictly isolated in serverless environments. CI runs `./scripts/validate-security.sh` to block key leaks.
 
 ### C. PWA Offline & Background Sync Architecture
 * **App Shell & Image Caching**: Workbox Service Worker configured with `StaleWhileRevalidate` for images and static assets.
@@ -105,7 +104,7 @@ This document provides an enterprise-grade architecture overview of **`ssbmax.in
 
 ### C. Serverless Backend Cloud Functions Integration
 * Deploy `evaluateOIRAnswers` Cloud Function (anti-cheating answer scoring).
-* Deploy `createRazorpayOrder` & `handleRazorpayWebhook` Cloud Functions with `notes: { userId }` metadata.
+* Deploy `handleRevenueCatWebhook` (RevenueCat is the only entitlement writer; the earlier Razorpay functions were retired 2026-09-25).
 * Deploy `analyzeResponse` Gemini 2.5 Flash evaluation trigger with XML boundary shielding and Firestore transactional lock (`isEvaluating: true`).
 
 ### D. CDN Assets Upload
@@ -133,7 +132,7 @@ This document provides an enterprise-grade architecture overview of **`ssbmax.in
 | **M1: Core UI & Web App Shell** | Build React 19 SPA + PWA + Design Tokens + Unit Tests | 108 Vitest tests green, local dev server running | ✅ **Completed** |
 | **M2: Cloudflare Deployment & Git Setup** | Connect Git to Cloudflare Pages, setup `ssbmax.in` DNS | Cloudflare Pages `ssbmax-web` deployed, HTTP security headers verified | ✅ **Completed** |
 | **M3: Production Auth & Data Sync** | Enable Google OAuth & Firestore live data sync | Registered Web App `1:836687498591:web:8344203ceec988e5f3baea`, Authorized Domains updated | ✅ **Completed** |
-| **M4: Payments & Gemini AI Backend** | Deploy Cloud Functions for Razorpay & Gemini 2.5 Flash | All Node.js 22 Cloud Functions (`createRazorpayOrder`, `evaluateOIRAnswers`, `handleRazorpayWebhook`, `analyzeResponse`) deployed | ✅ **Completed** |
+| **M4: Payments & Gemini AI Backend** | Deploy Cloud Functions for RevenueCat entitlements & Gemini 2.5 Flash | All Node.js 22 Cloud Functions (`handleRevenueCatWebhook`, `evaluateOIRAnswers`, `analyzeResponse`); Razorpay functions retired 2026-09-25 deployed | ✅ **Completed** |
 | **M5: Production Launch & Hardening** | Full end-to-end security audit & domain verification | Security audit passed (`./scripts/validate-security.sh`), production build verified | ✅ **Completed** |
 
 ---
@@ -153,7 +152,7 @@ A production-ready, enterprise-grade web application (`ssbmax.in`) that is:
 | Security Domain | Applied Controls & Defense Mechanisms | Verification & Compliance |
 | :--- | :--- | :--- |
 | **Edge & Network Security (`Cloudflare Pages`)** | • 2-year HSTS (`max-age=63072000; includeSubDomains; preload`) in [`_headers`](file:///Users/sunil/Downloads/SSBMax-kmp/web/public/_headers).<br>• Strict Content Security Policy with `frame-ancestors 'none'`, `object-src 'none'`, `upgrade-insecure-requests`, and no `'unsafe-inline'` script tags.<br>• `Cross-Origin-Resource-Policy: cross-origin` header.<br>• RFC 9116 compliant [`security.txt`](file:///Users/sunil/Downloads/SSBMax-kmp/web/public/.well-known/security.txt) policy. | Validated via [`web/tests/security/headers.test.ts`](file:///Users/sunil/Downloads/SSBMax-kmp/web/tests/security/headers.test.ts) (100% green). |
-| **Serverless Cloud Functions (`functions/src/`)** | • Modular architecture (< 300 LOC per file): [`webhooks.js`](file:///Users/sunil/Downloads/SSBMax-kmp/functions/src/webhooks.js), [`payments.js`](file:///Users/sunil/Downloads/SSBMax-kmp/functions/src/payments.js), [`aiAnalysis.js`](file:///Users/sunil/Downloads/SSBMax-kmp/functions/src/aiAnalysis.js), [`oirScoring.js`](file:///Users/sunil/Downloads/SSBMax-kmp/functions/src/oirScoring.js).<br>• Constant-time HMAC signature verification via `crypto.timingSafeEqual()` against timing side-channel attacks.<br>• Mandatory `RAZORPAY_WEBHOOK_SECRET` verification (HTTP 500 error on missing secret in prod mode).<br>• Atomic Firestore transactions (`db.runTransaction`) with `payments/{paymentId}` primary key mapping for multi-user replay protection and server-side INR currency validation.<br>• Gemini 2.5 Flash DoW 4,000-character ceiling across both inline and session evaluation endpoints with explicit `invalid-argument` error rejections.<br>• Prompt injection defense via XML entity escaping, system prompt boundary instructions, and regex JSON extraction (`/\{[\s\S]*\}/`).<br>• Denial-of-Wallet (DoW) defense via `maxInstances: 10` Cloud Function limits. | Validated via [`functions/test/security.test.js`](file:///Users/sunil/Downloads/SSBMax-kmp/functions/test/security.test.js) (Node 22 native test runner, 100% green). |
+| **Serverless Cloud Functions (`functions/src/`)** | • Modular architecture (< 300 LOC per file): [`revenueCatWebhook.js`](file:///Users/sunil/Downloads/SSBMax-kmp/functions/src/revenueCatWebhook.js), [`aiAnalysis.js`](file:///Users/sunil/Downloads/SSBMax-kmp/functions/src/aiAnalysis.js), [`oirScoring.js`](file:///Users/sunil/Downloads/SSBMax-kmp/functions/src/oirScoring.js).<br>• Constant-time HMAC signature verification via `crypto.timingSafeEqual()` against timing side-channel attacks.<br>• Mandatory `REVENUECAT_WEBHOOK_SECRET` verification (HTTP 500 error on missing secret in prod mode).<br>• Atomic Firestore transactions (`db.runTransaction`) with `webhook_logs/rc_{eventId}` idempotency.<br>• Gemini 2.5 Flash DoW 4,000-character ceiling across both inline and session evaluation endpoints with explicit `invalid-argument` error rejections.<br>• Prompt injection defense via XML entity escaping, system prompt boundary instructions, and regex JSON extraction (`/\{[\s\S]*\}/`).<br>• Denial-of-Wallet (DoW) defense via `maxInstances: 10` Cloud Function limits. | Validated via [`functions/test/security.test.js`](file:///Users/sunil/Downloads/SSBMax-kmp/functions/test/security.test.js) (Node 22 native test runner, 100% green). |
 | **Client Anti-Cheating & Storage Protection** | • Multi-platform anti-cheating service ([`AntiCheatService.ts`](file:///Users/sunil/Downloads/SSBMax-kmp/web/src/services/AntiCheatService.ts)) suppressing right-click context menus, blocking developer shortcuts (`F12`, `Cmd+Opt+I`, `Cmd+Shift+4`, `Ctrl+Shift+I`), intercepting `paste` & `drop` text insertions while preserving Input Method Editor (IME `isComposing`) composition, and cross-browser `fullscreenchange` tracking.<br>• Tab switch / window unfocus violation tracking with auto-submission trigger.<br>• Web Crypto SHA-256 HMAC payload checksum computation in [`OfflineQueueService.ts`](file:///Users/sunil/Downloads/SSBMax-kmp/web/src/services/OfflineQueueService.ts) to detect and reject tampered IndexedDB offline submissions. | Validated via [`web/tests/services/AntiCheatService.test.ts`](file:///Users/sunil/Downloads/SSBMax-kmp/web/tests/services/AntiCheatService.test.ts) and [`web/tests/unit/OfflineQueueService.test.ts`](file:///Users/sunil/Downloads/SSBMax-kmp/web/tests/unit/OfflineQueueService.test.ts). |
 | **Database & Storage Access Control** | • Hardened [`firestore.rules`](file:///Users/sunil/Downloads/SSBMax-kmp/firestore.rules): Strictly disallows client updates to privileged fields (`isPaidMember`, `membershipPlan`, `paymentId`, `orderId`, `role`, `olqScores`, `analyzedBy`). Locked down `webhook_logs` to Cloud Functions Admin SDK.<br>• Hardened [`storage.rules`](file:///Users/sunil/Downloads/SSBMax-kmp/storage.rules): Disallows client writes to static test assets (`ppdt_images`, `tat_images`), enforces 10MB maximum upload limits, and enforces MIME type filtering (`image/(jpeg|png|webp)|application/pdf|audio/.*`). | Validated via [`web/tests/security/rules.test.ts`](file:///Users/sunil/Downloads/SSBMax-kmp/web/tests/security/rules.test.ts). |
 | **Automated CI/CD Compliance** | • [`scripts/validate-security.sh`](file:///Users/sunil/Downloads/SSBMax-kmp/scripts/validate-security.sh): Automated 10-point security audit checking for API keys, tracked credentials, LOC limits (< 300 LOC per file), HSTS, CSP, CORP headers, paste/drop/fullscreen anti-cheat handlers, and security rules lockdown. | 100% clean execution (0 errors, 0 warnings). |

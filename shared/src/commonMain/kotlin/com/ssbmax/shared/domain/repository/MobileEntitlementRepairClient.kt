@@ -6,9 +6,7 @@ import com.ssbmax.shared.domain.model.SubscriptionTier
  * Domain interface for the client-triggered half of mobile drift repair (Phase 7, Payment
  * Ecosystem Hardening plan).
  *
- * Razorpay's active subscriptions are cheaply enumerable server-side
- * (`functions/src/subscriptions/scheduledRazorpayDriftSweep.js`), so web needs no client-side
- * counterpart. RevenueCat has no equivalent cheap "all active subscribers" endpoint -- the RC SDK
+ * RevenueCat has no cheap "all active subscribers" endpoint -- the RC SDK
  * already hands every device authoritative `CustomerInfo` on launch, so the device is the natural
  * place to *detect* "RevenueCat looks entitled to more than Firestore has on record."
  *

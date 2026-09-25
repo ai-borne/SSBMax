@@ -2,7 +2,7 @@
  * Phase 10 (Payment Ecosystem Hardening plan): tests for
  * `src/lib/subscriptionSourceClassification.js`'s pure `classifySubscriptionSource`. Each case
  * asserts *why* it matters (root CLAUDE.md Rule 9) -- the whole point of this file is that
- * "RAZORPAY_INCOMPLETE" and "NONE" must never collapse into the same rendered message, so that
+ * "LEGACY_RAZORPAY" and "NONE" must never collapse into the same rendered message, so that
  * distinction is what's pinned first.
  */
 
@@ -10,18 +10,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { classifySubscriptionSource, SOURCE_KINDS } = require('../src/lib/subscriptionSourceClassification');
 
-test('source RAZORPAY + subscriptionId present -> RAZORPAY', () => {
+test('source RAZORPAY (any subscriptionId) -> LEGACY_RAZORPAY: a pre-retirement doc, informational only -- Razorpay is no longer queried, and it must not read as "no purchase"', () => {
   assert.equal(
     classifySubscriptionSource({ source: 'RAZORPAY', subscriptionId: 'sub_abc', tier: 'PRO' }),
-    SOURCE_KINDS.RAZORPAY
+    SOURCE_KINDS.LEGACY_RAZORPAY
   );
-});
-
-test('source RAZORPAY + no subscriptionId -> RAZORPAY_INCOMPLETE (the live issue-1 case: a legacy doc predating Phase 5, unverifiable against Razorpay -- must not read as "no purchase")', () => {
-  assert.equal(
-    classifySubscriptionSource({ source: 'RAZORPAY', tier: 'PRO' }),
-    SOURCE_KINDS.RAZORPAY_INCOMPLETE
-  );
+  assert.equal(classifySubscriptionSource({ source: 'RAZORPAY', tier: 'PRO' }), SOURCE_KINDS.LEGACY_RAZORPAY);
 });
 
 test('source REVENUECAT -> REVENUECAT', () => {

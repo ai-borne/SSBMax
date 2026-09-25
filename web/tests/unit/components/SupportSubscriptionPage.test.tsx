@@ -61,10 +61,8 @@ describe('SupportSubscriptionPage', () => {
     const snapshot = {
       userId: 'user-1',
       firestore: { tier: 'PREMIUM' },
-      razorpay: { unavailable: true },
-      revenueCat: { status: 'NONE' },
-      alerts: { items: [], hasMore: false },
-      conflict: null
+      revenueCat: { unavailable: true },
+      alerts: { items: [], hasMore: false }
     };
     vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: snapshot }) as unknown as HttpsCallable);
 
@@ -81,16 +79,14 @@ describe('SupportSubscriptionPage', () => {
    * error boundary) because `alerts` degraded to `{ unavailable: true }` (the ops_alerts composite
    * index wasn't deployed yet) and `SupportSnapshotPanels` unconditionally called `.map()` on it,
    * assuming it was always an array. Fixed to treat alerts as a fourth degradable source, same as
-   * firestore/razorpay/revenueCat -- this pins that it renders instead of throwing.
+   * firestore/revenueCat -- this pins that it renders instead of throwing.
    */
   it('renders the alerts panel as unavailable (not a crash) when alerts degrades to { unavailable: true }', async () => {
     const snapshot = {
       userId: 'user-1',
       firestore: { tier: 'FREE' },
-      razorpay: null,
       revenueCat: { status: 'NONE' },
-      alerts: { unavailable: true },
-      conflict: null
+      alerts: { unavailable: true }
     };
     vi.mocked(httpsCallable).mockReturnValue(vi.fn().mockResolvedValue({ data: snapshot }) as unknown as HttpsCallable);
 

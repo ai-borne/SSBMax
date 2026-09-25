@@ -13,47 +13,24 @@ import type { SubscriptionSupportSnapshot } from '../../../src/repositories/Supp
 const BASE_SNAPSHOT: SubscriptionSupportSnapshot = {
   userId: 'user-1',
   firestore: { tier: 'FREE', sourceKind: 'NONE' },
-  razorpay: null,
   revenueCat: { status: 'NONE' },
-  alerts: { items: [], hasMore: false },
-  conflict: null
+  alerts: { items: [], hasMore: false }
 };
 
 describe('SupportSnapshotPanels', () => {
-  it('renders a distinct message for razorpay.dataIncomplete, not the generic "no Razorpay subscription" message (issue 1, the live case)', () => {
-    render(
-      <SupportSnapshotPanels
-        snapshot={{
-          ...BASE_SNAPSHOT,
-          firestore: { tier: 'PRO', source: 'RAZORPAY', sourceKind: 'RAZORPAY_INCOMPLETE' },
-          razorpay: { dataIncomplete: true, reason: 'missing-subscription-id' }
-        }}
-      />
-    );
-
-    expect(screen.getByTestId('support-razorpay-incomplete')).toHaveTextContent(strings.support.razorpayDataIncomplete);
-    expect(screen.queryByText(strings.support.noRazorpaySubscription)).not.toBeInTheDocument();
-  });
-
-  it('renders the generic "no Razorpay subscription" message when razorpay is plain null (genuinely no purchase)', () => {
+  it('renders no Razorpay panel and no conflict banner -- RevenueCat is the only provider', () => {
     render(<SupportSnapshotPanels snapshot={BASE_SNAPSHOT} />);
 
-    expect(screen.getByText(strings.support.noRazorpaySubscription)).toBeInTheDocument();
-    expect(screen.queryByTestId('support-razorpay-incomplete')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('support-panel-Razorpay')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('support-conflict-banner')).not.toBeInTheDocument();
+    expect(screen.getByTestId(`support-panel-${strings.support.revenueCatPanel}`)).toBeInTheDocument();
   });
 
-  it('renders a visible conflict banner when conflict.detected is true (issue 2)', () => {
-    render(<SupportSnapshotPanels snapshot={{ ...BASE_SNAPSHOT, conflict: { detected: true } }} />);
+  it('renders a distinct label for firestore.sourceKind === LEGACY_RAZORPAY (a pre-retirement doc, not "no purchase")', () => {
+    render(<SupportSnapshotPanels snapshot={{ ...BASE_SNAPSHOT, firestore: { tier: 'PRO', source: 'RAZORPAY', sourceKind: 'LEGACY_RAZORPAY' } }} />);
 
-    expect(screen.getByTestId('support-conflict-banner')).toHaveTextContent(strings.support.conflictDetected);
-  });
-
-  it('renders no conflict banner when conflict.detected is false or conflict is null', () => {
-    const { rerender } = render(<SupportSnapshotPanels snapshot={{ ...BASE_SNAPSHOT, conflict: { detected: false } }} />);
-    expect(screen.queryByTestId('support-conflict-banner')).not.toBeInTheDocument();
-
-    rerender(<SupportSnapshotPanels snapshot={{ ...BASE_SNAPSHOT, conflict: null }} />);
-    expect(screen.queryByTestId('support-conflict-banner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('support-sourcekind-legacy-razorpay')).toHaveTextContent(strings.support.legacyRazorpaySource);
+    expect(screen.queryByText('LEGACY_RAZORPAY')).not.toBeInTheDocument();
   });
 
   it('renders known timestamp fields (expiryDate, startDate, createdAt) formatted, not as raw epoch millis (issue 3)', () => {
@@ -62,7 +39,7 @@ describe('SupportSnapshotPanels', () => {
       <SupportSnapshotPanels
         snapshot={{
           ...BASE_SNAPSHOT,
-          firestore: { tier: 'PRO', sourceKind: 'RAZORPAY', expiryDate: expiry, startDate: expiry, createdAt: expiry }
+          firestore: { tier: 'PRO', sourceKind: 'REVENUECAT', expiryDate: expiry, startDate: expiry, createdAt: expiry }
         }}
       />
     );

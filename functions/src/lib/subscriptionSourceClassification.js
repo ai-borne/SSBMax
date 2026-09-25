@@ -1,10 +1,9 @@
 /**
  * Classifies a stored `users/{uid}/data/subscription` doc into one purchase-provenance tag
- * (Phase 10, Payment Ecosystem Hardening plan, issue 1). The support snapshot needs to
- * distinguish "no Razorpay purchase at all" from "a Razorpay-sourced doc that predates Phase 5's
- * subscriptionId-at-activation write and is therefore unverifiable against the Razorpay API" --
- * those rendered identically before this phase, and a support agent reading them as the same fact
- * is exactly how a ticket gets answered wrong. One pure function, one place this taxonomy exists;
+ * (Phase 10, Payment Ecosystem Hardening plan, issue 1). Razorpay was retired 2026-09-25 and
+ * RevenueCat is the only writer, so `RAZORPAY` survives only as a legacy provenance tag on docs
+ * written before then -- informational; nothing queries Razorpay any more. A support agent must
+ * still be able to tell it apart from "no purchase at all". One pure function, one place this taxonomy exists;
  * `getSubscriptionSupportSnapshot.js` and the web-side panel both consume the tag it returns
  * rather than re-deriving it.
  *
@@ -13,8 +12,7 @@
  */
 
 const SOURCE_KINDS = Object.freeze({
-  RAZORPAY: 'RAZORPAY',
-  RAZORPAY_INCOMPLETE: 'RAZORPAY_INCOMPLETE',
+  LEGACY_RAZORPAY: 'LEGACY_RAZORPAY',
   REVENUECAT: 'REVENUECAT',
   LEGACY_OR_UNKNOWN: 'LEGACY_OR_UNKNOWN',
   NONE: 'NONE'
@@ -28,9 +26,7 @@ function classifySubscriptionSource(stored) {
   const source = stored?.source;
 
   if (source === 'RAZORPAY') {
-    return typeof stored?.subscriptionId === 'string' && stored.subscriptionId
-      ? SOURCE_KINDS.RAZORPAY
-      : SOURCE_KINDS.RAZORPAY_INCOMPLETE;
+    return SOURCE_KINDS.LEGACY_RAZORPAY;
   }
 
   if (source === 'REVENUECAT') {

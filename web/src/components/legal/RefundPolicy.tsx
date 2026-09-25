@@ -9,7 +9,7 @@ export interface RefundPolicyProps {
   onBackClick?: () => void;
 }
 
-/** Standalone Refund & Cancellation page. Policy wording is reused from Terms and the cancel dialog. */
+/** Standalone Refund & Cancellation page. Refund wording is reused from Terms; billing is store-only (Apple / Google). */
 export const RefundPolicy: FC<RefundPolicyProps> = ({ onBackClick }) => {
   const s = strings.refundPolicy;
   return (
@@ -20,7 +20,7 @@ export const RefundPolicy: FC<RefundPolicyProps> = ({ onBackClick }) => {
           <p>{strings.terms.sec2Text}</p>
         </LegalCard>
         <LegalCard heading={s.cancelHeading}>
-          <p>{strings.subscription.cancelConfirmBody}</p>
+          <p>{s.cancelText}</p>
         </LegalCard>
         <LegalCard heading={s.howHeading}>
           <p>{s.howText}</p>

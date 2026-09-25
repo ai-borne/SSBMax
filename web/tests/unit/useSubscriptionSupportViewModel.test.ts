@@ -14,10 +14,8 @@ function mockRepository(overrides: Partial<Record<string, unknown>> = {}) {
 const SNAPSHOT: SubscriptionSupportSnapshot = {
   userId: 'user-1',
   firestore: { tier: 'PREMIUM' },
-  razorpay: null,
   revenueCat: { status: 'NONE' },
-  alerts: { items: [], hasMore: false },
-  conflict: null
+  alerts: { items: [], hasMore: false }
 };
 
 /**
@@ -69,10 +67,8 @@ describe('useSubscriptionSupportViewModel', () => {
     const partialSnapshot: SubscriptionSupportSnapshot = {
       userId: 'user-1',
       firestore: { tier: 'PREMIUM' },
-      razorpay: { unavailable: true },
-      revenueCat: { status: 'NONE' },
-      alerts: { items: [], hasMore: false },
-      conflict: null
+      revenueCat: { unavailable: true },
+      alerts: { items: [], hasMore: false }
     };
     const repository = mockRepository({
       getSubscriptionSupportSnapshot: vi.fn().mockResolvedValue(partialSnapshot)

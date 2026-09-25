@@ -1,9 +1,7 @@
 /**
  * Client-triggered mobile entitlement repair (Phase 7, Payment Ecosystem Hardening plan).
  *
- * Razorpay is cheaply enumerable server-side (`scheduledRazorpayDriftSweep.js`'s `GET
- * /v1/subscriptions?status=active`); RevenueCat has no equivalent cheap "all active subscribers"
- * endpoint. The RC SDK already hands every device authoritative `CustomerInfo` on launch, so the
+ * RevenueCat has no cheap "all active subscribers" endpoint to sweep server-side. The RC SDK already hands every device authoritative `CustomerInfo` on launch, so the
  * device is the natural place to *detect* "I look active locally but the last entitlement refresh
  * still reads FREE" -- but per this phase's landmine note, the device is never trusted to say what
  * tier to grant. This callable re-reads the truth from RevenueCat's REST API server-side for
@@ -15,8 +13,7 @@
  * the write would reintroduce C1 (Phase 1) through the back door.
  */
 
-// Same v1 pinning as every other callable in this plan -- see razorpaySubscriptions.js's
-// identical comment.
+// Same v1 pinning as every other callable in this plan.
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { FirestorePaths } = require('../generated/contracts.cjs');

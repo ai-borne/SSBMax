@@ -1,4 +1,4 @@
-/** Contact and Refund & Cancellation page copy. Policy text itself is reused from `terms`/`subscription`. */
+/** Contact and Refund & Cancellation page copy. Refund wording is reused from `terms`; billing is store-only (Apple / Google). */
 export const contactStrings = {
   contact: {
     title: 'Contact Us',
@@ -14,10 +14,11 @@ export const contactStrings = {
     subtitle: 'How refunds and cancellations work for SSBMax Officer Pass plans.',
     refundHeading: 'Refunds',
     cancelHeading: 'Cancellation',
+    cancelText: 'Cancel in your App Store or Google Play subscription settings by turning off auto-renew. You keep access until the end of the billing period you already paid for, then your plan does not renew.',
     howHeading: 'How to Request a Refund',
-    howText: 'Email us from the address linked to your account, with your payment ID if you have it. We reply within 2 business days.',
+    howText: 'Request refunds from the store you subscribed through: reportaproblem.apple.com for the App Store, or your order history in Google Play. If you need help finding your purchase, email us from the address linked to your account and we reply within 2 business days.',
     timelineHeading: 'When You Get Your Money Back',
-    timelineText: 'Approved refunds are returned to the original payment method through Razorpay. Your bank usually credits them within 5 to 7 business days.'
+    timelineText: 'Approved refunds are returned by Apple or Google to the payment method you used in the store. Timing depends on them and your bank.'
   },
   footerLinks: {
     refund: 'Refund & Cancellation',

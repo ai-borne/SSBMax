@@ -1,8 +1,6 @@
 /**
- * Per-user hourly rate limiting for subscription-lifecycle callables (create, Phase 5's cancel).
- * Extracted out of `razorpaySubscriptions.js` when adding cancel pushed that file over the 300-LOC
- * cap (root CLAUDE.md Quality Limits) -- shared here so create/cancel don't hand-roll two copies
- * of the same hour-bucket counter.
+ * Per-user hourly rate limiting for subscription-lifecycle callables (now `repairMobileEntitlement`).
+ * Originally shared with the retired Razorpay create/cancel callables.
  */
 
 const functions = require('firebase-functions/v1');

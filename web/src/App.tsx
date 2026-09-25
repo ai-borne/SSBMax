@@ -9,7 +9,6 @@ import { EditProfileModal } from './components/settings/EditProfileModal';
 import { SubscriptionPage } from './components/subscription/SubscriptionPage';
 import { SupportSubscriptionPage } from './components/support/SupportSubscriptionPage';
 import { AnalyticsDashboardPage } from './components/analytics/AnalyticsDashboardPage';
-import { PaymentService } from './services/PaymentService';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { TermsAndRefunds } from './components/legal/TermsAndRefunds';
 import { RefundPolicy } from './components/legal/RefundPolicy';
@@ -34,7 +33,6 @@ import { useTabRouting } from './hooks/useTabRouting';
 import { authService } from './services/AuthService';
 import { useSubscriptionViewModel } from './viewmodels/SubscriptionViewModel';
 import { useAppVersionGateViewModel } from './viewmodels/useAppVersionGateViewModel';
-import { useFeatureFlag } from './viewmodels/useFeatureFlag';
 import { UpdateRequiredScreen } from './components/common/UpdateRequiredScreen';
 import { AccessTier, DevTierOverride, getEffectiveTier } from './constants/ssbSelectionProcess';
 import { ACCOUNT_DELETION_GRACE_PERIOD_DAYS } from './constants/accountDeletion';
@@ -75,10 +73,6 @@ export const App: FC = () => {
   };
 
   const { tier: realTier, usage } = useSubscriptionViewModel(authService.getCurrentUser()?.uid, devTierOverride);
-  const paymentService = useMemo(() => new PaymentService(), []);
-  // Phase B checkout-cutover kill switch (senior-review fix #8) -- defaults false (old
-  // order-based Razorpay checkout) until this Firestore flag is explicitly flipped on.
-  const razorpaySubscriptionsCheckoutEnabled = useFeatureFlag('razorpay_subscriptions_checkout');
   const olqDashboard = useOLQDashboardViewModel(authService.getCurrentUser()?.uid, undefined, activeTab === 'reports');
   const isPaidMember = realTier !== 'FREE';
   const effectiveTier: AccessTier = import.meta.env.DEV
@@ -218,15 +212,7 @@ export const App: FC = () => {
           )}
           {activeTab === 'study' && <StudyMaterialPage onNavigateToTests={() => setActiveTab('tests')} />}
           {activeTab === 'subscription' && (
-            <SubscriptionPage
-              userId={authService.getCurrentUser()?.uid}
-              isPaidMember={isPaidMember}
-              createOrderFn={paymentService.createOrder}
-              createSubscriptionFn={paymentService.createSubscription}
-              cancelSubscriptionFn={paymentService.cancelSubscription}
-              useSubscriptionCheckout={razorpaySubscriptionsCheckoutEnabled}
-              onPaymentSuccess={() => setActiveTab('tests')}
-            />
+            <SubscriptionPage userId={authService.getCurrentUser()?.uid} isPaidMember={isPaidMember} />
           )}
           {activeTab === 'settings' && (
             <SettingsPage

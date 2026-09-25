@@ -2,8 +2,7 @@
  * RevenueCat HMAC Signature Verification (Phase 12 300-LOC split)
  *
  * Extracted out of `revenueCatWebhook.js` purely to keep that file under the 300-LOC cap once L1's
- * freshness-window check grew it past it -- mirrors `lib/razorpaySignature.js`'s identical
- * extraction for the Razorpay side. No behavior changed by this extraction.
+ * freshness-window check grew it past it -- No behavior changed by this extraction.
  */
 
 const crypto = require('crypto');

@@ -1,6 +1,6 @@
 import { FC } from 'react';
 import { strings } from '../../constants/strings';
-import type { SupportSnapshotRazorpay, SubscriptionSupportSnapshot, SupportSnapshotSource } from '../../repositories/SupportRepository';
+import type { SubscriptionSupportSnapshot, SupportSnapshotSource } from '../../repositories/SupportRepository';
 import { formatSupportTimestamp, SUPPORT_TIMESTAMP_KEYS } from './supportFormatting';
 
 /** Sibling component split out of `SupportSubscriptionPage.tsx` per the
@@ -14,21 +14,10 @@ function isUnavailable(source: SupportSnapshotSource | null): source is { unavai
   return source != null && (source as { unavailable?: boolean }).unavailable === true;
 }
 
-/** Phase 10, issue 1: a RAZORPAY-sourced doc with no `subscriptionId` is unverifiable against the
- * Razorpay API -- distinct from `data === null` (genuinely no Razorpay purchase), so it must not
- * fall through to `emptyMessage`. */
-function isDataIncomplete(data: SupportSnapshotRazorpay): data is { dataIncomplete: true; reason: string } {
-  return data != null && (data as { dataIncomplete?: boolean }).dataIncomplete === true;
-}
-
-const SourcePanel: FC<{ title: string; data: SupportSnapshotSource | SupportSnapshotRazorpay; emptyMessage: string }> = ({ title, data, emptyMessage }) => (
+const SourcePanel: FC<{ title: string; data: SupportSnapshotSource | null; emptyMessage: string }> = ({ title, data, emptyMessage }) => (
   <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 p-4" data-testid={`support-panel-${title}`}>
     <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">{title}</h3>
-    {isDataIncomplete(data) ? (
-      <p className="text-xs text-amber-600 dark:text-amber-400" data-testid="support-razorpay-incomplete">
-        {strings.support.razorpayDataIncomplete}
-      </p>
-    ) : data === null ? (
+    {data === null ? (
       <p className="text-xs text-slate-500 dark:text-slate-400">{emptyMessage}</p>
     ) : isUnavailable(data) ? (
       <p className="text-xs text-amber-600 dark:text-amber-400">{strings.support.sourceUnavailable}</p>
@@ -61,25 +50,17 @@ const SourceKindLabel: FC<{ value: string }> = ({ value }) =>
     <span className="text-amber-600 dark:text-amber-400" data-testid="support-sourcekind-legacy">
       {strings.support.legacyOrUnknownSource}
     </span>
+  ) : value === 'LEGACY_RAZORPAY' ? (
+    <span className="text-amber-600 dark:text-amber-400" data-testid="support-sourcekind-legacy-razorpay">
+      {strings.support.legacyRazorpaySource}
+    </span>
   ) : (
     <>{value}</>
   );
 
-const ConflictBanner: FC<{ conflict: SubscriptionSupportSnapshot['conflict'] }> = ({ conflict }) =>
-  conflict?.detected ? (
-    <div
-      className="rounded-xl border border-red-300 dark:border-red-700/60 bg-red-50 dark:bg-red-900/20 p-4 sm:col-span-2 text-xs text-red-700 dark:text-red-300"
-      data-testid="support-conflict-banner"
-    >
-      {strings.support.conflictDetected}
-    </div>
-  ) : null;
-
 export const SupportSnapshotPanels: FC<SupportSnapshotPanelsProps> = ({ snapshot }) => (
   <div className="grid gap-4 sm:grid-cols-2" data-testid="support-snapshot">
-    <ConflictBanner conflict={snapshot.conflict} />
     <SourcePanel title={strings.support.firestorePanel} data={snapshot.firestore} emptyMessage="" />
-    <SourcePanel title={strings.support.razorpayPanel} data={snapshot.razorpay} emptyMessage={strings.support.noRazorpaySubscription} />
     <SourcePanel title={strings.support.revenueCatPanel} data={snapshot.revenueCat} emptyMessage="" />
 
     <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 p-4 sm:col-span-2" data-testid="support-panel-alerts">

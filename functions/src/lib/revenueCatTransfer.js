@@ -23,8 +23,8 @@ const { FirestorePaths } = require('../generated/contracts.cjs');
 /**
  * Applies a TRANSFER event: downgrades every `transferred_from` uid's subscription doc to FREE,
  * but only when it's still RevenueCat-sourced -- an old owner whose doc was since overwritten by
- * a Razorpay purchase (or already reconciled to FREE by something else) must not be touched, same
- * "don't clobber a doc you don't own" stance `resolveReconciliation` takes everywhere else.
+ * a legacy non-RevenueCat doc (or one already reconciled to FREE by something else) must not be
+ * touched -- a "don't clobber a doc you don't own" stance.
  */
 async function processRevenueCatTransferEvent(event, firestoreDb) {
   const eventId = event.id;

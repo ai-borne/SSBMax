@@ -38,13 +38,6 @@ export const commonStrings = {
     welcomeBack: 'Welcome back,',
     authError: 'Authentication failed. Please try again.'
   },
-  payment: {
-    upgradeTitle: 'Unlock Pro Membership',
-    upgradeDescription: 'Get unlimited AI evaluations for TAT, WAT, SRT, and Mock Interviews.',
-    payButton: 'Upgrade Now with Razorpay',
-    paymentSuccess: 'Payment successful! Access granted.',
-    paymentFailed: 'Payment verification failed.'
-  },
   subscription: {
     title: 'Membership Tiers',
     subtitle: 'Choose your subscription plan to unlock full AI psychological dossier evaluations and unlimited SSB test batteries.',
@@ -73,25 +66,15 @@ export const commonStrings = {
     processing: 'Processing Order...',
     successBadge: 'Pro Membership Active',
     successMessage: 'Welcome to Pro Membership! Access unlocked across all AI evaluation engines.',
-    guarantee: '100% Refund Policy & Secure 256-Bit Razorpay Encryption',
-    mobileSubscriptionActiveBanner:
-      'You already have an active subscription purchased through the mobile app. Manage or cancel it there before starting a new one here.',
+    manageInStore:
+      'Subscriptions are purchased and managed in the SSBMax app on the App Store or Google Play. Your plan syncs to this website automatically. To change, cancel or request a refund, use your store\'s subscription settings.',
+    availableInApp: 'Available in the SSBMax app',
     renewsOn: (date: string) => `Renews on ${date}`,
     expiresNoRenew: (date: string) => `Expires ${date} (won't auto-renew)`,
     membershipActiveBadge: 'Membership Active',
     membershipActiveDescription: "You have unlocked full access to your plan's Stage-I & Stage-II simulators and AI assessments.",
     mostPopularBadge: 'Most Popular',
-    initiatingRazorpay: 'Initiating Razorpay...',
     passActive: 'Pass Active',
-    // Phase 5 (H5a, Payment Ecosystem Hardening plan): Razorpay cancellation UI.
-    cancelSubscription: 'Cancel Subscription',
-    cancelConfirmTitle: 'Cancel your subscription?',
-    cancelConfirmBody: "You'll keep access until the end of your current billing period, then your plan won't renew.",
-    cancelConfirmButton: 'Yes, Cancel',
-    cancelKeepButton: 'Keep My Subscription',
-    cancelInProgress: 'Cancelling...',
-    cancelSuccess: 'Your subscription has been cancelled. Access continues until the end of your current billing period.',
-    cancelError: 'Could not cancel your subscription. Please try again.',
     ribbonTitle: 'Select Your Preparation Tier',
     ribbonSubtitle: 'Choose Free, Basic, Pro, or Premium to unlock authentic SSB test simulators & AI evaluations.',
     ribbonFreeTitle: 'Free',
@@ -238,8 +221,8 @@ export const commonStrings = {
     a2: 'Yes! All study materials and test batteries auto-save progress offline via IndexedDB. Your test responses will automatically queue and sync to Cloud Firestore when you reconnect.',
     q3: 'What is included in the Pro Officer Pass subscription?',
     a3: 'Pro Officer Pass unlocks unlimited Stage II psychological test batteries, full AI 15-OLQ dossier generation, PPDT canvas practice, and priority assessor feedback.',
-    q4: 'Is there a money-back guarantee for subscriptions?',
-    a4: 'Yes, we offer a 100% 7-day money-back guarantee. If you are not completely satisfied with your Officer Pass, request a refund from Settings to receive a full refund via Razorpay.',
+    q4: 'How do refunds and cancellation work?',
+    a4: 'Subscriptions are billed by the Apple App Store or Google Play, which also handle refunds and cancellation. Turn off auto-renew in your store\'s subscription settings to cancel; you keep access until the end of the paid period.',
     q5: 'How is my preparatory data kept secure and private?',
     a5: 'All candidate data and AI dossiers are encrypted using TLS 1.3 256-bit encryption. Your psychological test responses are strictly private and never shared with third parties.'
   },
@@ -304,11 +287,11 @@ export const commonStrings = {
   },
   terms: {
     title: 'Terms of Service & Refund Guidelines',
-    subtitle: 'Legal agreement, candidate code of conduct, and 100% transparent Razorpay payment refund rules.',
+    subtitle: 'Legal agreement, candidate code of conduct, and store-billed subscription refund rules.',
     sec1Title: '1. Officer Pass Membership Terms',
     sec1Text: 'Access to SSBMax Pro Officer Pass features, including unlimited AI dossier evaluations and 15 OLQ radar analytics, is granted per active subscription period.',
-    sec2Title: '2. 100% Refund Guarantee & Policy',
-    sec2Text: 'We offer a hassle-free 7-day money-back guarantee. If you are unsatisfied with your Officer Pass, submit a refund request to receive a 100% full refund processed via Razorpay.',
+    sec2Title: '2. Billing, Refunds & Cancellation',
+    sec2Text: 'Subscriptions are purchased through the Apple App Store or Google Play, which bill you and process all refunds under their own refund policies. We cannot issue refunds directly. Request one from Apple or Google Play.',
     sec3Title: '3. Candidate Code of Conduct',
     sec3Text: 'Candidates agree to use the platform solely for personal SSB preparation. Redistribution or unauthorized automated scraping of psychological test material and AI evaluation models is prohibited.',
     sec4Title: '4. Independent Platform Disclaimer',

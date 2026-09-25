@@ -5,10 +5,8 @@
  * split of `webhooks.js` into a dispatcher plus `webhooks/paymentCaptured.js` -- same reasoning,
  * applied here. No behavior changed by this extraction.
  *
- * `resolveReconciliation` is also consumed by `lib/razorpaySubscriptionWebhook.js` (Razorpay's
- * subscription-family events run the identical cross-platform conflict check) -- living in `lib/`
- * rather than inside `revenueCatWebhook.js` also fixes the slightly backwards layering that had a
- * `lib/` file importing from a top-level one.
+ * RevenueCat is the only writer of the tier doc (Razorpay retired 2026-09-25), so there is no
+ * cross-platform reconciliation here: an incoming RC event always wins.
  */
 
 /**
@@ -36,8 +34,7 @@ const GRANT_EVENT_TYPES = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANG
 /** Event types that end an entitlement -- downgrades to FREE (single cumulative product per tier,
  * so an expiring subscription always expires the whole tier, not a partial entitlement set).
  * REFUND gets identical treatment to EXPIRATION -- both are "this entitlement is gone now".
- * SUBSCRIPTION_PAUSED (L3, Phase 12) is Google Play's explicit user-initiated pause -- unlike
- * Razorpay's `subscription.paused` (auto-renew off, access continues to `current_end`), a paused
+ * SUBSCRIPTION_PAUSED (L3, Phase 12) is Google Play's explicit user-initiated pause -- a paused
  * Play subscription stops granting access immediately, so it belongs with the revokes, not a
  * field-only write. Before this fix it fell through the dispatcher's ignored-event-types filter
  * entirely and a paused user kept their tier indefinitely. */
@@ -56,48 +53,10 @@ const BILLING_ISSUE_EVENT_TYPE = 'BILLING_ISSUE';
  * owner kept their tier forever, even after RevenueCat moved the entitlement to someone else. */
 const TRANSFER_EVENT_TYPE = 'TRANSFER';
 
-/** Tier ranking for cross-platform reconciliation (higher wins on conflict). */
-const TIER_RANK = { FREE: 0, BASIC: 1, PRO: 2, PREMIUM: 3 };
-
 /** A subscription with no expiry (fails closed to "still active", matching the RC-always-writes-
  * expiryDate-on-grant assumption used elsewhere) or a future expiry is still in force. */
 function isSubscriptionActive(expiryDate, nowMillis) {
   return expiryDate == null || expiryDate > nowMillis;
-}
-
-/**
- * Cross-cutting webhook-to-webhook reconciliation (see `shimmying-roaming-crane.md`'s "Webhook-
- * to-webhook reconciliation" section): neither `revenueCatWebhook.js` nor `webhooks.js`'s Razorpay
- * handler knows what the other already wrote, so without this a race/stale-tab/direct-API-call
- * scenario lets whichever webhook fires last silently clobber an active subscription from the
- * other platform. If the existing doc was written by a different, still-active source, keep
- * whichever side has the higher tier (or, tied, the later expiryDate) instead of blindly taking
- * `incoming`.
- */
-function resolveReconciliation(existing, incoming, nowMillis) {
-  const existingIsOtherActiveSource =
-    existing.source != null &&
-    existing.source !== incoming.source &&
-    isSubscriptionActive(existing.expiryDate, nowMillis);
-
-  if (!existingIsOtherActiveSource) {
-    return { tier: incoming.tier, expiryDate: incoming.expiryDate, source: incoming.source, conflict: false };
-  }
-
-  const existingRank = TIER_RANK[existing.tier] ?? 0;
-  const incomingRank = TIER_RANK[incoming.tier] ?? 0;
-
-  let winner;
-  if (existingRank !== incomingRank) {
-    winner = existingRank > incomingRank ? existing : incoming;
-  } else {
-    // Same tier -- later expiryDate wins; no expiry (null) is treated as furthest-out.
-    const existingExpiry = existing.expiryDate ?? Infinity;
-    const incomingExpiry = incoming.expiryDate ?? Infinity;
-    winner = existingExpiry >= incomingExpiry ? existing : incoming;
-  }
-
-  return { tier: winner.tier, expiryDate: winner.expiryDate, source: winner.source, conflict: true };
 }
 
 module.exports = {
@@ -106,7 +65,5 @@ module.exports = {
   REVOKE_EVENT_TYPES,
   BILLING_ISSUE_EVENT_TYPE,
   TRANSFER_EVENT_TYPE,
-  TIER_RANK,
-  isSubscriptionActive,
-  resolveReconciliation
+  isSubscriptionActive
 };

@@ -4,7 +4,7 @@
  * of this file existing -- a support tool that leaks another user's billing state to a non-admin
  * is a worse bug than the one this phase was built to fix, so that gets tested before anything
  * about the join itself. The degrade-gracefully behavior is tested second because a support tool
- * that goes dark exactly when Razorpay/RevenueCat is down is worthless.
+ * that goes dark exactly when RevenueCat is down is worthless.
  */
 
 const test = require('node:test');
@@ -141,79 +141,37 @@ test('resolveUserId fails closed (internal) on any other Auth error, rather than
   );
 });
 
-test('getSubscriptionSupportSnapshotForUser returns the joined snapshot for an admin', async () => {
+test('getSubscriptionSupportSnapshotForUser returns the joined snapshot for an admin (Firestore + RevenueCat + own alerts, no Razorpay)', async () => {
   const now = Date.now();
   const db = makeFakeDb({
-    'users/user-1/data/subscription': { tier: 'PREMIUM', source: 'RAZORPAY', subscriptionId: 'sub_abc', expiryDate: now + 100000 },
+    'users/user-1/data/subscription': { tier: 'PREMIUM', source: 'REVENUECAT', expiryDate: now + 100000 },
     __alerts: {
       'alert-1': { userId: 'user-1', kind: 'DRIFT_REPAIR', severity: 'INFO', createdAt: now - 1000 },
       'alert-2': { userId: 'other-user', kind: 'DRIFT_REPAIR', severity: 'INFO', createdAt: now }
     }
   });
   const fetchImpl = async (url) => {
-    if (String(url).includes('razorpay.com')) {
-      return { ok: true, json: async () => ({ id: 'sub_abc', status: 'active' }) };
-    }
+    assert.ok(!String(url).includes('razorpay'), 'the snapshot must never call Razorpay');
     return { ok: true, json: async () => ({ subscriber: { entitlements: { premium: { expires_date: new Date(now + 100000).toISOString() } } } }) };
   };
 
-  process.env.RAZORPAY_KEY_ID = 'test_key_id';
-  process.env.RAZORPAY_KEY_SECRET = 'test_key_secret';
   process.env.REVENUECAT_SECRET_KEY = 'test_rc_secret';
   let snapshot;
   try {
     snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1');
   } finally {
-    delete process.env.RAZORPAY_KEY_ID;
-    delete process.env.RAZORPAY_KEY_SECRET;
     delete process.env.REVENUECAT_SECRET_KEY;
   }
 
   assert.equal(snapshot.userId, 'user-1');
   assert.equal(snapshot.firestore.tier, 'PREMIUM');
-  assert.equal(snapshot.razorpay.id, 'sub_abc');
+  assert.equal(snapshot.firestore.sourceKind, 'REVENUECAT');
   assert.equal(snapshot.revenueCat.status, 'ACTIVE');
+  assert.equal('razorpay' in snapshot, false);
+  assert.equal('conflict' in snapshot, false);
   assert.equal(snapshot.alerts.items.length, 1, 'only this user\'s alerts, not another user\'s');
   assert.equal(snapshot.alerts.items[0].kind, 'DRIFT_REPAIR');
   assert.equal(snapshot.alerts.hasMore, false);
-});
-
-test('getSubscriptionSupportSnapshotForUser skips the Razorpay lookup when the stored doc names no Razorpay subscription', async () => {
-  const db = makeFakeDb({
-    'users/user-1/data/subscription': { tier: 'PREMIUM', source: 'REVENUECAT' }
-  });
-  const fetchImpl = makeFakeRevenueCatFetch({});
-
-  const snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1');
-
-  assert.equal(snapshot.razorpay, null);
-});
-
-test('getSubscriptionSupportSnapshotForUser degrades to a partial snapshot on a Razorpay outage, without failing the whole call', async () => {
-  const db = makeFakeDb({
-    'users/user-1/data/subscription': { tier: 'PREMIUM', source: 'RAZORPAY', subscriptionId: 'sub_abc' }
-  });
-  const fetchImpl = async (url) => {
-    if (String(url).includes('razorpay.com')) {
-      return { ok: false, status: 500, json: async () => ({}) };
-    }
-    return { ok: true, json: async () => ({ subscriber: { entitlements: {} } }) };
-  };
-
-  process.env.RAZORPAY_KEY_ID = 'test_key_id';
-  process.env.RAZORPAY_KEY_SECRET = 'test_key_secret';
-  process.env.REVENUECAT_SECRET_KEY = 'test_rc_secret';
-  let snapshot;
-  try {
-    snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1');
-  } finally {
-    delete process.env.RAZORPAY_KEY_ID;
-    delete process.env.RAZORPAY_KEY_SECRET;
-    delete process.env.REVENUECAT_SECRET_KEY;
-  }
-
-  assert.deepEqual(snapshot.razorpay, { unavailable: true });
-  assert.equal(snapshot.revenueCat.status, 'NONE', 'RevenueCat side still resolves independently');
 });
 
 test('getSubscriptionSupportSnapshotForUser degrades to a partial snapshot on a RevenueCat outage, without failing the whole call', async () => {
@@ -249,151 +207,28 @@ test('getSubscriptionSupportSnapshotForUser degrades alerts to { unavailable: tr
   assert.deepEqual(snapshot.alerts, { unavailable: true });
 });
 
-test('getSubscriptionSupportSnapshotForUser reports Razorpay/RevenueCat as unavailable (not a crash) when credentials are missing', async () => {
+test('getSubscriptionSupportSnapshotForUser reports RevenueCat as unavailable (not a crash) when credentials are missing', async () => {
   const db = makeFakeDb({
-    'users/user-1/data/subscription': { tier: 'PREMIUM', source: 'RAZORPAY', subscriptionId: 'sub_abc' }
-  });
-
-  const razorpayState = await getSubscriptionSupportSnapshotForUser(db, async () => ({ ok: true, json: async () => ({}) }), 'user-1');
-
-  assert.deepEqual(razorpayState.razorpay, { unavailable: true, reason: 'missing-credentials' });
-  assert.deepEqual(razorpayState.revenueCat, { unavailable: true, reason: 'missing-credentials' });
-});
-
-// --- Phase 10 (data quality, conflict surfacing & readability) -----------------------------
-
-test('getSubscriptionSupportSnapshotForUser tags a RAZORPAY-sourced doc with no subscriptionId as dataIncomplete, not the plain null that also means "no Razorpay purchase" (issue 1, the live case)', async () => {
-  const db = makeFakeDb({
-    'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY' }
+    'users/user-1/data/subscription': { tier: 'PREMIUM', source: 'REVENUECAT' }
   });
 
   const snapshot = await getSubscriptionSupportSnapshotForUser(db, async () => ({ ok: true, json: async () => ({}) }), 'user-1');
 
-  assert.deepEqual(snapshot.razorpay, { dataIncomplete: true, reason: 'missing-subscription-id' });
-  assert.equal(snapshot.firestore.sourceKind, 'RAZORPAY_INCOMPLETE');
+  assert.deepEqual(snapshot.revenueCat, { unavailable: true, reason: 'missing-credentials' });
 });
 
-test('getSubscriptionSupportSnapshotForUser sets firestore.sourceKind matching classifySubscriptionSource for a clean RAZORPAY doc', async () => {
+test('getSubscriptionSupportSnapshotForUser tags a legacy RAZORPAY-sourced doc as LEGACY_RAZORPAY and makes no Razorpay call', async () => {
   const db = makeFakeDb({
     'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY', subscriptionId: 'sub_abc' }
   });
   const fetchImpl = async (url) => {
-    if (String(url).includes('razorpay.com')) {
-      return { ok: true, json: async () => ({ id: 'sub_abc', status: 'active', notes: { planId: 'pro_monthly' } }) };
-    }
+    assert.ok(!String(url).includes('razorpay'), 'the snapshot must never call Razorpay');
     return { ok: true, json: async () => ({ subscriber: { entitlements: {} } }) };
   };
-  process.env.RAZORPAY_KEY_ID = 'k';
-  process.env.RAZORPAY_KEY_SECRET = 's';
-  let snapshot;
-  try {
-    snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1');
-  } finally {
-    delete process.env.RAZORPAY_KEY_ID;
-    delete process.env.RAZORPAY_KEY_SECRET;
-  }
 
-  assert.equal(snapshot.firestore.sourceKind, 'RAZORPAY');
-});
+  const snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1');
 
-test('getSubscriptionSupportSnapshotForUser sets conflict.detected true when RevenueCat independently reports an active subscription at a different tier than the stored RAZORPAY-sourced doc (issue 2, the dual-purchase case)', async () => {
-  const now = Date.now();
-  const db = makeFakeDb({
-    'users/user-1/data/subscription': { tier: 'BASIC', source: 'RAZORPAY', subscriptionId: 'sub_abc', expiryDate: now + 100000 }
-  });
-  const fetchImpl = async (url) => {
-    if (String(url).includes('razorpay.com')) {
-      return { ok: true, json: async () => ({ status: 'active', notes: { planId: 'basic_monthly' }, current_end: Math.floor((now + 100000) / 1000) }) };
-    }
-    return { ok: true, json: async () => ({ subscriber: { entitlements: { premium: { expires_date: new Date(now + 100000).toISOString() } } } }) };
-  };
-  process.env.RAZORPAY_KEY_ID = 'k';
-  process.env.RAZORPAY_KEY_SECRET = 's';
-  process.env.REVENUECAT_SECRET_KEY = 'rc';
-  let snapshot;
-  try {
-    snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1', now);
-  } finally {
-    delete process.env.RAZORPAY_KEY_ID;
-    delete process.env.RAZORPAY_KEY_SECRET;
-    delete process.env.REVENUECAT_SECRET_KEY;
-  }
-
-  assert.deepEqual(snapshot.conflict, { detected: true });
-});
-
-test('getSubscriptionSupportSnapshotForUser sets conflict.detected false when RevenueCat and Razorpay agree', async () => {
-  const now = Date.now();
-  const db = makeFakeDb({
-    'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY', subscriptionId: 'sub_abc', expiryDate: now + 100000 }
-  });
-  const fetchImpl = async (url) => {
-    if (String(url).includes('razorpay.com')) {
-      return { ok: true, json: async () => ({ status: 'active', notes: { planId: 'pro_monthly' }, current_end: Math.floor((now + 100000) / 1000) }) };
-    }
-    return { ok: true, json: async () => ({ subscriber: { entitlements: { pro: { expires_date: new Date(now + 100000).toISOString() } } } }) };
-  };
-  process.env.RAZORPAY_KEY_ID = 'k';
-  process.env.RAZORPAY_KEY_SECRET = 's';
-  process.env.REVENUECAT_SECRET_KEY = 'rc';
-  let snapshot;
-  try {
-    snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1', now);
-  } finally {
-    delete process.env.RAZORPAY_KEY_ID;
-    delete process.env.RAZORPAY_KEY_SECRET;
-    delete process.env.REVENUECAT_SECRET_KEY;
-  }
-
-  assert.deepEqual(snapshot.conflict, { detected: false });
-});
-
-test('getSubscriptionSupportSnapshotForUser sets conflict.detected false when only one provider is active', async () => {
-  const now = Date.now();
-  const db = makeFakeDb({
-    'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY', subscriptionId: 'sub_abc', expiryDate: now + 100000 }
-  });
-  const fetchImpl = async (url) => {
-    if (String(url).includes('razorpay.com')) {
-      return { ok: true, json: async () => ({ status: 'active', notes: { planId: 'pro_monthly' }, current_end: Math.floor((now + 100000) / 1000) }) };
-    }
-    return { ok: true, json: async () => ({ subscriber: { entitlements: {} } }) };
-  };
-  process.env.RAZORPAY_KEY_ID = 'k';
-  process.env.RAZORPAY_KEY_SECRET = 's';
-  process.env.REVENUECAT_SECRET_KEY = 'rc';
-  let snapshot;
-  try {
-    snapshot = await getSubscriptionSupportSnapshotForUser(db, fetchImpl, 'user-1', now);
-  } finally {
-    delete process.env.RAZORPAY_KEY_ID;
-    delete process.env.RAZORPAY_KEY_SECRET;
-    delete process.env.REVENUECAT_SECRET_KEY;
-  }
-
-  assert.deepEqual(snapshot.conflict, { detected: false });
-});
-
-test('getSubscriptionSupportSnapshotForUser sets conflict to null (never a false "no conflict") when a source needed for the comparison is unavailable', async () => {
-  const db = makeFakeDb({
-    'users/user-1/data/subscription': { tier: 'PRO', source: 'RAZORPAY', subscriptionId: 'sub_abc' }
-  });
-  // No REVENUECAT_SECRET_KEY set -> revenueCat degrades to { unavailable: true, ... }.
-  process.env.RAZORPAY_KEY_ID = 'k';
-  process.env.RAZORPAY_KEY_SECRET = 's';
-  let snapshot;
-  try {
-    snapshot = await getSubscriptionSupportSnapshotForUser(
-      db,
-      async () => ({ ok: true, json: async () => ({ status: 'active', notes: {} }) }),
-      'user-1'
-    );
-  } finally {
-    delete process.env.RAZORPAY_KEY_ID;
-    delete process.env.RAZORPAY_KEY_SECRET;
-  }
-
-  assert.equal(snapshot.conflict, null);
+  assert.equal(snapshot.firestore.sourceKind, 'LEGACY_RAZORPAY');
 });
 
 test('getSubscriptionSupportSnapshotForUser sets alerts.hasMore true when a 21st matching doc exists (issue 5), false with exactly 20', async () => {

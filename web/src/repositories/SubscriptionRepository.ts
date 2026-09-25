@@ -8,9 +8,7 @@ export { currentYearMonth } from '../domain/subscriptionEligibility';
 export interface SubscriptionOwnership {
   source: string | null;
   expiryDate: number | null;
-  /** Whether the subscription auto-renews at `expiryDate` (Phase B, Razorpay Subscriptions API
-   * migration -- `functions/src/webhooks.js`'s `subscription.cancelled`/`paused`/`resumed`
-   * handlers flip this without touching `tier`/`expiryDate`). Defaults `true`, additive-safe for
+  /** Whether the subscription auto-renews at `expiryDate`. Defaults `true`, additive-safe for
    * docs predating this field. */
   willRenew: boolean;
 }
@@ -18,7 +16,7 @@ export interface SubscriptionOwnership {
 /**
  * A stale/missed webhook must not leave an expired paid tier readable indefinitely -- derive the
  * effective tier from `expiryDate` at read time rather than trusting the stored `tier` field as-is.
- * `expiryDate == null` (legacy/grandfathered docs, e.g. pre-migration Razorpay one-time orders)
+ * `expiryDate == null` (legacy/grandfathered docs)
  * falls through to trusting the stored tier unchanged.
  */
 export function deriveEffectiveTier(tier: SubscriptionTier, expiryDate: number | null, nowMillis: number): SubscriptionTier {
@@ -73,15 +71,11 @@ export class SubscriptionRepository {
   }
 
   /**
-   * Which payment path last granted the user's current tier, plus its expiry (Phase 4 amendment,
-   * dual-purchase gate) -- used by `SubscriptionPage.tsx` to block starting a second, separate
-   * mobile-vs-web subscription. Neither `webhooks.js` (Razorpay/web) nor `revenueCatWebhook.js`
-   * (RevenueCat/mobile) reconciles against what the other already wrote to this doc -- last write
-   * wins -- so this check exists to stop the collision before it happens rather than after.
+   * The entitlement doc's provenance and renewal fields -- used by `SubscriptionPage.tsx` to show
+   * the renewal status. RevenueCat (`revenueCatWebhook.js`) is the only writer; `source` may still
+   * read `RAZORPAY` on a pre-retirement doc.
    *
-   * Fails open (no restriction), not closed to FREE like `getTier` -- blocking a real purchase
-   * attempt on a transient read error is worse than occasionally missing this guard; the two
-   * payment paths still can't corrupt each other's core tier data even if this check is skipped.
+   * Fails soft (empty ownership) on a read error -- it only drives display text, never access.
    */
   async getOwnership(userId: string): Promise<SubscriptionOwnership> {
     try {
@@ -95,7 +89,7 @@ export class SubscriptionRepository {
       const willRenew = typeof data.willRenew === 'boolean' ? data.willRenew : true;
       return { source, expiryDate, willRenew };
     } catch (error) {
-      console.warn(`Failed to fetch subscription ownership for ${userId}, failing open to no restriction`, error);
+      console.warn(`Failed to fetch subscription ownership for ${userId}, falling back to empty ownership`, error);
       return { source: null, expiryDate: null, willRenew: true };
     }
   }

@@ -1,6 +1,6 @@
 /**
  * Phase 4 (RevenueCat integration): `handleRevenueCatWebhook` is Android/iOS's equivalent of
- * `handleRazorpayWebhook` -- verifies RC's HMAC signature, maps entitlement IDs to a tier
+ * the store-billing webhook -- verifies RC's HMAC signature, maps entitlement IDs to a tier
  * (cumulative: premium implies basic+pro), and only writes `data/subscription.tier` for
  * grant/revoke event types. Runs via Node native test runner (node --test), mirroring
  * `security.test.js`'s mock-req/res pattern for onRequest handlers.
@@ -15,7 +15,6 @@ const {
   verifySignature,
   SIGNATURE_FRESHNESS_WINDOW_MS,
   isSubscriptionActive,
-  resolveReconciliation,
   processRevenueCatEvent,
   processRevenueCatTransferEvent
 } = require('../src/revenueCatWebhook');
@@ -201,62 +200,6 @@ test('isSubscriptionActive: null expiry or a future expiry is active; a past exp
   assert.equal(isSubscriptionActive(999, 1_000), false);
 });
 
-test('resolveReconciliation: same-source or no-existing-source incoming always wins, no conflict', () => {
-  const now = 1_000;
-  assert.deepEqual(
-    resolveReconciliation(
-      { source: null, tier: 'FREE', expiryDate: null },
-      { source: 'REVENUECAT', tier: 'PRO', expiryDate: 5_000 },
-      now
-    ),
-    { tier: 'PRO', expiryDate: 5_000, source: 'REVENUECAT', conflict: false }
-  );
-  assert.deepEqual(
-    resolveReconciliation(
-      { source: 'REVENUECAT', tier: 'PRO', expiryDate: 5_000 },
-      { source: 'REVENUECAT', tier: 'PREMIUM', expiryDate: 6_000 },
-      now
-    ),
-    { tier: 'PREMIUM', expiryDate: 6_000, source: 'REVENUECAT', conflict: false }
-  );
-});
-
-test('resolveReconciliation: an expired other-source doc does not block the incoming write', () => {
-  const resolved = resolveReconciliation(
-    { source: 'RAZORPAY', tier: 'PRO', expiryDate: 500 },
-    { source: 'REVENUECAT', tier: 'BASIC', expiryDate: 5_000 },
-    1_000
-  );
-  assert.deepEqual(resolved, { tier: 'BASIC', expiryDate: 5_000, source: 'REVENUECAT', conflict: false });
-});
-
-test('resolveReconciliation: an active other-source doc with a higher tier wins and flags conflict', () => {
-  const resolved = resolveReconciliation(
-    { source: 'RAZORPAY', tier: 'PREMIUM', expiryDate: 5_000 },
-    { source: 'REVENUECAT', tier: 'BASIC', expiryDate: 6_000 },
-    1_000
-  );
-  assert.deepEqual(resolved, { tier: 'PREMIUM', expiryDate: 5_000, source: 'RAZORPAY', conflict: true });
-});
-
-test('resolveReconciliation: an active other-source doc with a lower tier loses but still flags conflict', () => {
-  const resolved = resolveReconciliation(
-    { source: 'RAZORPAY', tier: 'BASIC', expiryDate: 5_000 },
-    { source: 'REVENUECAT', tier: 'PREMIUM', expiryDate: 6_000 },
-    1_000
-  );
-  assert.deepEqual(resolved, { tier: 'PREMIUM', expiryDate: 6_000, source: 'REVENUECAT', conflict: true });
-});
-
-test('resolveReconciliation: same tier, active other-source doc -- later expiryDate wins, conflict flagged', () => {
-  const resolved = resolveReconciliation(
-    { source: 'RAZORPAY', tier: 'PRO', expiryDate: 9_000 },
-    { source: 'REVENUECAT', tier: 'PRO', expiryDate: 6_000 },
-    1_000
-  );
-  assert.deepEqual(resolved, { tier: 'PRO', expiryDate: 9_000, source: 'RAZORPAY', conflict: true });
-});
-
 /**
  * Phase A: transaction-level behavior via `processRevenueCatEvent` + an injected fake db --
  * mirrors `evaluationCore.test.js`'s fake-Firestore convention rather than a live/emulated
@@ -324,33 +267,13 @@ test('processRevenueCatEvent: a following RENEWAL clears a prior billingIssueAt 
   assert.equal(db._store[SUBSCRIPTION_PATH('user1')].tier, 'PRO');
 });
 
-test('processRevenueCatEvent: an active Razorpay-sourced doc blocks an RC grant and flags conflictDetectedAt', async () => {
+test('processRevenueCatEvent: RevenueCat is the sole writer -- a legacy active RAZORPAY-sourced doc is overwritten, no conflict flag', async () => {
   const db = makeFakeDb({
     [USER_PATH('user1')]: { email: 'user1@example.com' },
     [SUBSCRIPTION_PATH('user1')]: { tier: 'PREMIUM', source: 'RAZORPAY', expiryDate: 9_999_999_999_999, startDate: 100 }
   });
   const event = {
-    id: 'evt_conflict_1',
-    app_user_id: 'user1',
-    type: 'INITIAL_PURCHASE',
-    entitlement_ids: ['basic'],
-    expiration_at_ms: 8_888_888_888_888
-  };
-
-  const result = await processRevenueCatEvent(event, db);
-
-  assert.equal(result.tier, 'PREMIUM', 'the higher, still-active Razorpay tier wins');
-  assert.equal(db._store[SUBSCRIPTION_PATH('user1')].source, 'RAZORPAY');
-  assert.ok(db._store[SUBSCRIPTION_PATH('user1')].conflictDetectedAt, 'conflictDetectedAt must be stamped');
-});
-
-test('processRevenueCatEvent: an expired Razorpay-sourced doc does not block an RC grant', async () => {
-  const db = makeFakeDb({
-    [USER_PATH('user1')]: { email: 'user1@example.com' },
-    [SUBSCRIPTION_PATH('user1')]: { tier: 'PREMIUM', source: 'RAZORPAY', expiryDate: 1, startDate: 100 }
-  });
-  const event = {
-    id: 'evt_no_conflict_1',
+    id: 'evt_legacy_1',
     app_user_id: 'user1',
     type: 'INITIAL_PURCHASE',
     entitlement_ids: ['basic'],
@@ -360,8 +283,22 @@ test('processRevenueCatEvent: an expired Razorpay-sourced doc does not block an 
   const result = await processRevenueCatEvent(event, db);
 
   assert.equal(result.tier, 'BASIC');
+  assert.equal(result.conflict, undefined);
   assert.equal(db._store[SUBSCRIPTION_PATH('user1')].source, 'REVENUECAT');
+  assert.equal(db._store[SUBSCRIPTION_PATH('user1')].expiryDate, 8_888_888_888_888);
   assert.equal(db._store[SUBSCRIPTION_PATH('user1')].conflictDetectedAt, undefined);
+});
+
+test('processRevenueCatEvent: an expiry event revokes a legacy RAZORPAY-sourced doc to FREE', async () => {
+  const db = makeFakeDb({
+    [USER_PATH('user1')]: { email: 'user1@example.com' },
+    [SUBSCRIPTION_PATH('user1')]: { tier: 'PRO', source: 'RAZORPAY', expiryDate: 9_999_999_999_999, startDate: 100 }
+  });
+
+  const result = await processRevenueCatEvent({ id: 'evt_legacy_2', app_user_id: 'user1', type: 'EXPIRATION' }, db);
+
+  assert.equal(result.tier, 'FREE');
+  assert.equal(db._store[SUBSCRIPTION_PATH('user1')].source, 'REVENUECAT');
 });
 
 /**
@@ -448,7 +385,7 @@ test('processRevenueCatEvent (M1): no event_timestamp_ms on the event never bloc
  * now folded into REVOKE_EVENT_TYPES, so it goes through the exact same `processRevenueCatEvent`
  * path as EXPIRATION/REFUND.
  */
-test('processRevenueCatEvent (L3): SUBSCRIPTION_PAUSED revokes to FREE, unlike Razorpay\'s subscription.paused', async () => {
+test('processRevenueCatEvent (L3): SUBSCRIPTION_PAUSED revokes to FREE, access stops immediately', async () => {
   const db = makeFakeDb({
     [USER_PATH('user1')]: { email: 'user1@example.com' },
     [SUBSCRIPTION_PATH('user1')]: { tier: 'PRO', source: 'REVENUECAT', expiryDate: 9_999_999_999_999, startDate: 100 }
