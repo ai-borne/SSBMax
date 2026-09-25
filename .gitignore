@@ -194,3 +194,12 @@ ci_check.sh
 # Wrangler
 .wrangler/
 
+
+# Python bytecode
+__pycache__/
+
+# OIR extraction output (local previews)
+scripts/oir_images/
+
+# Claude Code per-user local settings
+.claude/settings.local.json
