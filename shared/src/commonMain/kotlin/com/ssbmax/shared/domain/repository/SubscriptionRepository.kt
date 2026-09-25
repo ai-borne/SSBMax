@@ -41,12 +41,10 @@ interface SubscriptionRepository {
     suspend fun getSubscriptionStartDate(userId: String): Result<Long?>
 
     /**
-     * Which payment path last granted the user's current tier, plus its expiry -- used by
-     * [com.ssbmax.shared.presentation.premium.UpgradeViewModel]'s dual-purchase gate. Neither
-     * `webhooks.js` (Razorpay/web) nor `revenueCatWebhook.js` (RevenueCat/mobile) reconciles
-     * against what the other already wrote to `data/subscription` -- last write wins -- so a user
-     * who is already paying through one path is blocked from starting a second, separate
-     * subscription through the other rather than silently risking one webhook stomping the other.
+     * The tier doc's provenance (`source`), expiry and renewal state, used by the subscription
+     * management screen. RevenueCat is the only writer (Razorpay was retired 2026-09-25), so
+     * `source` is `REVENUECAT` for any current doc; a legacy `RAZORPAY` value is informational and
+     * never blocks a purchase.
      */
     suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership>
 }

@@ -62,10 +62,7 @@ internal data class PlanCardPurchaseState(
     /** RevenueCat's store-quoted MONTHLY price for this plan, if fetched successfully -- shown
      * instead of the generated pricing contract's number when present and MONTHLY is selected
      * (RC's Test Store only has monthly products right now). Null falls back to the contract. */
-    val storeFormattedPrice: String?,
-    /** True when the user already has an active tier from a Razorpay/web purchase (Phase 4
-     * amendment, dual-purchase gate) -- see [com.ssbmax.shared.presentation.premium.UpgradeUiState.activeOnWebInstead]. */
-    val purchaseBlocked: Boolean
+    val storeFormattedPrice: String?
 )
 
 /**
@@ -111,7 +108,6 @@ internal fun AnimatedPlanCard(
                 plan = plan,
                 currentTier = currentTier,
                 isPurchasing = purchaseState.isPurchasing,
-                purchaseBlocked = purchaseState.purchaseBlocked,
                 onClick = onUpgradeClick
             )
         }
@@ -152,13 +148,12 @@ private fun UpgradeButton(
     plan: SubscriptionPlan,
     currentTier: SubscriptionTier,
     isPurchasing: Boolean,
-    purchaseBlocked: Boolean,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        enabled = plan.tier != currentTier && !isPurchasing && !purchaseBlocked,
+        enabled = plan.tier != currentTier && !isPurchasing,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
