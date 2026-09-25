@@ -3,8 +3,6 @@ package com.ssbmax.shared.presentation.premium
 import com.ssbmax.shared.domain.model.BillingCycle
 import com.ssbmax.shared.domain.model.SSBMaxUser
 import com.ssbmax.shared.domain.model.SubscriptionTier
-import com.ssbmax.shared.domain.repository.SubscriptionOwnership
-import com.ssbmax.shared.domain.repository.SubscriptionRepository
 import com.ssbmax.shared.domain.usecase.auth.ObserveCurrentUserUseCase
 import com.ssbmax.shared.domain.usecase.subscription.GetSubscriptionTierUseCase
 import com.ssbmax.shared.domain.util.DomainLogger
@@ -14,7 +12,6 @@ import com.ssbmax.shared.platform.billing.revenuecat.RevenueCatClient
 import com.ssbmax.shared.platform.settings.DeveloperSettings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlin.time.Clock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,7 +61,6 @@ import kotlinx.coroutines.launch
 class UpgradeViewModel(
     private val observeCurrentUser: ObserveCurrentUserUseCase,
     private val getSubscriptionTier: GetSubscriptionTierUseCase,
-    private val subscriptionRepository: SubscriptionRepository,
     private val revenueCatClient: RevenueCatClient,
     private val developerSettings: DeveloperSettings,
     private val logger: DomainLogger
@@ -76,8 +72,6 @@ class UpgradeViewModel(
 
     private companion object {
         const val TAG = "UpgradeViewModel"
-        /** `applySubscriptionTier`'s `source` value in `functions/src/webhooks.js` (Razorpay/web). */
-        const val WEB_PAYMENT_SOURCE = "RAZORPAY"
     }
 
     init {
@@ -142,15 +136,7 @@ class UpgradeViewModel(
                 SubscriptionTier.FREE
             }
 
-            // Legacy guard: the Razorpay web checkout was retired 2026-09-25 (RevenueCat is now the
-            // only writer of the tier doc), so this only fires for a pre-retirement doc that still
-            // carries `source == RAZORPAY` with an unexpired `expiryDate`. Candidate for removal
-            // once no such docs remain.
-            val blockedByWeb = subscriptionRepository.getSubscriptionOwnership(currentUser.id)
-                .getOrElse { SubscriptionOwnership(source = null, expiryDate = null) }
-                .let { it.source == WEB_PAYMENT_SOURCE && it.isActive(Clock.System.now().toEpochMilliseconds()) }
-
-            _uiState.update { it.copy(currentTier = tier, isLoading = false, activeOnWebInstead = blockedByWeb) }
+            _uiState.update { it.copy(currentTier = tier, isLoading = false) }
         } catch (e: Exception) {
             logger.e(TAG, "Error in loadCurrentSubscription", e)
             _uiState.update { it.copy(currentTier = SubscriptionTier.FREE, isLoading = false) }
@@ -181,22 +167,6 @@ class UpgradeViewModel(
         }
         _uiState.update { it.copy(isPurchasing = true, purchaseError = null, selectedPlanForUpgrade = tier) }
         viewModelScope.launch {
-            // L5 (Payment Ecosystem Hardening plan, Phase 12): `activeOnWebInstead` in `_uiState`
-            // is only recomputed by `observeCurrentSubscription`'s collector -- when the signed-in
-            // user or the dev-override setting changes, not on any refresh tied to this screen
-            // remaining open. A web (Razorpay) purchase completed in another session/tab while this
-            // screen stayed open would leave the cached flag stale (false), letting a second,
-            // conflicting mobile purchase start against real money. Re-read ownership fresh, right
-            // before spending it, instead of trusting whatever was true when the screen first loaded.
-            val blockedByWeb = subscriptionRepository.getSubscriptionOwnership(userId)
-                .getOrElse { SubscriptionOwnership(source = null, expiryDate = null) }
-                .let { it.source == WEB_PAYMENT_SOURCE && it.isActive(Clock.System.now().toEpochMilliseconds()) }
-            if (blockedByWeb) {
-                logger.w(TAG, "upgradeToPlan blocked: user already has an active web (Razorpay) subscription")
-                _uiState.update { it.copy(isPurchasing = false, activeOnWebInstead = true, selectedPlanForUpgrade = null) }
-                return@launch
-            }
-
             revenueCatClient.purchase(productId)
                 .onSuccess { outcome ->
                     // Local UiState only -- deliberately NOT persisted. The optimistic
@@ -244,20 +214,6 @@ class UpgradeViewModel(
         }
         _uiState.update { it.copy(isRestoring = true, purchaseError = null) }
         viewModelScope.launch {
-            // L5 (Phase 12): same staleness gap as `upgradeToPlan` -- re-read ownership fresh
-            // rather than trusting `_uiState.value.activeOnWebInstead`, which is only recomputed
-            // when the signed-in user or dev-override setting changes, not on every restore attempt.
-            val blockedByWeb = subscriptionRepository.getSubscriptionOwnership(userId)
-                .getOrElse { SubscriptionOwnership(source = null, expiryDate = null) }
-                .let { it.source == WEB_PAYMENT_SOURCE && it.isActive(Clock.System.now().toEpochMilliseconds()) }
-            if (blockedByWeb) {
-                // Same gate as upgradeToPlan -- restoring RC entitlements would otherwise silently
-                // overwrite an active Razorpay-sourced tier just like a fresh purchase would.
-                logger.w(TAG, "restorePurchases blocked: user already has an active web (Razorpay) subscription")
-                _uiState.update { it.copy(isRestoring = false, activeOnWebInstead = true) }
-                return@launch
-            }
-
             revenueCatClient.restorePurchases()
                 .onSuccess { outcome ->
                     // Local UiState only -- see the identical note in upgradeToPlan for why there is

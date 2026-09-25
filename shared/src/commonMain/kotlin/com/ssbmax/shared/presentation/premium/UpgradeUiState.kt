@@ -24,11 +24,6 @@ data class UpgradeUiState(
     val isRestoring: Boolean = false,
     val purchaseError: String? = null,
     val selectedPlanForUpgrade: SubscriptionTier? = null,
-    /** True when the user already has an active tier from a Razorpay/web purchase (Phase 4
-     * amendment, dual-purchase gate) -- [UpgradeScreen] should disable purchase buttons and show
-     * `Res.string.premium_dialog_web_subscription_active` instead of letting them start a second,
-     * separate mobile subscription. See [UpgradeViewModel.upgradeToPlan]. */
-    val activeOnWebInstead: Boolean = false,
     /** RevenueCat's store-quoted MONTHLY price per tier, keyed by domain tier -- see
      * [UpgradeViewModel.loadStorePrices]. Empty (falls back to the generated pricing contract)
      * until the fetch succeeds. */

@@ -96,7 +96,6 @@ class SubscriptionTierSsotTest {
             val upgradeViewModel = UpgradeViewModel(
                 observeCurrentUser = observeCurrentUser,
                 getSubscriptionTier = getSubscriptionTier,
-                subscriptionRepository = subscriptionRepository,
                 revenueCatClient = FakeRevenueCatClient(),
                 developerSettings = developerSettings,
                 logger = FakeLogger()

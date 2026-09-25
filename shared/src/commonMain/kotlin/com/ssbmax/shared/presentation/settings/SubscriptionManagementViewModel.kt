@@ -62,8 +62,7 @@ class SubscriptionManagementViewModel(
 
     private companion object {
         const val TAG = "SubscriptionMgmtViewModel"
-        /** Matches [com.ssbmax.shared.presentation.premium.UpgradeViewModel]'s private
-         * `WEB_PAYMENT_SOURCE` -- `SubscriptionOwnership.source`'s RevenueCat-webhook value. */
+        /** `SubscriptionOwnership.source`'s RevenueCat-webhook value. */
         const val REVENUECAT_SOURCE = "REVENUECAT"
     }
 

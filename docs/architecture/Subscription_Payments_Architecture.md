@@ -180,7 +180,7 @@ Web writes nothing to the tier doc (rules forbid it, §3.4). To change, cancel o
 
 ### 7.1 No dual-purchase gate
 
-With RevenueCat the only writer there is nothing to collide with, so `assertNoActiveRevenueCatSubscription` and the web purchase block are gone. `source` remains on the document as provenance only. KMP still contains `UpgradeUiState.activeOnWebInstead`, which can no longer trigger for new data (it keys off a `RAZORPAY` source); it is dead-code cleanup for a later Kotlin change.
+With RevenueCat the only writer there is nothing to collide with, so `assertNoActiveRevenueCatSubscription`, the web purchase block and the Kotlin `activeOnWebInstead` guard (`UpgradeViewModel`, `UpgradeScreen`) are all gone. `source` remains on the document as provenance only, and a legacy `RAZORPAY` value never blocks a mobile purchase or restore (`UpgradeViewModelTest` pins this). `SubscriptionRepository.getSubscriptionOwnership` stays for the subscription-management screen.
 
 ### 7.2 Idempotency
 

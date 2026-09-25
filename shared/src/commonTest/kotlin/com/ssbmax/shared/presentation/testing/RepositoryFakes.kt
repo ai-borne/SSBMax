@@ -86,6 +86,7 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     var startDateResult: Result<Long?> = Result.success(null)
     var ownershipResult: Result<SubscriptionOwnership> = Result.success(SubscriptionOwnership(source = null, expiryDate = null))
     var getSubscriptionTierCallCount = 0
+    var ownershipReadCount = 0
 
     // No tier-write recorder here any more: `updateSubscriptionTier` was removed from
     // [SubscriptionRepository] in Phase 1 of the Payment Ecosystem Hardening plan (finding C1).
@@ -105,7 +106,10 @@ class FakeSubscriptionRepository : SubscriptionRepository {
         return monthlyUsageResult
     }
     override suspend fun getSubscriptionStartDate(userId: String): Result<Long?> = startDateResult
-    override suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership> = ownershipResult
+    override suspend fun getSubscriptionOwnership(userId: String): Result<SubscriptionOwnership> {
+        ownershipReadCount++
+        return ownershipResult
+    }
 }
 
 /** Phase 4 (RevenueCat integration): test double for [RevenueCatClient] -- avoids pulling the

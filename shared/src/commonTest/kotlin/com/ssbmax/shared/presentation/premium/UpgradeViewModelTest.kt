@@ -63,7 +63,6 @@ class UpgradeViewModelTest {
     private fun buildViewModel() = UpgradeViewModel(
         observeCurrentUser = ObserveCurrentUserUseCase(authRepository),
         getSubscriptionTier = GetSubscriptionTierUseCase(subscriptionRepository),
-        subscriptionRepository = subscriptionRepository,
         revenueCatClient = revenueCatClient,
         developerSettings = developerSettings,
         logger = NoOpLogger()
@@ -263,48 +262,13 @@ class UpgradeViewModelTest {
     }
 
     /**
-     * Phase 4 amendment (dual-purchase gate): neither `webhooks.js` (Razorpay/web) nor
-     * `revenueCatWebhook.js` (RevenueCat/mobile) reconciles against what the other already wrote
-     * to `data/subscription` -- last write wins. A user who bought PRO on web via Razorpay and
-     * then triggers a mobile RC purchase would have one webhook silently stomp the other's
-     * tier/expiry. `activeOnWebInstead` must reflect an active Razorpay-sourced tier so the UI can
-     * block the second purchase before it happens.
+     * Razorpay was retired 2026-09-25 and RevenueCat is the only writer of the tier doc, so the old
+     * dual-purchase gate (`activeOnWebInstead`) is gone. A pre-retirement doc still carrying
+     * `source = RAZORPAY` (even unexpired) must NOT block a mobile purchase or a restore -- the next
+     * RevenueCat webhook simply overwrites it.
      */
     @Test
-    fun `flags activeOnWebInstead when an active Razorpay subscription already exists`() = runTest(testDispatcher) {
-        subscriptionRepository.ownershipResult = Result.success(
-            SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
-        )
-        val viewModel = buildViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertEquals(true, viewModel.uiState.value.activeOnWebInstead)
-    }
-
-    @Test
-    fun `does not flag activeOnWebInstead for an expired Razorpay subscription`() = runTest(testDispatcher) {
-        subscriptionRepository.ownershipResult = Result.success(
-            SubscriptionOwnership(source = "RAZORPAY", expiryDate = 1L)
-        )
-        val viewModel = buildViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertEquals(false, viewModel.uiState.value.activeOnWebInstead)
-    }
-
-    @Test
-    fun `does not flag activeOnWebInstead when the active tier is already RevenueCat-sourced`() = runTest(testDispatcher) {
-        subscriptionRepository.ownershipResult = Result.success(
-            SubscriptionOwnership(source = "REVENUECAT", expiryDate = null)
-        )
-        val viewModel = buildViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertEquals(false, viewModel.uiState.value.activeOnWebInstead)
-    }
-
-    @Test
-    fun `upgradeToPlan is blocked and never calls purchase when activeOnWebInstead`() = runTest(testDispatcher) {
+    fun `upgradeToPlan is not blocked by a legacy RAZORPAY-sourced ownership`() = runTest(testDispatcher) {
         subscriptionRepository.ownershipResult = Result.success(
             SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
         )
@@ -314,18 +278,11 @@ class UpgradeViewModelTest {
         viewModel.upgradeToPlan(SubscriptionTier.PRO)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(null, revenueCatClient.lastPurchasedProductId)
-        assertEquals(false, viewModel.uiState.value.isPurchasing)
+        assertEquals("pro_monthly", revenueCatClient.lastPurchasedProductId)
     }
 
-    /**
-     * Phase D (dual-platform billing hardening plan): restorePurchases had no dual-purchase gate
-     * at all, unlike upgradeToPlan -- a user with an active Razorpay-sourced tier could restore RC
-     * entitlements and silently overwrite it. Same gate, same rationale as the upgradeToPlan test
-     * above.
-     */
     @Test
-    fun `restorePurchases is blocked and never calls restore when activeOnWebInstead`() = runTest(testDispatcher) {
+    fun `restorePurchases is not blocked by a legacy RAZORPAY-sourced ownership`() = runTest(testDispatcher) {
         subscriptionRepository.ownershipResult = Result.success(
             SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
         )
@@ -335,61 +292,19 @@ class UpgradeViewModelTest {
         viewModel.restorePurchases()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(0, revenueCatClient.restoreCallCount)
-        assertEquals(false, viewModel.uiState.value.isRestoring)
+        assertEquals(1, revenueCatClient.restoreCallCount)
     }
 
-    /**
-     * L5 (Payment Ecosystem Hardening plan, Phase 12): `activeOnWebInstead` used to be computed
-     * once when the screen loaded and never refreshed -- a web purchase completed in another
-     * session/tab while this screen stayed open left the cached flag stale (false), so a second,
-     * conflicting mobile purchase could start. This pins the fix: the screen loads with NO active
-     * web subscription (cached flag false), ownership then changes underneath it (simulating the
-     * other-session purchase) with no explicit refresh call, and `upgradeToPlan` must still block
-     * because it re-reads ownership fresh instead of trusting the stale cached flag.
-     */
     @Test
-    fun `upgradeToPlan re-checks ownership fresh and blocks even when the cached activeOnWebInstead flag is stale`() = runTest(testDispatcher) {
-        subscriptionRepository.ownershipResult = Result.success(
-            SubscriptionOwnership(source = "REVENUECAT", expiryDate = null)
-        )
+    fun `upgradeToPlan does not read subscription ownership at all any more`() = runTest(testDispatcher) {
         val viewModel = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(false, viewModel.uiState.value.activeOnWebInstead, "sanity: screen loaded with no web subscription blocking")
-
-        // Simulate a web (Razorpay) purchase completing in another session -- nothing in this
-        // screen's own state triggers a re-read, so the cached flag above is now stale.
-        subscriptionRepository.ownershipResult = Result.success(
-            SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
-        )
+        val readsBefore = subscriptionRepository.ownershipReadCount
 
         viewModel.upgradeToPlan(SubscriptionTier.PRO)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(null, revenueCatClient.lastPurchasedProductId, "must not purchase against a fresh but unread web conflict")
-        assertEquals(false, viewModel.uiState.value.isPurchasing)
-        assertEquals(true, viewModel.uiState.value.activeOnWebInstead, "the fresh read must also correct the now-stale cached flag")
-    }
-
-    @Test
-    fun `restorePurchases re-checks ownership fresh and blocks even when the cached activeOnWebInstead flag is stale`() = runTest(testDispatcher) {
-        subscriptionRepository.ownershipResult = Result.success(
-            SubscriptionOwnership(source = "REVENUECAT", expiryDate = null)
-        )
-        val viewModel = buildViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(false, viewModel.uiState.value.activeOnWebInstead)
-
-        subscriptionRepository.ownershipResult = Result.success(
-            SubscriptionOwnership(source = "RAZORPAY", expiryDate = null)
-        )
-
-        viewModel.restorePurchases()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertEquals(0, revenueCatClient.restoreCallCount)
-        assertEquals(false, viewModel.uiState.value.isRestoring)
-        assertEquals(true, viewModel.uiState.value.activeOnWebInstead)
+        assertEquals(readsBefore, subscriptionRepository.ownershipReadCount, "the purchase path must not depend on ownership")
     }
 
     /**
