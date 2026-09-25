@@ -137,6 +137,12 @@ test('verifySignature (L1): also rejects a signature timestamped in the future b
   assert.equal(verifySignature(req, secret, signedAtMs - SIGNATURE_FRESHNESS_WINDOW_MS - 1_000), false);
 });
 
+test('handleRevenueCatWebhook declares REVENUECAT_WEBHOOK_SECRET as a bound secret, so Cloud Functions injects it into process.env', () => {
+  // Without this binding a secret in Secret Manager is never injected and every delivery gets 500.
+  const bound = (handleRevenueCatWebhook.__endpoint.secretEnvironmentVariables || []).map((v) => v.key);
+  assert.ok(bound.includes('REVENUECAT_WEBHOOK_SECRET'), `bound secrets: ${JSON.stringify(bound)}`);
+});
+
 test('handleRevenueCatWebhook returns 500 when the secret is missing in production', async () => {
   process.env.FUNCTIONS_EMULATOR = 'false';
   delete process.env.REVENUECAT_WEBHOOK_SECRET;
