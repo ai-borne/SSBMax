@@ -8,6 +8,8 @@ import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { Footer } from '../legal/Footer';
 import { NotificationBell } from '../notifications/NotificationBell';
 import type { SSBMaxNotification } from '../../types/notification';
+import type { AccessTier } from '../../constants/ssbSelectionProcess';
+import { tierBadgeLabel, resolveDisplayTier } from '../../constants/tierLabels';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -27,6 +29,8 @@ export interface AppLayoutProps {
    * see git history for the fix). Defaults to false so the badge stays hidden when unset.
    */
   isPaidMember?: boolean;
+  /** Real stored tier, used to label the header badge (BASIC / PRO / PREMIUM). */
+  userTier?: AccessTier;
   onSignInClick?: () => void;
   onNotificationClick?: (notification: SSBMaxNotification) => void;
 }
@@ -38,10 +42,12 @@ export const AppLayout: FC<AppLayoutProps> = ({
   isTestMode = false,
   user: propUser,
   isPaidMember = false,
+  userTier,
   onSignInClick,
   onNotificationClick
 }) => {
   const { theme, toggleTheme } = useTheme();
+  const displayTier = resolveDisplayTier(userTier, isPaidMember);
   const isOnline = useOnlineStatus();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -115,9 +121,9 @@ export const AppLayout: FC<AppLayoutProps> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-base font-black tracking-wider text-slate-900 dark:text-white uppercase">{strings.header.title}</span>
-                      {isPaidMember && (
+                      {displayTier !== 'FREE' && (
                         <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/30 rounded uppercase tracking-widest" data-testid="pro-membership-badge">
-                          PRO
+                          {tierBadgeLabel(displayTier)}
                         </span>
                       )}
                     </div>

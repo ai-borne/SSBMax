@@ -2,13 +2,16 @@ import { FC } from 'react';
 import { Check, ShieldCheck, Award, Info, Smartphone } from 'lucide-react';
 import { strings } from '../../constants/strings';
 import { useSubscriptionOwnership } from '../../viewmodels/useSubscriptionOwnership';
-import { SUBSCRIPTION_TIERS } from '../../constants/ssbSelectionProcess';
+import { SUBSCRIPTION_TIERS, AccessTier } from '../../constants/ssbSelectionProcess';
+import { tierPlanTitle } from '../../constants/tierLabels';
 
 export interface SubscriptionPageProps {
   userId?: string;
   /** Real Firestore-backed tier, computed once in `App.tsx` (`isPaidMember = realTier !== 'FREE'`),
    * so "Membership Active" shows correctly on a hard reload. */
   isPaidMember?: boolean;
+  /** Real stored tier: marks that tier's card as the current plan and names it in the banner. */
+  currentTier?: AccessTier;
 }
 
 /**
@@ -16,8 +19,10 @@ export interface SubscriptionPageProps {
  * RevenueCat is the only writer of the tier doc and this page only reads it (Razorpay retired
  * 2026-09-25).
  */
-export const SubscriptionPage: FC<SubscriptionPageProps> = ({ userId, isPaidMember = false }) => {
+export const SubscriptionPage: FC<SubscriptionPageProps> = ({ userId, isPaidMember = false, currentTier }) => {
   const ownership = useSubscriptionOwnership(userId);
+  // Unknown tier + unpaid is FREE; unknown tier + paid marks no card (legacy boolean-only callers).
+  const activeTier: AccessTier | undefined = currentTier ?? (isPaidMember ? undefined : 'FREE');
 
   return (
     <div className="w-full space-y-8" data-testid="subscription-page">
@@ -41,6 +46,11 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({ userId, isPaidMemb
           <ShieldCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <div className="flex-1">
             <p className="font-bold text-sm">{strings.subscription.membershipActiveBadge}</p>
+            {currentTier && currentTier !== 'FREE' && (
+              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300" data-testid="subscription-plan-name">
+                {strings.subscription.yourPlan(tierPlanTitle(currentTier))}
+              </p>
+            )}
             <p className="text-xs text-emerald-700 dark:text-emerald-400">{strings.subscription.membershipActiveDescription}</p>
             {/* Real renewal status, once RevenueCat has populated expiryDate -- legacy docs with no
                 expiryDate show nothing here rather than a fabricated date. */}
@@ -107,15 +117,15 @@ export const SubscriptionPage: FC<SubscriptionPageProps> = ({ userId, isPaidMemb
                 </div>
               </div>
 
-              {isFree ? (
+              {tier.id === activeTier ? (
                 <button
                   disabled
-                  className="w-full min-h-[44px] py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold border border-slate-200 dark:border-slate-700 cursor-not-allowed text-center"
-                  data-testid="current-plan-btn"
+                  className="w-full min-h-[44px] py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-300 dark:border-emerald-500/40 cursor-not-allowed text-center"
+                  data-testid={isFree ? 'current-plan-btn' : `${testIdBase}-current-plan`}
                 >
                   {strings.subscription.currentPlan}
                 </button>
-              ) : (
+              ) : isFree ? null : (
                 <div
                   className="w-full min-h-[44px] py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2"
                   data-testid={`${testIdBase}-in-app-label`}

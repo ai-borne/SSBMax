@@ -87,6 +87,38 @@ describe('SubscriptionPage Component', () => {
     await waitFor(() => expect(screen.getByTestId('subscription-renewal-status')).toBeInTheDocument());
   });
 
+  describe('current tier card', () => {
+    it.each(['basic', 'pro', 'premium'])('marks only the %s card as the current plan and removes its in-app label', (id) => {
+      render(<SubscriptionPage isPaidMember currentTier={id.toUpperCase() as 'BASIC' | 'PRO' | 'PREMIUM'} />);
+
+      expect(screen.getByTestId(`${id}-current-plan`)).toHaveTextContent(strings.subscription.currentPlan);
+      expect(screen.queryByTestId(`${id}-in-app-label`)).not.toBeInTheDocument();
+      for (const other of ['basic', 'pro', 'premium'].filter((t) => t !== id)) {
+        expect(screen.getByTestId(`${other}-in-app-label`)).toBeInTheDocument();
+        expect(screen.queryByTestId(`${other}-current-plan`)).not.toBeInTheDocument();
+      }
+    });
+
+    it('does not claim the Free card is the current plan for a paid user', () => {
+      render(<SubscriptionPage isPaidMember currentTier="BASIC" />);
+
+      expect(screen.queryByTestId('current-plan-btn')).not.toBeInTheDocument();
+    });
+
+    it('marks the Free card current for a FREE user and leaves paid cards on the in-app label', () => {
+      render(<SubscriptionPage currentTier="FREE" />);
+
+      expect(screen.getByTestId('current-plan-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('basic-in-app-label')).toBeInTheDocument();
+    });
+
+    it('names the real plan in the Membership Active banner', () => {
+      render(<SubscriptionPage isPaidMember currentTier="BASIC" />);
+
+      expect(screen.getByTestId('subscription-success-banner')).toHaveTextContent(strings.subscription.basicPlanTitle);
+    });
+  });
+
   it('applies Level 2 elevation styling to free-tier-card and pro-tier-card', () => {
     render(<SubscriptionPage />);
 

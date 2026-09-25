@@ -54,6 +54,8 @@ export const commonStrings = {
     basicFeature1: 'Stage I OIR & PPDT Test Simulators (5/Month)',
     basicFeature2: 'Stage II Psych Battery Starter (5/Month each)',
     basicFeature3: 'Cached Study Materials',
+    premiumPlanTitle: 'Premium Plan',
+    yourPlan: (title: string) => `Your plan: ${title}`,
     proPlanTitle: 'Pro Plan',
     proPlanPrice: priceLabel('PRO'),
     proPlanBadge: 'MOST POPULAR',
