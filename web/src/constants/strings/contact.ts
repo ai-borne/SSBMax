@@ -4,8 +4,6 @@ export const contactStrings = {
     title: 'Contact Us',
     subtitle: 'SSBMax is built and operated by AI-Borne. Reach us for support, billing, privacy or refund requests.',
     emailHeading: 'Email',
-    phoneHeading: 'Phone',
-    addressHeading: 'Office Address',
     responseHeading: 'Response Time',
     responseText: 'We reply to all requests within 2 business days.'
   },

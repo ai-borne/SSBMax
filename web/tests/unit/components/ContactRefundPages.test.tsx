@@ -1,7 +1,7 @@
 /**
- * A standalone Refund & Cancellation page and a Contact page with email, phone and physical
- * address, both linked from the footer and reachable signed out. Billing is store-only (Apple /
- * Google), so the refund page must describe store refunds and never promise our own or name Razorpay.
+ * A standalone Refund & Cancellation page and a Contact page with an email, both linked from the
+ * footer and reachable signed out. Billing is store-only (Apple / Google), so the refund page
+ * must describe store refunds and never promise our own or name Razorpay.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -13,24 +13,16 @@ import { VALID_TABS, getTabFromUrl } from '../../../src/hooks/useTabRouting';
 import { strings } from '../../../src/constants/strings';
 
 describe('contact SSOT', () => {
-  it('holds the owner email, phone and Pune office address', () => {
+  it('holds the owner email', () => {
     expect(CONTACT_DETAILS.email).toBe('founder@ai-borne.in');
-    expect(CONTACT_DETAILS.phoneE164).toBe('+918936995020');
-    expect(CONTACT_DETAILS.phoneDisplay).toBe('+91 89369 95020');
-    expect(CONTACT_DETAILS.addressLines.join(' ')).toContain('Pune');
-    expect(CONTACT_DETAILS.addressLines.join(' ')).toContain('411045');
   });
 });
 
 describe('ContactPage', () => {
-  it('shows email, phone and address as actionable details', () => {
+  it('shows email as an actionable detail', () => {
     render(<ContactPage />);
     expect(screen.getByTestId('contact-title')).toHaveTextContent(strings.contact.title);
     expect(screen.getByRole('link', { name: CONTACT_DETAILS.email })).toHaveAttribute('href', `mailto:${CONTACT_DETAILS.email}`);
-    expect(screen.getByRole('link', { name: CONTACT_DETAILS.phoneDisplay })).toHaveAttribute('href', `tel:${CONTACT_DETAILS.phoneE164}`);
-    for (const line of CONTACT_DETAILS.addressLines) {
-      expect(screen.getByText(new RegExp(line.replace(/[()]/g, '\\$&')))).toBeInTheDocument();
-    }
   });
 
   it('triggers onBackClick', () => {
