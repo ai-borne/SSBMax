@@ -20,14 +20,6 @@ export const ContactPage: FC<ContactPageProps> = ({ onBackClick }) => {
         <LegalCard heading={s.emailHeading}>
           <a className={LINK_CLASS} href={`mailto:${CONTACT_DETAILS.email}`}>{CONTACT_DETAILS.email}</a>
         </LegalCard>
-        <LegalCard heading={s.phoneHeading}>
-          <a className={LINK_CLASS} href={`tel:${CONTACT_DETAILS.phoneE164}`}>{CONTACT_DETAILS.phoneDisplay}</a>
-        </LegalCard>
-        <LegalCard heading={s.addressHeading}>
-          <address style={{ fontStyle: 'normal' }}>
-            {CONTACT_DETAILS.addressLines.map((line) => <div key={line}>{line}</div>)}
-          </address>
-        </LegalCard>
         <LegalCard heading={s.responseHeading}>
           <p>{s.responseText}</p>
         </LegalCard>
