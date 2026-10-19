@@ -91,19 +91,19 @@ lifecycleKmp = "2.9.0"
 purchasesKmp = "3.5.0"
 
 # AndroidX Core
-coreKtx = "1.15.0"
+coreKtx = "1.19.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
 
 # Compose
-composeBom = "2024.05.00"
-navigationCompose = "2.8.5"
+composeBom = "2026.09.00"
+navigationCompose = "2.10.2"
 
 # Room bumped 2.6.1 -> 2.8.4: KSP2 (bundled with Kotlin 2.2.20's ksp plugin,
 # see kotlin/ksp above) has a known bug processing Room DAO suspend functions
 # returning Unit ("unexpected jvm signature V", google/ksp#2177/#2957),
 # fixed by upgrading Room to 2.7.0+.
-room = "2.8.4"
+room = "2.8.5"
 
 # Ktor (for KMM-compatible networking)
 ktor = "3.0.2"
