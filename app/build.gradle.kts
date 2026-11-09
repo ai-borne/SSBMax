@@ -258,7 +258,7 @@ dependencies {
     // Workers resolve their own dependencies via KoinComponent/inject() now
     // (see e.g. GTOAnalysisWorker), so no Hilt-work assisted-injection
     // compiler is needed — the default WorkerFactory works.
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
 
     // Firebase
     implementation(platform(libs.firebase.bom))
@@ -294,7 +294,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     // WorkManager testing (for Phase 1 worker tests)
-    testImplementation("androidx.work:work-testing:2.9.0")
+    testImplementation("androidx.work:work-testing:2.12.0")
 
     // Real org.json for JVM unit tests — Android's stub jar throws Stub! on JSONArray/JSONObject put()
     testImplementation("org.json:json:20231013")
